@@ -256,6 +256,16 @@ For detailed information about the risk scoring methodology and information sour
 - Git (for repository analysis)
 - Internet connection (for fetching package metadata)
 
+## Important Note About Example Files
+
+This project contains intentionally outdated dependencies in the following directories:
+- `/examples/` 
+- `/dependabot_check/`
+
+These files contain dependencies with known vulnerabilities for testing and demonstration purposes. They serve as test cases for the Dependency Risk Profiler tool to identify and classify various risks. These dependencies are excluded from Dependabot alerts via configuration in `.github/dependabot.yml`.
+
+**⚠️ WARNING: DO NOT use these example dependencies in production environments.**
+
 ## Development
 
 ```bash

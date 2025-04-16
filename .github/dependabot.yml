@@ -1,0 +1,37 @@
+# Dependabot configuration file
+# See documentation: https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Ignore all example and test dependencies as they're intentionally outdated for demonstration
+      - dependency-name: "*"
+        paths:
+          - "examples/**"
+          - "dependabot_check/**"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Ignore all example and test dependencies as they're intentionally outdated for demonstration
+      - dependency-name: "*"
+        paths:
+          - "examples/**"
+          - "dependabot_check/**"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Ignore all example and test dependencies as they're intentionally outdated for demonstration
+      - dependency-name: "*"
+        paths:
+          - "examples/**"
+          - "dependabot_check/**"
