@@ -5,6 +5,12 @@ import sys
 import json
 from datetime import datetime, timedelta
 
+
+import sys
+import os
+
+# Add the parent directory to the path to make imports work 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from src.dependency_risk_profiler.models import (
     ProjectRiskProfile,
     DependencyRiskScore,

@@ -4,11 +4,34 @@ import argparse
 import sys
 from typing import Optional
 
+
+import sys
+import os
+
+# Add the parent directory to the path to make imports work 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from src.dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from src.dependency_risk_profiler.vulnerabilities.aggregator import aggregate_vulnerability_data
 
+def test_vulnerability_aggregator_basic():
+    """Basic test for the vulnerability aggregator."""
+    # Create a test dependency with a safe package
+    package_name = "pytest"  # Using a common package that's likely safe
+    dependency = DependencyMetadata(
+        name=package_name,
+        installed_version="7.0.0",
+        security_metrics=SecurityMetrics()
+    )
+    
+    # Run the aggregator
+    updated_dep, vulnerabilities = aggregate_vulnerability_data(dependency)
+    
+    # Basic assertions - mainly we're just checking it runs without errors
+    assert updated_dep is not None
+    assert isinstance(vulnerabilities, list)
 
-def test_vuln_aggregator(
+
+def vuln_aggregator_test_func(
     package_name: str, 
     ecosystem: str = "python", 
     github_token: Optional[str] = None,
@@ -96,7 +119,7 @@ def main() -> int:
     
     args = parser.parse_args()
     
-    test_vuln_aggregator(
+    vuln_aggregator_test_func(
         args.package_name,
         args.ecosystem,
         args.github_token,

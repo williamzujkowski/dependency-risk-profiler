@@ -5,6 +5,18 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+import sys
+import os
+
+# Add the parent directory to the path to make imports work 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+
+import sys
+import os
+
+# Add the parent directory to the path to make imports work 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from src.dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from src.dependency_risk_profiler.scorecard.security_policy import check_security_policy
 from src.dependency_risk_profiler.scoring.risk_scorer import RiskScorer

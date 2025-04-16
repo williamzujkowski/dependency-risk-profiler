@@ -3,6 +3,12 @@
 import logging
 import shutil
 
+
+import sys
+import os
+
+# Add the parent directory to the path to make imports work 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from src.dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from src.dependency_risk_profiler.scorecard.signed_commits import check_signed_commits
 from src.dependency_risk_profiler.scorecard.branch_protection import check_branch_protection
