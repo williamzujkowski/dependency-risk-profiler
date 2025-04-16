@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 class NodeJSAnalyzer(BaseAnalyzer):
     """Analyzer for Node.js dependencies."""
     
+    def __init__(self, timeout: int = 30):
+        """Initialize the analyzer.
+        
+        Args:
+            timeout: HTTP request timeout in seconds.
+        """
+        super().__init__(timeout)
+        # Cache for package metadata
+        self.metadata_cache = {}
+    
     def analyze(self, dependencies: Dict[str, DependencyMetadata]) -> Dict[str, DependencyMetadata]:
         """Analyze Node.js dependencies and collect metadata.
         
@@ -37,6 +47,9 @@ class NodeJSAnalyzer(BaseAnalyzer):
             try:
                 # Get npm package information
                 npm_data = self._get_npm_package_info(name)
+                # Store in cache for other analyzers to use
+                if npm_data:
+                    self.metadata_cache[name] = npm_data
                 
                 if npm_data:
                     # Update metadata from npm

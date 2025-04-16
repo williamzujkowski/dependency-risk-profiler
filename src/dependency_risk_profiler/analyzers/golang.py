@@ -20,6 +20,16 @@ logger = logging.getLogger(__name__)
 class GoAnalyzer(BaseAnalyzer):
     """Analyzer for Go dependencies."""
     
+    def __init__(self, timeout: int = 30):
+        """Initialize the analyzer.
+        
+        Args:
+            timeout: HTTP request timeout in seconds.
+        """
+        super().__init__(timeout)
+        # Cache for package metadata
+        self.metadata_cache = {}
+    
     def analyze(self, dependencies: Dict[str, DependencyMetadata]) -> Dict[str, DependencyMetadata]:
         """Analyze Go dependencies and collect metadata.
         
@@ -37,6 +47,11 @@ class GoAnalyzer(BaseAnalyzer):
                 latest_version = self._get_latest_version(name)
                 if latest_version:
                     dep.latest_version = latest_version
+                    # Store minimal metadata in cache
+                    self.metadata_cache[name] = {
+                        "name": name,
+                        "latest_version": latest_version
+                    }
                 
                 # Check if GitHub repository
                 if "github.com" in name:

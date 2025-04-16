@@ -151,39 +151,71 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
     Returns:
         Tuple of (has_tests, has_ci, has_contribution_guidelines).
     """
-    repo_path = Path(repo_dir)
-    
-    # Check for tests
-    test_patterns = ["test", "spec", "tests", "specs"]
-    has_tests = any(
-        any(p.name.lower().startswith(pattern) for pattern in test_patterns)
-        for p in repo_path.glob("**/*")
-        if p.is_dir() and not p.name.startswith(".")
-    )
-    if not has_tests:
-        # Also check for test files directly
-        has_tests = any(
-            any(p.name.lower().startswith(pattern) or p.name.lower().endswith(f"_{pattern}.py") or p.name.lower().endswith(f".{pattern}.js"))
-            for pattern in test_patterns
-            for p in repo_path.glob("**/*")
-            if p.is_file() and not p.name.startswith(".")
-        )
-    
-    # Check for CI configuration
-    ci_files = [
-        ".travis.yml", ".circleci/config.yml", ".github/workflows", "azure-pipelines.yml",
-        ".gitlab-ci.yml", "Jenkinsfile", "appveyor.yml", ".drone.yml"
-    ]
-    has_ci = any(repo_path.joinpath(file).exists() for file in ci_files) or repo_path.joinpath(".github").joinpath("workflows").exists()
-    
-    # Check for contribution guidelines
-    contribution_files = [
-        "CONTRIBUTING.md", "CONTRIBUTING.rst", "CONTRIBUTE.md", ".github/CONTRIBUTING.md",
-        "docs/CONTRIBUTING.md", "docs/contributing.md", "DEVELOPMENT.md", "HACKING.md"
-    ]
-    has_contribution_guidelines = any(repo_path.joinpath(file).exists() for file in contribution_files)
-    
-    return has_tests, has_ci, has_contribution_guidelines
+    try:
+        repo_path = Path(repo_dir)
+        
+        # Check for tests
+        test_patterns = ["test", "spec", "tests", "specs"]
+        has_tests = False
+        
+        # Check for test directories
+        for pattern in test_patterns:
+            for p in repo_path.glob("**/*"):
+                if p.is_dir() and not p.name.startswith(".") and pattern in p.name.lower():
+                    has_tests = True
+                    break
+            if has_tests:
+                break
+                
+        # Also check for test files directly if no test directories found
+        if not has_tests:
+            for p in repo_path.glob("**/*"):
+                if p.is_file() and not p.name.startswith("."):
+                    filename = p.name.lower()
+                    if any(pattern in filename for pattern in test_patterns):
+                        has_tests = True
+                        break
+        
+        # Check for CI configuration
+        ci_files = [
+            ".travis.yml", ".circleci/config.yml", "azure-pipelines.yml",
+            ".gitlab-ci.yml", "Jenkinsfile", "appveyor.yml", ".drone.yml"
+        ]
+        has_ci = False
+        
+        # Check individual CI files
+        for file in ci_files:
+            if repo_path.joinpath(file).exists():
+                has_ci = True
+                break
+                
+        # Check for GitHub workflows
+        if not has_ci and repo_path.joinpath(".github").exists():
+            if repo_path.joinpath(".github").joinpath("workflows").exists():
+                has_ci = True
+        
+        # Check for contribution guidelines
+        contribution_files = [
+            "CONTRIBUTING.md", "CONTRIBUTING.rst", "CONTRIBUTE.md",
+            "docs/CONTRIBUTING.md", "docs/contributing.md", "DEVELOPMENT.md", "HACKING.md"
+        ]
+        has_contribution_guidelines = False
+        
+        # Check individual contribution files
+        for file in contribution_files:
+            if repo_path.joinpath(file).exists():
+                has_contribution_guidelines = True
+                break
+                
+        # Check for GitHub contribution guidelines
+        if not has_contribution_guidelines and repo_path.joinpath(".github").exists():
+            if repo_path.joinpath(".github").joinpath("CONTRIBUTING.md").exists():
+                has_contribution_guidelines = True
+        
+        return has_tests, has_ci, has_contribution_guidelines
+    except Exception as e:
+        logger.error(f"Error checking health indicators: {e}")
+        return False, False, False
 
 
 def check_for_vulnerabilities(package_name: str, ecosystem: str) -> bool:

@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 class PythonAnalyzer(BaseAnalyzer):
     """Analyzer for Python dependencies."""
     
+    def __init__(self, timeout: int = 30):
+        """Initialize the analyzer.
+        
+        Args:
+            timeout: HTTP request timeout in seconds.
+        """
+        super().__init__(timeout)
+        # Cache for package metadata
+        self.metadata_cache = {}
+    
     def analyze(self, dependencies: Dict[str, DependencyMetadata]) -> Dict[str, DependencyMetadata]:
         """Analyze Python dependencies and collect metadata.
         
@@ -37,6 +47,9 @@ class PythonAnalyzer(BaseAnalyzer):
             try:
                 # Get PyPI package information
                 pypi_data = self._get_pypi_package_info(name)
+                # Store in cache for other analyzers to use
+                if pypi_data:
+                    self.metadata_cache[name] = pypi_data
                 
                 if pypi_data:
                     # Update latest version

@@ -222,8 +222,23 @@ class JsonFormatter(BaseFormatter):
             "dependencies": [self._format_dependency(dep) for dep in profile.dependencies],
         }
         
-        # Convert to JSON
-        return json.dumps(profile_dict, indent=2)
+        # Convert to JSON with datetime handling
+        return json.dumps(profile_dict, indent=2, default=self._json_serializer)
+    
+    def _json_serializer(self, obj):
+        """Custom JSON serializer for objects not serializable by default.
+        
+        Args:
+            obj: Object to serialize.
+            
+        Returns:
+            Serialized object.
+        """
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        raise TypeError(f"Type {type(obj)} not serializable")
     
     def _format_dependency(self, dep: DependencyRiskScore) -> Dict:
         """Format dependency risk score as dict.

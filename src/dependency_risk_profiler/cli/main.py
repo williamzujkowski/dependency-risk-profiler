@@ -203,10 +203,18 @@ def main() -> int:
             from ..transitive.analyzer import analyze_transitive_dependencies
             
             logger.info("Analyzing license information")
-            # License analysis would be performed on each dependency with metadata
+            # Apply license analysis to each dependency
+            for name, dep in dependencies.items():
+                if hasattr(analyzer, 'metadata_cache') and name in analyzer.metadata_cache:
+                    dependencies[name] = analyze_license(dep, analyzer.metadata_cache[name])
             
             logger.info("Analyzing community metrics")
-            # Community metrics analysis would be performed on each dependency
+            # Apply community metrics analysis to each dependency
+            for name, dep in dependencies.items():
+                if hasattr(analyzer, 'metadata_cache') and name in analyzer.metadata_cache:
+                    dependencies[name] = analyze_community_metrics(dep, analyzer.metadata_cache[name])
+                else:
+                    dependencies[name] = analyze_community_metrics(dep)
             
             logger.info("Analyzing transitive dependencies")
             dependencies = analyze_transitive_dependencies(dependencies, manifest_path)
