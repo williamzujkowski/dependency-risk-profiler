@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 
 from ..analyzers.base import BaseAnalyzer
 from ..parsers.base import BaseParser
@@ -24,6 +25,34 @@ def setup_logging(debug: bool = False) -> None:
     )
 
 
+def display_ecosystem_list() -> None:
+    """Display a list of supported ecosystems and file types."""
+    try:
+        from ..parsers.registry import EcosystemRegistry
+        from ..parsers.base import BaseParser
+        
+        # If the registry is empty, initialize it with built-in parsers
+        if not EcosystemRegistry.get_available_ecosystems():
+            BaseParser._initialize_registry()
+        
+        # Get ecosystem details
+        ecosystem_details = EcosystemRegistry.get_ecosystem_details()
+        
+        if ecosystem_details:
+            print("\nSupported ecosystems and file types:")
+            for ecosystem, details in ecosystem_details.items():
+                print(f"\n- {ecosystem.capitalize()}:")
+                for pattern in details.get('file_patterns', []):
+                    print(f"  • {pattern}")
+        else:
+            print("\nNo ecosystems are registered.")
+            
+    except ImportError as e:
+        print(f"\nError: Registry module not available: {e}")
+    except Exception as e:
+        print(f"\nError displaying available ecosystems: {e}")
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments.
     
@@ -38,9 +67,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--manifest",
         "-m",
-        required=True,
         help="Path to the dependency manifest file (e.g., package-lock.json, "
-        "requirements.txt, go.mod).",
+        "requirements.txt, go.mod, pyproject.toml, Cargo.toml). "
+        "Required unless --list-ecosystems is specified.",
+    )
+    
+    parser.add_argument(
+        "--list-ecosystems",
+        action="store_true",
+        help="List all supported ecosystems and file types.",
     )
     
     parser.add_argument(
@@ -215,6 +250,18 @@ def parse_args() -> argparse.Namespace:
         help="NVD API key for NVD vulnerability source.",
     )
     
+    vuln_group.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable caching of vulnerability data.",
+    )
+    
+    vuln_group.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear the vulnerability cache before running.",
+    )
+    
     return parser.parse_args()
 
 
@@ -227,6 +274,22 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
     Returns:
         Ecosystem name.
     """
+    try:
+        from ..parsers.registry import EcosystemRegistry
+        
+        # If the registry is empty, initialize it with built-in parsers
+        from ..parsers.base import BaseParser
+        if not EcosystemRegistry.get_available_ecosystems():
+            BaseParser._initialize_registry()
+        
+        # Detect the ecosystem using the registry
+        ecosystem = EcosystemRegistry.detect_ecosystem(Path(manifest_path))
+        if ecosystem:
+            return ecosystem
+    except ImportError:
+        pass  # Fall back to the default implementation
+    
+    # Fallback implementation if registry is not available or doesn't match
     file_name = os.path.basename(manifest_path).lower()
     
     if file_name == "package-lock.json":
@@ -235,6 +298,8 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "python"
     elif file_name == "go.mod":
         return "golang"
+    elif file_name in ["pyproject.toml", "cargo.toml"] or file_name.endswith(".toml"):
+        return "toml"
     else:
         return "unknown"
 
@@ -250,6 +315,17 @@ def main() -> int:
     
     logger = logging.getLogger(__name__)
     
+    # Handle --list-ecosystems argument
+    if args.list_ecosystems:
+        display_ecosystem_list()
+        return 0
+    
+    # Check if manifest argument is provided
+    if not args.manifest:
+        print("Error: the --manifest argument is required unless --list-ecosystems is specified.")
+        print("Run with --list-ecosystems to see all supported ecosystems and file types.")
+        return 1
+    
     try:
         # Parse manifest file
         manifest_path = os.path.abspath(args.manifest)
@@ -258,6 +334,10 @@ def main() -> int:
         parser = BaseParser.get_parser_for_file(manifest_path)
         if not parser:
             logger.error(f"Unsupported manifest file: {manifest_path}")
+            
+            # Display available ecosystems and supported file types
+            display_ecosystem_list()
+            print("\nPlease provide a supported manifest file.")
             return 1
         
         dependencies = parser.parse()
@@ -272,6 +352,8 @@ def main() -> int:
         analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(ecosystem)
         if not analyzer:
             logger.error(f"Unsupported ecosystem: {ecosystem}")
+            print(f"\nThe ecosystem '{ecosystem}' was detected for {manifest_path}, but no analyzer is available for it.")
+            print("Please check if you have all required analyzers installed.")
             return 1
         
         logger.info(f"Analyzing dependencies for {ecosystem}")
@@ -307,6 +389,20 @@ def main() -> int:
                     from ..vulnerabilities.aggregator import aggregate_vulnerability_data
                     
                     logger.info("Aggregating vulnerability data from multiple sources")
+                    
+                    # Handle cache settings
+                    if args.no_cache:
+                        # Set environment variable to disable cache
+                        os.environ["DEPENDENCY_RISK_DISABLE_CACHE"] = "1"
+                        logger.info("Vulnerability data caching is disabled")
+                    
+                    if args.clear_cache:
+                        try:
+                            from ..vulnerabilities.cache import default_cache
+                            cleared = default_cache.clear()
+                            logger.info(f"Cleared {cleared} entries from vulnerability cache")
+                        except ImportError:
+                            logger.warning("Vulnerability cache module not available")
                     
                     # Configure API keys
                     api_keys = {}

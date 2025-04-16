@@ -1,8 +1,12 @@
 """
 Vulnerability data aggregator module that collects and normalizes vulnerability
 information from multiple sources.
+
+This module aggregates vulnerability data from OSV, NVD, and GitHub Advisory Database,
+and caches the results to disk to reduce the number of API calls.
 """
 import logging
+import os
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any, Union
@@ -10,13 +14,17 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 import requests
 
 from ..models import DependencyMetadata
+from .cache import default_cache as disk_cache
 
 logger = logging.getLogger(__name__)
 
 # Cache settings
 CACHE_EXPIRY = 24 * 60 * 60  # 24 hours in seconds
-VULNERABILITY_CACHE = {}  # In-memory cache
+VULNERABILITY_CACHE = {}  # In-memory cache (for backward compatibility)
 
+# Get cache settings from environment variables
+USE_DISK_CACHE = os.environ.get("DEPENDENCY_RISK_DISABLE_CACHE", "0").lower() not in ("1", "true", "yes", "disable")
+DISK_CACHE_EXPIRY = int(os.environ.get("DEPENDENCY_RISK_CACHE_EXPIRY", str(CACHE_EXPIRY)))
 
 class VulnerabilitySource:
     """Base class for vulnerability data sources."""
@@ -58,28 +66,61 @@ class VulnerabilitySource:
         """
         raise NotImplementedError("Subclasses must implement _normalize_results")
     
-    def _make_request(self, url: str, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        """Make an HTTP request to the vulnerability API.
+    def _make_request(self, url: str, params: Optional[Dict[str, Any]] = None, 
+                   max_retries: int = 3, backoff_factor: float = 0.5) -> Optional[Dict[str, Any]]:
+        """Make an HTTP request to the vulnerability API with exponential backoff retry.
         
         Args:
             url: URL to request
             params: Query parameters
-            
+            max_retries: Maximum number of retry attempts (default: 3)
+            backoff_factor: Backoff factor for retries (default: 0.5)
+                The sleep time between retries is: {backoff_factor} * (2 ^ (retry_number - 1))
+                
         Returns:
             JSON response data or None if the request failed
         """
-        try:
-            headers = {
-                "User-Agent": "dependency-risk-profiler/0.2.0",
-                "Accept": "application/json"
-            }
-            
-            response = requests.get(url, params=params, headers=headers, timeout=self.timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            logger.debug(f"Error fetching data from {url}: {e}")
-            return None
+        headers = {
+            "User-Agent": "dependency-risk-profiler/0.2.0",
+            "Accept": "application/json"
+        }
+        
+        for retry in range(max_retries + 1):
+            try:
+                if retry > 0:
+                    # Calculate delay with exponential backoff
+                    delay = backoff_factor * (2 ** (retry - 1))
+                    logger.debug(f"Retry {retry}/{max_retries} for {url} after {delay:.2f}s delay")
+                    time.sleep(delay)
+                
+                response = requests.get(url, params=params, headers=headers, timeout=self.timeout)
+                response.raise_for_status()
+                return response.json()
+                
+            except requests.HTTPError as e:
+                # Don't retry on 4xx client errors (except 429 Too Many Requests)
+                if e.response.status_code >= 400 and e.response.status_code < 500 and e.response.status_code != 429:
+                    logger.debug(f"Client error ({e.response.status_code}) fetching data from {url}: {e}")
+                    return None
+                
+                if retry == max_retries:
+                    logger.debug(f"Max retries reached for {url}: {e}")
+                    return None
+                
+                logger.debug(f"HTTP error fetching data from {url} (attempt {retry+1}/{max_retries+1}): {e}")
+                
+            except (requests.ConnectionError, requests.Timeout) as e:
+                if retry == max_retries:
+                    logger.debug(f"Max retries reached for {url}: {e}")
+                    return None
+                
+                logger.debug(f"Connection error fetching data from {url} (attempt {retry+1}/{max_retries+1}): {e}")
+                
+            except Exception as e:
+                logger.debug(f"Unexpected error fetching data from {url}: {e}")
+                return None
+        
+        return None
 
 
 class OSVSource(VulnerabilitySource):
@@ -118,21 +159,54 @@ class OSVSource(VulnerabilitySource):
             }
         }
         
-        try:
-            response = requests.post(
-                query_url,
-                json=query_data,
-                headers={"Content-Type": "application/json"},
-                timeout=self.timeout
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            vulns = data.get("vulns", [])
-            return self._normalize_results(vulns)
-        except requests.RequestException as e:
-            logger.debug(f"Error fetching OSV data for {package_name}: {e}")
-            return []
+        # Use retry mechanism for POST requests
+        max_retries = 3
+        backoff_factor = 0.5
+        
+        for retry in range(max_retries + 1):
+            try:
+                if retry > 0:
+                    # Calculate delay with exponential backoff
+                    delay = backoff_factor * (2 ** (retry - 1))
+                    logger.debug(f"Retry {retry}/{max_retries} for OSV query after {delay:.2f}s delay")
+                    time.sleep(delay)
+                
+                response = requests.post(
+                    query_url,
+                    json=query_data,
+                    headers={"Content-Type": "application/json"},
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                vulns = data.get("vulns", [])
+                return self._normalize_results(vulns)
+                
+            except requests.HTTPError as e:
+                # Don't retry on 4xx client errors (except 429 Too Many Requests)
+                if e.response.status_code >= 400 and e.response.status_code < 500 and e.response.status_code != 429:
+                    logger.debug(f"Client error ({e.response.status_code}) fetching OSV data for {package_name}: {e}")
+                    return []
+                
+                if retry == max_retries:
+                    logger.debug(f"Max retries reached for OSV query: {e}")
+                    return []
+                
+                logger.debug(f"HTTP error fetching OSV data for {package_name} (attempt {retry+1}/{max_retries+1}): {e}")
+                
+            except (requests.ConnectionError, requests.Timeout) as e:
+                if retry == max_retries:
+                    logger.debug(f"Max retries reached for OSV query: {e}")
+                    return []
+                
+                logger.debug(f"Connection error fetching OSV data for {package_name} (attempt {retry+1}/{max_retries+1}): {e}")
+                
+            except Exception as e:
+                logger.debug(f"Unexpected error fetching OSV data for {package_name}: {e}")
+                return []
+        
+        return []
     
     def _normalize_ecosystem(self, ecosystem: str) -> str:
         """Normalize ecosystem names to OSV format.
@@ -441,33 +515,70 @@ class GitHubAdvisorySource(VulnerabilitySource):
             "ecosystem": gh_ecosystem
         }
         
-        # Make the request
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.api_token}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.post(
-                self.base_url,
-                json={"query": query, "variables": variables},
-                headers=headers,
-                timeout=self.timeout
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            if "errors" in data:
-                logger.debug(f"GraphQL errors: {data['errors']}")
-                return []
-            
-            # Extract vulnerability data
-            vulnerabilities = data.get("data", {}).get("securityVulnerabilities", {}).get("nodes", [])
-            return self._normalize_results(vulnerabilities)
+        # Make the request with retry mechanism
+        max_retries = 3
+        backoff_factor = 0.5
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+            "Content-Type": "application/json"
+        }
         
-        except requests.RequestException as e:
-            logger.debug(f"Error fetching GitHub Advisory data for {package_name}: {e}")
-            return []
+        for retry in range(max_retries + 1):
+            try:
+                if retry > 0:
+                    # Calculate delay with exponential backoff
+                    delay = backoff_factor * (2 ** (retry - 1))
+                    logger.debug(f"Retry {retry}/{max_retries} for GitHub Advisory query after {delay:.2f}s delay")
+                    time.sleep(delay)
+                
+                response = requests.post(
+                    self.base_url,
+                    json={"query": query, "variables": variables},
+                    headers=headers,
+                    timeout=self.timeout
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                if "errors" in data:
+                    error_message = str(data.get("errors", []))
+                    logger.debug(f"GraphQL errors: {error_message}")
+                    
+                    # Check for rate limiting errors
+                    if "rate limit" in error_message.lower() and retry < max_retries:
+                        # This is a rate limit error, retry with backoff
+                        continue
+                    
+                    return []
+                
+                # Extract vulnerability data
+                vulnerabilities = data.get("data", {}).get("securityVulnerabilities", {}).get("nodes", [])
+                return self._normalize_results(vulnerabilities)
+                
+            except requests.HTTPError as e:
+                # Don't retry on 4xx client errors (except 429 Too Many Requests)
+                if e.response.status_code >= 400 and e.response.status_code < 500 and e.response.status_code != 429:
+                    logger.debug(f"Client error ({e.response.status_code}) fetching GitHub Advisory data for {package_name}: {e}")
+                    return []
+                
+                if retry == max_retries:
+                    logger.debug(f"Max retries reached for GitHub Advisory query: {e}")
+                    return []
+                
+                logger.debug(f"HTTP error fetching GitHub Advisory data for {package_name} (attempt {retry+1}/{max_retries+1}): {e}")
+                
+            except (requests.ConnectionError, requests.Timeout) as e:
+                if retry == max_retries:
+                    logger.debug(f"Max retries reached for GitHub Advisory query: {e}")
+                    return []
+                
+                logger.debug(f"Connection error fetching GitHub Advisory data for {package_name} (attempt {retry+1}/{max_retries+1}): {e}")
+                
+            except Exception as e:
+                logger.debug(f"Unexpected error fetching GitHub Advisory data for {package_name}: {e}")
+                return []
+        
+        return []
     
     def _normalize_ecosystem(self, ecosystem: str) -> str:
         """Normalize ecosystem names to GitHub's format.
@@ -609,30 +720,53 @@ def get_cache_key(package_name: str, ecosystem: str) -> str:
 def get_cached_data(package_name: str, ecosystem: str) -> Optional[Tuple[List[Dict[str, Any]], float]]:
     """Get cached vulnerability data for a package.
     
+    This function first checks the disk cache, and falls back to the in-memory cache.
+    
     Args:
         package_name: Package name
         ecosystem: Package ecosystem
         
     Returns:
-        Tuple of (vulnerability data, timestamp) or None if not cached
+        Tuple of (vulnerability data, timestamp) or None if not cached or expired
     """
+    # Check environment variable directly
+    if os.environ.get("DEPENDENCY_RISK_DISABLE_CACHE", "0") == "1":
+        logger.info(f"Cache disabled by environment variable, skipping cache lookup for {package_name}")
+        return None
+        
+    # First, try the disk cache if enabled
+    if USE_DISK_CACHE:
+        disk_cache_result = disk_cache.get(package_name, ecosystem)
+        if disk_cache_result:
+            return disk_cache_result
+
+    # Fall back to in-memory cache
     key = get_cache_key(package_name, ecosystem)
     if key in VULNERABILITY_CACHE:
         data, timestamp = VULNERABILITY_CACHE[key]
         # Check if the cache is still valid
         if time.time() - timestamp < CACHE_EXPIRY:
+            logger.debug(f"Serving vulnerability data for {package_name} from memory cache")
             return data, timestamp
+            
     return None
 
 
 def cache_data(package_name: str, ecosystem: str, data: List[Dict[str, Any]]) -> None:
     """Cache vulnerability data for a package.
     
+    This function stores the data in both the disk cache and in-memory cache.
+    
     Args:
         package_name: Package name
         ecosystem: Package ecosystem
         data: Vulnerability data to cache
     """
+    # Save to disk cache if enabled
+    if USE_DISK_CACHE:
+        disk_cache.set(package_name, ecosystem, data)
+    
+    # Also save to in-memory cache for backward compatibility
     key = get_cache_key(package_name, ecosystem)
     VULNERABILITY_CACHE[key] = (data, time.time())
 

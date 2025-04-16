@@ -1,10 +1,13 @@
 """Base parser interface for dependency manifests."""
 import os
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List, ClassVar, Type
 
 from ..models import DependencyMetadata
+
+logger = logging.getLogger(__name__)
 
 
 class BaseParser(ABC):
@@ -41,50 +44,69 @@ class BaseParser(ABC):
         Returns:
             An instance of the appropriate parser, or None if no parser matches.
         """
+        # Use the registry to get the appropriate parser
+        from .registry import EcosystemRegistry
+        
+        # If the registry is empty, initialize it with built-in parsers
+        if not EcosystemRegistry.get_available_ecosystems():
+            BaseParser._initialize_registry()
+        
+        return EcosystemRegistry.get_parser_for_file(manifest_path)
+    
+    @staticmethod
+    def _initialize_registry() -> None:
+        """Initialize the ecosystem registry with built-in parsers."""
         from .nodejs import NodeJSParser
         from .python import PythonParser
         from .golang import GoParser
         from .toml import TomlParser
-
-        file_name = os.path.basename(manifest_path).lower()
+        from .registry import EcosystemRegistry
         
-        # Check if file exists (important for tests with temporary files)
-        if not os.path.exists(manifest_path):
-            return None
-            
-        # Check for matching file patterns
-        if "package-lock" in file_name and file_name.endswith(".json"):
-            return NodeJSParser(manifest_path)
-        elif "requirements" in file_name and file_name.endswith(".txt"):
-            return PythonParser(manifest_path)
-        elif "pipfile.lock" in file_name.lower():
-            return PythonParser(manifest_path)
-        elif file_name.endswith(".mod") and ("go" in file_name or "go.mod" in manifest_path.lower()):
-            return GoParser(manifest_path)
-        elif file_name in ["pyproject.toml", "cargo.toml"] or "pyproject.toml" in file_name.lower() or "cargo.toml" in file_name.lower():
-            return TomlParser(manifest_path)
-            
-        # Check for file extensions as a fallback
-        elif file_name.endswith(".json"):
-            # Check content for package-lock structure
-            try:
-                with open(manifest_path, 'r') as f:
-                    first_chunk = f.read(1000)  # Read first 1000 chars
-                    if '"lockfileVersion"' in first_chunk and ('"dependencies"' in first_chunk or '"packages"' in first_chunk):
-                        return NodeJSParser(manifest_path)
-            except:
-                pass
-        elif file_name.endswith(".lock"):
-            # Check if it's a Pipfile.lock
-            try:
-                with open(manifest_path, 'r') as f:
-                    first_chunk = f.read(1000)
-                    if '"_meta"' in first_chunk and ('"pipfile"' in first_chunk or '"sources"' in first_chunk):
-                        return PythonParser(manifest_path)
-            except:
-                pass
-        elif file_name.endswith(".toml"):
-            # For other TOML files, try to parse as a generic TOML file
-            return TomlParser(manifest_path)
-            
-        return None
+        # Register Node.js parser
+        EcosystemRegistry.register_parser(
+            'nodejs',
+            NodeJSParser,
+            [
+                {'type': 'filename', 'pattern': 'package-lock.json'},
+                {'type': 'extension', 'pattern': '.json', 
+                 'matcher_fn': lambda path: 'package-lock' in path.lower()},
+                {'type': 'content', 'pattern': r'"lockfileVersion".*"dependencies"'},
+            ]
+        )
+        
+        # Register Python parser
+        EcosystemRegistry.register_parser(
+            'python',
+            PythonParser,
+            [
+                {'type': 'filename', 'pattern': 'requirements.txt'},
+                {'type': 'filename', 'pattern': 'pipfile.lock'},
+                {'type': 'extension', 'pattern': '.txt', 
+                 'matcher_fn': lambda path: 'requirements' in path.lower()},
+                {'type': 'content', 'pattern': r'"_meta".*"pipfile"'},
+            ]
+        )
+        
+        # Register Go parser
+        EcosystemRegistry.register_parser(
+            'golang',
+            GoParser,
+            [
+                {'type': 'filename', 'pattern': 'go.mod'},
+                {'type': 'extension', 'pattern': '.mod', 
+                 'matcher_fn': lambda path: 'go' in path.lower()},
+            ]
+        )
+        
+        # Register TOML parser
+        EcosystemRegistry.register_parser(
+            'toml',
+            TomlParser,
+            [
+                {'type': 'filename', 'pattern': 'pyproject.toml'},
+                {'type': 'filename', 'pattern': 'cargo.toml'},
+                {'type': 'extension', 'pattern': '.toml'},
+            ]
+        )
+        
+        logger.debug(f"Initialized ecosystem registry with built-in parsers: {EcosystemRegistry.get_available_ecosystems()}")
