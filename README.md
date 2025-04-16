@@ -24,6 +24,9 @@ A command-line tool that goes beyond traditional vulnerability scanners to asses
 - 🔐 **Security Best Practices**: Analyze security policies, dependency update tools, signed commits, and branch protection
 - 📈 **Historical Trend Analysis**: Track changes in risk metrics over time for better decision making
 - 🌐 **Supply Chain Visualization**: Generate dependency graphs to visualize relationships and risk
+- 🔍 **Multi-Source Vulnerability Aggregation**: Collect vulnerability data from OSV, NVD, and GitHub Advisory
+- 🔏 **Secure Code Signing**: Sign release artifacts with robust cryptographic protections and timestamping
+- 📦 **Secure Release Management**: Automate versioning, packaging, signing, and release notes generation
 
 ## Installation
 
@@ -169,6 +172,27 @@ dependency-risk-profiler --manifest /path/to/package-lock.json --generate-graph 
 
 ```bash
 dependency-risk-profiler --manifest /path/to/package-lock.json --debug
+```
+
+### Secure Code Signing and Release Management
+
+The package includes advanced security features for code signing and release management:
+
+```bash
+# Sign an artifact
+python -m dependency_risk_profiler.secure_release.code_signing artifact.zip --build-id my-build-123 --mode release
+
+# Verify a signature
+python -m dependency_risk_profiler.secure_release.code_signing artifact.zip --verify artifact.zip.sig
+
+# Create a release with automatic version bumping and signing
+python -m dependency_risk_profiler.secure_release.release_management --source-dir . --version-file pyproject.toml --output-dir ./dist
+
+# Run a comprehensive release build process
+python -m dependency_risk_profiler.secure_release.release_build --repo https://github.com/username/dependency-risk-profiler.git --output-dir ./dist --mode production
+
+# Run the demo script to see it all in action
+python examples/secure_release_demo.py
 ```
 
 ## Example Output
