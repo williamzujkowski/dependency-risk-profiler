@@ -1,23 +1,42 @@
-# Tests Directory
+# Testing Documentation
 
-This directory contains tests for the Dependency Risk Profiler project.
+This directory contains all the test code for the Dependency Risk Profiler project.
+
+## Overview
+
+The test suite follows the Minimal Testing Manifesto defined in `TESTING_STANDARDS.md` and includes:
+
+1. Hypothesis Tests for Behavior Validation
+2. Regression Tests for Known Fail States  
+3. Benchmark Tests with SLA Enforcement
+4. Grammatical Evolution for Fuzzing + Edge Discovery
+5. Structured Logs for Agent Feedback
 
 ## Directory Structure
 
 - `integration/` - Integration tests that test multiple components working together
 - `conftest.py` - Pytest configuration and fixtures
-- Unit tests for specific components:
+- **Unit Tests**
   - `test_parsers.py` - Tests for manifest file parsers
   - `test_scoring.py` - Tests for risk scoring logic
   - `test_toml_parser.py` and variants - Tests for TOML file parsing
   - `test_vulnerability_cache.py` - Tests for the vulnerability caching system
   - `test_vulnerability_aggregator_with_cache.py` - Tests for vulnerability aggregation with caching
+- **Comprehensive Tests**
+  - `test_comprehensive_vulnerability_aggregator.py` - Full test suite for vulnerability aggregator
+  - `test_comprehensive_risk_scorer.py` - Full test suite for risk scoring system
 
 ## Running Tests
 
 From the project root directory:
 
 ```bash
+# Activate the virtual environment
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install the package in development mode
+pip install -e ".[dev]"
+
 # Run all tests
 pytest
 
@@ -31,5 +50,39 @@ pytest tests/integration/
 pytest --cov=src
 
 # Run specific test files
-pytest tests/test_parsers.py
+pytest tests/test_comprehensive_vulnerability_aggregator.py
+
+# Run tests with specific marker
+pytest -m benchmark
+
+# Run tests with verbose output
+pytest -v
 ```
+
+## Writing New Tests
+
+When writing new tests, follow these guidelines:
+
+1. **Follow the test categories** defined in `TESTING_STANDARDS.md`
+2. **Use descriptive test names** that document the behavior being tested
+3. **Include detailed docstrings** describing the purpose and expectations
+4. **Structure tests** with Arrange-Act-Assert pattern
+5. **Use mock objects** to isolate the code being tested
+6. **Test both positive and negative cases**
+7. **Include boundary conditions** in your test cases
+8. **Verify error handling behaviors**
+
+## Test Fixtures
+
+Common test fixtures are defined in `conftest.py`:
+
+- `sample_nodejs_manifest` - Sample Node.js package-lock.json
+- `sample_python_manifest` - Sample Python requirements.txt
+- `sample_golang_manifest` - Sample Go go.mod file
+- `sample_dependencies` - Dictionary of sample dependency metadata
+- `mock_env_vars` - Fixture to set/restore environment variables
+- `temp_cache_dir` - Temporary directory for cache testing
+
+## Implementation Details
+
+For more information on the test implementation approach, see `TESTING_IMPLEMENTATION.md` in the root directory.

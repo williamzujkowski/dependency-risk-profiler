@@ -29,17 +29,19 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "requests>=2.32.2",  # Fixed CVE-2024-35195
-        "packaging>=20.0",
-        "colorama>=0.4.4;platform_system=='Windows'",
-        "pyyaml>=6.0",
-        "matplotlib>=3.5.0",  # For potential visualization
-        "networkx>=2.8.0",    # For dependency graph analysis
-        "cryptography>=39.0.0",  # For secure code signing
+        "packaging>=23.2",
+        "colorama>=0.4.6;platform_system=='Windows'",
+        "pyyaml>=6.0.1",
+        "matplotlib>=3.8.3",  # For potential visualization
+        "networkx>=3.3",      # For dependency graph analysis
+        "cryptography>=42.0.0",  # For secure code signing, Fixed CVE-2023-50782 & others
         "urllib3>=2.2.2",     # Fixed CVE-2024-37891
         "jinja2>=3.1.5",      # Fixed CVE-2024-56201
         "certifi>=2024.7.4",  # Fixed CVE-2024-39689
         "werkzeug>=3.0.6",    # Fixed CVE-2024-49766, CVE-2024-49767
-        "tomli>=2.0.0;python_version<'3.11'",  # TOML parsing (builtin in Python 3.11+)
+        "tomli>=2.0.1;python_version<'3.11'",  # TOML parsing (builtin in Python 3.11+)
+        "pygments>=2.16.1",   # Fixed CVE-2023-41337
+        "pillow>=10.2.0",     # Fixed CVE-2023-50447, CVE-2024-35219, etc.
     ],
     entry_points={
         "console_scripts": [
@@ -59,12 +61,13 @@ setup(
     ],
     extras_require={
         "dev": [
-            "pytest>=7.0.0",
-            "pytest-cov>=2.12.0",
-            "black>=22.0.0",
-            "isort>=5.10.0",
-            "flake8>=4.0.0",
-            "mypy>=0.9.0",
+            "pytest>=7.4.4",
+            "pytest-cov>=4.1.0",
+            "black>=24.2.0",
+            "isort>=5.13.2",
+            "flake8>=7.0.0",
+            "mypy>=1.6.0",
+            "responses>=0.25.0",  # Added for HTTP mocking in tests
         ],
     },
 )

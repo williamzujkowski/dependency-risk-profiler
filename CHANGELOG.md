@@ -5,6 +5,27 @@ All notable changes to the Dependency Risk Profiler will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Comprehensive test suite following TESTING_STANDARDS.md:
+  - Hypothesis tests for behavior validation
+  - Regression tests for known fail states
+  - Benchmark tests with SLA enforcement
+  - Fuzzing tests for edge case discovery
+  - Structured logging tests for agent feedback
+
+### Changed
+
+- Added pytest-benchmark and numpy for performance testing
+- Updated docstrings and error handling in tests
+- Improved mocking and test coverage
+- Refactored test code for testability and maintainability
+- Fixed timezone handling in datetime comparisons
+- Implemented direct testing patterns to avoid complex mocking
+- Added proper benchmark test markers in pyproject.toml
+
 ## [0.2.0] - 2025-04-16
 
 ### Added
@@ -28,6 +49,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - jinja2: Updated to >=3.1.5 (fixes CVE-2024-56201)
   - certifi: Updated to >=2024.7.4 (fixes CVE-2024-39689)
   - werkzeug: Updated to >=3.0.6 (fixes CVE-2024-49766, CVE-2024-49767)
+  - cryptography: Updated to >=42.0.0 (fixes CVE-2023-50782 and others)
+  - pyyaml: Updated to >=6.0.1 (addresses potential vulnerabilities)
+  - pygments: Added >=2.16.1 (fixes CVE-2023-41337)
+  - pillow: Added >=10.2.0 (fixes CVE-2023-50447, CVE-2024-35219)
+- Updated development dependencies to secure versions:
+  - pytest: Updated to >=7.4.4
+  - pytest-cov: Updated to >=4.1.0
+  - black: Updated to >=24.2.0
+  - isort: Updated to >=5.13.2
+  - flake8: Updated to >=7.0.0
+  - mypy: Updated to >=1.6.0
+  - Added responses >=0.25.0 for HTTP mocking in tests
 
 ### Changed
 
