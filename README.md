@@ -5,7 +5,7 @@ A command-line tool that goes beyond traditional vulnerability scanners to asses
 ## Features
 
 ### Core Features
-- 🧰 **Multi-Ecosystem Support**: Analyze dependencies from Node.js, Python, and Go projects
+- 🧰 **Multi-Ecosystem Support**: Analyze dependencies from Node.js, Python, Go, and TOML-based projects (Poetry, Cargo, etc.)
 - 🔄 **Version Comparison**: Compare installed versions with the latest available versions
 - ⏱️ **Update Recency**: Check how long ago dependencies were last updated
 - 👥 **Maintainer Analysis**: Determine if dependencies are maintained by teams or individuals
@@ -95,6 +95,15 @@ dependency-risk-profiler --manifest /path/to/package-lock.json
 
 # Analyze a Python project
 dependency-risk-profiler --manifest /path/to/requirements.txt
+
+# Analyze a Python project with Pipfile.lock
+dependency-risk-profiler --manifest /path/to/Pipfile.lock
+
+# Analyze a Python project with pyproject.toml
+dependency-risk-profiler --manifest /path/to/pyproject.toml
+
+# Analyze a Rust project
+dependency-risk-profiler --manifest /path/to/Cargo.toml
 
 # Analyze a Go project
 dependency-risk-profiler --manifest /path/to/go.mod

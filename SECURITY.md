@@ -6,7 +6,8 @@ Only the latest version of the Dependency Risk Profiler is actively maintained a
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 0.2.x   | :white_check_mark: |
+| 0.1.x   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -44,6 +45,15 @@ Security updates are announced through:
 3. A note in the README.md for critical issues
 
 We recommend keeping your installation up to date with the latest releases.
+
+### Recent Security Updates
+
+- **2025-04-16 (v0.2.0)**: Updated dependency requirements to address the following vulnerabilities:
+  - requests: Updated to >=2.32.2 (fixes CVE-2024-35195)
+  - urllib3: Updated to >=2.2.2 (fixes CVE-2024-37891)
+  - jinja2: Updated to >=3.1.5 (fixes CVE-2024-56201)
+  - certifi: Updated to >=2024.7.4 (fixes CVE-2024-39689)
+  - werkzeug: Updated to >=3.0.6 (fixes CVE-2024-49766, CVE-2024-49767)
 
 ## Best Practices When Using This Tool
 
