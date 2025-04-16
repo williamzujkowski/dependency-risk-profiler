@@ -1,6 +1,6 @@
 """Parser for TOML dependency files."""
 import sys
-from typing import Dict, Any
+from typing import Dict, Any, List, Union
 
 from ..models import DependencyMetadata
 from .base import BaseParser
@@ -279,6 +279,10 @@ class TomlParser(BaseParser):
                 "tool.poetry.dev-dependencies",
             ]
             
+            # Also look for nested dependency patterns
+            nested_sections = self._find_nested_dependency_sections(data)
+            dependency_sections.extend(nested_sections)
+            
             for section in dependency_sections:
                 # Navigate nested sections (like tool.poetry.dependencies)
                 parts = section.split(".")
@@ -315,16 +319,50 @@ class TomlParser(BaseParser):
                         
                         version = self._extract_generic_version(version_info)
                         
+                        # Add dev/build/etc. flags based on section name
+                        additional_info = {"section": section}
+                        if "dev" in section:
+                            additional_info["dev_dependency"] = "true"
+                        if "build" in section:
+                            additional_info["build_dependency"] = "true"
+                            
                         dependencies[name] = DependencyMetadata(
                             name=name,
                             installed_version=version,
                             repository_url=None,  # Unknown repository
-                            additional_info={"section": section}
+                            additional_info=additional_info
                         )
             
             return dependencies
         except Exception as e:
             raise ValueError(f"Error parsing generic TOML file: {e}")
+    
+    def _find_nested_dependency_sections(self, data: Dict, prefix: str = "") -> List[str]:
+        """Find all nested sections that might contain dependencies.
+        
+        Args:
+            data: The TOML data dictionary
+            prefix: Prefix for nested keys
+            
+        Returns:
+            List of section paths that might contain dependencies
+        """
+        sections = []
+        
+        # Look for sections that are likely to contain dependencies
+        for key, value in data.items():
+            current_path = f"{prefix}.{key}" if prefix else key
+            
+            # If this is a "dependencies" section, add it
+            if "dependencies" in key.lower():
+                sections.append(current_path)
+            
+            # Recursively check nested dictionaries
+            if isinstance(value, dict):
+                nested_sections = self._find_nested_dependency_sections(value, current_path)
+                sections.extend(nested_sections)
+        
+        return sections
     
     def _parse_dependency_string(self, dep_string: str) -> tuple:
         """Parse a dependency string into name and version.
@@ -414,6 +452,28 @@ class TomlParser(BaseParser):
             # Look for common source specifications
             for source_type in ["git", "path", "url"]:
                 if source_type in version_info:
-                    return f"{source_type}:{version_info[source_type]}"
+                    if "tag" in version_info:
+                        return f"{source_type}:{version_info[source_type]}@{version_info['tag']}"
+                    elif "branch" in version_info:
+                        return f"{source_type}:{version_info[source_type]}#{version_info['branch']}"
+                    elif "rev" in version_info:
+                        return f"{source_type}:{version_info[source_type]}@{version_info['rev']}"
+                    else:
+                        return f"{source_type}:{version_info[source_type]}"
+            
+            # Workspace dependencies (Cargo)
+            if "workspace" in version_info and version_info["workspace"] is True:
+                return "workspace = true"
+            
+            # If we found a complex dict but no recognized version pattern, 
+            # serialize it to a simple string representation
+            if version_info:
+                return str(version_info)
+        elif isinstance(version_info, (int, float, bool)):
+            # Handle primitive types
+            return str(version_info)
+        elif isinstance(version_info, list):
+            # Handle list values
+            return str(version_info)
         
         return "unknown"
