@@ -2,15 +2,14 @@
 """
 Simple test script for dependency-risk-profiler with historical trends.
 """
+# ruff: noqa: E402
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # Add project root to path
 
-from src.dependency_risk_profiler.models import DependencyMetadata
-from src.dependency_risk_profiler.supply_chain.trends import HistoricalTrendAnalyzer
 
 # For testing only - patch the check_security_policy function
 def mock_check_function(*args, **kwargs) -> Tuple[bool, float, list]:

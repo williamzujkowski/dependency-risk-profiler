@@ -7,6 +7,7 @@ This example shows how to:
 2. Analyze trends over time
 3. Generate visualization data for trends
 """
+# ruff: noqa: E402
 import argparse
 import json
 import os
@@ -100,7 +101,7 @@ def analyze_and_save_profile(manifest_path: str) -> str:
             try:
                 if hasattr(analyzer, 'metadata_cache') and name in analyzer.metadata_cache:
                     dependencies[name] = analyze_license(dep, analyzer.metadata_cache[name])
-            except Exception as e:
+            except Exception:
                 print(f"No license information found for {name}")
     except ImportError as e:
         print(f"License analyzer not available: {e}")

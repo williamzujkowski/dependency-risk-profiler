@@ -1,7 +1,5 @@
 """Analyzer for Node.js dependencies."""
-import re
 import logging
-from datetime import datetime
 from typing import Dict, Optional
 
 from ..models import DependencyMetadata
@@ -12,9 +10,12 @@ from .common import (
     clone_repo,
     count_contributors,
     fetch_json,
-    fetch_url,
     get_last_commit_date,
 )
+from ..scorecard.branch_protection import check_branch_protection
+from ..scorecard.dependency_update import check_dependency_update_tools
+from ..scorecard.security_policy import check_security_policy
+from ..scorecard.signed_commits import check_signed_commits
 
 logger = logging.getLogger(__name__)
 

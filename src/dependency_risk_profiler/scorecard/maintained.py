@@ -1,7 +1,6 @@
 """Enhanced maintained status check for dependencies."""
 import logging
 import subprocess
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple

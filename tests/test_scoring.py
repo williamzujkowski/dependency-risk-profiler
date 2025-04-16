@@ -1,7 +1,6 @@
 """Tests for the risk scoring system."""
 from datetime import datetime, timedelta
 
-import pytest
 
 from dependency_risk_profiler.models import DependencyMetadata, RiskLevel
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer

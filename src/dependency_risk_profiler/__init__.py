@@ -30,3 +30,21 @@ from .secure_release import (
     verify_signature,
     create_release
 )
+
+# Explicitly define __all__ to indicate what should be imported with "from dependency_risk_profiler import *"
+__all__ = [
+    "DependencyMetadata",
+    "DependencyRiskScore",
+    "ProjectRiskProfile",
+    "RiskLevel",
+    "analyze_supply_chain_risk",
+    "generate_dependency_graph",
+    "save_historical_profile",
+    "analyze_historical_trends",
+    "generate_trend_visualization",
+    "aggregate_vulnerability_data",
+    "normalize_cvss_score",
+    "sign_artifact",
+    "verify_signature",
+    "create_release"
+]

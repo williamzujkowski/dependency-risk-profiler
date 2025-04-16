@@ -2,7 +2,7 @@
 """Test script for vulnerability aggregator."""
 import argparse
 import sys
-from typing import Dict, Optional
+from typing import Optional
 
 from src.dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from src.dependency_risk_profiler.vulnerabilities.aggregator import aggregate_vulnerability_data

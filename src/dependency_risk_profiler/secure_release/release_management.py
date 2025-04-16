@@ -9,14 +9,12 @@ import argparse
 import datetime
 import json
 import logging
-import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
 from .code_signing import SigningMode, sign_artifact
 

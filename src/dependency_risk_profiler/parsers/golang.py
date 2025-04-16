@@ -21,9 +21,10 @@ class GoParser(BaseParser):
             with open(self.manifest_path, "r", encoding="utf-8") as f:
                 content = f.read()
             
-            # Extract module name and go version
-            module_match = re.search(r'module\s+(.+?)(?:\n|$)', content)
-            module_name = module_match.group(1).strip() if module_match else None
+            # Extract module name and go version (module name could be used for future enhancements)
+            # Commented out as it's not currently used in this version
+            # module_match = re.search(r'module\s+(.+?)(?:\n|$)', content)
+            # module_name = module_match.group(1).strip() if module_match else None
             
             # Extract dependencies
             # Look for require statements which can be either inline or in a block

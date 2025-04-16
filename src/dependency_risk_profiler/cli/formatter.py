@@ -1,8 +1,7 @@
 """Output formatters for the dependency risk profiler."""
 import json
-import os
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
 

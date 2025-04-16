@@ -10,7 +10,6 @@ import platform
 import subprocess
 import sys
 import venv
-from pathlib import Path
 
 PACKAGE_NAME = "dependency-risk-profiler"
 

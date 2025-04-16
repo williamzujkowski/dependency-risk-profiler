@@ -13,6 +13,10 @@ from .common import (
     fetch_url,
     get_last_commit_date,
 )
+from ..scorecard.branch_protection import check_branch_protection
+from ..scorecard.dependency_update import check_dependency_update_tools
+from ..scorecard.security_policy import check_security_policy
+from ..scorecard.signed_commits import check_signed_commits
 
 logger = logging.getLogger(__name__)
 

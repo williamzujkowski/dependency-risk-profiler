@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Test script for security policy detection."""
 import logging
-import os
 import tempfile
 from datetime import datetime
 from pathlib import Path

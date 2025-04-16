@@ -600,10 +600,10 @@ def main() -> int:
             args.artifacts_only
         )
         
-        print(f"✅ Build completed successfully!")
+        print("✅ Build completed successfully!")
         print(f"  Build ID: {build_info['build_id']}")
         print(f"  Timestamp: {build_info['build_timestamp']}")
-        print(f"  Artifacts:")
+        print("  Artifacts:")
         for artifact in build_info['artifacts']:
             print(f"    - {artifact}")
         print(f"  Build manifest: {build_info['manifest']}")

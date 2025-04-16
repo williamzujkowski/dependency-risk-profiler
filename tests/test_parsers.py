@@ -1,8 +1,5 @@
 """Tests for the dependency manifest parsers."""
-import os
-from pathlib import Path
 
-import pytest
 
 from dependency_risk_profiler.parsers.base import BaseParser
 from dependency_risk_profiler.parsers.nodejs import NodeJSParser

@@ -1,12 +1,11 @@
 """Command-line interface for the dependency risk profiler."""
 import argparse
+import json
 import logging
 import os
 import sys
-from typing import Dict, List, Optional
 
 from ..analyzers.base import BaseAnalyzer
-from ..models import DependencyMetadata
 from ..parsers.base import BaseParser
 from ..scoring.risk_scorer import RiskScorer
 from .formatter import JsonFormatter, TerminalFormatter

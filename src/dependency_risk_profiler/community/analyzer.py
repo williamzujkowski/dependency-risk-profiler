@@ -3,11 +3,8 @@ import logging
 import re
 import subprocess
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-import json
+from typing import Dict, Optional, Tuple
 
-import requests
 
 from ..analyzers.common import fetch_json, fetch_url
 from ..models import CommunityMetrics, DependencyMetadata

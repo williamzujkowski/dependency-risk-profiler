@@ -197,7 +197,7 @@ def main() -> int:
                 if not args.signing_only:
                     demo_release_management(source_dir, temp_path)
                 
-                print(f"\n✅ All demonstrations completed. Temporary files will be removed.")
+                print("\n✅ All demonstrations completed. Temporary files will be removed.")
         
         return 0
     

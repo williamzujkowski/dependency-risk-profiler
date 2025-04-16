@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Test script for dependency update tools detection."""
 import logging
-import os
 import tempfile
 from datetime import datetime
 from pathlib import Path

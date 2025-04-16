@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Test script for historical trends analysis."""
 import argparse
-import os
 import sys
 import json
 from datetime import datetime, timedelta
@@ -14,7 +13,6 @@ from src.dependency_risk_profiler.models import (
     SecurityMetrics
 )
 from src.dependency_risk_profiler.supply_chain.trends import (
-    HistoricalTrendAnalyzer,
     save_historical_profile,
     analyze_historical_trends,
     generate_trend_visualization

@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """Integration test for Phase 2 of OpenSSF Scorecard security enhancements."""
 import logging
-import os
-import tempfile
 import shutil
-from pathlib import Path
 
 from src.dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from src.dependency_risk_profiler.scorecard.signed_commits import check_signed_commits

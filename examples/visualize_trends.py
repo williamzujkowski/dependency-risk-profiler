@@ -6,7 +6,6 @@ This script generates sample trend visualization data that can be loaded
 into the trend_visualizer.html file.
 """
 import json
-import random
 from datetime import datetime, timedelta
 
 # Generate sample data

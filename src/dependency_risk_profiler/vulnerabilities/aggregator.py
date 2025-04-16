@@ -2,16 +2,14 @@
 Vulnerability data aggregator module that collects and normalizes vulnerability
 information from multiple sources.
 """
-import json
 import logging
-import re
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Set, Tuple, Any, Union
+from typing import Dict, List, Optional, Tuple, Any, Union
 
 import requests
 
-from ..models import DependencyMetadata, SecurityMetrics
+from ..models import DependencyMetadata
 
 logger = logging.getLogger(__name__)
 

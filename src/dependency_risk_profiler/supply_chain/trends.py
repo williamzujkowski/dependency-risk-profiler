@@ -4,9 +4,9 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Set
+from typing import Dict, List, Optional, Tuple, Any
 
-from ..models import ProjectRiskProfile, DependencyRiskScore, RiskLevel
+from ..models import ProjectRiskProfile
 
 logger = logging.getLogger(__name__)
 

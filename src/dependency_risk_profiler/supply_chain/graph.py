@@ -1,9 +1,8 @@
 """Dependency graph generation for visualization."""
-import json
 import logging
-from typing import Dict, List, Set, Optional, Tuple
+from typing import Dict, Optional
 
-from ..models import DependencyMetadata, RiskLevel
+from ..models import DependencyMetadata
 
 logger = logging.getLogger(__name__)
 

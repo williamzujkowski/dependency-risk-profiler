@@ -1,7 +1,7 @@
 """Risk scoring for dependencies."""
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
+from datetime import datetime
+from typing import Dict, List
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel, ProjectRiskProfile
 from packaging import version
