@@ -28,8 +28,8 @@ dependencies = [
     "packaging>=23.2",
     "colorama>=0.4.6;platform_system=='Windows'",
     "pyyaml>=6.0.1",
-    "matplotlib>=3.8.3",  # For potential visualization
-    "networkx>=3.3",      # For dependency graph analysis
+    "matplotlib>=3.7.0",  # For potential visualization
+    "networkx>=2.8.8",    # For dependency graph analysis
     "cryptography>=42.0.0",  # For secure code signing, Fixed CVE-2023-50782 & others
     "urllib3>=2.2.2",     # Fixed CVE-2024-37891
     "jinja2>=3.1.5",      # Fixed CVE-2024-56201
