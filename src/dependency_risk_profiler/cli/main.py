@@ -184,6 +184,38 @@ def parse_args() -> argparse.Namespace:
         help="Weight for transitive dependency score. Defaults to 0.15.",
     )
     
+    # Vulnerability sources
+    vuln_group = parser.add_argument_group("Vulnerability Sources")
+    
+    vuln_group.add_argument(
+        "--enable-osv",
+        action="store_true",
+        default=True,
+        help="Enable OSV vulnerability source. Enabled by default.",
+    )
+    
+    vuln_group.add_argument(
+        "--enable-nvd",
+        action="store_true",
+        help="Enable NVD vulnerability source.",
+    )
+    
+    vuln_group.add_argument(
+        "--enable-github-advisory",
+        action="store_true",
+        help="Enable GitHub Advisory vulnerability source.",
+    )
+    
+    vuln_group.add_argument(
+        "--github-token",
+        help="GitHub API token for GitHub Advisory vulnerability source.",
+    )
+    
+    vuln_group.add_argument(
+        "--nvd-api-key",
+        help="NVD API key for NVD vulnerability source.",
+    )
+    
     return parser.parse_args()
 
 
@@ -269,6 +301,34 @@ def main() -> int:
             
             logger.info("Analyzing transitive dependencies")
             dependencies = analyze_transitive_dependencies(dependencies, manifest_path)
+            
+            # Aggregate vulnerability data from multiple sources
+            if args.enable_osv or args.enable_nvd or args.enable_github_advisory:
+                try:
+                    from ..vulnerabilities.aggregator import aggregate_vulnerability_data
+                    
+                    logger.info("Aggregating vulnerability data from multiple sources")
+                    
+                    # Configure API keys
+                    api_keys = {}
+                    if args.github_token and args.enable_github_advisory:
+                        api_keys["github"] = args.github_token
+                    
+                    if args.nvd_api_key and args.enable_nvd:
+                        api_keys["nvd"] = args.nvd_api_key
+                    
+                    # Process each dependency
+                    for name, dep in dependencies.items():
+                        try:
+                            logger.debug(f"Checking vulnerability data for {name}")
+                            dependencies[name], vulns = aggregate_vulnerability_data(dep, api_keys)
+                            logger.debug(f"Found {len(vulns)} vulnerabilities for {name}")
+                        except Exception as e:
+                            logger.warning(f"Error aggregating vulnerability data for {name}: {e}")
+                
+                except ImportError as e:
+                    logger.warning(f"Vulnerability aggregation not available: {e}")
+            
         except ImportError as e:
             logger.warning(f"Enhanced analyzers not available: {e}")
         except Exception as e:
