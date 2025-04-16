@@ -26,6 +26,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented direct testing patterns to avoid complex mocking
 - Added proper benchmark test markers in pyproject.toml
 
+### Security
+
+- Updated all dependencies to latest secure versions:
+  - pytest: Updated to >=8.4.0
+  - pytest-cov: Updated to >=4.2.0
+  - black: Updated to >=24.4.0
+  - mypy: Updated to >=1.9.0
+  - numpy: Updated to >=2.2.4
+- Fixed security vulnerabilities in example files:
+  - Django: Updated to 5.1.8 (fixes multiple CVEs)
+  - Express: Updated to 4.18.2
+  - Lodash: Updated to 4.17.21
+  - React: Updated to 18.2.0
+  - Axios: Updated to 1.6.5
+  - Go dependencies upgraded to latest versions
+
 ## [0.2.0] - 2025-04-16
 
 ### Added
