@@ -1,8 +1,8 @@
 # Sample requirements.txt file for testing
-requests==2.32.2
-Flask==3.0.3
+requests==2.32.3
+Flask==3.1.0
 numpy==2.2.4
 pandas==2.2.2
 pytest==8.4.0
-black==24.4.0
+black==25.1.0
 Django==5.1.8
