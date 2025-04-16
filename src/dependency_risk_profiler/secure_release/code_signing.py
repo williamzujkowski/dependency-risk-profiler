@@ -10,14 +10,11 @@ import datetime
 import hashlib
 import logging
 import os
-import subprocess
 import sys
 import time
 from enum import Enum, auto
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
-
-import requests
+from typing import Dict, Optional, Union
 
 # Configure logging
 logger = logging.getLogger(__name__)

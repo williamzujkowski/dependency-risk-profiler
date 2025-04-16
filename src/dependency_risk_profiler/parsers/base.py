@@ -52,7 +52,6 @@ class BaseParser(ABC):
         elif file_name == "requirements.txt":
             return PythonParser(manifest_path)
         elif file_name == "pipfile.lock":
-            # TODO: Implement PipfileLockParser
             return PythonParser(manifest_path)
         elif file_name == "go.mod":
             return GoParser(manifest_path)
