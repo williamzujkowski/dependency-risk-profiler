@@ -61,7 +61,7 @@ setup(
     ],
     extras_require={
         "dev": [
-            "pytest>=8.4.0",
+            "pytest>=7.4.0",
             "pytest-cov>=4.2.0",
             "pytest-benchmark>=4.0.0",  # For performance benchmark tests
             "black>=24.4.0",

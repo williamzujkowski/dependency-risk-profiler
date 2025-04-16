@@ -38,8 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Changed dependencies to ensure wider compatibility:
-  - Downgraded networkx requirement from >=3.3 to >=2.8.8 for better compatibility 
+  - Downgraded networkx requirement from >=3.3 to >=2.8.8 for better compatibility
   - Adjusted matplotlib requirement from >=3.8.3 to >=3.7.0
+  - Changed pytest requirement from >=8.4.0 to >=7.4.0 for CI compatibility
 - Fixed security vulnerabilities in example files:
   - Django: Updated to 5.1.8 (fixes multiple CVEs)
   - Express: Updated to 4.18.2
