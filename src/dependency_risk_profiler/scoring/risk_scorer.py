@@ -26,6 +26,12 @@ class RiskScorer:
         community_weight: float = 0.2,
         transitive_weight: float = 0.15,
         
+        # OpenSSF Scorecard-inspired risk factors
+        security_policy_weight: float = 0.25,
+        dependency_update_weight: float = 0.2,
+        signed_commits_weight: float = 0.2,
+        branch_protection_weight: float = 0.15,
+        
         max_score: float = 5.0,
     ):
         """Initialize the risk scorer with customizable weights.
@@ -37,6 +43,11 @@ class RiskScorer:
             exploit_weight: Weight for known exploits score.
             version_difference_weight: Weight for version difference score.
             health_indicators_weight: Weight for health indicators score.
+            license_weight: Weight for license risk score.
+            community_weight: Weight for community health risk score.
+            transitive_weight: Weight for transitive dependency risk score.
+            security_policy_weight: Weight for security policy risk score.
+            dependency_update_weight: Weight for dependency update tools risk score.
             max_score: Maximum risk score.
         """
         self.staleness_weight = staleness_weight
@@ -50,6 +61,10 @@ class RiskScorer:
         self.license_weight = license_weight
         self.community_weight = community_weight
         self.transitive_weight = transitive_weight
+        self.security_policy_weight = security_policy_weight
+        self.dependency_update_weight = dependency_update_weight
+        self.signed_commits_weight = signed_commits_weight
+        self.branch_protection_weight = branch_protection_weight
         
         self.max_score = max_score
         
@@ -86,6 +101,12 @@ class RiskScorer:
         community_score = self._calculate_community_score(dependency.community_metrics)
         transitive_score = self._calculate_transitive_score(dependency.transitive_dependencies)
         
+        # OpenSSF Scorecard-inspired risk scores
+        security_policy_score = self._calculate_security_policy_score(dependency.security_metrics)
+        dependency_update_score = self._calculate_dependency_update_score(dependency.security_metrics)
+        signed_commits_score = self._calculate_signed_commits_score(dependency.security_metrics)
+        branch_protection_score = self._calculate_branch_protection_score(dependency.security_metrics)
+        
         # Calculate weighted score
         weighted_scores = [
             (staleness_score, self.staleness_weight),
@@ -99,6 +120,10 @@ class RiskScorer:
             (license_score, self.license_weight) if license_score is not None else (None, 0),
             (community_score, self.community_weight) if community_score is not None else (None, 0),
             (transitive_score, self.transitive_weight) if transitive_score is not None else (None, 0),
+            (security_policy_score, self.security_policy_weight) if security_policy_score is not None else (None, 0),
+            (dependency_update_score, self.dependency_update_weight) if dependency_update_score is not None else (None, 0),
+            (signed_commits_score, self.signed_commits_weight) if signed_commits_score is not None else (None, 0),
+            (branch_protection_score, self.branch_protection_weight) if branch_protection_score is not None else (None, 0),
         ]
         
         total_score = 0.0
@@ -126,6 +151,10 @@ class RiskScorer:
             license_score,
             community_score,
             transitive_score,
+            security_policy_score,
+            dependency_update_score,
+            signed_commits_score,
+            branch_protection_score,
         )
         
         return DependencyRiskScore(
@@ -136,6 +165,13 @@ class RiskScorer:
             exploit_score=exploit_score or 0.0,
             version_score=version_score or 0.0,
             health_indicators_score=health_score or 0.0,
+            license_score=license_score or 0.0,
+            community_score=community_score or 0.0,
+            transitive_score=transitive_score or 0.0,
+            security_policy_score=security_policy_score or 0.0,
+            dependency_update_score=dependency_update_score or 0.0,
+            signed_commits_score=signed_commits_score or 0.0,
+            branch_protection_score=branch_protection_score or 0.0,
             total_score=total_score,
             risk_level=risk_level,
             factors=risk_factors,
@@ -471,6 +507,94 @@ class RiskScorer:
             return 0.25  # Low transitive dependency count
         else:
             return 0.1  # Very low transitive dependency count
+            
+    def _calculate_security_policy_score(self, security_metrics) -> float:
+        """Calculate security policy risk score.
+        
+        Args:
+            security_metrics: Security metrics information.
+            
+        Returns:
+            Security policy risk score between 0.0 and 1.0.
+        """
+        if not security_metrics:
+            return 0.7  # Higher default risk when security data is missing
+        
+        # If the dependency has a security policy, it's a good sign
+        if security_metrics.has_security_policy is not None:
+            if security_metrics.has_security_policy:
+                return 0.0  # No risk
+            else:
+                return 1.0  # High risk - no security policy
+        
+        # If we don't have explicit security policy data
+        return 0.7  # Higher default risk when security policy status is unknown
+    
+    def _calculate_dependency_update_score(self, security_metrics) -> float:
+        """Calculate dependency update tools risk score.
+        
+        Args:
+            security_metrics: Security metrics information.
+            
+        Returns:
+            Dependency update tools risk score between 0.0 and 1.0.
+        """
+        if not security_metrics:
+            return 0.7  # Higher default risk when security data is missing
+        
+        # If the dependency uses dependency update tools, it's a good sign
+        if security_metrics.has_dependency_update_tools is not None:
+            if security_metrics.has_dependency_update_tools:
+                return 0.0  # No risk
+            else:
+                return 1.0  # High risk - no dependency update tools
+        
+        # If we don't have explicit dependency update tools data
+        return 0.7  # Higher default risk when dependency update tools status is unknown
+    
+    def _calculate_signed_commits_score(self, security_metrics) -> float:
+        """Calculate signed commits risk score.
+        
+        Args:
+            security_metrics: Security metrics information.
+            
+        Returns:
+            Signed commits risk score between 0.0 and 1.0.
+        """
+        if not security_metrics:
+            return 0.7  # Higher default risk when security data is missing
+        
+        # If the dependency uses signed commits/releases, it's a good sign
+        if security_metrics.has_signed_commits is not None:
+            if security_metrics.has_signed_commits:
+                return 0.0  # No risk
+            else:
+                return 1.0  # High risk - no signed commits
+        
+        # If we don't have explicit signed commits data
+        return 0.7  # Higher default risk when signed commits status is unknown
+    
+    def _calculate_branch_protection_score(self, security_metrics) -> float:
+        """Calculate branch protection risk score.
+        
+        Args:
+            security_metrics: Security metrics information.
+            
+        Returns:
+            Branch protection risk score between 0.0 and 1.0.
+        """
+        if not security_metrics:
+            return 0.7  # Higher default risk when security data is missing
+        
+        # If the dependency uses branch protection, it's a good sign
+        if security_metrics.has_branch_protection is not None:
+            if security_metrics.has_branch_protection:
+                return 0.0  # No risk
+            else:
+                return 1.0  # High risk - no branch protection
+        
+        # If we don't have explicit branch protection data
+        return 0.7  # Higher default risk when branch protection status is unknown
     
     def _determine_risk_factors(
         self,
@@ -484,6 +608,10 @@ class RiskScorer:
         license_score: float,
         community_score: float,
         transitive_score: float,
+        security_policy_score: float,
+        dependency_update_score: float,
+        signed_commits_score: float,
+        branch_protection_score: float,
     ) -> List[str]:
         """Determine risk factors that contribute to the risk score.
         
@@ -495,6 +623,10 @@ class RiskScorer:
             exploit_score: Exploit score.
             version_score: Version difference score.
             health_score: Health indicators score.
+            license_score: License risk score.
+            community_score: Community health risk score.
+            transitive_score: Transitive dependency risk score.
+            security_policy_score: Security policy risk score.
             
         Returns:
             List of risk factors.
@@ -567,5 +699,49 @@ class RiskScorer:
         if transitive_score and transitive_score > 0.5:
             if dependency.transitive_dependencies:
                 factors.append(f"Large dependency tree ({len(dependency.transitive_dependencies)} deps)")
+        
+        # Security policy risk factors
+        if security_policy_score and security_policy_score > 0.5:
+            if dependency.security_metrics:
+                if dependency.security_metrics.has_security_policy is not None:
+                    if not dependency.security_metrics.has_security_policy:
+                        factors.append("Missing security policy")
+                else:
+                    factors.append("Security policy status unknown")
+            else:
+                factors.append("No security metadata available")
+        
+        # Dependency update tools risk factors
+        if dependency_update_score and dependency_update_score > 0.5:
+            if dependency.security_metrics:
+                if dependency.security_metrics.has_dependency_update_tools is not None:
+                    if not dependency.security_metrics.has_dependency_update_tools:
+                        factors.append("No dependency update tools found")
+                else:
+                    factors.append("Dependency update tools status unknown")
+            else:
+                factors.append("No security metadata available")
+        
+        # Signed commits risk factors
+        if signed_commits_score and signed_commits_score > 0.5:
+            if dependency.security_metrics:
+                if dependency.security_metrics.has_signed_commits is not None:
+                    if not dependency.security_metrics.has_signed_commits:
+                        factors.append("Does not use signed commits")
+                else:
+                    factors.append("Signed commits status unknown")
+            else:
+                factors.append("No security metadata available")
+        
+        # Branch protection risk factors
+        if branch_protection_score and branch_protection_score > 0.5:
+            if dependency.security_metrics:
+                if dependency.security_metrics.has_branch_protection is not None:
+                    if not dependency.security_metrics.has_branch_protection:
+                        factors.append("Does not use branch protection")
+                else:
+                    factors.append("Branch protection status unknown")
+            else:
+                factors.append("No security metadata available")
         
         return factors

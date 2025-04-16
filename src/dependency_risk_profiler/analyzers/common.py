@@ -9,6 +9,12 @@ import logging
 import requests
 from pathlib import Path
 
+from ..scorecard.security_policy import check_security_policy
+from ..scorecard.dependency_update import check_dependency_update_tools
+from ..scorecard.signed_commits import check_signed_commits
+from ..scorecard.branch_protection import check_branch_protection
+from ..models import SecurityMetrics
+
 logger = logging.getLogger(__name__)
 
 

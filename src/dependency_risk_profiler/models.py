@@ -56,7 +56,13 @@ class CommunityMetrics:
 class SecurityMetrics:
     """Security metrics for a dependency."""
     
+    # OpenSSF Scorecard-inspired metrics
     has_security_policy: Optional[bool] = None  # Whether repo has a security policy
+    has_dependency_update_tools: Optional[bool] = None  # Whether repo uses dependency update tools
+    has_signed_commits: Optional[bool] = None  # Whether repo uses signed commits/releases
+    has_branch_protection: Optional[bool] = None  # Whether repo uses branch protection
+    
+    # Vulnerability metrics
     vulnerability_count: Optional[int] = None   # Number of known vulnerabilities
     fixed_vulnerability_count: Optional[int] = None  # Number of fixed vulnerabilities
     max_cvss_score: Optional[float] = None      # Maximum CVSS score of vulnerabilities
@@ -105,6 +111,12 @@ class DependencyRiskScore:
     license_score: float = 0.0
     community_score: float = 0.0
     transitive_score: float = 0.0
+    
+    # OpenSSF Scorecard-inspired risk scores
+    security_policy_score: float = 0.0
+    dependency_update_score: float = 0.0
+    signed_commits_score: float = 0.0
+    branch_protection_score: float = 0.0
     
     total_score: float = 0.0
     risk_level: RiskLevel = RiskLevel.LOW

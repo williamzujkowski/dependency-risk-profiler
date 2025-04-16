@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dependency Risk Trend Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        select, button {
+            padding: 8px 12px;
+            margin: 0 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .file-input {
+            margin: 20px 0;
+            text-align: center;
+        }
+        #file-name {
+            margin-left: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dependency Risk Trend Visualization</h1>
+        
+        <div class="file-input">
+            <input type="file" id="data-file" accept=".json">
+            <span id="file-name">No file selected</span>
+        </div>
+        
+        <div class="controls">
+            <select id="chart-type">
+                <option value="overall">Overall Risk Score</option>
+                <option value="distribution">Risk Distribution</option>
+                <option value="dependencies">Top Dependencies</option>
+                <option value="security">Security Metrics</option>
+            </select>
+            <button id="load-demo-data">Load Demo Data</button>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="chart"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let chart = null;
+        
+        // Demo data for testing
+        const demoData = {
+            "overall": {
+                "type": "line_chart",
+                "title": "Overall Risk Score Trend",
+                "data": {
+                    "labels": ["2024-01-15", "2024-02-15", "2024-03-15", "2024-04-15", "2024-05-15"],
+                    "datasets": [
+                        {
+                            "label": "Risk Score",
+                            "data": [3.8, 3.5, 2.9, 2.3, 1.9],
+                            "borderColor": "#ff6384",
+                            "backgroundColor": "rgba(255, 99, 132, 0.2)"
+                        }
+                    ]
+                },
+                "options": {
+                    "scales": {
+                        "y": {
+                            "title": {
+                                "display": true,
+                                "text": "Risk Score (0-5)"
+                            },
+                            "min": 0,
+                            "max": 5
+                        }
+                    }
+                }
+            },
+            "distribution": {
+                "type": "stacked_bar_chart",
+                "title": "Risk Distribution Trend",
+                "data": {
+                    "labels": ["2024-01-15", "2024-02-15", "2024-03-15", "2024-04-15", "2024-05-15"],
+                    "datasets": [
+                        {
+                            "label": "High Risk",
+                            "data": [5, 4, 3, 2, 1],
+                            "backgroundColor": "rgba(255, 99, 132, 0.7)"
+                        },
+                        {
+                            "label": "Medium Risk",
+                            "data": [8, 8, 9, 8, 7],
+                            "backgroundColor": "rgba(255, 159, 64, 0.7)"
+                        },
+                        {
+                            "label": "Low Risk",
+                            "data": [10, 12, 15, 18, 22],
+                            "backgroundColor": "rgba(75, 192, 192, 0.7)"
+                        }
+                    ]
+                },
+                "options": {
+                    "scales": {
+                        "y": {
+                            "stacked": true,
+                            "title": {
+                                "display": true,
+                                "text": "Number of Dependencies"
+                            }
+                        },
+                        "x": {
+                            "stacked": true
+                        }
+                    }
+                }
+            },
+            "dependencies": {
+                "type": "line_chart",
+                "title": "Top Dependencies Risk Trends",
+                "data": {
+                    "labels": ["2024-01-15", "2024-02-15", "2024-03-15", "2024-04-15", "2024-05-15"],
+                    "datasets": [
+                        {
+                            "label": "lodash",
+                            "data": [4.5, 4.2, 3.8, 3.5, 2.9],
+                            "borderColor": "rgb(255, 99, 132)",
+                            "fill": false
+                        },
+                        {
+                            "label": "express",
+                            "data": [3.2, 3.0, 2.7, 2.5, 2.2],
+                            "borderColor": "rgb(54, 162, 235)",
+                            "fill": false
+                        },
+                        {
+                            "label": "axios",
+                            "data": [2.8, 2.5, 2.2, 1.8, 1.5],
+                            "borderColor": "rgb(75, 192, 192)",
+                            "fill": false
+                        }
+                    ]
+                },
+                "options": {
+                    "scales": {
+                        "y": {
+                            "title": {
+                                "display": true,
+                                "text": "Risk Score (0-5)"
+                            },
+                            "min": 0,
+                            "max": 5
+                        }
+                    }
+                }
+            },
+            "security": {
+                "type": "radar_chart",
+                "title": "Security Metrics Improvement",
+                "data": {
+                    "labels": ["Security Policy", "Dependency Updates", "Signed Commits", "Branch Protection"],
+                    "datasets": [
+                        {
+                            "label": "2024-01-15",
+                            "data": [25, 40, 15, 30],
+                            "backgroundColor": "rgba(54, 162, 235, 0.2)",
+                            "borderColor": "rgb(54, 162, 235)"
+                        },
+                        {
+                            "label": "2024-05-15",
+                            "data": [60, 75, 45, 70],
+                            "backgroundColor": "rgba(255, 99, 132, 0.2)",
+                            "borderColor": "rgb(255, 99, 132)"
+                        }
+                    ]
+                },
+                "options": {
+                    "scales": {
+                        "r": {
+                            "angleLines": {
+                                "display": true
+                            },
+                            "min": 0,
+                            "max": 100
+                        }
+                    }
+                }
+            }
+        };
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up event listeners
+            document.getElementById('chart-type').addEventListener('change', updateChart);
+            document.getElementById('load-demo-data').addEventListener('click', loadDemoData);
+            document.getElementById('data-file').addEventListener('change', loadDataFile);
+            
+            // Initialize with demo data
+            loadDemoData();
+        });
+        
+        // Load demo data
+        function loadDemoData() {
+            const chartType = document.getElementById('chart-type').value;
+            renderChart(demoData[chartType]);
+        }
+        
+        // Load data from JSON file
+        function loadDataFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('file-name').textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    renderChart(data);
+                } catch (error) {
+                    alert('Error parsing JSON file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        // Update chart when type changes
+        function updateChart() {
+            const chartType = document.getElementById('chart-type').value;
+            
+            // If we have a file loaded, try to load data from that file
+            const fileInput = document.getElementById('data-file');
+            if (fileInput.files.length > 0) {
+                loadDataFile({ target: fileInput });
+            } else {
+                // Otherwise use demo data
+                renderChart(demoData[chartType]);
+            }
+        }
+        
+        // Render chart based on data
+        function renderChart(chartData) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Configure chart type
+            let chartType = 'line';
+            if (chartData.type === 'stacked_bar_chart') {
+                chartType = 'bar';
+            } else if (chartData.type === 'radar_chart') {
+                chartType = 'radar';
+            }
+            
+            // Create chart
+            chart = new Chart(ctx, {
+                type: chartType,
+                data: chartData.data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartData.title,
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    ...chartData.options
+                }
+            });
+        }
+    </script>
+</body>
+</html>

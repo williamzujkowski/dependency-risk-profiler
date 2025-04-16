@@ -1,6 +1,53 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "dependency-risk-profiler"
+version = "0.2.0"
+description = "A tool to evaluate the health and risk of a project's dependencies beyond vulnerability scanning"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Security",
+]
+dependencies = [
+    "requests>=2.25.0",
+    "packaging>=20.0",
+    "colorama>=0.4.4;platform_system=='Windows'",
+    "pyyaml>=6.0",
+    "matplotlib>=3.5.0",  # For potential visualization
+    "networkx>=2.8.0",    # For dependency graph analysis
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=2.12.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "flake8>=4.0.0",
+    "mypy>=0.9.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/username/dependency-risk-profiler"
+Issues = "https://github.com/username/dependency-risk-profiler/issues"
+
+[project.scripts]
+dependency-risk-profiler = "dependency_risk_profiler.cli.main:main"
 
 [tool.black]
 line-length = 88

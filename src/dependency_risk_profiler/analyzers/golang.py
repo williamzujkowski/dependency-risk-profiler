@@ -87,6 +87,49 @@ class GoAnalyzer(BaseAnalyzer):
                         dep.has_tests = has_tests
                         dep.has_ci = has_ci
                         dep.has_contribution_guidelines = has_contribution_guidelines
+                        
+                        # Check for security policy
+                        try:
+                            has_security_policy, security_policy_score, issues = check_security_policy(dep, repo_dir)
+                            
+                            # Log security policy issues
+                            for issue in issues:
+                                logger.info(f"Security policy issue for {name}: {issue}")
+                        except Exception as e:
+                            logger.error(f"Error checking security policy: {e}")
+                            
+                        # Check for dependency update tools
+                        try:
+                            has_update_tools, update_tools_score, update_issues = check_dependency_update_tools(dep, repo_dir)
+                            dep.security_metrics.has_dependency_update_tools = has_update_tools
+                            
+                            # Log dependency update tools issues
+                            for issue in update_issues:
+                                logger.info(f"Dependency update tools issue for {name}: {issue}")
+                        except Exception as e:
+                            logger.error(f"Error checking dependency update tools: {e}")
+                            
+                        # Check for signed commits
+                        try:
+                            has_signed_commits, signed_commits_score, signed_commits_issues = check_signed_commits(dep, repo_dir)
+                            dep.security_metrics.has_signed_commits = has_signed_commits
+                            
+                            # Log signed commits issues
+                            for issue in signed_commits_issues:
+                                logger.info(f"Signed commits issue for {name}: {issue}")
+                        except Exception as e:
+                            logger.error(f"Error checking signed commits: {e}")
+                            
+                        # Check for branch protection
+                        try:
+                            has_branch_protection, branch_protection_score, branch_protection_issues = check_branch_protection(dep, repo_dir)
+                            dep.security_metrics.has_branch_protection = has_branch_protection
+                            
+                            # Log branch protection issues
+                            for issue in branch_protection_issues:
+                                logger.info(f"Branch protection issue for {name}: {issue}")
+                        except Exception as e:
+                            logger.error(f"Error checking branch protection: {e}")
                 
                 # Check for known vulnerabilities
                 dep.has_known_exploits = check_for_vulnerabilities(name, "go")

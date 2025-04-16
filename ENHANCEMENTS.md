@@ -24,11 +24,11 @@ Below is a consolidated list incorporating all eight additional improvements we 
    - **Multi-Source Vulnerability Checks:** In addition to querying OSV, integrate vulnerability data from other sources like the National Vulnerability Database (NVD) or GitHub Advisory Database.  
    - **Severity Weighting:** Use standardized scoring systems (such as CVSS, or even EPSS when available) to weigh vulnerabilities and incorporate them into the overall risk score.
 
-7. **Historical Risk Trends and Continuous Monitoring:**  
+7. **Historical Risk Trends and Continuous Monitoring:** ✅  
    - **Temporal Analysis:** Track the historical data of each dependency—such as changes in commit frequency, issue backlog trends, or shifts in vulnerability counts—to understand if the risk is increasing over time.  
    - **Automated Alerts:** Implement a continuous monitoring system that automatically alerts you when there’s a significant change in any of these metrics, ensuring timely remediation.
 
-8. **Visualization and Reporting Enhancements:**  
+8. **Visualization and Reporting Enhancements:** ✅  
    - **Interactive Dependency Graphs:** Provide visualizations that display the dependency tree and risk clustering. This can help developers pinpoint which parts of the dependency graph require immediate attention.  
    - **Customizable Reporting:** Allow users to define custom risk thresholds and tailor output formats (e.g., color-coded terminal reports, JSON outputs) so that the reports can seamlessly integrate into CI/CD pipelines and decision-making dashboards.
 

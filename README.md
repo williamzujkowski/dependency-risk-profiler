@@ -21,21 +21,65 @@ A command-line tool that goes beyond traditional vulnerability scanners to asses
 - 🌟 **Community Health Metrics**: Assess repository stars, forks, and activity levels
 - 🔄 **Transitive Dependency Analysis**: Analyze the full dependency tree beyond direct dependencies
 - 📊 **Comprehensive Risk Model**: Expanded risk scoring with customizable weights for all factors
+- 🔐 **Security Best Practices**: Analyze security policies, dependency update tools, signed commits, and branch protection
+- 📈 **Historical Trend Analysis**: Track changes in risk metrics over time for better decision making
+- 🌐 **Supply Chain Visualization**: Generate dependency graphs to visualize relationships and risk
 
 ## Installation
 
 ### From PyPI
 
 ```bash
+# Install directly
 pip install dependency-risk-profiler
+
+# Or use the quick installer (no need to clone the repository)
+curl -sSL https://raw.githubusercontent.com/username/dependency-risk-profiler/main/quickinstall.py | python3
 ```
 
-### From Source
+### Using the Installer Scripts
+
+This package provides convenient installer scripts for different platforms:
+
+#### Linux/macOS
+
+```bash
+# Clone the repository
+git clone https://github.com/username/dependency-risk-profiler.git
+cd dependency-risk-profiler
+
+# Run the installer
+./install.sh
+```
+
+#### Windows
+
+```cmd
+# Clone the repository
+git clone https://github.com/username/dependency-risk-profiler.git
+cd dependency-risk-profiler
+
+# Run the installer
+install.bat
+```
+
+#### Cross-platform Python installer
+
+```bash
+# Clone the repository
+git clone https://github.com/username/dependency-risk-profiler.git
+cd dependency-risk-profiler
+
+# Run the installer
+python install.py
+```
+
+### From Source (Manual Installation)
 
 ```bash
 git clone https://github.com/username/dependency-risk-profiler.git
 cd dependency-risk-profiler
-pip install -e .
+pip install .  # Or 'pip install -e .' for development mode
 ```
 
 ## Usage
@@ -82,6 +126,43 @@ dependency-risk-profiler --manifest /path/to/package-lock.json \
   --license-weight 0.4 \
   --community-weight 0.3 \
   --transitive-weight 0.2
+```
+
+### Historical Trends Analysis
+
+You can save scan results to a historical database and analyze trends over time:
+
+```bash
+# Save the current scan to historical data
+dependency-risk-profiler --manifest /path/to/package-lock.json --save-history
+
+# Analyze historical trends for a project
+dependency-risk-profiler --manifest /path/to/package-lock.json --analyze-trends
+
+# Limit the number of historical scans to analyze
+dependency-risk-profiler --manifest /path/to/package-lock.json --analyze-trends --trend-limit 5
+
+# Generate visualization data for trends
+dependency-risk-profiler --manifest /path/to/package-lock.json --trend-visualization overall
+dependency-risk-profiler --manifest /path/to/package-lock.json --trend-visualization distribution
+dependency-risk-profiler --manifest /path/to/package-lock.json --trend-visualization dependencies
+dependency-risk-profiler --manifest /path/to/package-lock.json --trend-visualization security
+```
+
+### Supply Chain Visualization
+
+Generate dependency graphs to visualize relationships and risk:
+
+```bash
+# Generate dependency graph (D3.js format by default)
+dependency-risk-profiler --manifest /path/to/package-lock.json --generate-graph
+
+# Specify graph format
+dependency-risk-profiler --manifest /path/to/package-lock.json --generate-graph --graph-format graphviz
+dependency-risk-profiler --manifest /path/to/package-lock.json --generate-graph --graph-format cytoscape
+
+# Specify maximum depth for transitive dependencies
+dependency-risk-profiler --manifest /path/to/package-lock.json --generate-graph --graph-depth 2
 ```
 
 ### Debug Mode
@@ -167,6 +248,32 @@ isort .
 flake8
 mypy .
 ```
+
+## Example Tools and Demos
+
+### Historical Trends Demo
+
+The `examples/trends_demo.py` script demonstrates how to use the historical trends analysis functionality:
+
+```bash
+# Save the current scan to historical data
+python examples/trends_demo.py --manifest /path/to/requirements.txt
+
+# Analyze historical trends
+python examples/trends_demo.py --manifest /path/to/requirements.txt --analyze
+
+# Generate visualization data
+python examples/trends_demo.py --manifest /path/to/requirements.txt --visualize overall
+```
+
+### Trend Visualization
+
+The `examples/trend_visualizer.html` file provides a simple web-based visualization tool for viewing trend data:
+
+1. Generate trend visualization data using the CLI or trends_demo.py
+2. Open the trend_visualizer.html file in a web browser
+3. Click "Choose File" and select the generated JSON file
+4. View the visualized trend data
 
 ## License
 

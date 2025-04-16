@@ -1,0 +1,75 @@
+{
+  "type": "line_chart",
+  "title": "Top Dependencies Risk Trends",
+  "data": {
+    "labels": [
+      "2025-04-16",
+      "2025-04-16",
+      "2025-04-16"
+    ],
+    "datasets": [
+      {
+        "label": "black",
+        "data": [
+          3.152542372881355,
+          3.152542372881355,
+          2.203389830508474
+        ],
+        "borderColor": "rgb(198,197,174)",
+        "fill": false
+      },
+      {
+        "label": "Flask",
+        "data": [
+          2.686440677966101,
+          2.686440677966101,
+          1.7372881355932202
+        ],
+        "borderColor": "rgb(236,50,50)",
+        "fill": false
+      },
+      {
+        "label": "pandas",
+        "data": [
+          2.4463276836158188,
+          2.4463276836158188,
+          1.4971751412429377
+        ],
+        "borderColor": "rgb(153,65,240)",
+        "fill": false
+      },
+      {
+        "label": "numpy",
+        "data": [
+          2.3898305084745757,
+          2.3898305084745757,
+          1.4406779661016946
+        ],
+        "borderColor": "rgb(230,50,72)",
+        "fill": false
+      },
+      {
+        "label": "pytest",
+        "data": [
+          2.3898305084745757,
+          2.3898305084745757,
+          1.4406779661016946
+        ],
+        "borderColor": "rgb(201,217,54)",
+        "fill": false
+      }
+    ]
+  },
+  "options": {
+    "scales": {
+      "y": {
+        "title": {
+          "display": true,
+          "text": "Risk Score (0-5)"
+        },
+        "min": 0,
+        "max": 5
+      }
+    }
+  }
+}

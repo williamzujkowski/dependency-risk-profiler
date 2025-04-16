@@ -31,6 +31,9 @@ setup(
         "requests>=2.25.0",
         "packaging>=20.0",
         "colorama>=0.4.4;platform_system=='Windows'",
+        "pyyaml>=6.0",
+        "matplotlib>=3.5.0",  # For potential visualization
+        "networkx>=2.8.0",    # For dependency graph analysis
     ],
     entry_points={
         "console_scripts": [

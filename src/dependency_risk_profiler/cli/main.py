@@ -64,6 +64,57 @@ def parse_args() -> argparse.Namespace:
         help="Enable debug logging.",
     )
     
+    # Historical trends analysis options
+    trends_group = parser.add_argument_group("Historical Trends Analysis")
+    
+    trends_group.add_argument(
+        "--save-history",
+        action="store_true",
+        help="Save current scan results to historical data.",
+    )
+    
+    trends_group.add_argument(
+        "--analyze-trends",
+        action="store_true",
+        help="Analyze historical trends for the project.",
+    )
+    
+    trends_group.add_argument(
+        "--trend-limit",
+        type=int,
+        default=10,
+        help="Maximum number of historical scans to include in trend analysis. Defaults to 10.",
+    )
+    
+    trends_group.add_argument(
+        "--trend-visualization",
+        choices=["overall", "distribution", "dependencies", "security"],
+        help="Generate visualization data for the specified trend type.",
+    )
+    
+    # Supply chain visualization options
+    visualization_group = parser.add_argument_group("Supply Chain Visualization")
+    
+    visualization_group.add_argument(
+        "--generate-graph",
+        action="store_true",
+        help="Generate a dependency graph for visualization.",
+    )
+    
+    visualization_group.add_argument(
+        "--graph-format",
+        choices=["d3", "graphviz", "cytoscape"],
+        default="d3",
+        help="Format for the dependency graph. Defaults to d3.",
+    )
+    
+    visualization_group.add_argument(
+        "--graph-depth",
+        type=int,
+        default=3,
+        help="Maximum depth of transitive dependencies to include in the graph. Defaults to 3.",
+    )
+    
     # Base risk factors
     risk_group = parser.add_argument_group("Basic Risk Factors")
     
@@ -248,6 +299,113 @@ def main() -> int:
         
         output = formatter.format_profile(profile)
         print(output)
+        
+        # Process supply chain visualization if requested
+        if args.generate_graph:
+            try:
+                from ..supply_chain import generate_dependency_graph
+                
+                logger.info(f"Generating dependency graph in {args.graph_format} format")
+                
+                # Extract risk scores for graph coloring
+                risk_scores = {}
+                for dep in profile.dependencies:
+                    risk_scores[dep.dependency.name] = dep.total_score / 5.0  # Normalize to 0-1
+                
+                # Generate the graph
+                graph_data = generate_dependency_graph(
+                    dependencies={dep.dependency.name: dep.dependency for dep in profile.dependencies},
+                    output_format=args.graph_format,
+                    risk_scores=risk_scores,
+                    depth_limit=args.graph_depth
+                )
+                
+                # Determine output file name
+                base_name = os.path.splitext(os.path.basename(manifest_path))[0]
+                graph_file = f"{base_name}_dependency_graph.json"
+                
+                # Save the graph data
+                with open(graph_file, "w") as f:
+                    json.dump(graph_data, f, indent=2)
+                
+                logger.info(f"Dependency graph saved to {graph_file}")
+                print(f"\nDependency graph saved to {graph_file}")
+                
+            except ImportError as e:
+                logger.warning(f"Supply chain visualization not available: {e}")
+            except Exception as e:
+                logger.error(f"Error generating dependency graph: {e}", exc_info=args.debug)
+        
+        # Handle historical trends functionality
+        try:
+            if args.save_history:
+                from ..supply_chain import save_historical_profile
+                
+                logger.info("Saving scan results to historical data")
+                history_path = save_historical_profile(profile)
+                print(f"\nScan results saved to historical data at {history_path}")
+            
+            if args.analyze_trends:
+                from ..supply_chain import analyze_historical_trends
+                
+                logger.info("Analyzing historical trends")
+                trends = analyze_historical_trends(profile.manifest_path, args.trend_limit)
+                
+                if "error" in trends:
+                    print(f"\nTrend analysis error: {trends['error']}")
+                else:
+                    # Output trend summary
+                    print("\nHistorical Trend Analysis:")
+                    
+                    # Overall risk summary
+                    avg_risk = trends["average_risk_over_time"]
+                    print(f"  Average Risk Score: {avg_risk['average']:.2f}/5.0 ({avg_risk['trend']})")
+                    
+                    # Improving and deteriorating dependencies
+                    print(f"  Improving Dependencies: {len(trends['improving_dependencies'])}")
+                    print(f"  Deteriorating Dependencies: {len(trends['deteriorating_dependencies'])}")
+                    
+                    # Period analyzed
+                    print(f"  Analysis Period: {trends['analyzed_period']['start']} to {trends['analyzed_period']['end']}")
+                    print(f"  Scans Analyzed: {trends['analyzed_period']['scans_analyzed']}")
+                    
+                    # Velocity metrics
+                    if "velocity_metrics" in trends and trends["velocity_metrics"]:
+                        vm = trends["velocity_metrics"]
+                        print("\n  Dependency Velocity Metrics:")
+                        print(f"    New Dependencies: {vm.get('new_dependencies', 0)}")
+                        print(f"    Updated Dependencies: {vm.get('updated_dependencies', 0)}")
+                        print(f"    Removed Dependencies: {vm.get('removed_dependencies', 0)}")
+                        print(f"    Dependency Churn Rate: {vm.get('dependency_churn_rate', 0)} deps/day")
+            
+            if args.trend_visualization:
+                from ..supply_chain import generate_trend_visualization
+                
+                logger.info(f"Generating trend visualization for {args.trend_visualization}")
+                viz_data = generate_trend_visualization(
+                    profile.manifest_path,
+                    args.trend_visualization,
+                    args.trend_limit
+                )
+                
+                if "error" in viz_data:
+                    print(f"\nVisualization error: {viz_data['error']}")
+                else:
+                    # Determine output file name
+                    base_name = os.path.splitext(os.path.basename(manifest_path))[0]
+                    viz_file = f"{base_name}_{args.trend_visualization}_trend.json"
+                    
+                    # Save the visualization data
+                    with open(viz_file, "w") as f:
+                        json.dump(viz_data, f, indent=2)
+                    
+                    logger.info(f"Trend visualization data saved to {viz_file}")
+                    print(f"\nTrend visualization data saved to {viz_file}")
+                
+        except ImportError as e:
+            logger.warning(f"Historical trends analysis not available: {e}")
+        except Exception as e:
+            logger.error(f"Error in historical trends analysis: {e}", exc_info=args.debug)
         
         return 0
     
