@@ -73,8 +73,8 @@ dependency-risk-profiler-legacy = "dependency_risk_profiler.cli.main:main"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
-include = '\.pyi?$'$'
+target-version = ["py39"]
+include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
