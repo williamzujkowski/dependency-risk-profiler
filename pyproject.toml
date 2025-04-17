@@ -1,6 +1,10 @@
 [build-system]
-requires = ["setuptools>=68.0.0", "wheel>=0.42.0"]
+requires = ["setuptools>=69.0.2", "wheel>=0.42.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["dependency_risk_profiler"]
+package-dir = {"" = "src"}
 
 [project]
 name = "dependency-risk-profiler"
