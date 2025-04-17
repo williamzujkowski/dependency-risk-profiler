@@ -77,7 +77,7 @@ setup(
             "mypy>=1.9.0",
             "responses>=0.25.0",        # For HTTP mocking in tests
             "aioresponses>=0.7.4",      # For mocking async HTTP requests
-            "numpy>=2.0.0,<2.1.0",      # For benchmark tests and percentile calculations
+            "numpy>=1.24.0,<1.25.0",    # For benchmark tests and percentile calculations
         ],
     },
 )
