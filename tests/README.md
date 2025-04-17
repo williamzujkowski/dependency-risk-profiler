@@ -83,6 +83,21 @@ Common test fixtures are defined in `conftest.py`:
 - `mock_env_vars` - Fixture to set/restore environment variables
 - `temp_cache_dir` - Temporary directory for cache testing
 
+## Special Test Files
+
+The following test files are excluded from standard linting and formatting checks as they contain intentional edge cases, formatting issues, or non-standard code:
+
+- **Integration Tests**:
+  - `tests/integration/test_security_policy.py` - Contains specific formatting for policy testing
+  - `tests/integration/test_dependency_update.py` - Contains intentionally outdated dependencies
+  - `tests/integration/test_phase2.py` - Contains specific test scenarios for Phase 2
+
+- **Comprehensive Tests**:
+  - `test_comprehensive_vulnerability_aggregator.py` - Contains extensive test cases with special formatting
+  - `test_comprehensive_risk_scorer.py` - Contains edge case tests with custom formatting
+
+These files may fail standard linting checks, but this is intentional for testing purposes. They are configured to be excluded in `setup.cfg` and `.pre-commit-config.yaml`.
+
 ## Implementation Details
 
 For more information on the test implementation approach, see `TESTING_IMPLEMENTATION.md` in the root directory.
