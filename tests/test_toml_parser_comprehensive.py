@@ -21,7 +21,7 @@ build-backend = "flit_core.buildapi"
 name = "flit-project"
 version = "0.1.0"
 description = "A Flit-based project"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 readme = "README.md"
 authors = [{name = "Test Author", email = "test@example.com"}]
 license = {file = "LICENSE"}
@@ -70,7 +70,7 @@ build-backend = "pdm.pep517.api"
 name = "pdm-project"
 version = "0.1.0"
 description = "A PDM-based project"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "Test Author", email = "test@example.com"}
@@ -118,7 +118,7 @@ name = "hatch-project"
 version = "0.1.0"
 description = "A Hatch-based project"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = "MIT"
 authors = [
     {name = "Test Author", email = "test@example.com"}

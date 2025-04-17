@@ -22,7 +22,7 @@ build-backend = "setuptools.build_meta"
 name = "test-project"
 version = "0.1.0"
 description = "A test project"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "requests>=2.25.0",
     "packaging>=20.0",
@@ -58,7 +58,7 @@ version = "0.2.0"
 description = "A Poetry project"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 requests = "^2.25.0"
 numpy = { version = "^1.20.0", optional = true }
 pendulum = { git = "https://github.com/sdispater/pendulum.git" }

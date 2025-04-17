@@ -85,7 +85,7 @@ def sample_python_manifest() -> str:
     # Test requirements file
     flask==2.0.1
     requests>=2.25.0
-    numpy==1.20.0; python_version >= "3.8"
+    numpy==1.20.0; python_version >= "3.9"
     """
     
     fd, path = tempfile.mkstemp(suffix=".txt", prefix="requirements-")
