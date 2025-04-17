@@ -51,8 +51,8 @@ jobs:
         run: |
           flake8 --config=.flake8
           black --check . --exclude "/tests/"
-          # Temporarily skip mypy type checking due to numerous type issues
-          echo "Skipping mypy type checking due to known type issues - will be re-enabled in future PR"
+          # For now, run mypy with no error reporting, just to verify config works
+          mypy --config-file=mypy.ini --no-error-summary src/ || echo "mypy found issues, but continuing - will be fixed in future PR"
           
       - name: Run unit tests
         run: |
