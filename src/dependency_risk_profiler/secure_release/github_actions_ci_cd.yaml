@@ -57,16 +57,18 @@ jobs:
         run: |
           pytest -xvs tests/
           
-      - name: Run security checks
+      - name: Run bandit security check
         run: |
           # Run security audits on the code
           bandit -r src/ || echo "Bandit found security issues, but continuing"
-          
+
+      - name: Skip safety check
+        run: |
           # Create a safety configuration file to skip the check due to API issues
           echo "# Safety skip file
           42194" > .safety-policy.yml
           
-          # Try running safety check, but don't fail the build if it errors
+          # Log that we're skipping the check due to compatibility issues
           echo "Skipping safety check due to known compatibility issues - will be re-enabled in future PR"
           
       - name: Run dependency vulnerability scan
@@ -153,7 +155,7 @@ jobs:
           echo "✅ Built artifacts: ${{ env.SDIST_PATH }}, ${{ env.WHEEL_PATH }}"
 
       # Scan the built artifact for security issues
-      - name: Security scan
+      - name: Run bandit security scan
         run: |
           echo "Running security scan on built artifacts..."
           # Install security tools
@@ -162,10 +164,12 @@ jobs:
           # Run security audit on the package contents
           bandit -r src/ -c .bandit.yml || echo "Bandit found issues, but continuing"
           
+          echo "✅ Bandit security scan completed"
+          
+      - name: Skip safety check
+        run: |
           # Skip safety check due to compatibility issues
           echo "Skipping safety check due to known compatibility issues - will be re-enabled in future PR"
-          
-          echo "✅ Security scan completed"
           
       - name: Run dependency vulnerability scan
         uses: snyk/actions/python@master
