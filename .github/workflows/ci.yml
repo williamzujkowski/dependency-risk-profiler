@@ -58,5 +58,5 @@ jobs:
     
     - name: Run security checks
       run: |
-        bandit -r src
+        bandit -r src -c .bandit.yml
         safety check

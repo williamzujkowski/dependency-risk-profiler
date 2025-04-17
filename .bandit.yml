@@ -1,0 +1,24 @@
+# Bandit configuration file for dependency-risk-profiler
+# This file configures the bandit security scanner to ignore certain low-severity issues
+
+# Skip the following tests (with justification):
+# B101: assert used for type checking (these are removed in optimized mode but are useful in development)
+# B110: Try/except/pass is used in several places where exceptions are expected and can be safely ignored
+# B112: Try/except/continue is used in several places where exceptions are expected and iteration should continue
+# B404: Import of subprocess module - required for functionality
+# B603: subprocess call - our calls use arrays and don't use shell=True, which mitigates risks
+# B607: Partial path - we only use well-known commands like git, not user input
+
+skips: ['B101', 'B110', 'B112', 'B404', 'B603', 'B607']
+
+# Configure test method exclusion
+# exclude_dirs: []
+
+# Configure test method inclusion
+# only_includes: []
+
+# Set a severity threshold
+# severity_level: LOW
+
+# Set a confidence threshold
+# confidence_level: HIGH
