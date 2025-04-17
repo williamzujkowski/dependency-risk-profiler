@@ -58,6 +58,8 @@ dev = [
     "responses>=0.25.0",        # For HTTP mocking in tests
     "aioresponses>=0.7.4",      # For mocking async HTTP requests
     "numpy>=2.2.4",             # For benchmark tests and percentile calculations
+    "tomli>=2.0.1",             # For TOML parsing in tests
+    "tomli-w>=1.0.0",           # For TOML writing in tests
 ]
 
 [project.urls]
