@@ -58,9 +58,12 @@ dev = [
     "mypy>=1.9.0",
     "responses>=0.25.0",        # For HTTP mocking in tests
     "aioresponses>=0.7.4",      # For mocking async HTTP requests
-    "numpy>=1.24.0,<1.25.0",    # For benchmark tests and percentile calculations
     "tomli>=2.0.1;python_version>='3.9' and python_version<'3.11'",  # For TOML parsing in tests (builtin in 3.11+)
     "tomli-w>=1.0.0",           # For TOML writing in tests
+]
+
+benchmark = [
+    "numpy>=1.24.0",           # For benchmark tests and percentile calculations
 ]
 
 [project.urls]

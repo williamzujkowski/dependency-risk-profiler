@@ -25,7 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip 'setuptools==69.0.2' 'wheel>=0.42.0'
-        pip install -e ".[dev]" --no-build-isolation
+        pip install -e ".[dev]"
     
     - name: Lint with flake8
       run: flake8
