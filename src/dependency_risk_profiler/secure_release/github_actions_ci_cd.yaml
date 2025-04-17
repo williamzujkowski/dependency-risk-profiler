@@ -44,8 +44,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip 'setuptools==69.0.2' 'wheel>=0.42.0'
           pip install -e ".[dev,visualization]"
-          # Install bandit before running security checks
-          pip install bandit safety
+          # Install bandit and specific safety version before running security checks
+          pip install bandit "safety==2.3.5"
           
       - name: Run lint checks
         run: |
