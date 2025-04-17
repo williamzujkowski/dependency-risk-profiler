@@ -10,7 +10,7 @@ on:
 
 # Environment variables accessible to all jobs
 env:
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.12"
   AWS_REGION: us-east-1
 
 jobs:

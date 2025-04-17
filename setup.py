@@ -39,7 +39,7 @@ setup(
         "jinja2>=3.1.5",      # Fixed CVE-2024-56201
         "certifi>=2024.7.4",  # Fixed CVE-2024-39689
         "werkzeug>=3.0.6",    # Fixed CVE-2024-49766, CVE-2024-49767
-        "tomli>=2.0.1;python_version<'3.11'",  # TOML parsing (builtin in Python 3.11+)
+        "tomli>=2.0.1;python_version>='3.9' and python_version<'3.11'",  # TOML parsing (builtin in Python 3.11+)
         "pygments>=2.16.1",   # Fixed CVE-2023-41337
         "pillow>=10.2.0",     # Fixed CVE-2023-50447, CVE-2024-35219, etc.
         "typer>=0.9.0",       # CLI framework for better user experience
@@ -79,6 +79,8 @@ setup(
             "responses>=0.25.0",        # For HTTP mocking in tests
             "aioresponses>=0.7.4",      # For mocking async HTTP requests
             "numpy>=1.24.0,<1.25.0",    # For benchmark tests and percentile calculations
+            "tomli>=2.0.1;python_version>='3.9' and python_version<'3.11'",  # For TOML parsing in tests (builtin in 3.11+)
+            "tomli-w>=1.0.0",           # For TOML writing in tests
         ],
     },
 )
