@@ -129,6 +129,7 @@ class AsyncNVDSource(NVDSource):
         return normalized
 
 
+
 class AsyncGitHubAdvisorySource(GitHubAdvisorySource):
     """Asynchronous GitHub Advisory Database vulnerability data source."""
     
