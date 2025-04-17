@@ -54,11 +54,10 @@ jobs:
           black --check . --exclude "/tests/"
 
       - name: Type checking
-        continue-on-error: true  # Don't fail the build if mypy has issues
         run: |
-          # Run mypy but don't fail if it finds errors
-          echo "Running mypy with error suppression - issues will be fixed in future PR"
-          mypy --config-file=mypy.ini src/ || true
+          # Run mypy with our fixed configuration
+          echo "Running mypy type checking"
+          mypy --config-file=mypy.ini src/
           
       - name: Run unit tests
         run: |
@@ -67,7 +66,7 @@ jobs:
       - name: Run bandit security check
         run: |
           # Run security audits on the code
-          bandit -r src/ || true
+          bandit -r src/ -c .bandit.yml
 
       - name: Note on security checks
         run: |
@@ -159,14 +158,13 @@ jobs:
 
       # Scan the built artifact for security issues
       - name: Run bandit security scan
-        continue-on-error: true  # Don't fail the build if security issues are found
         run: |
           echo "Running security scan on built artifacts..."
           # Install security tools
           pip install bandit
           
           # Run security audit on the package contents
-          bandit -r src/ || true
+          bandit -r src/ -c .bandit.yml
           
           echo "✅ Bandit security scan completed"
           
