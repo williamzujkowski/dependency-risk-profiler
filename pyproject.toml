@@ -90,6 +90,13 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+exclude = [
+    "tests/",
+    "venv/",
+    "build/",
+    "dist/",
+    "setup.py"
+]
 
 [tool.pytest]
 testpaths = ["tests"]
@@ -110,3 +117,10 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
 version = {attr = "dependency_risk_profiler.__version__"}
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+exclude = ["tests/*", "**/tests/*"]
+select = ["E", "F", "B", "I"]
+ignore = ["E203"]
