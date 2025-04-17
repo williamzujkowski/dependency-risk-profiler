@@ -13,7 +13,9 @@ exclude =
     .pytest_cache,
     .eggs,
     *.egg,
-    tests/*
+    tests/*,
+    examples/*,
+    dependabot_check/*
 
 per-file-ignores =
     # Allow unused imports in __init__.py files

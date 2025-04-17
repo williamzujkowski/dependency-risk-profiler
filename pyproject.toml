@@ -60,10 +60,16 @@ dev = [
     "aioresponses>=0.7.4",      # For mocking async HTTP requests
     "tomli>=2.0.1;python_version>='3.9' and python_version<'3.11'",  # For TOML parsing in tests (builtin in 3.11+)
     "tomli-w>=1.0.0",           # For TOML writing in tests
+    "pre-commit>=3.5.0",        # For pre-commit hooks
 ]
 
 benchmark = [
     "numpy>=1.24.0",           # For benchmark tests and percentile calculations
+]
+
+visualization = [
+    "graphviz>=0.20.1",        # For dependency graph visualization
+    "python-igraph>=0.10.4",   # Alternative graph visualization
 ]
 
 [project.urls]
