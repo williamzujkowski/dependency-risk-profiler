@@ -42,10 +42,16 @@ setup(
         "tomli>=2.0.1;python_version<'3.11'",  # TOML parsing (builtin in Python 3.11+)
         "pygments>=2.16.1",   # Fixed CVE-2023-41337
         "pillow>=10.2.0",     # Fixed CVE-2023-50447, CVE-2024-35219, etc.
+        "typer>=0.9.0",       # CLI framework for better user experience
+        "rich>=13.5.0",       # For rich terminal output and progress bars
+        "aiohttp>=3.8.6",     # For async HTTP requests
+        "httpx>=0.24.1",      # Modern HTTP client with sync and async support
+        "pipdeptree>=2.13.0", # For enhanced Python transitive dependency analysis
     ],
     entry_points={
         "console_scripts": [
-            "dependency-risk-profiler=dependency_risk_profiler.cli.main:main",
+            "dependency-risk-profiler=dependency_risk_profiler.cli.typer_cli:main",
+            "dependency-risk-profiler-legacy=dependency_risk_profiler.cli.main:main",
         ],
     },
     classifiers=[
@@ -64,12 +70,14 @@ setup(
             "pytest>=7.4.0",
             "pytest-cov>=4.2.0",
             "pytest-benchmark>=4.0.0",  # For performance benchmark tests
+            "pytest-asyncio>=0.21.1",   # For testing async code
             "black>=24.4.0",
             "isort>=5.13.2",
             "flake8>=7.0.0",
             "mypy>=1.9.0",
-            "responses>=0.25.0",  # Added for HTTP mocking in tests
-            "numpy>=2.2.4",  # For benchmark tests and percentile calculations
+            "responses>=0.25.0",        # For HTTP mocking in tests
+            "aioresponses>=0.7.4",      # For mocking async HTTP requests
+            "numpy>=1.24.0",            # For benchmark tests and percentile calculations
         ],
     },
 )
