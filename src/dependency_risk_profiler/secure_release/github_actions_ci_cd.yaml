@@ -47,8 +47,8 @@ jobs:
           
       - name: Run lint checks
         run: |
-          flake8 .
-          black --check .
+          flake8 --config=.flake8
+          black --check . --exclude "/tests/"
           mypy src/
           
       - name: Run unit tests

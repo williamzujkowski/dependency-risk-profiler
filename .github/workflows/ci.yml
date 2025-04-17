@@ -28,7 +28,7 @@ jobs:
         pip install -e ".[dev]"
     
     - name: Lint with flake8
-      run: flake8
+      run: flake8 --config=.flake8
     
     - name: Type check with mypy
       run: mypy
