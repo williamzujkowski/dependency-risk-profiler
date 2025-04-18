@@ -36,6 +36,40 @@ Since this tool analyzes and reports on security risks in dependencies, we are e
 
 4. **Temporary Files**: Any temporary files created during analysis are securely managed and removed when no longer needed.
 
+## Project Security Measures
+
+The Dependency Risk Profiler project employs several security measures for its own codebase:
+
+### Automated Security Scanning
+
+- **GitHub CodeQL Analysis**: Automatically scans code for potential security vulnerabilities
+  - Configured to exclude test directories and example code with intentional vulnerabilities
+  - Configuration is located in `.github/codeql/codeql-config.yml`
+  - Runs on every push to main, pull requests to main, and weekly scheduled scans
+
+- **Bandit**: Python-specific security linter integrated into our CI/CD pipeline
+  - Detects common security issues in Python code
+  - Run via `bandit -r src -c .bandit.yml` in our CI process
+
+### Dependency Management
+
+- **Dependabot**: Automatically monitors our dependencies for vulnerabilities
+  - Creates pull requests when security updates are available
+  - Configured to exclude test directories and example code
+  - Configuration is located in `.github/dependabot.yml`
+  
+- **Self-analysis**: We regularly run the Dependency Risk Profiler against itself
+
+### Security in Testing
+
+Our project contains intentionally outdated dependencies and vulnerability examples in the following directories:
+- `/examples/` 
+- `/testing/projects/`
+
+These files are used for testing and demonstration purposes of the tool's capabilities and are excluded from security scanning to avoid false positives.
+
+**⚠️ WARNING: The demonstration dependencies in test and example code should not be used in production environments.**
+
 ## Security Updates
 
 Security updates are announced through:
