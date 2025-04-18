@@ -47,12 +47,12 @@ A command-line tool that goes beyond traditional vulnerability scanners to asses
 pip install dependency-risk-profiler
 
 # Or use the quick installer (no need to clone the repository)
-curl -sSL https://raw.githubusercontent.com/your-organization/dependency-risk-profiler/main/quickinstall.py | python3
+curl -sSL https://raw.githubusercontent.com/your-organization/dependency-risk-profiler/main/scripts/quickinstall.py | python3
 ```
 
 ### Using the Installer Scripts
 
-This package provides convenient installer scripts for different platforms:
+This package provides convenient installer scripts in the `scripts/` directory:
 
 #### Linux/macOS
 
@@ -62,7 +62,7 @@ git clone https://github.com/your-organization/dependency-risk-profiler.git
 cd dependency-risk-profiler
 
 # Run the installer
-./install.sh
+./scripts/install.sh
 ```
 
 #### Windows
@@ -73,7 +73,7 @@ git clone https://github.com/your-organization/dependency-risk-profiler.git
 cd dependency-risk-profiler
 
 # Run the installer
-install.bat
+scripts\install.bat
 ```
 
 #### Cross-platform Python installer
@@ -84,7 +84,7 @@ git clone https://github.com/your-organization/dependency-risk-profiler.git
 cd dependency-risk-profiler
 
 # Run the installer
-python install.py
+python scripts/install.py
 ```
 
 ### From Source (Manual Installation)
@@ -365,10 +365,10 @@ Risk factors include:
 - Repository activity metrics
 
 For detailed information about the risk scoring methodology and information sources, see:
-- [Scoring Methodology](docs/SCORING.md) - How risk scores are calculated
-- [Information Sources](docs/INFORMATION_SOURCES.md) - Where the tool gets its data
+- [Scoring Methodology](https://williamzujkowski.github.io/dependency-risk-profiler/SCORING/) - How risk scores are calculated
+- [Information Sources](https://williamzujkowski.github.io/dependency-risk-profiler/INFORMATION_SOURCES/) - Where the tool gets its data
 
-For all documentation, see the [docs directory](docs/README.md).
+For all documentation, see the [online documentation](https://williamzujkowski.github.io/dependency-risk-profiler/).
 
 ## Documentation
 
@@ -377,13 +377,14 @@ The project documentation is built with MkDocs and available in multiple formats
 - **Online Documentation**: [View the docs online](https://williamzujkowski.github.io/dependency-risk-profiler/) (automatically updated when the main branch changes)
 - **Local Documentation**: Run `mkdocs serve` in the project directory to view documentation locally at http://127.0.0.1:8000/
 - **Static Site**: Run `mkdocs build` to generate a static documentation site in the `site/` directory
-- **Markdown Files**: Browse the raw documentation in the [docs directory](docs/)
+- **Markdown Files**: Browse the raw documentation in the `docs/` directory
 
 The documentation includes:
 - User guides for installation and usage
 - API references and configuration options
-- Development guides and contribution guidelines
+- Development guides and contribution guidelines 
 - Security and risk scoring methodologies
+- Project standards and testing documentation
 
 ## Requirements
 
@@ -401,7 +402,7 @@ These files contain dependencies with known vulnerabilities for testing and demo
 
 **⚠️ WARNING: DO NOT use these example dependencies in production environments.**
 
-Please review our [Security Policy](docs/security/SECURITY.md) and [Dependency Security](docs/security/DEPENDENCY_SECURITY.md) documentation for more information.
+Please review our [Security Policy](https://williamzujkowski.github.io/dependency-risk-profiler/security/SECURITY/) and [Dependency Security](https://williamzujkowski.github.io/dependency-risk-profiler/security/DEPENDENCY_SECURITY/) documentation for more information.
 
 ## Development
 
@@ -551,7 +552,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more details.
+See the [Contributing Guide](https://williamzujkowski.github.io/dependency-risk-profiler/CONTRIBUTING/) for more details.
 
 ## Release Process
 

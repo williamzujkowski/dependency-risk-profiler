@@ -27,6 +27,8 @@ set /p choice="Enter your choice (1 or 2): "
 if "%choice%"=="1" (
     REM Direct installation
     echo Installing globally...
+    REM Navigate to the project root directory (parent of scripts directory)
+    cd %~dp0\..
     pip install .
     
     echo Installation complete!
@@ -34,6 +36,8 @@ if "%choice%"=="1" (
 ) else (
     REM Virtual environment installation
     echo Creating virtual environment...
+    REM Navigate to the project root directory (parent of scripts directory)
+    cd %~dp0\..
     python -m venv venv
     
     REM Activate virtual environment

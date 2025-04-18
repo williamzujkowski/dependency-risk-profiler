@@ -45,6 +45,8 @@ read -p "Enter your choice (1 or 2): " choice
 if [ "$choice" == "1" ]; then
     # Direct installation
     echo "Installing globally..."
+    # Navigate to the project root directory (parent of scripts directory)
+    cd "$(dirname "$0")/.."
     pip3 install .
     
     echo "Installation complete!"
@@ -52,6 +54,8 @@ if [ "$choice" == "1" ]; then
 else
     # Virtual environment installation
     echo "Creating virtual environment..."
+    # Navigate to the project root directory (parent of scripts directory)
+    cd "$(dirname "$0")/.."
     python3 -m venv venv
     
     # Activate virtual environment based on OS

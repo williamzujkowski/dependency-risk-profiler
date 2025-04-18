@@ -1,1 +1,0 @@
-docs/security/DEPENDENCY_SECURITY.md

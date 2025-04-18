@@ -5,9 +5,12 @@ This directory contains examples, demos, and sample data for the Dependency Risk
 ## Directory Structure
 
 - [`data/`](data/README.md) - Example data files (JSON) for testing and demos
+  - [`data/trends/`](data/trends/README.md) - Historical trend data for visualization
+- [`fixtures/`](fixtures/README.md) - Test fixtures including sample large manifest files
 - [`manifests/`](manifests/README.md) - Example dependency manifest files (requirements.txt, package-lock.json, go.mod)
 - [`usage/`](usage/README.md) - Examples of using the Dependency Risk Profiler API in Python code
 - [`visualization/`](visualization/README.md) - Examples of visualizing dependency risk data
+- [`src/`](src/README.md) - Example source code for plugins and extensions
 
 ## Quick Start
 

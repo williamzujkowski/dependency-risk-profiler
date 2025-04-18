@@ -11,6 +11,11 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -e ".[dev]"
 
+# Alternative: Use installer scripts
+# python scripts/install.py   # Cross-platform Python installer
+# ./scripts/install.sh        # Unix/Linux installer
+# scripts\install.bat         # Windows installer
+
 # Install pre-commit hooks
 pre-commit install
 ```

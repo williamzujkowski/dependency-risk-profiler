@@ -97,10 +97,11 @@ def install_package(venv_path=None, dev=True, editable=True):
 
     # Upgrade pip, setuptools, wheel
     print("Upgrading pip, setuptools, and wheel...")
-    current_dir = Path(__file__).resolve().parent
+    # Navigate to the project root directory (parent of scripts directory)
+    project_dir = Path(__file__).resolve().parent.parent
     run_command(
         [pip_exe, "install", "--upgrade", "pip", "setuptools", "wheel"],
-        cwd=current_dir,
+        cwd=project_dir,
         env=env,
     )
 
@@ -116,8 +117,9 @@ def install_package(venv_path=None, dev=True, editable=True):
 
     # Run installation
     print(f"Installing package: {' '.join(install_args)}")
-    current_dir = Path(__file__).resolve().parent
-    result = run_command(install_args, cwd=current_dir, env=env)
+    # Navigate to the project root directory (parent of scripts directory)
+    project_dir = Path(__file__).resolve().parent.parent
+    result = run_command(install_args, cwd=project_dir, env=env)
 
     if result and result.returncode == 0:
         return True
@@ -300,8 +302,8 @@ def interactive_install():
 
     elif choice == "2":
         # Virtual environment installation (no dev dependencies)
-        current_dir = Path(__file__).resolve().parent
-        venv_path = current_dir / "venv"
+        project_dir = Path(__file__).resolve().parent.parent
+        venv_path = project_dir / "venv"
 
         # Check if venv exists
         if os.path.exists(venv_path):
@@ -333,8 +335,8 @@ def interactive_install():
 
     else:  # choice == "3"
         # Development mode with virtual environment
-        current_dir = Path(__file__).resolve().parent
-        venv_path = current_dir / "venv"
+        project_dir = Path(__file__).resolve().parent.parent
+        venv_path = project_dir / "venv"
 
         # Check if venv exists
         if os.path.exists(venv_path):
