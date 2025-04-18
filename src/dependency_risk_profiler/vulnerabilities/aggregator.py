@@ -118,7 +118,9 @@ class VulnerabilitySource:
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                is_client_error = e.response.status_code >= 400 and e.response.status_code < 500
+                is_client_error = (
+                    e.response.status_code >= 400 and e.response.status_code < 500
+                )
                 is_rate_limited = e.response.status_code == 429
                 if is_client_error and not is_rate_limited:
                     logger.debug(
@@ -213,7 +215,9 @@ class OSVSource(VulnerabilitySource):
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                is_client_error = e.response.status_code >= 400 and e.response.status_code < 500
+                is_client_error = (
+                    e.response.status_code >= 400 and e.response.status_code < 500
+                )
                 is_rate_limited = e.response.status_code == 429
                 if is_client_error and not is_rate_limited:
                     logger.debug(
@@ -605,7 +609,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                is_client_error = e.response.status_code >= 400 and e.response.status_code < 500
+                is_client_error = (
+                    e.response.status_code >= 400 and e.response.status_code < 500
+                )
                 is_rate_limited = e.response.status_code == 429
                 if is_client_error and not is_rate_limited:
                     logger.debug(
