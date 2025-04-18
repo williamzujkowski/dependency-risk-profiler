@@ -41,20 +41,28 @@ class BaseAnalyzer(ABC):
         Returns:
             An instance of the appropriate analyzer, or None if no analyzer matches.
         """
-        from .golang import GoAnalyzer
-        from .nodejs import NodeJSAnalyzer
-        from .python import PythonAnalyzer
+        try:
+            from .golang import GoAnalyzer
+            from .nodejs import NodeJSAnalyzer
+            from .python import PythonAnalyzer
+            
+            if not ecosystem:
+                return None
+                
+            ecosystem = ecosystem.lower().strip()
 
-        ecosystem = ecosystem.lower()
-
-        if ecosystem == "nodejs":
-            return NodeJSAnalyzer()
-        elif ecosystem == "python":
-            return PythonAnalyzer()
-        elif ecosystem == "golang":
-            return GoAnalyzer()
-        elif ecosystem == "toml":
-            # Fallback to Python analyzer for toml files (pyproject.toml)
-            return PythonAnalyzer()
-        else:
+            if ecosystem == "nodejs":
+                return NodeJSAnalyzer()
+            elif ecosystem == "python":
+                return PythonAnalyzer()
+            elif ecosystem == "golang":
+                return GoAnalyzer()
+            elif ecosystem == "toml":
+                # Fallback to Python analyzer for toml files (pyproject.toml)
+                return PythonAnalyzer()
+            else:
+                return None
+                
+        except ImportError:
+            # Handle the case where one of the analyzers can't be imported
             return None
