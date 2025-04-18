@@ -6,9 +6,10 @@ This script identifies and removes files that are no longer needed due to the mi
 to a pyproject.toml-based configuration. It creates backups before removal.
 """
 
-import os
 import shutil
+import sys
 from pathlib import Path
+
 
 # Files that should be removed after migration to pyproject.toml
 LEGACY_FILES = [
@@ -20,6 +21,7 @@ LEGACY_FILES = [
     "tox.ini",
     "pytest.ini",
 ]
+
 
 def backup_file(file_path):
     """Create a backup of a file before removing it."""
@@ -34,6 +36,7 @@ def backup_file(file_path):
         return True
     return False
 
+
 def remove_file(file_path):
     """Remove a file if it exists."""
     path = Path(file_path)
@@ -43,11 +46,13 @@ def remove_file(file_path):
         return True
     return False
 
+
 def main():
     """Main entry point."""
     print("Dependency Risk Profiler Legacy Cleanup")
     print("======================================")
-    print("This script will remove legacy configuration files that have been migrated to pyproject.toml.")
+    print("This script will remove legacy configuration files that have been migrated "
+          "to pyproject.toml.")
     print("Backups will be created in the 'backup_legacy' directory.")
     
     # Check if pyproject.toml exists
@@ -56,16 +61,17 @@ def main():
         return 1
     
     # In automated environment, proceed without confirmation
-    import sys
     if "--force" in sys.argv:
         confirm = "y"
     else:
         # Confirm before proceeding
         try:
-            confirm = input("\nContinue with removal of legacy files? (y/N): ").strip().lower()
+            prompt = "\nContinue with removal of legacy files? (y/N): "
+            confirm = input(prompt).strip().lower()
         except EOFError:
             # Handle non-interactive environments
-            print("\nNon-interactive environment detected. Use --force to proceed without confirmation.")
+            print("\nNon-interactive environment detected. Use --force to proceed "
+                  "without confirmation.")
             return 0
             
     if confirm not in ["y", "yes"]:
@@ -86,6 +92,7 @@ def main():
         print("\nNo legacy files found or removed.")
     
     return 0
+
 
 if __name__ == "__main__":
     exit(main())
