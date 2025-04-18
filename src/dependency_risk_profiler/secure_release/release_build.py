@@ -166,7 +166,7 @@ def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
             # Run unit tests
             logger.info("Running unit tests...")
             subprocess.run(
-                [sys.executable, "-m", "pytest", "-xvs", "tests/"],  # nosec B603
+                [sys.executable, "-m", "pytest", "-xvs", "testing/"],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,

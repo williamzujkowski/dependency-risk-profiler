@@ -176,7 +176,7 @@ module = "dependency_risk_profiler.secure_release.*"
 ignore_errors = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["testing/unit", "testing/integration"]
 python_files = "test_*.py"
 python_functions = "test_*"
 markers = [

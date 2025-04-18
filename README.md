@@ -317,7 +317,7 @@ python examples/secure_release_demo.py
 
 ## Example Output
 
-For examples of how to use this tool, check out the [examples directory](examples/README.md). For real-world test cases, see the [test-projects directory](test-projects/README.md).
+For examples of how to use this tool, check out the [examples directory](examples/README.md). For real-world test cases, see the [testing/projects directory](testing/projects/README.md).
 
 ```
 Dependency Risk Profile
@@ -367,7 +367,7 @@ For detailed information about the risk scoring methodology and information sour
 - [Scoring Methodology](docs/SCORING.md) - How risk scores are calculated
 - [Information Sources](docs/INFORMATION_SOURCES.md) - Where the tool gets its data
 
-For more documentation, see the [docs directory](docs/README.md).
+For all documentation, see the [docs directory](docs/README.md).
 
 ## Requirements
 
@@ -389,6 +389,22 @@ Please review our [Security Policy](docs/security/SECURITY.md) and [Dependency S
 
 ## Development
 
+### Project Structure
+
+The Dependency Risk Profiler follows a clean, well-organized directory structure:
+
+- `src/dependency_risk_profiler/`: Core library code
+- `testing/`: Test files and resources 
+  - `unit/`: Unit tests for individual components
+  - `integration/`: Integration tests for multi-component functionality
+  - `fixtures/`: Test fixtures and mock data
+  - `manifests/`: Sample dependency manifests for testing
+  - `projects/`: Complete project copies for realistic testing
+- `examples/`: Example scripts and usage demos
+- `docs/`: Documentation files
+
+### Getting Started
+
 ```bash
 # Clone the repository
 git clone https://github.com/williamzujkowski/dependency-risk-profiler.git
@@ -409,6 +425,10 @@ pytest
 
 # Run tests with coverage report
 pytest --cov=src
+
+# Run specific test categories
+pytest testing/unit/
+pytest testing/integration/
 
 # Format and lint code
 black .
