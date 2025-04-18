@@ -5,34 +5,44 @@ on:
     tags:
       - 'v*.*.*'  # Run when tag matches v*, i.e. v1.0.0, v0.1.0
 
+permissions:
+  contents: write
+  
 jobs:
   build-and-publish:
+    name: Build and Publish Release
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0  # We need the full history for the changelog
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.12'
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install build wheel twine
-        pip install github-changelog-generator
     
     - name: Extract version from tag
       id: get_version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
     
-    - name: Generate changelog
+    - name: Generate Release Notes
+      id: changelog
       run: |
-        github-changelog-generator --future-release v${{ env.VERSION }} --output CHANGELOG.md
-      env:
-        CHANGELOG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        echo "# Release v${{ env.VERSION }}" > RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "## What's Changed" >> RELEASE_NOTES.md
+        git log --pretty=format:"* %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD | grep -v "Merge pull request" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^)...v${{ env.VERSION }}" >> RELEASE_NOTES.md
+        cat RELEASE_NOTES.md
     
     - name: Build package
       run: |
@@ -40,29 +50,31 @@ jobs:
         twine check dist/*
     
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ env.VERSION }}
-        release_name: Release v${{ env.VERSION }}
-        body_path: CHANGELOG.md
+        name: Release v${{ env.VERSION }}
+        body_path: RELEASE_NOTES.md
         draft: false
         prerelease: false
+        files: |
+          dist/*.tar.gz
+          dist/*.whl
     
-    - name: Upload Release Assets
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/*
-        asset_name: dependency-risk-profiler-${{ env.VERSION }}.tar.gz
-        asset_content_type: application/gzip
-    
-    - name: Publish to PyPI
+    - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+        skip-existing: true
+        verbose: true
+    
+    - name: Build docs
+      run: |
+        pip install -e ".[docs]"
+        mkdocs build
+    
+    - name: Deploy docs
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        folder: site
+        branch: gh-pages
+        clean: true
