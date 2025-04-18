@@ -332,9 +332,26 @@ class Config:
         """Get scoring weights from configuration.
 
         Returns:
-            Dictionary of scoring weights
+            Dictionary of scoring weights with keys as expected by RiskScorer
         """
-        return self.get_section("scoring_weights")
+        weights = self.get_section("scoring_weights")
+
+        # Map config keys to RiskScorer parameter names
+        return {
+            "staleness_weight": weights.get("staleness", 0.25),
+            "maintainer_weight": weights.get("maintainer", 0.2),
+            "deprecation_weight": weights.get("deprecation", 0.3),
+            "exploit_weight": weights.get("exploit", 0.5),
+            "version_difference_weight": weights.get("version_difference", 0.15),
+            "health_indicators_weight": weights.get("health_indicators", 0.1),
+            "license_weight": weights.get("license", 0.3),
+            "community_weight": weights.get("community", 0.2),
+            "transitive_weight": weights.get("transitive", 0.15),
+            "security_policy_weight": weights.get("security_policy", 0.25),
+            "dependency_update_weight": weights.get("dependency_update", 0.2),
+            "signed_commits_weight": weights.get("signed_commits", 0.2),
+            "branch_protection_weight": weights.get("branch_protection", 0.15),
+        }
 
     def get_vulnerability_config(self) -> Dict[str, Any]:
         """Get vulnerability configuration.

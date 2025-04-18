@@ -122,6 +122,7 @@ def test_pyproject_toml_parser(pyproject_toml_file):
         import tomli_w
     except ImportError:
         import pytest
+
         pytest.skip("tomli and tomli_w packages required for this test")
 
     # Read the current file
@@ -171,6 +172,7 @@ def test_poetry_toml_parser(poetry_toml_file):
         import tomli_w
     except ImportError:
         import pytest
+
         pytest.skip("tomli and tomli_w packages required for this test")
 
     # Read the current file
