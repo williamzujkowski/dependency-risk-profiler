@@ -15,6 +15,7 @@ A command-line tool that goes beyond traditional vulnerability scanners to asses
 - 📊 **Risk Scoring**: Compute a composite risk score for each dependency
 - 🎨 **Colorized Output**: Clear, color-coded terminal reports
 - 📋 **JSON Output**: Optional JSON output for integration with other tools
+- 📂 **Directory Scanning**: Analyze all manifest files in a directory with a single command
 
 ### Enhanced Features
 - 📜 **License Analysis**: Evaluate license types and compliance risks
@@ -113,6 +114,12 @@ dependency-risk-profiler analyze --manifest /path/to/go.mod
 
 # Enable asynchronous dependency analysis for faster results
 dependency-risk-profiler analyze --manifest /path/to/package-lock.json --async
+
+# Analyze all manifest files in a directory
+dependency-risk-profiler analyze --manifest /path/to/project_directory
+
+# Analyze all manifest files in a directory and its subdirectories
+dependency-risk-profiler analyze --manifest /path/to/project_directory --recursive
 ```
 
 ### Configuration Files
