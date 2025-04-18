@@ -1,7 +1,11 @@
 name: "CodeQL Analysis"
 
-# Declare this workflow as the custom code scanning workflow
-# This disables the default CodeQL setup
+# Important: To use this custom workflow, you must DISABLE the default setup in GitHub
+# 1. Go to GitHub repository → Settings → Code security and analysis
+# 2. Find "Code scanning" section
+# 3. Turn OFF "Default setup" for CodeQL Analysis
+# 4. Turn ON "Advanced setup" to use this custom workflow
+#
 # See: https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning
 
 on:

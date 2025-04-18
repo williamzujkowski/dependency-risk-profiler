@@ -46,6 +46,7 @@ The Dependency Risk Profiler project employs several security measures for its o
   - Configured to exclude test directories and example code with intentional vulnerabilities
   - Configuration is located in `.github/codeql/codeql-config.yml`
   - Runs on every push to main, pull requests to main, and weekly scheduled scans
+  - **Important Setup Note**: The repository must have the default CodeQL setup disabled and advanced setup enabled in GitHub settings for the custom configuration to work properly
 
 - **Bandit**: Python-specific security linter integrated into our CI/CD pipeline
   - Detects common security issues in Python code
