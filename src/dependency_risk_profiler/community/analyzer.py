@@ -1,48 +1,16 @@
 """Community metrics analyzer for dependencies."""
 
 import logging
-import re
-import subprocess  # nosec B404
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 
-from ..analyzers.common import fetch_json, fetch_url
 from ..models import CommunityMetrics, DependencyMetadata
+from ..utils import extract_github_repo_info, fetch_json, fetch_url
 
 logger = logging.getLogger(__name__)
 
 
-def extract_github_repo_info(repo_url: str) -> Optional[Tuple[str, str]]:
-    """Extract owner and repo name from a GitHub URL.
-
-    Args:
-        repo_url: GitHub repository URL.
-
-    Returns:
-        Tuple of (owner, repo) or None if not a GitHub URL.
-    """
-    if not repo_url:
-        return None
-
-    # Clean the URL
-    repo_url = repo_url.strip()
-
-    # Handle various GitHub URL formats
-    github_patterns = [
-        r"github\.com[/:]([^/]+)/([^/]+)(\.git)?/?$",
-        r"github\.com[/:]([^/]+)/([^/]+?)(?:\.git|/)?$",
-    ]
-
-    for pattern in github_patterns:
-        match = re.search(pattern, repo_url)
-        if match:
-            owner = match.group(1)
-            repo = match.group(2)
-            if repo.endswith(".git"):
-                repo = repo[:-4]
-            return owner, repo
-
-    return None
+# We'll use extract_github_repo_info from utils.py instead
 
 
 def extract_star_count(html_content: str) -> Optional[int]:
