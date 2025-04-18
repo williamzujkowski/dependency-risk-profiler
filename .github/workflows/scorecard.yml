@@ -12,16 +12,11 @@ on:
   # Allow manual triggering
   workflow_dispatch:
 
-# Permissions for the GITHUB_TOKEN
-permissions:
-  # Repository contents, needed to checkout the code
+# Permissions - limit to minimum required
+# Note: Following the Scorecard Action workflow restrictions guidance
+permissions: 
+  # Only read access to repository contents is needed for scanning
   contents: read
-  # Pull requests, needed for check results
-  pull-requests: read
-  # Needed for scorecard results
-  security-events: write
-  # Needed for GitHub OIDC token
-  id-token: write
 
 jobs:
   scorecard:
@@ -39,8 +34,10 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
-          # Publishing to Scorecard REST API is optional
-          publish_results: true
+          # Disable publishing to Scorecard REST API
+          publish_results: false
+          # Use a specific commit to create reproducible results
+          commit_sha: ${{ github.sha }}
           
       - name: "Upload artifact"
         uses: actions/upload-artifact@v4
@@ -49,7 +46,10 @@ jobs:
           path: results.sarif
           retention-days: 5
           
-      - name: "Upload to code-scanning"
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
+      # Note: Uploads to GitHub Code Scanning requires security-events write permission
+      # If needed, uncomment and add the permission above, but note that this would
+      # require careful review according to Scorecard's workflow restrictions
+      # - name: "Upload to code-scanning"
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: results.sarif
