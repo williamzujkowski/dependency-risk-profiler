@@ -125,6 +125,7 @@ class Config:
                         config_data = tomllib.load(f)
                     else:
                         import tomli
+
                         config_data = tomli.load(f)
             elif file_path.suffix in (".yaml", ".yml"):
                 with open(file_path, "r") as f:

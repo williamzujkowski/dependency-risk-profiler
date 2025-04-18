@@ -31,12 +31,13 @@ When a repository URL is available, the tool clones the repository to analyze:
 
 ### 3. Security Information
 
-- The tool looks for security indicators in package descriptions and documentation.
-- For more comprehensive tools, this could be expanded to query vulnerability databases like OSV or the GitHub Advisory Database.
+- **Vulnerability Databases**: The tool queries multiple sources including OSV (Open Source Vulnerabilities), NVD (National Vulnerability Database), and GitHub Advisory Database.
+- **Security Indicators**: Analysis of security policies, branch protection rules, signed commits, and dependency update tools.
+- **Security Documentation**: Checking for presence of SECURITY.md and security-related documentation.
 
 ## Risk Scoring Components
 
-The overall risk score is calculated from six components, each with configurable weights:
+The overall risk score is calculated from multiple components, each with configurable weights. The basic components include:
 
 ### 1. Staleness Score (Default Weight: 0.25)
 
@@ -103,6 +104,44 @@ Evaluates project health based on presence of tests, CI, and contribution guidel
 | Some Present          | Proportional (1 - ratio of present indicators) |
 | Unknown               | 0.5   |
 
+### Enhanced Risk Components (v0.2.0+)
+
+These additional components are part of the enhanced risk model in version 0.2.0 and later:
+
+7. **License Risk Score (Default Weight: 0.3)**
+
+Evaluates the license type and compliance risk:
+
+| License Type         | Score |
+|----------------------|-------|
+| Permissive (MIT, Apache, BSD) | 0.0 |
+| Weak Copyleft (LGPL) | 0.3   |
+| Strong Copyleft (GPL)| 0.5   |
+| Non-standard        | 0.7   |
+| No License          | 1.0   |
+
+8. **Community Health Score (Default Weight: 0.25)**
+
+Evaluates community engagement metrics:
+
+| Community Factors    | Score |
+|----------------------|-------|
+| Many stars, forks, and active PRs | 0.0 |
+| Moderate activity    | 0.4   |
+| Low activity         | 0.7   |
+| Abandoned           | 1.0   |
+
+9. **Security Policy Score (Default Weight: 0.35)**
+
+Evaluates security practices in the repository:
+
+| Security Practices   | Score |
+|----------------------|-------|
+| All security best practices | 0.0 |
+| Some security practices | 0.4   |
+| Few security practices | 0.7   |
+| No security practices | 1.0   |
+
 ## Calculation Process
 
 1. **Individual Scoring**: Each component is scored on a scale of 0.0 to 1.0.
@@ -154,12 +193,10 @@ This allows organizations to adjust the scoring methodology to align with their 
 
 ## Future Enhancements
 
-- Integration with vulnerability databases (NVD, OSV, GitHub Advisory Database)
-- License risk assessment
 - Dependency usage analysis (how many projects depend on this package)
 - More sophisticated version analysis (SemVer compliance, release frequency)
 - Static code analysis metrics (code quality, test coverage)
 
 ---
 
-*This document describes the risk scoring methodology as of version 0.1.0 of the Dependency Risk Profiler. Future versions may incorporate additional data sources and enhanced scoring algorithms.*
+*This document describes the risk scoring methodology as of version 0.2.0 of the Dependency Risk Profiler.*

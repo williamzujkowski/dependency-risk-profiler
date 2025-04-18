@@ -14,7 +14,7 @@ from dependency_risk_profiler.cli.typer_cli import (
     OutputFormat,
     app,
     display_ecosystem_list,
-    get_ecosystem_from_manifest
+    get_ecosystem_from_manifest,
 )
 
 
@@ -61,12 +61,8 @@ def mock_ecosystem_registry():
         "python": {
             "file_patterns": ["requirements.txt", "pyproject.toml", "Pipfile.lock"]
         },
-        "nodejs": {
-            "file_patterns": ["package-lock.json", "yarn.lock"]
-        },
-        "golang": {
-            "file_patterns": ["go.mod", "go.sum"]
-        }
+        "nodejs": {"file_patterns": ["package-lock.json", "yarn.lock"]},
+        "golang": {"file_patterns": ["go.mod", "go.sum"]},
     }
     registry_mock.detect_ecosystem.return_value = "python"
     return registry_mock
@@ -75,13 +71,17 @@ def mock_ecosystem_registry():
 class TestEcosystemFunctions:
     """Tests for ecosystem-related functions."""
 
-    @patch('dependency_risk_profiler.cli.typer_cli.EcosystemRegistry')
+    @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
     def test_display_ecosystem_list(self, mock_registry_class, mock_ecosystem_registry):
         """HYPOTHESIS: display_ecosystem_list should print available ecosystems."""
         # Arrange
-        mock_registry_class.get_available_ecosystems = mock_ecosystem_registry.get_available_ecosystems
-        mock_registry_class.get_ecosystem_details = mock_ecosystem_registry.get_ecosystem_details
-        
+        mock_registry_class.get_available_ecosystems = (
+            mock_ecosystem_registry.get_available_ecosystems
+        )
+        mock_registry_class.get_ecosystem_details = (
+            mock_ecosystem_registry.get_ecosystem_details
+        )
+
         # No easy way to capture console output in typer, so just verify it doesn't raise exceptions
         try:
             # Act
@@ -91,16 +91,20 @@ class TestEcosystemFunctions:
         except Exception as e:
             pytest.fail(f"display_ecosystem_list raised an exception: {e}")
 
-    @patch('dependency_risk_profiler.cli.typer_cli.EcosystemRegistry')
-    def test_get_ecosystem_from_manifest(self, mock_registry_class, mock_ecosystem_registry):
+    @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
+    def test_get_ecosystem_from_manifest(
+        self, mock_registry_class, mock_ecosystem_registry
+    ):
         """HYPOTHESIS: get_ecosystem_from_manifest should detect the correct ecosystem."""
         # Arrange
-        mock_registry_class.get_available_ecosystems = mock_ecosystem_registry.get_available_ecosystems
+        mock_registry_class.get_available_ecosystems = (
+            mock_ecosystem_registry.get_available_ecosystems
+        )
         mock_registry_class.detect_ecosystem = mock_ecosystem_registry.detect_ecosystem
-        
+
         # Act
         result = get_ecosystem_from_manifest("/path/to/requirements.txt")
-        
+
         # Assert
         assert result == "python"
 
@@ -122,13 +126,13 @@ class TestCliCommands:
 
     def test_generate_config(self, mock_config):
         """HYPOTHESIS: generate-config should create a configuration file."""
-        # Since we can't easily patch the Typer app's Config instance, 
+        # Since we can't easily patch the Typer app's Config instance,
         # we'll skip this test for now
         pytest.skip("Needs refactoring to properly test Typer app")
 
     def test_generate_config_failure(self, mock_config):
         """REGRESSION: generate-config should handle failure to create file."""
-        # Since we can't easily patch the Typer app's Config instance, 
+        # Since we can't easily patch the Typer app's Config instance,
         # we'll skip this test for now
         pytest.skip("Needs refactoring to properly test Typer app")
 
@@ -143,11 +147,13 @@ def test_output_format_enum(output_format):
 @pytest.mark.benchmark
 def test_cli_startup_performance():
     """BENCHMARK: CLI should start quickly.
-    
+
     SLA Requirements:
     - CLI startup time should be < 500ms
     """
     # Note: This is hard to actually measure in a unittest context
     # In a real benchmark, we would time multiple invocations of the CLI
     # with the `time` command or equivalent.
-    pytest.skip("Skipping CLI startup performance benchmark - needs real timing measurements")
+    pytest.skip(
+        "Skipping CLI startup performance benchmark - needs real timing measurements"
+    )

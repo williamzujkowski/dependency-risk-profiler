@@ -17,27 +17,27 @@ from dependency_risk_profiler.models import RiskLevel
 
 def analyze_dependencies(manifest_path, custom_weights=None):
     """Analyze dependencies in a manifest file.
-    
+
     Args:
         manifest_path: Path to the manifest file.
         custom_weights: Optional dictionary of custom weights for scoring.
-        
+
     Returns:
         Formatted project risk profile.
     """
     # Convert to absolute path
     manifest_path = os.path.abspath(manifest_path)
-    
+
     # Get the appropriate parser for the manifest file
     parser = BaseParser.get_parser_for_file(manifest_path)
     if not parser:
         print(f"Unsupported manifest file: {manifest_path}")
         return None
-    
+
     # Parse the manifest file
     print(f"Parsing {manifest_path}...")
     dependencies = parser.parse()
-    
+
     # Get the ecosystem from the manifest file
     file_name = os.path.basename(manifest_path).lower()
     if file_name == "package-lock.json":
@@ -48,31 +48,31 @@ def analyze_dependencies(manifest_path, custom_weights=None):
         ecosystem = "golang"
     else:
         ecosystem = "unknown"
-    
+
     # Get the appropriate analyzer for the ecosystem
     analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(ecosystem)
     if not analyzer:
         print(f"Unsupported ecosystem: {ecosystem}")
         return None
-    
+
     # Analyze the dependencies
     print(f"Analyzing {len(dependencies)} dependencies...")
     dependencies = analyzer.analyze(dependencies)
-    
+
     # Create a risk scorer with custom weights if provided
     if custom_weights:
         scorer = RiskScorer(**custom_weights)
     else:
         scorer = RiskScorer()
-    
+
     # Score the dependencies
     print("Scoring dependencies...")
     profile = scorer.create_project_profile(manifest_path, ecosystem, dependencies)
-    
+
     # Format the profile
     formatter = TerminalFormatter(color=True)
     output = formatter.format_profile(profile)
-    
+
     # Return the formatted profile
     return output
 
@@ -82,8 +82,8 @@ def main():
     # Example 1: Analyze a Python requirements.txt file
     python_output = analyze_dependencies("requirements.txt")
     print(python_output)
-    print("\n" + "="*50 + "\n")
-    
+    print("\n" + "=" * 50 + "\n")
+
     # Example 2: Analyze a Node.js package-lock.json file with custom weights
     custom_weights = {
         "staleness_weight": 0.3,
@@ -95,18 +95,18 @@ def main():
     }
     nodejs_output = analyze_dependencies("package-lock.json", custom_weights)
     print(nodejs_output)
-    
+
     # Example 3: Process the results programmatically
-    print("\n" + "="*50 + "\n")
+    print("\n" + "=" * 50 + "\n")
     print("Programmatic processing example:")
-    
+
     parser = BaseParser.get_parser_for_file("requirements.txt")
     dependencies = parser.parse()
     analyzer = BaseAnalyzer.get_analyzer_for_ecosystem("python")
     dependencies = analyzer.analyze(dependencies)
     scorer = RiskScorer()
     profile = scorer.create_project_profile("requirements.txt", "python", dependencies)
-    
+
     # Count dependencies by risk level
     risk_counts = {
         RiskLevel.LOW: 0,
@@ -114,16 +114,16 @@ def main():
         RiskLevel.HIGH: 0,
         RiskLevel.CRITICAL: 0,
     }
-    
+
     for dep in profile.dependencies:
         risk_counts[dep.risk_level] += 1
-    
+
     print(f"Total dependencies: {len(profile.dependencies)}")
     print(f"Low risk: {risk_counts[RiskLevel.LOW]}")
     print(f"Medium risk: {risk_counts[RiskLevel.MEDIUM]}")
     print(f"High risk: {risk_counts[RiskLevel.HIGH]}")
     print(f"Critical risk: {risk_counts[RiskLevel.CRITICAL]}")
-    
+
     # Find the highest risk dependency
     highest_risk_dep = max(profile.dependencies, key=lambda d: d.total_score)
     print(f"\nHighest risk dependency: {highest_risk_dep.dependency.name}")

@@ -1,4 +1,5 @@
 """Package manifest parsers for different ecosystems."""
+
 from .base import BaseParser
 from .golang import GoParser
 from .nodejs import NodeJSParser

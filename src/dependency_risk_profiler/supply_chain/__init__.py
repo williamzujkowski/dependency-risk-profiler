@@ -3,9 +3,9 @@
 from .analyzer import analyze_supply_chain_risk
 from .graph import generate_dependency_graph
 from .trends import (
-    save_historical_profile,
     analyze_historical_trends,
-    generate_trend_visualization
+    generate_trend_visualization,
+    save_historical_profile,
 )
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "generate_dependency_graph",
     "save_historical_profile",
     "analyze_historical_trends",
-    "generate_trend_visualization"
+    "generate_trend_visualization",
 ]

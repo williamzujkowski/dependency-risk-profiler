@@ -54,6 +54,13 @@ We recommend keeping your installation up to date with the latest releases.
   - jinja2: Updated to >=3.1.5 (fixes CVE-2024-56201)
   - certifi: Updated to >=2024.7.4 (fixes CVE-2024-39689)
   - werkzeug: Updated to >=3.0.6 (fixes CVE-2024-49766, CVE-2024-49767)
+  - Development dependencies:
+    - pytest: Updated to >=7.4.0
+    - pytest-cov: Updated to >=4.2.0
+    - black: Updated to >=24.4.0
+    - isort: Updated to >=5.13.2
+    - flake8: Updated to >=7.0.0
+    - mypy: Updated to >=1.9.0
 
 ## Best Practices When Using This Tool
 

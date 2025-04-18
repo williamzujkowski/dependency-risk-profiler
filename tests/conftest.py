@@ -1,4 +1,5 @@
 """Test fixtures for dependency risk profiler."""
+
 import os
 import tempfile
 from typing import Dict
@@ -11,7 +12,7 @@ from dependency_risk_profiler.models import DependencyMetadata
 @pytest.fixture
 def sample_nodejs_manifest() -> str:
     """Create a sample package-lock.json file.
-    
+
     Returns:
         Path to the sample manifest file.
     """
@@ -63,13 +64,13 @@ def sample_nodejs_manifest() -> str:
       }
     }
     """
-    
+
     fd, path = tempfile.mkstemp(suffix=".json", prefix="package-lock-")
     os.write(fd, content.encode("utf-8"))
     os.close(fd)
-    
+
     yield path
-    
+
     # Cleanup
     os.unlink(path)
 
@@ -77,7 +78,7 @@ def sample_nodejs_manifest() -> str:
 @pytest.fixture
 def sample_python_manifest() -> str:
     """Create a sample requirements.txt file.
-    
+
     Returns:
         Path to the sample manifest file.
     """
@@ -87,13 +88,13 @@ def sample_python_manifest() -> str:
     requests>=2.25.0
     numpy==1.20.0; python_version >= "3.9"
     """
-    
+
     fd, path = tempfile.mkstemp(suffix=".txt", prefix="requirements-")
     os.write(fd, content.encode("utf-8"))
     os.close(fd)
-    
+
     yield path
-    
+
     # Cleanup
     os.unlink(path)
 
@@ -101,7 +102,7 @@ def sample_python_manifest() -> str:
 @pytest.fixture
 def sample_golang_manifest() -> str:
     """Create a sample go.mod file.
-    
+
     Returns:
         Path to the sample manifest file.
     """
@@ -117,13 +118,13 @@ def sample_golang_manifest() -> str:
 
     require github.com/sirupsen/logrus v1.8.1
     """
-    
+
     fd, path = tempfile.mkstemp(suffix=".mod", prefix="go-")
     os.write(fd, content.encode("utf-8"))
     os.close(fd)
-    
+
     yield path
-    
+
     # Cleanup
     os.unlink(path)
 
@@ -131,7 +132,7 @@ def sample_golang_manifest() -> str:
 @pytest.fixture
 def sample_dependencies() -> Dict[str, DependencyMetadata]:
     """Create sample dependency metadata.
-    
+
     Returns:
         Dictionary of sample dependency metadata.
     """

@@ -1,0 +1,82 @@
+{
+  "type": "stacked_bar_chart",
+  "title": "Risk Distribution Trend",
+  "data": {
+    "labels": [
+      "2025-04-16",
+      "2025-04-16",
+      "2025-04-16",
+      "2025-04-17",
+      "2025-04-17",
+      "2025-04-17",
+      "2025-04-17",
+      "2025-04-17",
+      "2025-04-17",
+      "2025-04-17"
+    ],
+    "datasets": [
+      {
+        "label": "High Risk",
+        "data": [
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7,
+          7
+        ],
+        "backgroundColor": "rgba(255, 99, 132, 0.7)"
+      },
+      {
+        "label": "Medium Risk",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "backgroundColor": "rgba(255, 159, 64, 0.7)"
+      },
+      {
+        "label": "Low Risk",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "backgroundColor": "rgba(75, 192, 192, 0.7)"
+      }
+    ]
+  },
+  "options": {
+    "scales": {
+      "y": {
+        "stacked": true,
+        "title": {
+          "display": true,
+          "text": "Number of Dependencies"
+        }
+      },
+      "x": {
+        "stacked": true
+      }
+    }
+  }
+}

@@ -1,9 +1,9 @@
 """Base parser interface for dependency manifests."""
-import os
+
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Optional, List, ClassVar, Type
+from typing import Dict, Optional
 
 from ..models import DependencyMetadata
 
@@ -46,67 +46,78 @@ class BaseParser(ABC):
         """
         # Use the registry to get the appropriate parser
         from .registry import EcosystemRegistry
-        
+
         # If the registry is empty, initialize it with built-in parsers
         if not EcosystemRegistry.get_available_ecosystems():
             BaseParser._initialize_registry()
-        
+
         return EcosystemRegistry.get_parser_for_file(manifest_path)
-    
+
     @staticmethod
     def _initialize_registry() -> None:
         """Initialize the ecosystem registry with built-in parsers."""
+        from .golang import GoParser
         from .nodejs import NodeJSParser
         from .python import PythonParser
-        from .golang import GoParser
-        from .toml import TomlParser
         from .registry import EcosystemRegistry
-        
+        from .toml import TomlParser
+
         # Register Node.js parser
         EcosystemRegistry.register_parser(
-            'nodejs',
+            "nodejs",
             NodeJSParser,
             [
-                {'type': 'filename', 'pattern': 'package-lock.json'},
-                {'type': 'extension', 'pattern': '.json', 
-                 'matcher_fn': lambda path: 'package-lock' in path.lower()},
-                {'type': 'content', 'pattern': r'"lockfileVersion".*"dependencies"'},
-            ]
+                {"type": "filename", "pattern": "package-lock.json"},
+                {
+                    "type": "extension",
+                    "pattern": ".json",
+                    "matcher_fn": lambda path: "package-lock" in path.lower(),
+                },
+                {"type": "content", "pattern": r'"lockfileVersion".*"dependencies"'},
+            ],
         )
-        
+
         # Register Python parser
         EcosystemRegistry.register_parser(
-            'python',
+            "python",
             PythonParser,
             [
-                {'type': 'filename', 'pattern': 'requirements.txt'},
-                {'type': 'filename', 'pattern': 'pipfile.lock'},
-                {'type': 'extension', 'pattern': '.txt', 
-                 'matcher_fn': lambda path: 'requirements' in path.lower()},
-                {'type': 'content', 'pattern': r'"_meta".*"pipfile"'},
-            ]
+                {"type": "filename", "pattern": "requirements.txt"},
+                {"type": "filename", "pattern": "pipfile.lock"},
+                {
+                    "type": "extension",
+                    "pattern": ".txt",
+                    "matcher_fn": lambda path: "requirements" in path.lower(),
+                },
+                {"type": "content", "pattern": r'"_meta".*"pipfile"'},
+            ],
         )
-        
+
         # Register Go parser
         EcosystemRegistry.register_parser(
-            'golang',
+            "golang",
             GoParser,
             [
-                {'type': 'filename', 'pattern': 'go.mod'},
-                {'type': 'extension', 'pattern': '.mod', 
-                 'matcher_fn': lambda path: 'go' in path.lower()},
-            ]
+                {"type": "filename", "pattern": "go.mod"},
+                {
+                    "type": "extension",
+                    "pattern": ".mod",
+                    "matcher_fn": lambda path: "go" in path.lower(),
+                },
+            ],
         )
-        
+
         # Register TOML parser
         EcosystemRegistry.register_parser(
-            'toml',
+            "toml",
             TomlParser,
             [
-                {'type': 'filename', 'pattern': 'pyproject.toml'},
-                {'type': 'filename', 'pattern': 'cargo.toml'},
-                {'type': 'extension', 'pattern': '.toml'},
-            ]
+                {"type": "filename", "pattern": "pyproject.toml"},
+                {"type": "filename", "pattern": "cargo.toml"},
+                {"type": "extension", "pattern": ".toml"},
+            ],
         )
-        
-        logger.debug(f"Initialized ecosystem registry with built-in parsers: {EcosystemRegistry.get_available_ecosystems()}")
+
+        logger.debug(
+            f"Initialized ecosystem registry with built-in parsers: {EcosystemRegistry.get_available_ecosystems()}"
+        )

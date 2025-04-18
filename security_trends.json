@@ -1,0 +1,47 @@
+{
+  "type": "radar_chart",
+  "title": "Security Metrics Improvement",
+  "data": {
+    "labels": [
+      "Security Policy",
+      "Dependency Updates",
+      "Signed Commits",
+      "Branch Protection"
+    ],
+    "datasets": [
+      {
+        "label": "2025-04-16",
+        "data": [
+          100.0,
+          100.0,
+          100.0,
+          100.0
+        ],
+        "backgroundColor": "rgba(54, 162, 235, 0.2)",
+        "borderColor": "rgb(54, 162, 235)"
+      },
+      {
+        "label": "2025-04-17",
+        "data": [
+          100.0,
+          100.0,
+          100.0,
+          100.0
+        ],
+        "backgroundColor": "rgba(255, 99, 132, 0.2)",
+        "borderColor": "rgb(255, 99, 132)"
+      }
+    ]
+  },
+  "options": {
+    "scales": {
+      "r": {
+        "angleLines": {
+          "display": true
+        },
+        "min": 0,
+        "max": 100
+      }
+    }
+  }
+}

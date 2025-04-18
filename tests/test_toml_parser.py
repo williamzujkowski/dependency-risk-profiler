@@ -1,4 +1,5 @@
 """Tests for the TOML parser."""
+
 import os
 import sys
 import tempfile
@@ -37,14 +38,15 @@ dev = [
 ]
 """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
-        f.write(content.encode('utf-8'))
+        f.write(content.encode("utf-8"))
         temp_file = f.name
-    
+
     # Store path for cleanup
     import sys
+
     current_module = sys.modules[__name__]
     current_module.pyproject_toml_path = temp_file
-    
+
     return temp_file
 
 
@@ -68,14 +70,15 @@ pytest = "^7.0.0"
 black = "^22.0.0"
 """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
-        f.write(content.encode('utf-8'))
+        f.write(content.encode("utf-8"))
         temp_file = f.name
-    
+
     # Store path for cleanup
     import sys
+
     current_module = sys.modules[__name__]
     current_module.poetry_toml_path = temp_file
-    
+
     return temp_file
 
 
@@ -98,14 +101,15 @@ criterion = "0.3"
 mockall = "0.11"
 """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
-        f.write(content.encode('utf-8'))
+        f.write(content.encode("utf-8"))
         temp_file = f.name
-    
+
     # Store path for cleanup
     import sys
+
     current_module = sys.modules[__name__]
     current_module.cargo_toml_path = temp_file
-    
+
     return temp_file
 
 
@@ -114,35 +118,42 @@ def test_pyproject_toml_parser(pyproject_toml_file):
     # Run this before the actual test to modify the file to add dev dependencies
     # that will be parsed correctly
     import tomli, tomli_w
-    
+
     # Read the current file
     with open(pyproject_toml_file, "rb") as f:
         data = tomli.load(f)
-    
+
     # Add dev dependencies directly to main data structure for easier parsing
-    if "project" in data and "optional-dependencies" in data["project"] and "dev" in data["project"]["optional-dependencies"]:
+    if (
+        "project" in data
+        and "optional-dependencies" in data["project"]
+        and "dev" in data["project"]["optional-dependencies"]
+    ):
         for dep in data["project"]["optional-dependencies"]["dev"]:
             name, _ = dep.split(">=", 1)
             data["project"].setdefault("dev_dependencies", {})
             data["project"]["dev_dependencies"][name.strip()] = "dev"
-    
+
     # Write it back
     with open(pyproject_toml_file, "wb") as f:
         tomli_w.dump(data, f)
-    
+
     # Now run the actual test
     parser = TomlParser(pyproject_toml_file)
     dependencies = parser.parse()
-    
+
     # We expect at least 4 main dependencies
     assert len(dependencies) >= 4  # At minimum, we should have the 4 main dependencies
-    
+
     # Check main dependencies
     assert "requests" in dependencies
     assert dependencies["requests"].installed_version.startswith(">=")
     assert dependencies["requests"].name == "requests"
-    assert dependencies["requests"].additional_info.get("section") == "project.dependencies"
-    
+    assert (
+        dependencies["requests"].additional_info.get("section")
+        == "project.dependencies"
+    )
+
     assert "cryptography" in dependencies
     assert dependencies["cryptography"].installed_version == "==39.0.0"
 
@@ -151,28 +162,28 @@ def test_poetry_toml_parser(poetry_toml_file):
     """Test parsing a Poetry-style pyproject.toml file."""
     # Modify the file structure to make it more compatible with our parser
     import tomli, tomli_w
-    
+
     # Read the current file
     with open(poetry_toml_file, "rb") as f:
         data = tomli.load(f)
-    
+
     # Write it back
     with open(poetry_toml_file, "wb") as f:
         tomli_w.dump(data, f)
-    
+
     parser = TomlParser(poetry_toml_file)
     dependencies = parser.parse()
-    
+
     # Verify we have at least 3 dependencies (requests, numpy, pendulum)
     assert len(dependencies) >= 3
-    
+
     # Check dependencies
     assert "requests" in dependencies
     assert dependencies["requests"].installed_version.startswith("^")
-    
+
     assert "pendulum" in dependencies
     assert "git:" in dependencies["pendulum"].installed_version
-    
+
     # Python requirement should be skipped
     assert "python" not in dependencies
 
@@ -181,27 +192,33 @@ def test_cargo_toml_parser(cargo_toml_file):
     """Test parsing a Cargo.toml file."""
     parser = TomlParser(cargo_toml_file)
     dependencies = parser.parse()
-    
+
     # We should at least have the 3 main dependencies
     assert len(dependencies) >= 3  # serde, tokio, clap
-    
+
     # Check main dependencies
     assert "serde" in dependencies
     assert dependencies["serde"].installed_version == "1.0"
     assert dependencies["serde"].additional_info.get("section") == "dependencies"
-    
+
     assert "tokio" in dependencies
     # We extract the version differently than expected in the test
-    assert dependencies["tokio"].installed_version in ["1.0", "{ version = \"1.0\", features = [\"full\"] }"]
-    
+    assert dependencies["tokio"].installed_version in [
+        "1.0",
+        '{ version = "1.0", features = ["full"] }',
+    ]
+
     assert "clap" in dependencies
     assert "git:" in dependencies["clap"].installed_version
-    
+
     # Check that dev dependencies exist
-    dev_deps = [name for name, dep in dependencies.items() 
-               if dep.additional_info.get("dev_dependency") == "true" or 
-               dep.additional_info.get("section") == "dev-dependencies"]
-    
+    dev_deps = [
+        name
+        for name, dep in dependencies.items()
+        if dep.additional_info.get("dev_dependency") == "true"
+        or dep.additional_info.get("section") == "dev-dependencies"
+    ]
+
     assert len(dev_deps) > 0, "No dev dependencies were found"
 
 
@@ -214,17 +231,20 @@ def test_file_not_found():
 def test_invalid_toml():
     """Test parsing an invalid TOML file."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
-        f.write(b"""
+        f.write(
+            b"""
         [invalid toml
         this is not valid toml
-        """)
+        """
+        )
         temp_file = f.name
-    
+
     # Store path for cleanup
     import sys
+
     current_module = sys.modules[__name__]
     current_module.invalid_toml_path = temp_file
-    
+
     parser = TomlParser(temp_file)
     with pytest.raises(ValueError):
         parser.parse()
@@ -237,7 +257,7 @@ def teardown_module(module):
         getattr(module, "pyproject_toml_path", None),
         getattr(module, "poetry_toml_path", None),
         getattr(module, "cargo_toml_path", None),
-        getattr(module, "invalid_toml_path", None)
+        getattr(module, "invalid_toml_path", None),
     ]:
         if path and os.path.exists(path):
             os.unlink(path)

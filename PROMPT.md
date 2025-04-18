@@ -1,6 +1,3 @@
-Below is an example of a comprehensive prompt you can give to a code‐creation LLM. This prompt clearly outlines the concept, features, technical requirements, and desired output of your “Open-Source Dependency Risk Profiler” CLI tool. You can copy this and adjust details as needed:
-
----
 
 **Prompt for Code Creation LLM: Build an Open-Source Dependency Risk Profiler CLI Tool**
 

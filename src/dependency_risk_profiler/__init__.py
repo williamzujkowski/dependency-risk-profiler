@@ -7,29 +7,21 @@ from .models import (
     DependencyMetadata,
     DependencyRiskScore,
     ProjectRiskProfile,
-    RiskLevel
-)
-
-from .supply_chain import (
-    analyze_supply_chain_risk,
-    generate_dependency_graph,
-    save_historical_profile,
-    analyze_historical_trends,
-    generate_trend_visualization
-)
-
-# Imports for vulnerability aggregation
-from .vulnerabilities import (
-    aggregate_vulnerability_data,
-    normalize_cvss_score
+    RiskLevel,
 )
 
 # Imports for secure release functionality
-from .secure_release import (
-    sign_artifact,
-    verify_signature,
-    create_release
+from .secure_release import create_release, sign_artifact, verify_signature
+from .supply_chain import (
+    analyze_historical_trends,
+    analyze_supply_chain_risk,
+    generate_dependency_graph,
+    generate_trend_visualization,
+    save_historical_profile,
 )
+
+# Imports for vulnerability aggregation
+from .vulnerabilities import aggregate_vulnerability_data, normalize_cvss_score
 
 # Explicitly define __all__ to indicate what should be imported with "from dependency_risk_profiler import *"
 __all__ = [
@@ -46,5 +38,5 @@ __all__ = [
     "normalize_cvss_score",
     "sign_artifact",
     "verify_signature",
-    "create_release"
+    "create_release",
 ]
