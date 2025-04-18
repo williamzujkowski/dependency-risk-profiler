@@ -89,7 +89,8 @@ def install_package(venv_path=None, dev=True, editable=True):
     
     # Upgrade pip, setuptools, wheel
     print("Upgrading pip, setuptools, and wheel...")
-    run_command([pip_exe, "install", "--upgrade", "pip", "setuptools", "wheel"], cwd=package_dir, env=env)
+    current_dir = Path(__file__).resolve().parent
+    run_command([pip_exe, "install", "--upgrade", "pip", "setuptools", "wheel"], cwd=current_dir, env=env)
     
     # Determine install flags
     install_args = [pip_exe, "install"]
@@ -103,7 +104,8 @@ def install_package(venv_path=None, dev=True, editable=True):
     
     # Run installation
     print(f"Installing package: {' '.join(install_args)}")
-    result = run_command(install_args, cwd=package_dir, env=env)
+    current_dir = Path(__file__).resolve().parent
+    result = run_command(install_args, cwd=current_dir, env=env)
     
     if result and result.returncode == 0:
         return True
@@ -249,7 +251,8 @@ def interactive_install():
     
     elif choice == "2":
         # Virtual environment installation (no dev dependencies)
-        venv_path = package_dir / "venv"
+        current_dir = Path(__file__).resolve().parent
+        venv_path = current_dir / "venv"
         
         # Check if venv exists
         if os.path.exists(venv_path):
@@ -274,7 +277,8 @@ def interactive_install():
     
     else:  # choice == "3"
         # Development mode with virtual environment
-        venv_path = package_dir / "venv"
+        current_dir = Path(__file__).resolve().parent
+        venv_path = current_dir / "venv"
         
         # Check if venv exists
         if os.path.exists(venv_path):
