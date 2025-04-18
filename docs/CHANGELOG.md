@@ -5,6 +5,26 @@ All notable changes to the Dependency Risk Profiler will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-04-19
+
+### Added
+- Enhanced "is_maintained" field to SecurityMetrics to track active maintenance
+- Added maintained_score field to DependencyRiskScore for improved risk assessment
+- New maintained status indicator in risk factor determination
+- Improved performance and reliability of maintenance analysis
+
+### Fixed
+- Fixed mypy type errors with Python 3.11
+- Resolved issues with the updated maintained status signature
+- Updated test suite to work with new maintained_score parameter
+- Improved error handling in maintenance status determination
+
+### Changed
+- Refactored maintained.py to return the is_maintained status along with score
+- Enhanced risk scoring to include maintained status in the overall assessment
+- Updated documentation for better clarity and organization
+- Moved key files to the root directory for better discoverability
+
 ## [0.3.0] - 2025-04-18
 
 ### Added
