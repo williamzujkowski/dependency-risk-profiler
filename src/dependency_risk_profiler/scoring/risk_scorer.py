@@ -726,7 +726,10 @@ class RiskScorer:
 
         if version_score and version_score > 0.5:
             factors.append(
-                f"Outdated (current: {dependency.installed_version}, latest: {dependency.latest_version})"
+                (
+                    f"Outdated (current: {dependency.installed_version}, "
+                    f"latest: {dependency.latest_version})"
+                )
             )
 
         if health_score and health_score > 0.5:

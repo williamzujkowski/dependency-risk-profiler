@@ -94,7 +94,10 @@ class AsyncHTTPClient:
                         # Calculate delay with exponential backoff
                         delay = self.backoff_factor * (2 ** (retry - 1))
                         logger.debug(
-                            f"Retry {retry}/{self.max_retries} for {url} after {delay:.2f}s delay"
+                            (
+                                f"Retry {retry}/{self.max_retries} for {url} "
+                                f"after {delay:.2f}s delay"
+                            )
                         )
                         await asyncio.sleep(delay)
 
@@ -124,7 +127,10 @@ class AsyncHTTPClient:
                         return None
 
                     logger.debug(
-                        f"HTTP error fetching data from {url} (attempt {retry+1}/{self.max_retries+1}): {e}"
+                        (
+                            f"HTTP error fetching data from {url} "
+                            f"(attempt {retry+1}/{self.max_retries+1}): {e}"
+                        )
                     )
 
                 except (ClientError, asyncio.TimeoutError) as e:
@@ -133,7 +139,10 @@ class AsyncHTTPClient:
                         return None
 
                     logger.debug(
-                        f"Connection error fetching data from {url} (attempt {retry+1}/{self.max_retries+1}): {e}"
+                        (
+                            f"Connection error fetching data from {url} "
+                            f"(attempt {retry+1}/{self.max_retries+1}): {e}"
+                        )
                     )
 
                 except Exception as e:
@@ -175,7 +184,10 @@ class AsyncHTTPClient:
                         # Calculate delay with exponential backoff
                         delay = self.backoff_factor * (2 ** (retry - 1))
                         logger.debug(
-                            f"Retry {retry}/{self.max_retries} for {url} after {delay:.2f}s delay"
+                            (
+                                f"Retry {retry}/{self.max_retries} for {url} "
+                                f"after {delay:.2f}s delay"
+                            )
                         )
                         await asyncio.sleep(delay)
 
@@ -205,7 +217,10 @@ class AsyncHTTPClient:
                         return None
 
                     logger.debug(
-                        f"HTTP error fetching data from {url} (attempt {retry+1}/{self.max_retries+1}): {e}"
+                        (
+                            f"HTTP error fetching data from {url} "
+                            f"(attempt {retry+1}/{self.max_retries+1}): {e}"
+                        )
                     )
 
                 except (ClientError, asyncio.TimeoutError) as e:
@@ -214,7 +229,10 @@ class AsyncHTTPClient:
                         return None
 
                     logger.debug(
-                        f"Connection error fetching data from {url} (attempt {retry+1}/{self.max_retries+1}): {e}"
+                        (
+                            f"Connection error fetching data from {url} "
+                            f"(attempt {retry+1}/{self.max_retries+1}): {e}"
+                        )
                     )
 
                 except Exception as e:
