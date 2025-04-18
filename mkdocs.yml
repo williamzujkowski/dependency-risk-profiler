@@ -49,6 +49,7 @@ nav:
     - 'Dependency Security': 'security/DEPENDENCY_SECURITY.md'
   - Development:
     - 'Contributing': 'CONTRIBUTING.md'
+    - 'Release Process': 'development/RELEASE_PROCESS.md'
     - 'Migration Summary': 'MIGRATION_SUMMARY.md'
     - 'Testing Standards': 'project_standards/TESTING_STANDARDS.md'
     - 'Testing Implementation': 'project_standards/TESTING_IMPLEMENTATION.md'
