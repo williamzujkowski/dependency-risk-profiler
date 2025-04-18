@@ -61,7 +61,7 @@ jobs:
           
       - name: Run unit tests
         run: |
-          pytest -xvs tests/
+          pytest -xvs testing/unit testing/integration
           
       - name: Run bandit security check
         run: |
