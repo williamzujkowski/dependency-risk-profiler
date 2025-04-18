@@ -1,0 +1,1395 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Evaluate and monitor the risk of your project dependencies">
+      
+      
+        <meta name="author" content="William Zujkowski">
+      
+      
+        <link rel="canonical" href="https://williamzujkowski.github.io/dependency-risk-profiler/enhancement/ENHANCEMENTS3/">
+      
+      
+        <link rel="prev" href="../ENHANCEMENTS2/">
+      
+      
+        <link rel="next" href="../Improvements/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+    
+    
+      
+        <title>Phase 3 Enhancements - Dependency Risk Profiler</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.2afb09e1.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="deep-purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#enhancement-roadmap" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dependency Risk Profiler" class="md-header__button md-logo" aria-label="Dependency Risk Profiler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dependency Risk Profiler
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phase 3 Enhancements
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/williamzujkowski/dependency-risk-profiler" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    dependency-risk-profiler
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dependency Risk Profiler" class="md-nav__button md-logo" aria-label="Dependency Risk Profiler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dependency Risk Profiler
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/williamzujkowski/dependency-risk-profiler" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    dependency-risk-profiler
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    User Guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            User Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Getting Started
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../basic-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Basic Usage
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SCORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Scoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../INFORMATION_SOURCES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Information Sources
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/DEPENDENCY_SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Dependency Security
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Development
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MIGRATION_SUMMARY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Migration Summary
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../project_standards/TESTING_STANDARDS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing Standards
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../project_standards/TESTING_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing Implementation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    Enhancements
+    
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_5">
+            <span class="md-nav__icon md-icon"></span>
+            Enhancements
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ENHANCEMENTS2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Phase 2 Enhancements
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Phase 3 Enhancements
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Phase 3 Enhancements
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-status-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Status Summary:
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-1-enhanced-error-handling-and-robustness-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Prompt 1: Enhanced Error Handling and Robustness (IMPLEMENTED)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-2-plugin-like-mechanism-for-new-ecosystems-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Prompt 2: Plugin-Like Mechanism for New Ecosystems (IMPLEMENTED)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-3-disk-based-caching-for-vulnerability-data-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Prompt 3: Disk-Based Caching for Vulnerability Data (IMPLEMENTED)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-4-parallelized-or-asynchronous-repository-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 4: Parallelized or Asynchronous Repository Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-5-configuration-file-support-for-risk-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 5: Configuration File Support for Risk Scoring
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-6-refactoring-the-cli-with-typer-or-click" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 6: Refactoring the CLI with Typer or Click
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-7-single-maintainer-vs-multi-maintainer-checking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 7: Single Maintainer vs. Multi-Maintainer Checking
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-8-automated-documentation-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 8: Automated Documentation Generation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Improvements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Improvement Ideas
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_6" id="__nav_4_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Development Resources
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_6">
+            <span class="md-nav__icon md-icon"></span>
+            Development Resources
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/PROMPT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Claude Prompts
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/CLAUDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Claude Instructions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Changelog
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-status-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implementation Status Summary:
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-1-enhanced-error-handling-and-robustness-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Prompt 1: Enhanced Error Handling and Robustness (IMPLEMENTED)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-2-plugin-like-mechanism-for-new-ecosystems-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Prompt 2: Plugin-Like Mechanism for New Ecosystems (IMPLEMENTED)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-3-disk-based-caching-for-vulnerability-data-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      ✅ Prompt 3: Disk-Based Caching for Vulnerability Data (IMPLEMENTED)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-4-parallelized-or-asynchronous-repository-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 4: Parallelized or Asynchronous Repository Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-5-configuration-file-support-for-risk-scoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 5: Configuration File Support for Risk Scoring
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-6-refactoring-the-cli-with-typer-or-click" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 6: Refactoring the CLI with Typer or Click
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-7-single-maintainer-vs-multi-maintainer-checking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 7: Single Maintainer vs. Multi-Maintainer Checking
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prompt-8-automated-documentation-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prompt 8: Automated Documentation Generation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="enhancement-roadmap">Enhancement Roadmap<a class="headerlink" href="#enhancement-roadmap" title="Permanent link">&para;</a></h1>
+<p>Below are the enhancements planned for the dependency-risk-profiler project. Implemented features are marked with ✅.</p>
+<h2 id="implementation-status-summary">Implementation Status Summary:<a class="headerlink" href="#implementation-status-summary" title="Permanent link">&para;</a></h2>
+<p><strong>Completed:</strong>
+- ✅ We successfully implemented the Plugin-Like Mechanism (Prompt 2) to provide a more systematic way to register and detect ecosystem parsers.
+- ✅ We added Disk-Based Caching for Vulnerability Data (Prompt 3) that stores data locally to reduce network calls across runs.
+- ✅ We enhanced Error Handling and Robustness (Prompt 1) with retry mechanisms and better error recovery.</p>
+<p><strong>Remaining Enhancements:</strong>
+- Parallelized Repository Analysis (Prompt 4)
+- Configuration File Support (Prompt 5)
+- CLI Refactoring with Typer/Click (Prompt 6)
+- Single vs. Multi-Maintainer Checking (Prompt 7)
+- Automated Documentation Generation (Prompt 8)</p>
+<p>Note: ENHANCEMENTS2.md contains requirements for the Secure Code Signing feature that is planned but not yet implemented.</p>
+<h2 id="prompt-1-enhanced-error-handling-and-robustness-implemented">✅ Prompt 1: Enhanced Error Handling and Robustness (IMPLEMENTED)<a class="headerlink" href="#prompt-1-enhanced-error-handling-and-robustness-implemented" title="Permanent link">&para;</a></h2>
+<p><em>"Refactor the code to improve error handling and resilience for external network calls and subprocess operations. Specifically:</em></p>
+<ol>
+<li><strong>Wrap <code>requests.get</code> and <code>requests.post</code></strong> in a retry mechanism (e.g., using an exponential backoff strategy).</li>
+<li><strong>Add try/except blocks</strong> around <code>subprocess.run</code> calls to catch <code>subprocess.CalledProcessError</code> and log a warning instead of crashing the program.</li>
+<li><strong>Gracefully handle missing or malformed data</strong> from external calls (e.g., if JSON responses lack expected fields, log the issue and continue without halting).</li>
+<li><strong>Document</strong> each new exception or fallback path in docstrings or inline comments, ensuring we clearly explain how partial failures are handled.</li>
+</ol>
+<p>Implementation notes:
+- Added exponential backoff retry mechanism for all network requests in vulnerability sources
+- Improved error handling for different types of errors (client errors, server errors, connectivity)
+- Added detailed error logging for better debugging</p>
+<hr />
+<h2 id="prompt-2-plugin-like-mechanism-for-new-ecosystems-implemented">✅ Prompt 2: Plugin-Like Mechanism for New Ecosystems (IMPLEMENTED)<a class="headerlink" href="#prompt-2-plugin-like-mechanism-for-new-ecosystems-implemented" title="Permanent link">&para;</a></h2>
+<p><em>"Implement a plugin or registry pattern so that adding support for new ecosystems is more systematic. Specifically:</em></p>
+<ol>
+<li><strong>Create a 'plugin registry'</strong> (e.g., in <code>BaseParser</code>) where each parser (NodeJSParser, PythonParser, etc.) can register itself with a unique ecosystem identifier.</li>
+<li><strong>Modify <code>get_parser_for_file</code></strong> so it loops through the registered plugins to detect the best parser, rather than having large if/else blocks.</li>
+<li><strong>Allow external modules</strong> to provide new parser/analyzer pairs by registering them at runtime (e.g., <code>EcosystemRegistry.register_parser('rust', RustParser)</code>).</li>
+<li><strong>Update the CLI</strong> to display a list of available ecosystems if a user tries to parse an unrecognized manifest file.</li>
+</ol>
+<p>Implementation notes:
+- Created an <code>EcosystemRegistry</code> class to manage parsers and file patterns
+- Implemented file pattern matching with three strategies (filename, extension, content)
+- Updated CLI to display available ecosystems when a user tries to parse an unrecognized manifest file
+- Added <code>--list-ecosystems</code> command to display all supported ecosystems</p>
+<hr />
+<h2 id="prompt-3-disk-based-caching-for-vulnerability-data-implemented">✅ Prompt 3: Disk-Based Caching for Vulnerability Data (IMPLEMENTED)<a class="headerlink" href="#prompt-3-disk-based-caching-for-vulnerability-data-implemented" title="Permanent link">&para;</a></h2>
+<p><em>"Augment the existing <code>vulnerabilities/aggregator.py</code> module to store fetched vulnerability data on disk (rather than in memory only), enabling reuse across multiple runs. Specifically:</em></p>
+<ol>
+<li><strong>Implement a simple file-based cache</strong> using JSON (e.g., stored in a <code>.vuln_cache</code> directory).</li>
+<li><strong>Load cached data</strong> if available and recent (e.g., within 24 hours), instead of making new network calls.</li>
+<li><strong>Implement a safe fallback</strong> so that if the cached file is corrupt or out-of-date, the code seamlessly fetches fresh data.</li>
+<li><strong>Allow the user to override or clear the cache</strong> (e.g., <code>--no-cache</code> command-line flag or an environment variable).</li>
+<li><strong>Document</strong> in the docstrings how the caching logic works, and update the logging to indicate whether data is served from cache or from a fresh request.</li>
+</ol>
+<p>Implementation notes:
+- Added <code>VulnerabilityCache</code> class for disk-based caching in <code>~/.dependency_risk_profiler/vuln_cache/</code>
+- Implemented cache expiry, validation, and robust error handling
+- Added <code>--no-cache</code> and <code>--clear-cache</code> CLI options
+- Maintained backward compatibility with the in-memory cache
+- Added comprehensive unit tests for the cache system</p>
+<hr />
+<h2 id="prompt-4-parallelized-or-asynchronous-repository-analysis">Prompt 4: Parallelized or Asynchronous Repository Analysis<a class="headerlink" href="#prompt-4-parallelized-or-asynchronous-repository-analysis" title="Permanent link">&para;</a></h2>
+<p><em>"Refactor the repository-cloning and data-fetching steps to run concurrently, reducing overall execution time in large projects. Specifically:</em></p>
+<ol>
+<li><strong>Use Python's <code>asyncio</code></strong> or <code>concurrent.futures.ThreadPoolExecutor</code> to clone multiple repositories in parallel.</li>
+<li><strong>Add a configuration parameter</strong> (<code>max_concurrent_clones</code>, defaulting to 4) so that we limit concurrency for environment constraints.</li>
+<li><strong>Refactor analyzers</strong> (e.g., in <code>analyzers/common.py</code>) so that <code>clone_repo</code>, <code>get_last_commit_date</code>, etc., do not block the main thread. Each step can be asynchronous or in a worker pool.</li>
+<li><strong>Include error-handling</strong> so that if some tasks fail (e.g., a repo clone times out), the rest of the tasks still continue. Log partial failures but keep going.</li>
+<li><strong>Maintain a global concurrency limit</strong> so that we don't spawn too many processes, especially in large monorepos.</li>
+</ol>
+<hr />
+<h2 id="prompt-5-configuration-file-support-for-risk-scoring">Prompt 5: Configuration File Support for Risk Scoring<a class="headerlink" href="#prompt-5-configuration-file-support-for-risk-scoring" title="Permanent link">&para;</a></h2>
+<p><em>"Add a simple configuration file feature to manage risk scoring weights and other user settings. Specifically:</em></p>
+<ol>
+<li><strong>Create a config loader</strong> (e.g., <code>config.py</code>) that looks for a YAML or JSON file (<code>dependency_risk_config.yaml</code> or <code>json</code>) in the current directory or a user-specified path.</li>
+<li><strong>Extend the CLI</strong> to accept a <code>--config</code> argument which overrides default or command-line-provided values. If no config file is found, proceed with existing defaults.</li>
+<li><strong>Merge</strong> any config file values with the existing CLI flags so that CLI flags take precedence for quick one-off changes.</li>
+<li><strong>Document</strong> the structure of the config file with an example snippet (e.g., keys for staleness_weight, maintainers_weight, etc.).</li>
+<li><strong>Add test cases</strong> verifying that the config file is correctly loaded, overrides default values, and merges properly if partial config keys are missing.</li>
+</ol>
+<hr />
+<h2 id="prompt-6-refactoring-the-cli-with-typer-or-click">Prompt 6: Refactoring the CLI with Typer or Click<a class="headerlink" href="#prompt-6-refactoring-the-cli-with-typer-or-click" title="Permanent link">&para;</a></h2>
+<p><em>"Refactor the command-line interface to use a more modern framework (e.g., Typer or Click) to improve code readability and user help text. Specifically:</em></p>
+<ol>
+<li><strong>Create a new <code>cli.py</code></strong> that uses Typer for subcommands (<code>analyze</code>, <code>score</code>, <code>visualize</code>, <code>trends</code>, <code>release</code>, etc.).</li>
+<li><strong>Organize</strong> subcommands so that each functional area (e.g., <code>dependency-risk-profiler analyze &lt;options&gt;</code>) has its own subcommand help section with typed arguments.</li>
+<li><strong>Maintain backward compatibility</strong> if possible, or at least provide deprecation messaging for old flags.</li>
+<li><strong>Automatically generate</strong> help text from function docstrings or parameter annotations (Typer feature).</li>
+<li><strong>Include error codes</strong> or exit statuses for known error conditions (e.g., missing manifest).</li>
+</ol>
+<hr />
+<h2 id="prompt-7-single-maintainer-vs-multi-maintainer-checking">Prompt 7: Single Maintainer vs. Multi-Maintainer Checking<a class="headerlink" href="#prompt-7-single-maintainer-vs-multi-maintainer-checking" title="Permanent link">&para;</a></h2>
+<p><em>"Enhance the logic that checks whether a package is maintained by a single individual or a team. Specifically:</em></p>
+<ol>
+<li><strong>Add checks</strong> that read the repository's contributor/committer data (already shallow cloned) to count unique authors.</li>
+<li><strong>Compare</strong> the number of unique authors, using thresholds for 1=single, 2-3=small, 4+ = moderate, 10+ = large.</li>
+<li><strong>In the risk scoring</strong> give a higher penalty to single-maintainer dependencies, a smaller penalty to small teams, and no penalty to large communities.</li>
+<li><strong>Log</strong> the results in the final terminal output (e.g., "Maintainers: 3 → moderate") and reflect that in the final risk factors list.</li>
+<li><strong>Write or update tests</strong> where you clone example repos with dummy commits so that at least one test covers the scenario of single vs. multiple maintainers.</li>
+</ol>
+<hr />
+<h2 id="prompt-8-automated-documentation-generation">Prompt 8: Automated Documentation Generation<a class="headerlink" href="#prompt-8-automated-documentation-generation" title="Permanent link">&para;</a></h2>
+<p><em>"Set up automated API documentation generation so that docstrings are reflected in user-friendly docs. Specifically:</em></p>
+<ol>
+<li><strong>Add a Sphinx or MkDocs</strong> configuration in a <code>docs/</code> folder.</li>
+<li><strong>Scan</strong> the <code>src/dependency_risk_profiler</code> directory to autodoc all public classes and functions.</li>
+<li><strong>Generate an index page</strong> summarizing the modules and sub-packages (e.g., <code>CLI &amp; Parsers</code>, <code>Risk Scoring</code>, <code>Analyzer Plugins</code>, etc.).</li>
+<li><strong>In README</strong> and/or <code>docs/README.md</code>, instruct contributors how to run <code>sphinx-build</code> (or <code>mkdocs build</code>) to regenerate docs.</li>
+<li><strong>Optionally</strong> set up a GitHub Actions workflow to automatically build and deploy the docs to GitHub Pages if the build is successful.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "navigation.sections", "navigation.indexes", "content.code.copy", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      
+    
+  </body>
+</html>
