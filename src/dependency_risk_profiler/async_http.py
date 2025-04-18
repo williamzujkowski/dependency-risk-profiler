@@ -52,7 +52,8 @@ class AsyncHTTPClient:
             session = aiohttp.ClientSession(timeout=timeout)
             self._session = session
             self._semaphore = asyncio.Semaphore(self.concurrent_requests)
-        assert self._session is not None  # For type checking
+        if self._session is None:
+            raise RuntimeError("HTTP session is not initialized")  # pragma: no cover
         return self._session
 
     async def close(self) -> None:
@@ -84,7 +85,8 @@ class AsyncHTTPClient:
         }
 
         semaphore = self._semaphore
-        assert semaphore is not None  # For type checking
+        if semaphore is None:
+            raise RuntimeError("Semaphore is not initialized")  # pragma: no cover
         async with semaphore:
             for retry in range(self.max_retries + 1):
                 try:
@@ -97,7 +99,8 @@ class AsyncHTTPClient:
                         await asyncio.sleep(delay)
 
                     # Ensure we have a valid session
-                    assert session is not None  # For type checking
+                    if session is None:
+                        raise RuntimeError("HTTP session is not initialized")  # pragma: no cover
                     async with session.get(
                         url, params=params, headers=headers
                     ) as response:
@@ -161,7 +164,8 @@ class AsyncHTTPClient:
         }
 
         semaphore = self._semaphore
-        assert semaphore is not None  # For type checking
+        if semaphore is None:
+            raise RuntimeError("Semaphore is not initialized")  # pragma: no cover
         async with semaphore:
             for retry in range(self.max_retries + 1):
                 try:
@@ -174,7 +178,8 @@ class AsyncHTTPClient:
                         await asyncio.sleep(delay)
 
                     # Ensure we have a valid session
-                    assert session is not None  # For type checking
+                    if session is None:
+                        raise RuntimeError("HTTP session is not initialized")  # pragma: no cover
                     async with session.post(
                         url, json=json_data, headers=headers
                     ) as response:

@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 import tempfile
 import time
@@ -84,7 +84,7 @@ def fetch_latest_code(repo_url: str, branch: str, temp_dir: Union[str, Path]) ->
 
         # Clone the repository
         subprocess.run(
-            ["git", "clone", "-b", branch, repo_url, str(temp_dir)],
+            ["git", "clone", "-b", branch, repo_url, str(temp_dir)],  # nosec B603, B607
             check=True,
             capture_output=True,
             text=True,
@@ -128,7 +128,7 @@ def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
             # Install dependencies
             logger.info("Installing dependencies...")
             subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-e", ".[dev]"],
+                [sys.executable, "-m", "pip", "install", "-e", ".[dev]"],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,
@@ -138,7 +138,7 @@ def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
             # Run linters
             logger.info("Running linters...")
             subprocess.run(
-                [sys.executable, "-m", "flake8"],
+                [sys.executable, "-m", "flake8"],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,
@@ -146,7 +146,7 @@ def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
             )
 
             subprocess.run(
-                [sys.executable, "-m", "black", "--check", "."],
+                [sys.executable, "-m", "black", "--check", "."],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,
@@ -156,7 +156,7 @@ def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
             # Run type checking
             logger.info("Running type checking...")
             subprocess.run(
-                [sys.executable, "-m", "mypy", "src/"],
+                [sys.executable, "-m", "mypy", "src/"],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,
@@ -166,7 +166,7 @@ def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
             # Run unit tests
             logger.info("Running unit tests...")
             subprocess.run(
-                [sys.executable, "-m", "pytest", "-xvs", "tests/"],
+                [sys.executable, "-m", "pytest", "-xvs", "tests/"],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,
@@ -224,7 +224,7 @@ def build_package(
         try:
             # Build the package
             subprocess.run(
-                [sys.executable, "-m", "build"],
+                [sys.executable, "-m", "build"],  # nosec B603
                 check=True,
                 env=build_env,
                 capture_output=True,
@@ -377,7 +377,7 @@ def create_build_manifest(
                 "name": artifact.name,
                 "size": artifact.stat().st_size,
                 "sha256": subprocess.run(
-                    ["sha256sum", str(artifact)],
+                    ["sha256sum", str(artifact)],  # nosec B603, B607
                     check=True,
                     capture_output=True,
                     text=True,

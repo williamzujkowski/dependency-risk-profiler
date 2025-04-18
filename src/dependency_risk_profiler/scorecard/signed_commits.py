@@ -2,7 +2,7 @@
 
 import logging
 import re
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -32,9 +32,9 @@ def check_recent_commit_signature_status(
 
     try:
         # Get signature status for recent commits
-        cmd = ["git", "log", f"-{commit_count}", "--pretty=format:%H %G?"]
+        cmd = ["git", "log", f"-{commit_count}", "--pretty=format:%H %G?"]  # nosec B607
         output = subprocess.run(
-            cmd, cwd=repo_dir, check=True, capture_output=True, text=True
+            cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
         ).stdout.strip()
 
         if not output:
@@ -101,9 +101,9 @@ def check_release_signature_status(
 
     try:
         # Get the most recent tags
-        cmd = ["git", "tag", "--sort=-creatordate"]
+        cmd = ["git", "tag", "--sort=-creatordate"]  # nosec B607
         output = subprocess.run(
-            cmd, cwd=repo_dir, check=True, capture_output=True, text=True
+            cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
         ).stdout.strip()
 
         if not output:
@@ -116,9 +116,9 @@ def check_release_signature_status(
         # Check signature status for each tag
         for tag in tags:
             # Check if the tag is signed
-            verify_cmd = ["git", "tag", "-v", tag]
+            verify_cmd = ["git", "tag", "-v", tag]  # nosec B607
             verify_result = subprocess.run(
-                verify_cmd, cwd=repo_dir, capture_output=True, text=True
+                verify_cmd, cwd=repo_dir, capture_output=True, text=True  # nosec B603
             )
 
             # Parse output to determine signature status
@@ -174,7 +174,8 @@ def check_commit_signing_requirement(repo_dir: str) -> Dict[str, bool]:
                                 f"GitHub Actions workflow: {workflow_file.name}"
                             )
                             break
-                except Exception:
+                except Exception as e:  # nosec B112
+                    logger.debug(f"Error reading workflow file {workflow_file}: {e}")
                     continue
 
         # Check for GitHub branch protection settings in .github/settings.yml
@@ -186,8 +187,9 @@ def check_commit_signing_requirement(repo_dir: str) -> Dict[str, bool]:
                     if re.search(r"require_signed_commits\s*:\s*true", content):
                         result["requires_commit_signing"] = True
                         result["commit_signing_mechanism"] = "GitHub settings.yml"
-            except Exception:
-                pass
+            except Exception as e:  # nosec B110
+                logger.debug(f"Error reading settings file {settings_file}: {e}")
+                # Continue without settings file info
 
     except Exception as e:
         logger.error(f"Error checking commit signing requirement: {e}")

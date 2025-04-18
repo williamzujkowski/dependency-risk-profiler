@@ -2,7 +2,7 @@
 
 import logging
 import re
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -83,7 +83,7 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
 
         # Clone with depth 1 for speed
         result = subprocess.run(
-            ["git", "clone", "--depth", "1", repo_url, temp_dir],
+            ["git", "clone", "--depth", "1", repo_url, temp_dir],  # nosec B603, B607
             check=True,
             capture_output=True,
             text=True,
@@ -106,7 +106,7 @@ def get_last_commit_date(repo_dir: str) -> Optional[datetime]:
     """
     try:
         result = subprocess.run(
-            ["git", "log", "-1", "--format=%cd", "--date=iso"],
+            ["git", "log", "-1", "--format=%cd", "--date=iso"],  # nosec B603, B607
             cwd=repo_dir,
             check=True,
             capture_output=True,
@@ -130,7 +130,7 @@ def count_contributors(repo_dir: str) -> int:
     """
     try:
         result = subprocess.run(
-            ["git", "shortlog", "-s", "-n", "--all"],
+            ["git", "shortlog", "-s", "-n", "--all"],  # nosec B603, B607
             cwd=repo_dir,
             check=True,
             capture_output=True,

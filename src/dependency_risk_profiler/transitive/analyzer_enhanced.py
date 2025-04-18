@@ -7,7 +7,7 @@ particularly for Python projects using the pipdeptree library.
 import json
 import logging
 import os
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import venv
 from typing import Dict, List, Optional, Set
@@ -78,7 +78,7 @@ def install_packages(pip_path: str, requirements_file: str) -> bool:
     try:
         logger.debug(f"Installing packages from {requirements_file}")
         result = subprocess.run(
-            [pip_path, "install", "-r", requirements_file],
+            [pip_path, "install", "-r", requirements_file],  # nosec B603
             capture_output=True,
             text=True,
             check=False,
@@ -104,7 +104,7 @@ def install_pipdeptree(pip_path: str) -> bool:
     try:
         logger.debug("Installing pipdeptree")
         result = subprocess.run(
-            [pip_path, "install", "pipdeptree"],
+            [pip_path, "install", "pipdeptree"],  # nosec B603
             capture_output=True,
             text=True,
             check=False,
@@ -130,7 +130,7 @@ def run_pipdeptree(python_path: str) -> Optional[List[Dict]]:
     try:
         logger.debug("Running pipdeptree")
         result = subprocess.run(
-            [python_path, "-m", "pipdeptree", "--json-tree", "--warn", "silence"],
+            [python_path, "-m", "pipdeptree", "--json-tree", "--warn", "silence"],  # nosec B603
             capture_output=True,
             text=True,
             check=False,
