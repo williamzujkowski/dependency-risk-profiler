@@ -27,11 +27,11 @@ click-plugins==1.1.1
     # via celery
 click-repl==0.2.0
     # via celery
-flask==2.3.2
+flask==3.1.0
     # via flask-example-celery (pyproject.toml)
 itsdangerous==2.1.2
     # via flask
-jinja2==3.1.2
+jinja2==3.1.6
     # via flask
 kombu==5.2.4
     # via celery
@@ -54,5 +54,5 @@ vine==5.0.0
     #   kombu
 wcwidth==0.2.6
     # via prompt-toolkit
-werkzeug==2.3.3
+werkzeug==3.0.6
     # via flask
