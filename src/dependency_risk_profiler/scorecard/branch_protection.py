@@ -2,7 +2,7 @@
 
 import logging
 import re
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -89,7 +89,8 @@ def check_github_branch_protection_config(repo_dir: str) -> Dict[str, bool]:
                                 f"GitHub Actions: {workflow_file.name}"
                             )
                             break
-                except Exception:
+                except Exception as e:  # nosec B112
+                    logger.debug(f"Error reading workflow file {workflow_file}: {e}")
                     continue
 
     except Exception as e:
@@ -142,9 +143,9 @@ def check_common_branch_protection_indicators(repo_dir: str) -> Dict[str, bool]:
 
         # Try to detect protected branches from git config
         try:
-            cmd = ["git", "config", "--local", "--list"]
+            cmd = ["git", "config", "--local", "--list"]  # nosec B607
             output = subprocess.run(
-                cmd, cwd=repo_dir, check=True, capture_output=True, text=True
+                cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
             ).stdout.strip()
 
             # Look for protected branch patterns in git config
@@ -158,8 +159,9 @@ def check_common_branch_protection_indicators(repo_dir: str) -> Dict[str, bool]:
             if protected_branches:
                 result["has_protected_branches"] = True
                 result["protected_branches"] = list(protected_branches)
-        except Exception:
-            pass
+        except Exception as e:  # nosec B110
+            logger.debug(f"Error checking git config for protected branches: {e}")
+            # Continue without protected branch info
 
     except Exception as e:
         logger.error(f"Error checking branch protection indicators: {e}")

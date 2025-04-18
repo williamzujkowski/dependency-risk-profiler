@@ -1,7 +1,7 @@
 """Enhanced maintained status check for dependencies."""
 
 import logging
-import subprocess
+import subprocess  # nosec B404
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -42,7 +42,7 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
                 "HEAD",
             ]
             output = subprocess.run(
-                cmd, cwd=repo_dir, check=True, capture_output=True, text=True
+                cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
             ).stdout.strip()
 
             try:
@@ -115,7 +115,7 @@ def analyze_release_cadence(
                 "refs/tags",
             ]
             output = subprocess.run(
-                cmd, cwd=repo_dir, check=True, capture_output=True, text=True
+                cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
             ).stdout.strip()
 
             tag_dates = []

@@ -2,7 +2,7 @@
 
 import logging
 import re
-import subprocess
+import subprocess  # nosec B404
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 
@@ -141,7 +141,7 @@ def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float
 
         # Count commits since that date
         result = subprocess.run(
-            ["git", "rev-list", "--count", f"--since={date_threshold}", "HEAD"],
+            ["git", "rev-list", "--count", f"--since={date_threshold}", "HEAD"],  # nosec B603, B607
             cwd=repo_dir,
             check=True,
             capture_output=True,
@@ -301,8 +301,9 @@ def analyze_pypi_community_metrics(
                 dependency.community_metrics.downloads_count = download_stats["data"][
                     "last_month"
                 ]
-    except Exception:
-        pass
+    except Exception as e:  # nosec B110
+        logger.debug(f"Could not fetch PyPI download stats for {dependency.name}: {e}")
+        # Continue without download stats
 
     return dependency
 
