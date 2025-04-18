@@ -8,12 +8,13 @@ This directory contains configuration files for GitHub Actions and other GitHub 
 
 The repository includes a custom CodeQL configuration to exclude test files and examples that may contain intentional vulnerabilities for demonstration purposes.
 
-**Important:** To use the custom CodeQL workflow, you must disable the default setup in GitHub:
+**Important:** To configure CodeQL properly:
 
 1. Go to GitHub repository → Settings → Code security and analysis
 2. Find "Code scanning" section
-3. Turn OFF "Default setup" for CodeQL Analysis
-4. Turn ON "Advanced setup" to use this custom workflow
+3. Enable "Advanced setup" for CodeQL Analysis
+4. This will create a default .github/workflows/codeql.yml file
+5. Our custom workflow is named custom-codeql.yml to avoid conflicts
 
 Otherwise, you'll see this error:
 ```

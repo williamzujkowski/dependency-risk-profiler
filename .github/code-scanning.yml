@@ -6,5 +6,5 @@ use_advanced_setup: true
 # Configure custom workflows that will be used for code scanning
 name: "custom-workflows"
 custom_workflows:
-  - name: "CodeQL Analysis"
-    workflow_file: "codeql.yml"
+  - name: "Custom CodeQL Analysis"
+    workflow_file: "custom-codeql.yml"
