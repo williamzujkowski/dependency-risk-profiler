@@ -1,4 +1,8 @@
-name: "CodeQL"
+name: "CodeQL Analysis"
+
+# Declare this workflow as the custom code scanning workflow
+# This disables the default CodeQL setup
+# See: https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning
 
 on:
   push:
@@ -31,8 +35,15 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         config-file: .github/codeql/codeql-config.yml
+        setup-python-dependencies: false
+        # Explicitly disable default setup to avoid conflicts
+        tools: latest
+        setup-tools-done: true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
+        upload: true
+        checkout_path: ${{ github.workspace }}
+        output: sarif-results

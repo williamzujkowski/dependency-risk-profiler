@@ -1,0 +1,10 @@
+# Code Scanning Advanced Setup Configuration
+
+# Disable default setup since we're using a custom workflow
+use_advanced_setup: true
+
+# Configure custom workflows that will be used for code scanning
+name: "custom-workflows"
+custom_workflows:
+  - name: "CodeQL Analysis"
+    workflow_file: "codeql.yml"
