@@ -76,8 +76,6 @@ def run_command(command, cwd=None, env=None, check=True):
 
 def install_package(venv_path=None, dev=True, editable=True):
     """Install the package with pip."""
-    # Get package directory
-    package_dir = Path(__file__).resolve().parent
     
     # Determine pip executable
     pip_exe = "pip"
@@ -215,9 +213,6 @@ def interactive_install():
     if not check_python_version():
         return 1
     
-    # Get the package directory
-    package_dir = Path(__file__).resolve().parent
-    
     # Ask installation method
     print("\nChoose an installation method:")
     print("1. Install directly (no virtual environment)")
@@ -314,8 +309,7 @@ def main():
     if args.interactive:
         return interactive_install()
     
-    # Get package directory
-    package_dir = Path(__file__).resolve().parent
+    # Set venv path
     venv_path = Path(args.venv_path)
     
     # Handle virtual environment
@@ -345,6 +339,7 @@ def main():
         return 0
     
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
