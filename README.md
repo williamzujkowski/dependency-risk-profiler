@@ -380,7 +380,7 @@ These files contain dependencies with known vulnerabilities for testing and demo
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-organization/dependency-risk-profiler.git
+git clone https://github.com/williamzujkowski/dependency-risk-profiler.git
 cd dependency-risk-profiler
 
 # Create a virtual environment
@@ -390,17 +390,56 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install development dependencies
 pip install -e ".[dev]"
 
+# Install pre-commit hooks (recommended)
+pre-commit install
+
 # Run tests
 pytest
 
-# Format code
+# Run tests with coverage report
+pytest --cov=src
+
+# Format and lint code
 black .
 isort .
-
-# Lint code
 flake8
-mypy .
+mypy src
+
+# Security check
+bandit -r src
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and delivery:
+
+### Continuous Integration
+
+The CI workflow runs on every push and pull request to the `main` branch and performs the following checks:
+
+- Runs all pre-commit hooks on changed files
+- Verifies code quality with flake8
+- Runs static type checking with mypy
+- Performs security scanning with bandit
+- Executes all tests with pytest and collects coverage metrics
+
+### Continuous Delivery
+
+The CD workflow automatically creates releases when version tags (e.g., `v0.3.0`) are pushed:
+
+1. Builds the Python package (wheel and sdist)
+2. Generates release notes from the changelog
+3. Creates a GitHub release with the built artifacts
+4. Publishes the package to PyPI
+
+### Dependabot Integration
+
+Dependabot is configured to scan for dependency updates weekly and create pull requests for:
+
+- Python dependencies
+- GitHub Actions
+- Node.js dependencies (for example tools)
+- Go dependencies (for example tools)
 
 ## Example Tools and Demos
 
