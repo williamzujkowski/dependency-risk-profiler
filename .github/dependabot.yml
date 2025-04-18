@@ -13,6 +13,11 @@ updates:
         paths:
           - "examples/**"
           - "dependabot_check/**"
+          - "testing/**"
+          - "tests/**"
+          - "test_projects/**"
+          - "test_dirs/**"
+          - "test-projects/**"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -24,6 +29,11 @@ updates:
         paths:
           - "examples/**"
           - "dependabot_check/**"
+          - "testing/**"
+          - "tests/**"
+          - "test_projects/**"
+          - "test_dirs/**"
+          - "test-projects/**"
 
   - package-ecosystem: "gomod"
     directory: "/"
@@ -35,3 +45,8 @@ updates:
         paths:
           - "examples/**"
           - "dependabot_check/**"
+          - "testing/**"
+          - "tests/**"
+          - "test_projects/**"
+          - "test_dirs/**"
+          - "test-projects/**"

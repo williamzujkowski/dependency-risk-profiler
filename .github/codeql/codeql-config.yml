@@ -1,0 +1,38 @@
+name: "Dependency Risk Profiler CodeQL Configuration"
+
+paths-ignore:
+  - "**/testing/**"
+  - "**/tests/**"
+  - "**/examples/**"
+  - "**/test_projects/**"
+  - "**/test_dirs/**"
+  - "**/test-projects/**"
+  - "**/venv/**"
+  - "**/*.test.py"
+  - "**/*_test.py"
+  - "**/test_*.py"
+  - "**/htmlcov/**"
+  - "**/.pytest_cache/**"
+  - "**/.mypy_cache/**"
+
+queries:
+  - name: Security and Quality
+    uses: security-and-quality
+
+query-filters:
+  # Exclude test-related queries that might still trigger on non-test files
+  - exclude:
+      id: py/path-injection-taint-tracking
+      path-source: testing/
+  - exclude:
+      id: py/path-injection-taint-tracking
+      path-source: tests/
+  - exclude:
+      id: py/path-injection-taint-tracking
+      path-source: examples/
+  - exclude:
+      id: py/hardcoded-credentials
+      path-source: examples/
+  - exclude:
+      id: py/command-line-injection
+      path-source: testing/
