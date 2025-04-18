@@ -107,9 +107,14 @@ jobs:
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
         skip-existing: true
         verbose: true
+        packages-dir: dist
+        # Disable trusted publishing and use token authentication instead
+        verify-metadata: true
+        attestations: false
     
     - name: Build docs
       run: |
