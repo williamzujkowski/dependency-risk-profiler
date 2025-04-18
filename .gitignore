@@ -63,4 +63,7 @@ venv.bak/
 .idea/
 .vscode/
 *.swp
-*.swotest-projects/
+*.swo
+
+# Test projects with embedded git repositories
+test-projects/
