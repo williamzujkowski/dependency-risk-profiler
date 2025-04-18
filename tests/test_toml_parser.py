@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from dependency_risk_profiler.parsers.toml import TomlParser
 from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.parsers.toml import TomlParser
 
 
 @pytest.fixture
@@ -117,7 +117,12 @@ def test_pyproject_toml_parser(pyproject_toml_file):
     """Test parsing a standard pyproject.toml file."""
     # Run this before the actual test to modify the file to add dev dependencies
     # that will be parsed correctly
-    import tomli, tomli_w
+    try:
+        import tomli
+        import tomli_w
+    except ImportError:
+        import pytest
+        pytest.skip("tomli and tomli_w packages required for this test")
 
     # Read the current file
     with open(pyproject_toml_file, "rb") as f:
@@ -161,7 +166,12 @@ def test_pyproject_toml_parser(pyproject_toml_file):
 def test_poetry_toml_parser(poetry_toml_file):
     """Test parsing a Poetry-style pyproject.toml file."""
     # Modify the file structure to make it more compatible with our parser
-    import tomli, tomli_w
+    try:
+        import tomli
+        import tomli_w
+    except ImportError:
+        import pytest
+        pytest.skip("tomli and tomli_w packages required for this test")
 
     # Read the current file
     with open(poetry_toml_file, "rb") as f:
