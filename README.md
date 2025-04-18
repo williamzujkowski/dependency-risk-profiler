@@ -1,6 +1,7 @@
 # Dependency Risk Profiler 🔍
 
 [![CI](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
+[![Docs](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/docs.yml/badge.svg)](https://williamzujkowski.github.io/dependency-risk-profiler/)
 [![Coverage](https://raw.githubusercontent.com/williamzujkowski/dependency-risk-profiler/main/.github/badges/coverage.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -373,6 +374,7 @@ For all documentation, see the [docs directory](docs/README.md).
 
 The project documentation is built with MkDocs and available in multiple formats:
 
+- **Online Documentation**: [View the docs online](https://williamzujkowski.github.io/dependency-risk-profiler/) (automatically updated when the main branch changes)
 - **Local Documentation**: Run `mkdocs serve` in the project directory to view documentation locally at http://127.0.0.1:8000/
 - **Static Site**: Run `mkdocs build` to generate a static documentation site in the `site/` directory
 - **Markdown Files**: Browse the raw documentation in the [docs directory](docs/)

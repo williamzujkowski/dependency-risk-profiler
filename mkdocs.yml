@@ -1,8 +1,10 @@
 site_name: Dependency Risk Profiler
 site_description: Evaluate and monitor the risk of your project dependencies
 site_author: William Zujkowski
+site_url: https://williamzujkowski.github.io/dependency-risk-profiler/
 repo_url: https://github.com/williamzujkowski/dependency-risk-profiler
 repo_name: dependency-risk-profiler
+edit_uri: edit/main/docs/
 
 theme:
   name: material
