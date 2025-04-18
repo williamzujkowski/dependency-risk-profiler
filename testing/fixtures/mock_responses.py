@@ -93,6 +93,7 @@ GO_VULN_RESPONSE = {
     ]
 }
 
+
 def get_mock_response(dependency_name: str) -> Dict:
     """Get mock vulnerability data for a dependency.
     
