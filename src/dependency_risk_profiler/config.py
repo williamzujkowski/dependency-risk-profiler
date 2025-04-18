@@ -37,6 +37,7 @@ DEFAULT_CONFIG = {
         "output_format": "terminal",
         "use_color": True,
         "debug": False,
+        "timeout": 120,  # Default timeout in seconds
     },
     "scoring_weights": {
         "staleness": 0.25,
@@ -230,6 +231,9 @@ class Config:
 
         if "debug" in args:
             self._config["general"]["debug"] = args["debug"]
+            
+        if "timeout" in args and args["timeout"] is not None:
+            self._config["general"]["timeout"] = args["timeout"]
 
         # Scoring weights
         if "staleness_weight" in args and args["staleness_weight"] is not None:

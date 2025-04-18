@@ -120,6 +120,12 @@ dependency-risk-profiler analyze --manifest /path/to/project_directory
 
 # Analyze all manifest files in a directory and its subdirectories
 dependency-risk-profiler analyze --manifest /path/to/project_directory --recursive
+
+# Set a longer timeout for analyzing large projects with many dependencies
+dependency-risk-profiler analyze --manifest /path/to/large_project --timeout 300
+
+# Combine timeout and recursive scanning for large projects
+dependency-risk-profiler analyze --manifest /path/to/large_project --recursive --timeout 300
 ```
 
 ### Configuration Files

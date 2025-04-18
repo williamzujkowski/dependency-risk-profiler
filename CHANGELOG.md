@@ -5,7 +5,7 @@ All notable changes to the Dependency Risk Profiler will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2025-04-17
+## [0.3.0] - 2025-04-18
 
 ### Added
 
@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for recursive scanning of subdirectories with `--recursive` flag
   - Automatic ecosystem detection for all manifest files
   - Overall summary of risk scores across all scanned files
+- Timeout control for improved performance with large projects
+  - New `--timeout` option to set the maximum analysis time per file
+  - Default timeout of 120 seconds per file
+  - Timeout error handling with helpful messages
+  - Enhanced summary report with categorized failed files
+  - Helpful tips for resolving analysis failures
 - Comprehensive test suite following TESTING_STANDARDS.md:
   - Hypothesis tests for behavior validation
   - Regression tests for known fail states

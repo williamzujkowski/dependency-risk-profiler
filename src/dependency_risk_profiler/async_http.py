@@ -21,7 +21,7 @@ class AsyncHTTPClient:
 
     def __init__(
         self,
-        timeout: float = 10,
+        timeout: float = 30,
         max_retries: int = 3,
         backoff_factor: float = 0.5,
         concurrent_requests: int = 10,
