@@ -317,7 +317,7 @@ python examples/secure_release_demo.py
 
 ## Example Output
 
-For examples of how to use this tool, check out the [examples directory](examples/README.md).
+For examples of how to use this tool, check out the [examples directory](examples/README.md). For real-world test cases, see the [test-projects directory](test-projects/README.md).
 
 ```
 Dependency Risk Profile
