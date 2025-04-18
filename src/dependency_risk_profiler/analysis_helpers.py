@@ -117,8 +117,14 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
         is_maintained, maintained_score, maintained_issues = check_maintained_status(
             dependency, repo_dir, None  # Pass None for package_data
         )
-        # No need to set any attribute on dependency from this function
-
+        
+        # Set is_maintained on dependency if security_metrics is available
+        if dependency.security_metrics is None:
+            dependency.security_metrics = SecurityMetrics()
+            
+        if dependency.security_metrics:
+            dependency.security_metrics.is_maintained = is_maintained
+            
         # Log maintained status issues
         for issue in maintained_issues:
             logger.info(f"Maintained status issue for {dependency.name}: {issue}")

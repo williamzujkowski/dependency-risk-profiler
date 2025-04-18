@@ -66,6 +66,7 @@ class SecurityMetrics:
         None  # Whether repo uses signed commits/releases
     )
     has_branch_protection: Optional[bool] = None  # Whether repo uses branch protection
+    is_maintained: Optional[bool] = None  # Whether repo is actively maintained
 
     # Vulnerability metrics
     vulnerability_count: Optional[int] = None  # Number of known vulnerabilities
@@ -126,6 +127,7 @@ class DependencyRiskScore:
     dependency_update_score: float = 0.0
     signed_commits_score: float = 0.0
     branch_protection_score: float = 0.0
+    maintained_score: float = 0.0
 
     total_score: float = 0.0
     risk_level: RiskLevel = RiskLevel.LOW
