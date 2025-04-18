@@ -441,6 +441,8 @@
       
         
       
+        
+      
     
     
     
@@ -536,6 +538,29 @@
   
   <span class="md-ellipsis">
     Dependency Security
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/CODE_SIGNING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Code Signing
     
   </span>
   
@@ -1367,8 +1392,10 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 <ol>
 <li>Build the Python package (wheel and sdist)</li>
 <li>Generate release notes based on commits since the last release</li>
+<li>Sign the package artifacts using the project's code signing module</li>
+<li>Generate SHA256 checksums for all artifacts</li>
 <li>Create a GitHub Release with the generated notes</li>
-<li>Upload the package files to the GitHub Release</li>
+<li>Upload the package files, signature files, and checksums to the GitHub Release</li>
 <li>Publish the package to PyPI</li>
 <li>Update the documentation site</li>
 </ol>
@@ -1385,8 +1412,24 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 <p>Verify the GitHub Release was created with the correct artifacts:</p>
 </li>
 <li>Visit the "Releases" page on GitHub</li>
+<li>Ensure both the wheel and source distribution are attached</li>
 <li>
-<p>Ensure both the wheel and source distribution are attached</p>
+<p>Verify that signature files (.sig) and SHA256SUMS.txt are included</p>
+</li>
+<li>
+<p>Verify the signatures (optional):
+   <div class="highlight"><pre><span></span><code><span class="c1"># Download the package and signature files</span>
+wget<span class="w"> </span>https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/dependency_risk_profiler-X.Y.Z-py3-none-any.whl
+wget<span class="w"> </span>https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/dependency_risk_profiler-X.Y.Z-py3-none-any.whl.sig
+wget<span class="w"> </span>https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/SHA256SUMS.txt
+
+<span class="c1"># Verify checksum</span>
+sha256sum<span class="w"> </span>-c<span class="w"> </span>SHA256SUMS.txt
+
+<span class="c1"># Verify signature (requires the package to be installed)</span>
+pip<span class="w"> </span>install<span class="w"> </span>dependency-risk-profiler<span class="o">==</span>X.Y.Z
+python<span class="w"> </span>-m<span class="w"> </span>dependency_risk_profiler.secure_release.code_signing<span class="w"> </span>dependency_risk_profiler-X.Y.Z-py3-none-any.whl<span class="w"> </span>--verify<span class="w"> </span>dependency_risk_profiler-X.Y.Z-py3-none-any.whl.sig
+</code></pre></div></p>
 </li>
 <li>
 <p>Confirm the documentation site has been updated:</p>
