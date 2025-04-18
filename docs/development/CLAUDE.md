@@ -29,10 +29,25 @@ mypy .
 pytest
 
 # Run a single test
-pytest tests/path/to/test_file.py::test_function_name
+pytest testing/unit/test_file.py::test_function_name
 
 # Run tests with coverage
 pytest --cov=src
+```
+
+## Documentation Commands
+```bash
+# Install documentation dependencies
+pip install -e ".[docs]"
+
+# Preview documentation site (with live reloading)
+mkdocs serve
+
+# Build static documentation site
+mkdocs build
+
+# Deploy to GitHub Pages (if configured)
+mkdocs gh-deploy
 ```
 
 ## Code Style Guidelines
