@@ -72,6 +72,12 @@ visualization = [
     "python-igraph>=0.10.4",   # Alternative graph visualization
 ]
 
+docs = [
+    "mkdocs>=1.6.0",           # Documentation site generator
+    "mkdocs-material>=9.6.0",  # Material theme for MkDocs
+    "pymdown-extensions>=10.14.0", # Markdown extensions for MkDocs
+]
+
 [project.urls]
 Homepage = "https://github.com/williamzujkowski/dependency-risk-profiler"
 Issues = "https://github.com/williamzujkowski/dependency-risk-profiler/issues"
