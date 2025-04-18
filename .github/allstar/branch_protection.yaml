@@ -1,0 +1,38 @@
+# Branch Protection policy
+# https://github.com/ossf/allstar/blob/main/pkg/policies/branch/README.md
+
+optConfig:
+  optOutStrategy: false  # Set to false to opt-in
+
+policy:
+  # Specifies which branch(es) this policy applies to
+  branches:
+    - main
+  
+  # Enforce branch protection for all matching branches
+  requireBranchProtection: true
+  
+  # Enforces approval by at least one reviewer
+  requireApproval: true
+  approvalCount: 1
+  
+  # Require status checks to pass before merging
+  requireStatusChecks: true
+  
+  # Prevents force pushes to matching branches
+  disallowForcePushes: true
+  
+  # Prevents deletion of matching branches
+  disallowDeletion: true
+  
+  # Require linear history
+  requireLinearHistory: false
+  
+action:
+  # Create an issue when non-compliant
+  issue: true
+  
+  # Add labels to created issues
+  issueLabels:
+    - security
+    - allstar

@@ -1,0 +1,33 @@
+# Binary Artifacts policy
+# https://github.com/ossf/allstar/blob/main/pkg/policies/binary/README.md
+
+optConfig:
+  optOutStrategy: false  # Set to false to opt-in
+
+policy:
+  # Enforces restriction of binary artifacts
+  denyBinaryArtifacts: true
+  
+  # Allowed file extensions (example: images and docs that are fine)
+  allowlistedExtensions:
+    - .png
+    - .jpg
+    - .jpeg
+    - .gif
+    - .svg
+    - .pdf
+    - .ico
+    - .webp
+  
+  # Specific binaries files to allow
+  # allowListedPaths:
+  #   - path/to/binary/file
+
+action:
+  # Create an issue when non-compliant
+  issue: true
+  
+  # Add labels to created issues
+  issueLabels:
+    - security
+    - allstar

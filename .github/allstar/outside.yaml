@@ -1,0 +1,25 @@
+# Outside Collaborators policy
+# https://github.com/ossf/allstar/blob/main/pkg/policies/outside/README.md
+
+optConfig:
+  optOutStrategy: false  # Set to false to opt-in
+
+policy:
+  # Prevents outside collaborators from having admin access
+  preventAdminAccess: true
+  
+  # Prevents outside collaborators from having push access
+  preventPushAccess: false
+  
+  # Allowlisted outside collaborators (users who are allowed admin/push access)
+  # allowListedOutsideCollaborators:
+  #   - collaborator-username
+    
+action:
+  # Create an issue when non-compliant
+  issue: true
+  
+  # Add labels to created issues
+  issueLabels:
+    - security
+    - allstar

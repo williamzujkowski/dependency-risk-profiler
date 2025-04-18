@@ -3,6 +3,8 @@
 [![CI](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
 [![Docs](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/docs.yml/badge.svg)](https://williamzujkowski.github.io/dependency-risk-profiler/)
 [![Coverage](https://raw.githubusercontent.com/williamzujkowski/dependency-risk-profiler/main/.github/badges/coverage.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
+[![OSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/williamzujkowski/dependency-risk-profiler/badge)](https://securityscorecards.dev/viewer/?uri=github.com/williamzujkowski/dependency-risk-profiler)
+[![OSSF Allstar](https://img.shields.io/badge/OSSF-Allstar%20Protected-success)](https://github.com/ossf/allstar)
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -113,6 +115,19 @@ We welcome contributions! Please feel free to submit a Pull Request.
 5. Open a Pull Request
 
 See the [Contributing Guide](https://williamzujkowski.github.io/dependency-risk-profiler/CONTRIBUTING/) for more details.
+
+## Security Practices
+
+The Dependency Risk Profiler project follows security best practices in open source development:
+
+- **OSSF Scorecard**: We regularly run [OpenSSF Scorecard](https://securityscorecards.dev/) to maintain high security standards
+- **OSSF Allstar**: Our repository is protected by [OpenSSF Allstar](https://github.com/ossf/allstar) to enforce security policies
+- **Branch Protection**: We enforce branch protection on main branches to prevent unauthorized changes
+- **Code Review**: All changes require peer review before merging
+- **Dependency Management**: We use Dependabot to keep dependencies up-to-date
+- **Secure Publishing**: We use OpenID Connect trusted publishing for PyPI releases
+
+For more information, please review our [Security Policy](SECURITY.md).
 
 ## License
 

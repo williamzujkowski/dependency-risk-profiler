@@ -1,0 +1,18 @@
+# Main Allstar configuration file
+# https://github.com/ossf/allstar/blob/main/README.md
+
+optConfig:
+  optOutStrategy: true  # Set to true to opt-out by default (recommended for existing repos)
+
+issue:
+  title: "OpenSSF Allstar Security Issue"
+  body: |
+    This repository has been found to be out of compliance with one or more security policies.
+
+    Please see the details below and follow the recommendations to address the issues.
+
+    For more information about OpenSSF Allstar, visit: https://github.com/ossf/allstar
+
+action:
+  title: "OpenSSF Allstar Security Automation"
+  description: "Security policy monitoring by OpenSSF Allstar"

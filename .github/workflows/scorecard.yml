@@ -1,0 +1,55 @@
+name: OSSF Scorecard
+
+on:
+  # Run on scheduled intervals (weekly)
+  schedule:
+    - cron: '0 0 * * 0'  # Every Sunday at midnight
+  
+  # Run on push events to the main branch
+  push:
+    branches: [ main ]
+  
+  # Allow manual triggering
+  workflow_dispatch:
+
+# Permissions for the GITHUB_TOKEN
+permissions:
+  # Repository contents, needed to checkout the code
+  contents: read
+  # Pull requests, needed for check results
+  pull-requests: read
+  # Needed for scorecard results
+  security-events: write
+  # Needed for GitHub OIDC token
+  id-token: write
+
+jobs:
+  scorecard:
+    name: OSSF Scorecard Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: "Run OSSF Scorecard"
+        uses: ossf/scorecard-action@v2.3.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # Publishing to Scorecard REST API is optional
+          publish_results: true
+          
+      - name: "Upload artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+          
+      - name: "Upload to code-scanning"
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
