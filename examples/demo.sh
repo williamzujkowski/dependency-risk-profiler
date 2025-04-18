@@ -10,27 +10,27 @@ echo ""
 
 echo "1. Analyzing Python dependencies in requirements.txt"
 echo "---------------------------------------------"
-python -m dependency_risk_profiler.cli.main --manifest requirements.txt
+python -m dependency_risk_profiler.cli.main --manifest manifests/requirements.txt
 echo ""
 
 echo "2. Analyzing Node.js dependencies in package-lock.json"
 echo "---------------------------------------------------"
-python -m dependency_risk_profiler.cli.main --manifest package-lock.json
+python -m dependency_risk_profiler.cli.main --manifest manifests/package-lock.json
 echo ""
 
 echo "3. Analyzing Go dependencies in go.mod"
 echo "-----------------------------------"
-python -m dependency_risk_profiler.cli.main --manifest go.mod
+python -m dependency_risk_profiler.cli.main --manifest manifests/go.mod
 echo ""
 
 echo "4. Output in JSON format"
 echo "---------------------"
-python -m dependency_risk_profiler.cli.main --manifest requirements.txt --output json
+python -m dependency_risk_profiler.cli.main --manifest manifests/requirements.txt --output json
 echo ""
 
 echo "5. Custom Risk Weights (Basic)"
 echo "--------------------------"
-python -m dependency_risk_profiler.cli.main --manifest requirements.txt \
+python -m dependency_risk_profiler.cli.main --manifest manifests/requirements.txt \
   --staleness-weight 0.4 \
   --maintainer-weight 0.2 \
   --deprecation-weight 0.3 \
@@ -41,7 +41,7 @@ python -m dependency_risk_profiler.cli.main --manifest requirements.txt \
 echo ""
 echo "6. Custom Risk Weights (Enhanced)"
 echo "-------------------------------"
-python -m dependency_risk_profiler.cli.main --manifest requirements.txt \
+python -m dependency_risk_profiler.cli.main --manifest manifests/requirements.txt \
   --license-weight 0.4 \
   --community-weight 0.3 \
   --transitive-weight 0.2

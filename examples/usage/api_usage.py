@@ -5,8 +5,8 @@ import os
 import sys
 from pathlib import Path
 
-# Add the parent directory to the Python path to allow importing the library
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add the project root to the Python path to allow importing the library
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.cli.formatter import TerminalFormatter
@@ -80,7 +80,7 @@ def analyze_dependencies(manifest_path, custom_weights=None):
 def main():
     """Main function."""
     # Example 1: Analyze a Python requirements.txt file
-    python_output = analyze_dependencies("requirements.txt")
+    python_output = analyze_dependencies("../manifests/requirements.txt")
     print(python_output)
     print("\n" + "=" * 50 + "\n")
 
@@ -93,19 +93,19 @@ def main():
         "version_difference_weight": 0.3,
         "health_indicators_weight": 0.1,
     }
-    nodejs_output = analyze_dependencies("package-lock.json", custom_weights)
+    nodejs_output = analyze_dependencies("../manifests/package-lock.json", custom_weights)
     print(nodejs_output)
 
     # Example 3: Process the results programmatically
     print("\n" + "=" * 50 + "\n")
     print("Programmatic processing example:")
 
-    parser = BaseParser.get_parser_for_file("requirements.txt")
+    parser = BaseParser.get_parser_for_file("../manifests/requirements.txt")
     dependencies = parser.parse()
     analyzer = BaseAnalyzer.get_analyzer_for_ecosystem("python")
     dependencies = analyzer.analyze(dependencies)
     scorer = RiskScorer()
-    profile = scorer.create_project_profile("requirements.txt", "python", dependencies)
+    profile = scorer.create_project_profile("../manifests/requirements.txt", "python", dependencies)
 
     # Count dependencies by risk level
     risk_counts = {

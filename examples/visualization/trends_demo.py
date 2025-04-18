@@ -14,43 +14,42 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parent.parent)
-)  # Add project root to path
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # Patch the check_security_policy function for the example
 import sys
 from unittest.mock import MagicMock
 
-from src.dependency_risk_profiler import (
+from dependency_risk_profiler import (
     analyze_historical_trends,
     generate_trend_visualization,
     save_historical_profile,
 )
-from src.dependency_risk_profiler.analyzers.base import BaseAnalyzer
-from src.dependency_risk_profiler.parsers.base import BaseParser
+from dependency_risk_profiler.analyzers.base import BaseAnalyzer
+from dependency_risk_profiler.parsers.base import BaseParser
 
 # Mock the security check functions to prevent errors in the examples
-sys.modules["src.dependency_risk_profiler.scorecard.security_policy"] = MagicMock()
-sys.modules["src.dependency_risk_profiler.scorecard.dependency_update"] = MagicMock()
-sys.modules["src.dependency_risk_profiler.scorecard.signed_commits"] = MagicMock()
-sys.modules["src.dependency_risk_profiler.scorecard.branch_protection"] = MagicMock()
+sys.modules["dependency_risk_profiler.scorecard.security_policy"] = MagicMock()
+sys.modules["dependency_risk_profiler.scorecard.dependency_update"] = MagicMock()
+sys.modules["dependency_risk_profiler.scorecard.signed_commits"] = MagicMock()
+sys.modules["dependency_risk_profiler.scorecard.branch_protection"] = MagicMock()
 
 # Create mock functions that return default values
 mock_security_result = (True, 1.0, [])
 sys.modules[
-    "src.dependency_risk_profiler.scorecard.security_policy"
+    "dependency_risk_profiler.scorecard.security_policy"
 ].check_security_policy = MagicMock(return_value=mock_security_result)
 sys.modules[
-    "src.dependency_risk_profiler.scorecard.dependency_update"
+    "dependency_risk_profiler.scorecard.dependency_update"
 ].check_dependency_update_tools = MagicMock(return_value=mock_security_result)
 sys.modules[
-    "src.dependency_risk_profiler.scorecard.signed_commits"
+    "dependency_risk_profiler.scorecard.signed_commits"
 ].check_signed_commits = MagicMock(return_value=mock_security_result)
 sys.modules[
-    "src.dependency_risk_profiler.scorecard.branch_protection"
+    "dependency_risk_profiler.scorecard.branch_protection"
 ].check_branch_protection = MagicMock(return_value=mock_security_result)
-from src.dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 
 def get_ecosystem_from_manifest(manifest_path: str) -> str:
@@ -106,7 +105,7 @@ def analyze_and_save_profile(manifest_path: str) -> str:
 
     # Apply license analysis
     try:
-        from src.dependency_risk_profiler.license.analyzer import analyze_license
+        from dependency_risk_profiler.license.analyzer import analyze_license
 
         for name, dep in dependencies.items():
             try:
@@ -124,7 +123,7 @@ def analyze_and_save_profile(manifest_path: str) -> str:
 
     # Apply community metrics analysis
     try:
-        from src.dependency_risk_profiler.community.analyzer import (
+        from dependency_risk_profiler.community.analyzer import (
             analyze_community_metrics,
         )
 
@@ -147,7 +146,7 @@ def analyze_and_save_profile(manifest_path: str) -> str:
     # Apply security analysis - OpenSSF Scorecard-inspired metrics
     try:
         # We'll initialize security metrics without actually running the checks
-        from src.dependency_risk_profiler.models import SecurityMetrics
+        from dependency_risk_profiler.models import SecurityMetrics
 
         for name, dep in dependencies.items():
             try:
@@ -167,7 +166,7 @@ def analyze_and_save_profile(manifest_path: str) -> str:
 
     # Analyze transitive dependencies
     try:
-        from src.dependency_risk_profiler.transitive.analyzer import (
+        from dependency_risk_profiler.transitive.analyzer import (
             analyze_transitive_dependencies,
         )
 
