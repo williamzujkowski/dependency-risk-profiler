@@ -130,7 +130,14 @@ def run_pipdeptree(python_path: str) -> Optional[List[Dict]]:
     try:
         logger.debug("Running pipdeptree")
         result = subprocess.run(
-            [python_path, "-m", "pipdeptree", "--json-tree", "--warn", "silence"],  # nosec B603
+            [
+                python_path,
+                "-m",
+                "pipdeptree",
+                "--json-tree",
+                "--warn",
+                "silence",
+            ],  # nosec B603
             capture_output=True,
             text=True,
             check=False,

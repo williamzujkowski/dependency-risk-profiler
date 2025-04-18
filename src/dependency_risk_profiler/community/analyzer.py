@@ -141,7 +141,13 @@ def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float
 
         # Count commits since that date
         result = subprocess.run(
-            ["git", "rev-list", "--count", f"--since={date_threshold}", "HEAD"],  # nosec B603, B607
+            [
+                "git",
+                "rev-list",
+                "--count",
+                f"--since={date_threshold}",
+                "HEAD",
+            ],  # nosec B603, B607
             cwd=repo_dir,
             check=True,
             capture_output=True,

@@ -100,7 +100,9 @@ class AsyncHTTPClient:
 
                     # Ensure we have a valid session
                     if session is None:
-                        raise RuntimeError("HTTP session is not initialized")  # pragma: no cover
+                        raise RuntimeError(
+                            "HTTP session is not initialized"
+                        )  # pragma: no cover
                     async with session.get(
                         url, params=params, headers=headers
                     ) as response:
@@ -179,7 +181,9 @@ class AsyncHTTPClient:
 
                     # Ensure we have a valid session
                     if session is None:
-                        raise RuntimeError("HTTP session is not initialized")  # pragma: no cover
+                        raise RuntimeError(
+                            "HTTP session is not initialized"
+                        )  # pragma: no cover
                     async with session.post(
                         url, json=json_data, headers=headers
                     ) as response:

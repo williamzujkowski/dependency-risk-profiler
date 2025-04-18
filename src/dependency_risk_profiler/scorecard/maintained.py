@@ -42,7 +42,11 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
                 "HEAD",
             ]
             output = subprocess.run(
-                cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
+                cmd,
+                cwd=repo_dir,
+                check=True,
+                capture_output=True,
+                text=True,  # nosec B603
             ).stdout.strip()
 
             try:
@@ -115,7 +119,11 @@ def analyze_release_cadence(
                 "refs/tags",
             ]
             output = subprocess.run(
-                cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
+                cmd,
+                cwd=repo_dir,
+                check=True,
+                capture_output=True,
+                text=True,  # nosec B603
             ).stdout.strip()
 
             tag_dates = []

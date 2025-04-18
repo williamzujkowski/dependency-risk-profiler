@@ -145,7 +145,11 @@ def check_common_branch_protection_indicators(repo_dir: str) -> Dict[str, bool]:
         try:
             cmd = ["git", "config", "--local", "--list"]  # nosec B607
             output = subprocess.run(
-                cmd, cwd=repo_dir, check=True, capture_output=True, text=True  # nosec B603
+                cmd,
+                cwd=repo_dir,
+                check=True,
+                capture_output=True,
+                text=True,  # nosec B603
             ).stdout.strip()
 
             # Look for protected branch patterns in git config
