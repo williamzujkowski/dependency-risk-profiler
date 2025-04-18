@@ -115,7 +115,7 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
 
         # Check for maintained status
         is_maintained, maintained_score, maintained_issues = check_maintained_status(
-            dependency, repo_dir
+            dependency, repo_dir, None  # Pass None for package_data
         )
         # No need to set any attribute on dependency from this function
 
