@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    .venv,
+    .tox,
+    .mypy_cache,
+    .pytest_cache,
+    .eggs,
+    *.egg,
+    # Exclude test files with intentional issues
+    testing/integration/test_security_policy.py,
+    testing/integration/test_dependency_update.py,
+    testing/integration/test_phase2.py,
+    testing/unit/test_comprehensive_vulnerability_aggregator.py,
+    testing/unit/test_comprehensive_risk_scorer.py,
+    testing/unit/test_vulnerability_aggregator_with_cache.py
