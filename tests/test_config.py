@@ -199,15 +199,15 @@ enable_osv = true
 
         # Assert
         assert isinstance(weights, dict)
-        assert "staleness" in weights
-        assert "maintainer" in weights
-        assert "deprecation" in weights
-        assert "exploit" in weights
-        assert "version_difference" in weights
-        assert "health_indicators" in weights
-        assert "license" in weights
-        assert "community" in weights
-        assert "transitive" in weights
+        assert "staleness_weight" in weights
+        assert "maintainer_weight" in weights
+        assert "deprecation_weight" in weights
+        assert "exploit_weight" in weights
+        assert "version_difference_weight" in weights
+        assert "health_indicators_weight" in weights
+        assert "license_weight" in weights
+        assert "community_weight" in weights
+        assert "transitive_weight" in weights
 
     def test_get_api_keys(self):
         """HYPOTHESIS: get_api_keys should return configured API keys."""
