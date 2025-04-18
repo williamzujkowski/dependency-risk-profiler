@@ -55,8 +55,19 @@ def main():
         print("\nERROR: pyproject.toml not found. Migration must be completed first.")
         return 1
     
-    # Confirm before proceeding
-    confirm = input("\nContinue with removal of legacy files? (y/N): ").strip().lower()
+    # In automated environment, proceed without confirmation
+    import sys
+    if "--force" in sys.argv:
+        confirm = "y"
+    else:
+        # Confirm before proceeding
+        try:
+            confirm = input("\nContinue with removal of legacy files? (y/N): ").strip().lower()
+        except EOFError:
+            # Handle non-interactive environments
+            print("\nNon-interactive environment detected. Use --force to proceed without confirmation.")
+            return 0
+            
     if confirm not in ["y", "yes"]:
         print("Operation cancelled.")
         return 0
