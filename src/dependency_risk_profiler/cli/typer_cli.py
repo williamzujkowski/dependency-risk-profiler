@@ -22,7 +22,10 @@ from .formatter import JsonFormatter, TerminalFormatter
 # Create Typer app
 app = typer.Typer(
     name="dependency-risk-profiler",
-    help="A tool to evaluate the health and risk of a project's dependencies beyond vulnerability scanning.",
+    help=(
+        "A tool to evaluate the health and risk of a project's dependencies "
+        "beyond vulnerability scanning."
+    ),
     add_completion=False,
 )
 
@@ -153,7 +156,9 @@ def callback(
         help="Enable debug logging",
     ),
 ) -> None:
-    """Dependency Risk Profiler - A tool to evaluate the health and risk of a project's dependencies."""
+    """
+    Dependency Risk Profiler - A tool to evaluate the health and risk of a project's dependencies.
+    """
     # Initialize configuration
     ctx.obj = Config(config_path)
 
@@ -170,7 +175,10 @@ def analyze(
     # Basic options
     manifest: Optional[Path] = typer.Argument(
         None,
-        help="Path to the dependency manifest file (e.g., package-lock.json, requirements.txt)",
+        help=(
+            "Path to the dependency manifest file "
+            "(e.g., package-lock.json, requirements.txt)"
+        ),
         exists=True,
         dir_okay=False,
         file_okay=True,
@@ -371,7 +379,10 @@ def analyze(
     if not manifest:
         console.print("[bold red]Error: the MANIFEST argument is required.[/bold red]")
         console.print(
-            "Run [bold]dependency-risk-profiler list-ecosystems[/bold] to see all supported ecosystems and file types."
+            (
+                "Run [bold]dependency-risk-profiler list-ecosystems[/bold] to see "
+                "all supported ecosystems and file types."
+            )
         )
         raise typer.Exit(code=1)
 
@@ -627,7 +638,10 @@ def analyze(
                     logger.info("Saving scan results to historical data")
                     history_path = save_historical_profile(profile)
                     console.print(
-                        f"\n[bold green]Scan results saved to historical data at {history_path}[/bold green]"
+                        (
+                            f"\n[bold green]Scan results saved to historical data at "
+                            f"{history_path}[/bold green]"
+                        )
                     )
 
                 if config.get("general", "analyze_trends", False):

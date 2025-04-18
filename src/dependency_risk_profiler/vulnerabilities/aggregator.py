@@ -24,12 +24,9 @@ CACHE_EXPIRY = 24 * 60 * 60  # 24 hours in seconds
 VULNERABILITY_CACHE = {}  # In-memory cache (for backward compatibility)
 
 # Get cache settings from environment variables
-USE_DISK_CACHE = os.environ.get("DEPENDENCY_RISK_DISABLE_CACHE", "0").lower() not in (
-    "1",
-    "true",
-    "yes",
-    "disable",
-)
+disable_values = ("1", "true", "yes", "disable")
+env_value = os.environ.get("DEPENDENCY_RISK_DISABLE_CACHE", "0").lower()
+USE_DISK_CACHE = env_value not in disable_values
 DISK_CACHE_EXPIRY = int(
     os.environ.get("DEPENDENCY_RISK_CACHE_EXPIRY", str(CACHE_EXPIRY))
 )
@@ -121,11 +118,9 @@ class VulnerabilitySource:
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                if (
-                    e.response.status_code >= 400
-                    and e.response.status_code < 500
-                    and e.response.status_code != 429
-                ):
+                is_client_error = e.response.status_code >= 400 and e.response.status_code < 500
+                is_rate_limited = e.response.status_code == 429
+                if is_client_error and not is_rate_limited:
                     logger.debug(
                         f"Client error ({e.response.status_code}) fetching data from {url}: {e}"
                     )
@@ -136,7 +131,10 @@ class VulnerabilitySource:
                     return None
 
                 logger.debug(
-                    f"HTTP error fetching data from {url} (attempt {retry+1}/{max_retries+1}): {e}"
+                    (
+                        f"HTTP error fetching data from {url} "
+                        f"(attempt {retry+1}/{max_retries+1}): {e}"
+                    )
                 )
 
             except (requests.ConnectionError, requests.Timeout) as e:
@@ -145,7 +143,10 @@ class VulnerabilitySource:
                     return None
 
                 logger.debug(
-                    f"Connection error fetching data from {url} (attempt {retry+1}/{max_retries+1}): {e}"
+                    (
+                        f"Connection error fetching data from {url} "
+                        f"(attempt {retry+1}/{max_retries+1}): {e}"
+                    )
                 )
 
             except Exception as e:
@@ -212,11 +213,9 @@ class OSVSource(VulnerabilitySource):
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                if (
-                    e.response.status_code >= 400
-                    and e.response.status_code < 500
-                    and e.response.status_code != 429
-                ):
+                is_client_error = e.response.status_code >= 400 and e.response.status_code < 500
+                is_rate_limited = e.response.status_code == 429
+                if is_client_error and not is_rate_limited:
                     logger.debug(
                         f"Client error ({e.response.status_code}) fetching OSV data for {package_name}: {e}"
                     )
@@ -606,11 +605,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                if (
-                    e.response.status_code >= 400
-                    and e.response.status_code < 500
-                    and e.response.status_code != 429
-                ):
+                is_client_error = e.response.status_code >= 400 and e.response.status_code < 500
+                is_rate_limited = e.response.status_code == 429
+                if is_client_error and not is_rate_limited:
                     logger.debug(
                         f"Client error ({e.response.status_code}) fetching GitHub Advisory data for {package_name}: {e}"
                     )
