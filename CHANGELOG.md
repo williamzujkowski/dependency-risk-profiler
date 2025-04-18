@@ -5,10 +5,14 @@ All notable changes to the Dependency Risk Profiler will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2025-04-17
 
 ### Added
 
+- Directory scanning feature to analyze all manifest files in a directory with a single command
+  - Support for recursive scanning of subdirectories with `--recursive` flag
+  - Automatic ecosystem detection for all manifest files
+  - Overall summary of risk scores across all scanned files
 - Comprehensive test suite following TESTING_STANDARDS.md:
   - Hypothesis tests for behavior validation
   - Regression tests for known fail states
@@ -25,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed timezone handling in datetime comparisons
 - Implemented direct testing patterns to avoid complex mocking
 - Added proper benchmark test markers in pyproject.toml
+- Fixed parameter mismatch in RiskScorer configuration
+- Added proper HTTP session closure to prevent resource leaks
 
 ### Security
 
@@ -48,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - React: Updated to 18.2.0
   - Axios: Updated to 1.6.5
   - Go dependencies upgraded to latest versions
+- Updated package metadata with correct author information
 
 ## [0.2.0] - 2025-04-16
 
