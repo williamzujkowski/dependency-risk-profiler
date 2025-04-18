@@ -1033,6 +1033,9 @@ def test_risk_factor_determination_performance_sla():
 
         # Time just the risk factor determination
         factors_start_time = time.time()
+        # Calculate maintained score
+        maintained_score = scorer._calculate_maintained_score(dep.security_metrics)
+        
         factors = scorer._determine_risk_factors(
             dep,
             staleness_score,
@@ -1048,6 +1051,7 @@ def test_risk_factor_determination_performance_sla():
             dependency_update_score,
             signed_commits_score,
             branch_protection_score,
+            maintained_score,
         )
         determination_times.append(
             (time.time() - factors_start_time) * 1000
@@ -1444,8 +1448,16 @@ def test_logging_information_completeness():
         logger.debug(f"Determined risk factors for {dependency.name}: {factors}")
         return factors
 
-    # Patch the method
-    RiskScorer._determine_risk_factors = logged_determine_risk_factors
+    # Patch the method - ensure we handle the new parameter signature
+    def wrapped_determine_risk_factors(self, dependency, *args):
+        # Make sure we handle the case of both the old signature and new signature
+        if len(args) < 14:  # Old signature had fewer parameters
+            # Add a maintained_score at the end if needed
+            maintained_score = 0.5  # Default value
+            args = list(args) + [maintained_score]
+        return logged_determine_risk_factors(self, dependency, *args)
+        
+    RiskScorer._determine_risk_factors = wrapped_determine_risk_factors
 
     # Act - Score the dependency to generate logs
     scorer = RiskScorer()
