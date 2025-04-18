@@ -369,6 +369,20 @@ For detailed information about the risk scoring methodology and information sour
 
 For all documentation, see the [docs directory](docs/README.md).
 
+## Documentation
+
+The project documentation is built with MkDocs and available in multiple formats:
+
+- **Local Documentation**: Run `mkdocs serve` in the project directory to view documentation locally at http://127.0.0.1:8000/
+- **Static Site**: Run `mkdocs build` to generate a static documentation site in the `site/` directory
+- **Markdown Files**: Browse the raw documentation in the [docs directory](docs/)
+
+The documentation includes:
+- User guides for installation and usage
+- API references and configuration options
+- Development guides and contribution guidelines
+- Security and risk scoring methodologies
+
 ## Requirements
 
 - Python 3.8+
