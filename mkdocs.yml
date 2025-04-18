@@ -1,0 +1,61 @@
+site_name: Dependency Risk Profiler
+site_description: Evaluate and monitor the risk of your project dependencies
+site_author: William Zujkowski
+repo_url: https://github.com/williamzujkowski/dependency-risk-profiler
+repo_name: dependency-risk-profiler
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: deep purple
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - 'Getting Started': 'getting-started.md'
+    - 'Installation': 'installation.md'
+    - 'Basic Usage': 'basic-usage.md'
+    - 'Configuration': 'configuration.md'
+    - 'Scoring': 'SCORING.md'
+  - Reference:
+    - 'Information Sources': 'INFORMATION_SOURCES.md'
+    - 'Security': 'security/SECURITY.md'
+    - 'Dependency Security': 'security/DEPENDENCY_SECURITY.md'
+  - Development:
+    - 'Contributing': 'CONTRIBUTING.md'
+    - 'Migration Summary': 'MIGRATION_SUMMARY.md'
+    - 'Testing Standards': 'project_standards/TESTING_STANDARDS.md'
+    - 'Testing Implementation': 'project_standards/TESTING_IMPLEMENTATION.md'
+    - 'Enhancements': 
+      - 'Overview': 'enhancement/README.md'
+      - 'Phase 2 Enhancements': 'enhancement/ENHANCEMENTS2.md'
+      - 'Phase 3 Enhancements': 'enhancement/ENHANCEMENTS3.md'
+      - 'Improvement Ideas': 'enhancement/Improvements.md'
+    - 'Development Resources':
+      - 'Claude Prompts': 'development/PROMPT.md'
+      - 'Claude Instructions': 'development/CLAUDE.md'
+    - 'Changelog': 'CHANGELOG.md'

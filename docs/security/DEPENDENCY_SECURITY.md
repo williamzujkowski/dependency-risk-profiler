@@ -94,7 +94,7 @@ DO NOT use these example dependencies in production environments.
 
 ## History of Security Updates
 
-The project maintains a comprehensive changelog of security updates in [CHANGELOG.md](CHANGELOG.md).
+The project maintains a comprehensive changelog of security updates in [CHANGELOG.md](../CHANGELOG.md).
 
 ## Recent Example File Updates
 
