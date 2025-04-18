@@ -1,6 +1,8 @@
 """Community metrics analyzer for dependencies."""
 
 import logging
+import re
+import subprocess  # nosec B404
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 
