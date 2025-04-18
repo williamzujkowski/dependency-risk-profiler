@@ -386,7 +386,7 @@ def check_maintained_status(
     dependency: DependencyMetadata,
     repo_dir: Optional[str] = None,
     package_data: Optional[Dict] = None,
-) -> Tuple[float, List[str]]:
+) -> Tuple[bool, float, List[str]]:
     """Check if a dependency is actively maintained.
 
     Args:
@@ -395,7 +395,7 @@ def check_maintained_status(
         package_data: Optional package registry data.
 
     Returns:
-        Tuple of (maintained_score, list of maintenance issues).
+        Tuple of (is_maintained, maintained_score, list of maintenance issues).
     """
     maintenance_issues = []
 
@@ -458,4 +458,7 @@ def check_maintained_status(
             "No repository information available for maintenance analysis"
         )
 
-    return maintained_score, maintenance_issues
+    # Consider a package maintained if score is greater than 0.6
+    is_maintained = maintained_score > 0.6
+    
+    return is_maintained, maintained_score, maintenance_issues
