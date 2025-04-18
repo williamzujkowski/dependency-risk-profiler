@@ -5,7 +5,7 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
@@ -466,7 +466,7 @@ def analyze(
 
                 # Get timeout value from config
                 timeout_seconds = config.get("general", "timeout", 120)
-                
+
                 try:
                     # Create a progress spinner
                     with Progress(
@@ -480,29 +480,36 @@ def analyze(
                         async def parse_with_timeout():
                             parser = BaseParser.get_parser_for_file(manifest_path)
                             if not parser:
-                                logger.error(f"Unsupported manifest file: {manifest_path}")
+                                logger.error(
+                                    f"Unsupported manifest file: {manifest_path}"
+                                )
                                 return None, "unsupported"
-                                
+
                             dependencies = parser.parse()
                             if not dependencies:
-                                logger.warning(f"No dependencies found in {manifest_path}")
+                                logger.warning(
+                                    f"No dependencies found in {manifest_path}"
+                                )
                                 return None, "empty"
-                                
+
                             return dependencies, None
 
                         # Run the parsing task with timeout
                         import asyncio
+
                         try:
                             loop = asyncio.get_event_loop()
                         except RuntimeError:
                             loop = asyncio.new_event_loop()
                             asyncio.set_event_loop(loop)
-                            
+
                         try:
                             dependencies, error = loop.run_until_complete(
-                                asyncio.wait_for(parse_with_timeout(), timeout=timeout_seconds)
+                                asyncio.wait_for(
+                                    parse_with_timeout(), timeout=timeout_seconds
+                                )
                             )
-                            
+
                             if error == "unsupported":
                                 console.print(
                                     f"[bold yellow]Skipping unsupported file: {manifest_path}[/bold yellow]"
@@ -513,9 +520,11 @@ def analyze(
                                     f"[bold yellow]No dependencies found in {manifest_path}[/bold yellow]"
                                 )
                                 continue
-                                
+
                         except asyncio.TimeoutError:
-                            logger.error(f"Analysis timed out after {timeout_seconds} seconds for {manifest_path}")
+                            logger.error(
+                                f"Analysis timed out after {timeout_seconds} seconds for {manifest_path}"
+                            )
                             console.print(
                                 f"[bold red]Analysis timed out after {timeout_seconds} seconds for {manifest_path}. "
                                 f"Try increasing the timeout with --timeout option or reducing the scope of analysis.[/bold red]"
@@ -524,18 +533,22 @@ def analyze(
                             failed_file = {
                                 "manifest_path": manifest_path,
                                 "reason": "timeout",
-                                "timeout": timeout_seconds
+                                "timeout": timeout_seconds,
                             }
                             failed_files.append(failed_file)
-                            
+
                             # Log the error for debug
-                            logger.debug(f"Added file to failed_files due to timeout: {manifest_path}")
-                            logger.debug(f"Current failed_files count: {len(failed_files)}")
+                            logger.debug(
+                                f"Added file to failed_files due to timeout: {manifest_path}"
+                            )
+                            logger.debug(
+                                f"Current failed_files count: {len(failed_files)}"
+                            )
                             continue
                 except Exception as e:
                     # Fall back to non-async if there's an issue with the async implementation
                     logger.warning(f"Falling back to non-async parsing due to: {e}")
-                    
+
                     parser = BaseParser.get_parser_for_file(manifest_path)
                     if not parser:
                         logger.error(f"Unsupported manifest file: {manifest_path}")
@@ -545,7 +558,7 @@ def analyze(
                         # Add unsupported file to failed list
                         failed_file = {
                             "manifest_path": manifest_path,
-                            "reason": "unsupported"
+                            "reason": "unsupported",
                         }
                         failed_files.append(failed_file)
                         continue
@@ -559,7 +572,7 @@ def analyze(
                         # Add empty file to failed list
                         failed_file = {
                             "manifest_path": manifest_path,
-                            "reason": "empty"
+                            "reason": "empty",
                         }
                         failed_files.append(failed_file)
                         continue
@@ -920,7 +933,7 @@ def analyze(
                 failed_file = {
                     "manifest_path": manifest_path,
                     "reason": "error",
-                    "error": str(e)
+                    "error": str(e),
                 }
                 failed_files.append(failed_file)
 
@@ -952,24 +965,26 @@ def analyze(
             console.print(
                 f"Total manifest files found: [bold]{len(manifest_files)}[/bold]"
             )
-            console.print(
-                f"Successfully analyzed: [bold]{len(overall_results)}[/bold]"
-            )
+            console.print(f"Successfully analyzed: [bold]{len(overall_results)}[/bold]")
             if failed_files:
                 console.print(
                     f"Failed analysis: [bold red]{len(failed_files)}[/bold red]"
                 )
-                
+
             if total_deps > 0:
                 console.print(f"Total dependencies analyzed: [bold]{total_deps}[/bold]")
                 console.print(
                     f"Overall average risk score: [bold]{avg_score:.2f}/5.0[/bold]"
                 )
-                console.print(f"High risk dependencies: [bold red]{high_risk}[/bold red]")
+                console.print(
+                    f"High risk dependencies: [bold red]{high_risk}[/bold red]"
+                )
                 console.print(
                     f"Medium risk dependencies: [bold yellow]{medium_risk}[/bold yellow]"
                 )
-                console.print(f"Low risk dependencies: [bold green]{low_risk}[/bold green]")
+                console.print(
+                    f"Low risk dependencies: [bold green]{low_risk}[/bold green]"
+                )
 
             # Show list of manifest files with highest risk scores
             if overall_results:
@@ -993,51 +1008,61 @@ def analyze(
 
                 if len(sorted_results) > 5:
                     console.print(f"... and {len(sorted_results) - 5} more")
-                    
+
             # Show failed files if any
             if failed_files:
                 console.print("\n[bold red]Files that failed analysis:[/bold red]")
                 logger.debug(f"Failed files: {len(failed_files)}")
-                
+
                 # Print failed files directly to console when debugging to diagnose issues
                 for f in failed_files:
                     logger.debug(f"Failed file: {f}")
-                
+
                 # Track failure reasons
                 failure_reasons = {}
-                
+
                 # Group by failure reason
                 for failed in failed_files:
                     reason = failed.get("reason", "unknown")
                     if reason not in failure_reasons:
                         failure_reasons[reason] = []
                     failure_reasons[reason].append(failed)
-                
+
                 # Show counts by reason
                 for reason, files in failure_reasons.items():
                     if reason == "timeout":
-                        console.print(f"  [bold yellow]Timed out[/bold yellow]: {len(files)} file(s)")
+                        console.print(
+                            f"  [bold yellow]Timed out[/bold yellow]: {len(files)} file(s)"
+                        )
                         for f in files[:3]:  # Show first 3
                             timeout = f.get("timeout", "unknown")
-                            console.print(f"    - {f['manifest_path']} (timeout: {timeout}s)")
+                            console.print(
+                                f"    - {f['manifest_path']} (timeout: {timeout}s)"
+                            )
                     elif reason == "empty":
-                        console.print(f"  [bold blue]No dependencies[/bold blue]: {len(files)} file(s)")
+                        console.print(
+                            f"  [bold blue]No dependencies[/bold blue]: {len(files)} file(s)"
+                        )
                         for f in files[:3]:  # Show first 3
                             console.print(f"    - {f['manifest_path']}")
                     elif reason == "unsupported":
-                        console.print(f"  [bold magenta]Unsupported format[/bold magenta]: {len(files)} file(s)")
+                        console.print(
+                            f"  [bold magenta]Unsupported format[/bold magenta]: {len(files)} file(s)"
+                        )
                         for f in files[:3]:  # Show first 3
                             console.print(f"    - {f['manifest_path']}")
                     elif reason == "error":
-                        console.print(f"  [bold red]Errors[/bold red]: {len(files)} file(s)")
+                        console.print(
+                            f"  [bold red]Errors[/bold red]: {len(files)} file(s)"
+                        )
                         for f in files[:3]:  # Show first 3
                             error = f.get("error", "unknown error")
                             console.print(f"    - {f['manifest_path']}: {error}")
-                    
+
                     # Show ellipsis if more than 3 files of this reason
                     if len(files) > 3:
                         console.print(f"    ... and {len(files) - 3} more")
-                
+
                 # Show tip for timeouts
                 if "timeout" in failure_reasons:
                     console.print(
@@ -1092,7 +1117,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    
+
     # For debugging failures:
     # import asyncio
     # manifest_path = "/tmp/requirements.txt"
