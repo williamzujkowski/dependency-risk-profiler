@@ -231,7 +231,7 @@ class Config:
 
         if "debug" in args:
             self._config["general"]["debug"] = args["debug"]
-            
+
         if "timeout" in args and args["timeout"] is not None:
             self._config["general"]["timeout"] = args["timeout"]
 
