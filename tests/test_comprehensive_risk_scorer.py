@@ -558,6 +558,55 @@ def test_regression_version_parsing_edge_cases():
             pytest.fail(f"Version comparison failed for {installed} -> {latest}: {e}")
 
 
+def test_legacy_version_handling():
+    """Test handling of packaging.LegacyVersion objects.
+    
+    This test specifically checks our fix for handling LegacyVersion objects
+    which don't have major/minor attributes.
+    """
+    # Arrange
+    scorer = RiskScorer()
+    
+    # These non-PEP440 version strings will be parsed as LegacyVersion
+    legacy_version_test_cases = [
+        ("dev.1", "dev.2", 0.5),  # Both LegacyVersion
+        ("development", "production", 0.5),  # Non-numeric
+        ("dev.1", "1.0.0", 0.5),  # Legacy to normal
+        ("1.0.0", "test", 0.5),  # Normal to legacy
+    ]
+    
+    # Act & Assert
+    for installed, latest, expected_score in legacy_version_test_cases:
+        result = scorer._calculate_version_difference_score(installed, latest)
+        assert (
+            abs(result - expected_score) < 0.01
+        ), f"Score for {installed} -> {latest} should be approximately {expected_score}"
+        
+
+def test_version_range_handling():
+    """Test handling of version ranges, especially with dash notation.
+    
+    This test specifically checks our fix for handling version ranges 
+    with dash notation like "1.0.0 - 2.0.0".
+    """
+    # Arrange
+    scorer = RiskScorer()
+    
+    range_test_cases = [
+        ("1.0.0 - 2.0.0", "3.0.0", 0.25),  # Range with dash
+        ("1.0.0-2.0.0", "3.0.0", 0.25),    # Range with dash, no spaces
+        ("1.0.0 - ", "3.0.0", 0.25),       # Incomplete range
+        ("1.0.0-", "3.0.0", 0.25),         # Incomplete range, no space
+    ]
+    
+    # Act & Assert
+    for installed, latest, expected_score in range_test_cases:
+        result = scorer._calculate_version_difference_score(installed, latest)
+        assert (
+            abs(result - expected_score) < 0.01
+        ), f"Score for {installed} -> {latest} should be approximately {expected_score}"
+
+
 def test_regression_risk_factors_without_data():
     """REGRESSION: Bug #303 - Risk factor determination crashes with missing data.
 
