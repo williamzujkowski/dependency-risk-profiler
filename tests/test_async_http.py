@@ -2,9 +2,8 @@
 
 import asyncio
 import json
-from unittest.mock import MagicMock, patch, AsyncMock
-
 import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
 try:
     import aiohttp
@@ -18,8 +17,8 @@ except ImportError:
     aioresponses = None
 
 from dependency_risk_profiler.async_http import (
-    AsyncHTTPClient,
     AsyncHTTPBatchClient,
+    AsyncHTTPClient,
     fetch_json_async,
     fetch_url_async,
 )

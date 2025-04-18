@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """Integration test for the dependency risk profiler with security enhancements."""
 import logging
-import shutil
-
-
-import sys
 import os
+import shutil
+import sys
 
 # Add the parent directory to the path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from src.dependency_risk_profiler.analyzers.common import clone_repo
 from src.dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
-from src.dependency_risk_profiler.scorecard.security_policy import check_security_policy
 from src.dependency_risk_profiler.scorecard.dependency_update import (
     check_dependency_update_tools,
 )
+from src.dependency_risk_profiler.scorecard.security_policy import check_security_policy
 from src.dependency_risk_profiler.scoring.risk_scorer import RiskScorer
-from src.dependency_risk_profiler.analyzers.common import clone_repo
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

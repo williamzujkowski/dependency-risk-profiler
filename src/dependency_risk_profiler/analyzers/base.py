@@ -53,5 +53,8 @@ class BaseAnalyzer(ABC):
             return PythonAnalyzer()
         elif ecosystem == "golang":
             return GoAnalyzer()
+        elif ecosystem == "toml":
+            # Fallback to Python analyzer for toml files (pyproject.toml)
+            return PythonAnalyzer()
         else:
             return None

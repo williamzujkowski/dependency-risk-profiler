@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+
 import pytest
 
 from dependency_risk_profiler.parsers.toml import TomlParser

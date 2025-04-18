@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 """Example of how to use the Dependency Risk Profiler as a library."""
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Add the parent directory to the Python path to allow importing the library
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dependency_risk_profiler.parsers.base import BaseParser
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
-from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.cli.formatter import TerminalFormatter
 from dependency_risk_profiler.models import RiskLevel
+from dependency_risk_profiler.parsers.base import BaseParser
+from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 
 def analyze_dependencies(manifest_path, custom_weights=None):

@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta
 
-
 from dependency_risk_profiler.models import DependencyMetadata, RiskLevel
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 

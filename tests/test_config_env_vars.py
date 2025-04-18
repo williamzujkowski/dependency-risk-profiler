@@ -23,10 +23,10 @@ def test_config_environment_variables():
         "DRP_DISABLE_CACHE": "1",
         "DRP_CACHE_EXPIRY": "3600",
     }
-    
+
     with mock.patch.dict(os.environ, env_vars):
         config = Config()
-        
+
         # Check that values were loaded from environment
         assert config.get("general", "output_format") == "json"
         assert config.get("general", "use_color") is False
@@ -43,7 +43,7 @@ def test_config_environment_variable_precedence():
     """Test that environment variables take precedence over config file values."""
     # Create a mock config object with predefined values
     config = Config()
-    
+
     # Override the _config attribute directly for testing
     config._config = {
         "general": {
@@ -58,9 +58,9 @@ def test_config_environment_variable_precedence():
             "cache_expiry": 86400,
             "enable_github_advisory": False,
             "enable_nvd": False,
-        }
+        },
     }
-    
+
     # Set environment variables
     env_vars = {
         "DRP_OUTPUT_FORMAT": "json",
@@ -71,11 +71,11 @@ def test_config_environment_variable_precedence():
         "DRP_DISABLE_CACHE": "1",
         "DRP_CACHE_EXPIRY": "3600",
     }
-    
+
     with mock.patch.dict(os.environ, env_vars):
         # Call _load_from_env to reload from environment
         config._load_from_env()
-        
+
         # Check that values were updated from environment
         assert config.get("general", "output_format") == "json"
         assert config.get("general", "use_color") is False
@@ -91,21 +91,22 @@ def test_config_environment_variable_precedence():
 def test_get_config_singleton():
     """Test that get_config returns a singleton instance."""
     # Clear any existing instance
-    from dependency_risk_profiler.config import _config_instance
     import dependency_risk_profiler.config
+    from dependency_risk_profiler.config import _config_instance
+
     dependency_risk_profiler.config._config_instance = None
-    
+
     # Get a config instance
     config1 = get_config()
-    
+
     # Get another config instance
     config2 = get_config()
-    
+
     # They should be the same object
     assert config1 is config2, "get_config should return a singleton instance"
-    
+
     # Get a config instance with a specific path
     config3 = get_config(config_path="custom_path.toml")
-    
+
     # It should be a different object
     assert config1 is not config3, "get_config with path should return a new instance"

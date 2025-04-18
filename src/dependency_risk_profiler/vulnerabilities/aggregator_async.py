@@ -284,38 +284,46 @@ async def aggregate_vulnerabilities_for_package_async(
             except Exception as e:
                 logger.error(f"Error creating task for {source.name}: {e}")
 
-    if tasks:
-        results_raw = await asyncio.gather(*tasks, return_exceptions=True)
-        # Type check for mypy - ensure we handle all possible result types
-        results: List[Union[List[Dict[str, Any]], BaseException]] = results_raw
+    try:
+        if tasks:
+            results_raw = await asyncio.gather(*tasks, return_exceptions=True)
+            # Type check for mypy - ensure we handle all possible result types
+            results: List[Union[List[Dict[str, Any]], BaseException]] = results_raw
 
-        for result in results:
-            if isinstance(result, Exception):
-                logger.error(f"Error fetching vulnerabilities: {result}")
-            elif isinstance(result, list):
-                all_vulnerabilities.extend(result)
-            else:
-                logger.error(f"Unexpected result type: {type(result)}")
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.error(f"Error fetching vulnerabilities: {result}")
+                elif isinstance(result, list):
+                    all_vulnerabilities.extend(result)
+                else:
+                    logger.error(f"Unexpected result type: {type(result)}")
 
-    # Deduplicate vulnerabilities based on ID
-    seen_ids = set()
-    unique_vulnerabilities = []
+        # Deduplicate vulnerabilities based on ID
+        seen_ids = set()
+        unique_vulnerabilities = []
 
-    for vuln in all_vulnerabilities:
-        vuln_id = vuln.get("id", "")
-        if vuln_id and vuln_id not in seen_ids:
-            seen_ids.add(vuln_id)
-            unique_vulnerabilities.append(vuln)
+        for vuln in all_vulnerabilities:
+            vuln_id = vuln.get("id", "")
+            if vuln_id and vuln_id not in seen_ids:
+                seen_ids.add(vuln_id)
+                unique_vulnerabilities.append(vuln)
 
-    # Cache the results
-    cache_data(package_name, ecosystem, unique_vulnerabilities)
+        # Cache the results
+        cache_data(package_name, ecosystem, unique_vulnerabilities)
 
-    # Update dependency metadata
-    updated_dependency = _update_dependency_with_vulnerabilities(
-        dependency, unique_vulnerabilities
-    )
+        # Update dependency metadata
+        updated_dependency = _update_dependency_with_vulnerabilities(
+            dependency, unique_vulnerabilities
+        )
 
-    return updated_dependency, unique_vulnerabilities
+        return updated_dependency, unique_vulnerabilities
+    finally:
+        # Properly close all HTTP client sessions
+        for source in sources:
+            try:
+                await source.http_client.close()
+            except Exception as e:
+                logger.debug(f"Error closing HTTP client session: {e}")
 
 
 async def aggregate_vulnerability_data_async_impl(

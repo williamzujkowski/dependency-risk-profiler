@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """Test script for security policy detection."""
 import logging
+import os
+import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
-
-import sys
-import os
 
 # Add the parent directory to the path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 
-import sys
 import os
+import sys
 
 # Add the parent directory to the path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from dependency_risk_profiler.parsers.toml import TomlParser
 from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.parsers.toml import TomlParser
 
 
 @pytest.fixture

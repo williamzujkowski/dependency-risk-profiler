@@ -1,27 +1,24 @@
 #!/usr/bin/env python
 """Test script for historical trends analysis."""
 import argparse
-import sys
 import json
-from datetime import datetime, timedelta
-
-
-import sys
 import os
+import sys
+from datetime import datetime, timedelta
 
 # Add the parent directory to the path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from src.dependency_risk_profiler.models import (
-    ProjectRiskProfile,
-    DependencyRiskScore,
     DependencyMetadata,
+    DependencyRiskScore,
+    ProjectRiskProfile,
     RiskLevel,
     SecurityMetrics,
 )
 from src.dependency_risk_profiler.supply_chain.trends import (
-    save_historical_profile,
     analyze_historical_trends,
     generate_trend_visualization,
+    save_historical_profile,
 )
 
 

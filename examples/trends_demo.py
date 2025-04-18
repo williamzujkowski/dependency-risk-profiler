@@ -18,17 +18,17 @@ sys.path.insert(
     0, str(Path(__file__).resolve().parent.parent)
 )  # Add project root to path
 
-from src.dependency_risk_profiler import (
-    save_historical_profile,
-    analyze_historical_trends,
-    generate_trend_visualization,
-)
-from src.dependency_risk_profiler.parsers.base import BaseParser
-from src.dependency_risk_profiler.analyzers.base import BaseAnalyzer
-
 # Patch the check_security_policy function for the example
 import sys
 from unittest.mock import MagicMock
+
+from src.dependency_risk_profiler import (
+    analyze_historical_trends,
+    generate_trend_visualization,
+    save_historical_profile,
+)
+from src.dependency_risk_profiler.analyzers.base import BaseAnalyzer
+from src.dependency_risk_profiler.parsers.base import BaseParser
 
 # Mock the security check functions to prevent errors in the examples
 sys.modules["src.dependency_risk_profiler.scorecard.security_policy"] = MagicMock()

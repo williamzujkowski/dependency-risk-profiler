@@ -4,9 +4,9 @@ import os
 import tempfile
 
 from dependency_risk_profiler.parsers.base import BaseParser
+from dependency_risk_profiler.parsers.golang import GoParser
 from dependency_risk_profiler.parsers.nodejs import NodeJSParser
 from dependency_risk_profiler.parsers.python import PythonParser
-from dependency_risk_profiler.parsers.golang import GoParser
 
 
 def test_base_parser_factory(

@@ -19,10 +19,10 @@ def mock_check_function(*args, **kwargs) -> Tuple[bool, float, list]:
     return True, 1.0, []
 
 
-import src.dependency_risk_profiler.scorecard.security_policy
-import src.dependency_risk_profiler.scorecard.dependency_update
-import src.dependency_risk_profiler.scorecard.signed_commits
 import src.dependency_risk_profiler.scorecard.branch_protection
+import src.dependency_risk_profiler.scorecard.dependency_update
+import src.dependency_risk_profiler.scorecard.security_policy
+import src.dependency_risk_profiler.scorecard.signed_commits
 
 # Add the mock functions to avoid errors during testing
 src.dependency_risk_profiler.scorecard.security_policy.check_security_policy = (
@@ -38,15 +38,16 @@ src.dependency_risk_profiler.scorecard.branch_protection.check_branch_protection
     mock_check_function
 )
 
-# Continue with imports after monkey patching
-from src.dependency_risk_profiler.parsers.base import BaseParser
-from src.dependency_risk_profiler.analyzers.base import BaseAnalyzer
-from src.dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from src.dependency_risk_profiler import (
-    save_historical_profile,
     analyze_historical_trends,
     generate_trend_visualization,
+    save_historical_profile,
 )
+from src.dependency_risk_profiler.analyzers.base import BaseAnalyzer
+
+# Continue with imports after monkey patching
+from src.dependency_risk_profiler.parsers.base import BaseParser
+from src.dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 
 def test_trend_analysis():
