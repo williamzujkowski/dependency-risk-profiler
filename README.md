@@ -552,3 +552,32 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 5. Open a Pull Request
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more details.
+
+## Release Process
+
+This project uses an automated CI/CD pipeline for releases:
+
+1. Create and push a new version tag following semantic versioning:
+
+```bash
+# For a new patch release (bug fixes)
+git tag v0.1.1
+git push origin v0.1.1
+
+# For a new minor release (new features)
+git tag v0.2.0
+git push origin v0.2.0
+
+# For a new major release (breaking changes)
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+2. The release workflow will automatically:
+   - Build the Python package (wheel and sdist)
+   - Create a GitHub Release with auto-generated release notes
+   - Upload the package files to the GitHub Release
+   - Publish the package to PyPI
+   - Update the documentation site
+
+This ensures that when a new version is released, it's immediately available on PyPI for installation via pip and properly documented on the project's GitHub page and documentation site.
