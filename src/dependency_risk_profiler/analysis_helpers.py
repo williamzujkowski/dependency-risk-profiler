@@ -5,9 +5,10 @@ helping to avoid circular imports.
 """
 
 import logging
-from typing import List, Optional, Tuple
+from datetime import datetime
+from typing import List, Optional, Tuple, cast
 
-from .models import DependencyMetadata
+from .models import DependencyMetadata, SecurityMetrics
 from .scorecard.branch_protection import check_branch_protection
 from .scorecard.dependency_update import check_dependency_update_tools
 from .scorecard.maintained import check_maintained_status
@@ -32,7 +33,14 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
         # Get last commit date
         last_commit_date = get_last_commit_date(repo_dir)
         if last_commit_date:
-            dependency.last_updated = last_commit_date
+            # Since last_updated is Optional[datetime] but get_last_commit_date returns str
+            # We'll convert the ISO format string to datetime here
+            try:
+                dependency.last_updated = datetime.fromisoformat(last_commit_date)
+            except ValueError:
+                logger.warning(f"Could not parse date format: {last_commit_date}")
+                # Keep as is if we can't parse it
+                pass
 
         # Count contributors
         contributor_count = count_contributors(repo_dir)
@@ -58,7 +66,14 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
         has_update_tools, update_tools_score, update_issues = check_dependency_update_tools(
             dependency, repo_dir
         )
-        dependency.security_metrics.has_dependency_update_tools = has_update_tools
+        
+        # Initialize security metrics if not already present
+        if dependency.security_metrics is None:
+            dependency.security_metrics = SecurityMetrics()
+        
+        # Make sure security_metrics is not None before accessing it
+        if dependency.security_metrics:
+            dependency.security_metrics.has_dependency_update_tools = has_update_tools
 
         # Log dependency update tools issues
         for issue in update_issues:
@@ -68,7 +83,14 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
         has_signed_commits, signed_commits_score, signed_commits_issues = check_signed_commits(
             dependency, repo_dir
         )
-        dependency.security_metrics.has_signed_commits = has_signed_commits
+        
+        # Initialize security metrics if not already present (redundant but safe)
+        if dependency.security_metrics is None:
+            dependency.security_metrics = SecurityMetrics()
+        
+        # Make sure security_metrics is not None before accessing it
+        if dependency.security_metrics:
+            dependency.security_metrics.has_signed_commits = has_signed_commits
 
         # Log signed commits issues
         for issue in signed_commits_issues:
@@ -78,7 +100,14 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
         has_branch_protection, branch_protection_score, branch_protection_issues = (
             check_branch_protection(dependency, repo_dir)
         )
-        dependency.security_metrics.has_branch_protection = has_branch_protection
+        
+        # Initialize security metrics if not already present (redundant but safe)
+        if dependency.security_metrics is None:
+            dependency.security_metrics = SecurityMetrics()
+        
+        # Make sure security_metrics is not None before accessing it
+        if dependency.security_metrics:
+            dependency.security_metrics.has_branch_protection = has_branch_protection
 
         # Log branch protection issues
         for issue in branch_protection_issues:
@@ -88,6 +117,7 @@ def analyze_repository(dependency: DependencyMetadata, repo_dir: str) -> Depende
         is_maintained, maintained_score, maintained_issues = check_maintained_status(
             dependency, repo_dir
         )
+        # No need to set any attribute on dependency from this function
 
         # Log maintained status issues
         for issue in maintained_issues:

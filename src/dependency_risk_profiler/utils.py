@@ -6,7 +6,7 @@ import re
 import subprocess  # nosec B404
 import tempfile
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
@@ -27,13 +27,14 @@ def fetch_url(url: str, timeout: int = 30) -> Optional[str]:
     try:
         response = requests.get(url, timeout=timeout)
         response.raise_for_status()
-        return response.text
-    except requests.RequestException as e:
+        # Explicitly cast response.text to str to help mypy
+        return str(response.text)
+    except Exception as e:
         logger.error(f"Error fetching {url}: {e}")
         return None
 
 
-def fetch_json(url: str, timeout: int = 30) -> Optional[Dict]:
+def fetch_json(url: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
     """Fetch JSON from a URL.
 
     Args:
@@ -48,7 +49,9 @@ def fetch_json(url: str, timeout: int = 30) -> Optional[Dict]:
         return None
 
     try:
-        return json.loads(content)
+        # Properly type the result to avoid mypy errors
+        result: Dict[str, Any] = json.loads(content)
+        return result
     except json.JSONDecodeError as e:
         logger.error(f"Error decoding JSON from {url}: {e}")
         return None
@@ -93,7 +96,7 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
         else:
             logger.error(f"Error cloning {repo_url}: {result.stderr}")
             return None
-    except (subprocess.SubprocessError, subprocess.TimeoutExpired) as e:
+    except Exception as e:
         logger.error(f"Error cloning {repo_url}: {e}")
         return None
 
@@ -123,7 +126,7 @@ def get_last_commit_date(repo_dir: str) -> Optional[str]:
         else:
             logger.error(f"No commit date found in {repo_dir}")
             return None
-    except subprocess.SubprocessError as e:
+    except Exception as e:
         logger.error(f"Error getting last commit date: {e}")
         return None
 
@@ -160,7 +163,7 @@ def count_contributors(repo_dir: str) -> Optional[int]:
         else:
             logger.warning(f"No contributors found in {repo_dir}")
             return 0
-    except subprocess.SubprocessError as e:
+    except Exception as e:
         logger.error(f"Error counting contributors: {e}")
         return None
 
