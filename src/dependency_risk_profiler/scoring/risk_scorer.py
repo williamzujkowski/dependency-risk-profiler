@@ -122,6 +122,9 @@ class RiskScorer:
         branch_protection_score = self._calculate_branch_protection_score(
             dependency.security_metrics
         )
+        maintained_score = self._calculate_maintained_score(
+            dependency.security_metrics
+        )
 
         # Calculate weighted score
         weighted_scores = [
@@ -167,6 +170,11 @@ class RiskScorer:
                 if branch_protection_score is not None
                 else (None, 0)
             ),
+            (
+                (maintained_score, self.branch_protection_weight)
+                if maintained_score is not None
+                else (None, 0)
+            ),
         ]
 
         total_score = 0.0
@@ -198,6 +206,7 @@ class RiskScorer:
             dependency_update_score,
             signed_commits_score,
             branch_protection_score,
+            maintained_score,
         )
 
         return DependencyRiskScore(
@@ -215,6 +224,7 @@ class RiskScorer:
             dependency_update_score=dependency_update_score or 0.0,
             signed_commits_score=signed_commits_score or 0.0,
             branch_protection_score=branch_protection_score or 0.0,
+            maintained_score=maintained_score or 0.0,
             total_score=total_score,
             risk_level=risk_level,
             factors=risk_factors,
@@ -659,6 +669,28 @@ class RiskScorer:
 
         # If we don't have explicit branch protection data
         return 0.7  # Higher default risk when branch protection status is unknown
+        
+    def _calculate_maintained_score(self, security_metrics) -> float:
+        """Calculate maintained status risk score.
+
+        Args:
+            security_metrics: Security metrics information.
+
+        Returns:
+            Maintained status risk score between 0.0 and 1.0.
+        """
+        if not security_metrics:
+            return 0.7  # Higher default risk when security data is missing
+
+        # If the dependency is maintained, it's a good sign
+        if security_metrics.is_maintained is not None:
+            if security_metrics.is_maintained:
+                return 0.0  # No risk
+            else:
+                return 1.0  # High risk - not maintained
+
+        # If we don't have explicit maintained status data
+        return 0.7  # Higher default risk when maintained status is unknown
 
     def _determine_risk_factors(
         self,
@@ -676,6 +708,7 @@ class RiskScorer:
         dependency_update_score: float,
         signed_commits_score: float,
         branch_protection_score: float,
+        maintained_score: float,
     ) -> List[str]:
         """Determine risk factors that contribute to the risk score.
 
@@ -831,6 +864,17 @@ class RiskScorer:
                         factors.append("Does not use branch protection")
                 else:
                     factors.append("Branch protection status unknown")
+            else:
+                factors.append("No security metadata available")
+                
+        # Maintained status risk factors
+        if maintained_score and maintained_score > 0.5:
+            if dependency.security_metrics:
+                if dependency.security_metrics.is_maintained is not None:
+                    if not dependency.security_metrics.is_maintained:
+                        factors.append("Project does not appear to be actively maintained")
+                else:
+                    factors.append("Maintenance status unknown")
             else:
                 factors.append("No security metadata available")
 
