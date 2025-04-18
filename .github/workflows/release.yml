@@ -107,14 +107,14 @@ jobs:
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        # Use trusted publishing (OIDC) instead of token authentication
+        # No need for user/password with trusted publishing
         skip-existing: true
         verbose: true
         packages-dir: dist
-        # Disable trusted publishing and use token authentication instead
         verify-metadata: true
-        attestations: false
+        # Enable attestations for trusted publishing
+        attestations: true
     
     - name: Build docs
       run: |
