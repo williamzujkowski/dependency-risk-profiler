@@ -1015,6 +1015,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#documentation-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation Commands
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#code-style-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       Code Style Guidelines
@@ -1115,6 +1124,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#documentation-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation Commands
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#code-style-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       Code Style Guidelines
@@ -1168,10 +1186,23 @@ mypy<span class="w"> </span>.
 pytest
 
 <span class="c1"># Run a single test</span>
-pytest<span class="w"> </span>tests/path/to/test_file.py::test_function_name
+pytest<span class="w"> </span>testing/unit/test_file.py::test_function_name
 
 <span class="c1"># Run tests with coverage</span>
 pytest<span class="w"> </span>--cov<span class="o">=</span>src
+</code></pre></div>
+<h2 id="documentation-commands">Documentation Commands<a class="headerlink" href="#documentation-commands" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install documentation dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[docs]&quot;</span>
+
+<span class="c1"># Preview documentation site (with live reloading)</span>
+mkdocs<span class="w"> </span>serve
+
+<span class="c1"># Build static documentation site</span>
+mkdocs<span class="w"> </span>build
+
+<span class="c1"># Deploy to GitHub Pages (if configured)</span>
+mkdocs<span class="w"> </span>gh-deploy
 </code></pre></div>
 <h2 id="code-style-guidelines">Code Style Guidelines<a class="headerlink" href="#code-style-guidelines" title="Permanent link">&para;</a></h2>
 <ul>
