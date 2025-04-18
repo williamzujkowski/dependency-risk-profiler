@@ -47,6 +47,7 @@ nav:
     - 'Information Sources': 'INFORMATION_SOURCES.md'
     - 'Security': 'security/SECURITY.md'
     - 'Dependency Security': 'security/DEPENDENCY_SECURITY.md'
+    - 'Code Signing': 'security/CODE_SIGNING.md'
   - Development:
     - 'Contributing': 'CONTRIBUTING.md'
     - 'Release Process': 'development/RELEASE_PROCESS.md'

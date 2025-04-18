@@ -28,6 +28,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build wheel twine
+        pip install -e .
     
     - name: Extract version from tag
       id: get_version
@@ -41,6 +42,20 @@ jobs:
         echo "## What's Changed" >> RELEASE_NOTES.md
         git log --pretty=format:"* %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD | grep -v "Merge pull request" >> RELEASE_NOTES.md
         echo "" >> RELEASE_NOTES.md
+        echo "## Security" >> RELEASE_NOTES.md
+        echo "This release is cryptographically signed using the project's secure release system." >> RELEASE_NOTES.md
+        echo "Signature files (.sig) and SHA256 checksums are provided for all artifacts." >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "## Verification" >> RELEASE_NOTES.md
+        echo "To verify the integrity of the packages:" >> RELEASE_NOTES.md
+        echo '```bash' >> RELEASE_NOTES.md
+        echo "# Verify checksums" >> RELEASE_NOTES.md
+        echo "sha256sum -c SHA256SUMS.txt" >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
+        echo "# Verify signature (requires the dependency-risk-profiler package)" >> RELEASE_NOTES.md
+        echo "python -m dependency_risk_profiler.secure_release.code_signing package.whl --verify package.whl.sig" >> RELEASE_NOTES.md
+        echo '```' >> RELEASE_NOTES.md
+        echo "" >> RELEASE_NOTES.md
         echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^)...v${{ env.VERSION }}" >> RELEASE_NOTES.md
         cat RELEASE_NOTES.md
     
@@ -48,6 +63,31 @@ jobs:
       run: |
         python -m build
         twine check dist/*
+        
+    - name: Sign package artifacts
+      run: |
+        echo "Signing release artifacts..."
+        # Import the secure_release module for code signing
+        python -c "
+        from dependency_risk_profiler.secure_release.code_signing import sign_artifact, SigningMode
+        import glob
+        import os
+        
+        # Sign each artifact
+        for artifact in glob.glob('dist/*.tar.gz') + glob.glob('dist/*.whl'):
+            print(f'Signing {artifact}')
+            signature_path = artifact + '.sig'
+            signature_info = sign_artifact(
+                artifact, 
+                '${{ github.run_id }}', 
+                SigningMode.RELEASE, 
+                output_path=signature_path,
+                log_file='dist/signing.log'
+            )
+            print(f'Created signature: {signature_path}')
+        "
+        # Create a SHA256 checksum file
+        cd dist && sha256sum *.tar.gz *.whl > SHA256SUMS.txt
     
     - name: Create Release
       uses: softprops/action-gh-release@v2
@@ -59,6 +99,9 @@ jobs:
         files: |
           dist/*.tar.gz
           dist/*.whl
+          dist/*.sig
+          dist/SHA256SUMS.txt
+          dist/signing.log
     
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
