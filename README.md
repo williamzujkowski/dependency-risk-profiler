@@ -365,6 +365,8 @@ For detailed information about the risk scoring methodology and information sour
 - [Scoring Methodology](docs/SCORING.md) - How risk scores are calculated
 - [Information Sources](docs/INFORMATION_SOURCES.md) - Where the tool gets its data
 
+For more documentation, see the [docs directory](docs/README.md).
+
 ## Requirements
 
 - Python 3.8+
@@ -380,6 +382,8 @@ This project contains intentionally outdated dependencies in the following direc
 These files contain dependencies with known vulnerabilities for testing and demonstration purposes. They serve as test cases for the Dependency Risk Profiler tool to identify and classify various risks. These dependencies are excluded from Dependabot alerts via configuration in `.github/dependabot.yml`.
 
 **⚠️ WARNING: DO NOT use these example dependencies in production environments.**
+
+Please review our [Security Policy](docs/security/SECURITY.md) and [Dependency Security](docs/security/DEPENDENCY_SECURITY.md) documentation for more information.
 
 ## Development
 
@@ -508,3 +512,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for more details.
