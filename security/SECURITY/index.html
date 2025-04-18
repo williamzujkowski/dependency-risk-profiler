@@ -586,6 +586,48 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#project-security-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project Security Measures
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Project Security Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automated-security-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automated Security Scanning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependency-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Management
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-in-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security in Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#security-updates" class="md-nav__link">
     <span class="md-ellipsis">
       Security Updates
@@ -1155,6 +1197,48 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#project-security-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project Security Measures
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Project Security Measures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automated-security-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automated Security Scanning
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependency-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Management
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-in-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security in Testing
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#security-updates" class="md-nav__link">
     <span class="md-ellipsis">
       Security Updates
@@ -1264,6 +1348,40 @@
 <p><strong>Temporary Files</strong>: Any temporary files created during analysis are securely managed and removed when no longer needed.</p>
 </li>
 </ol>
+<h2 id="project-security-measures">Project Security Measures<a class="headerlink" href="#project-security-measures" title="Permanent link">&para;</a></h2>
+<p>The Dependency Risk Profiler project employs several security measures for its own codebase:</p>
+<h3 id="automated-security-scanning">Automated Security Scanning<a class="headerlink" href="#automated-security-scanning" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>GitHub CodeQL Analysis</strong>: Automatically scans code for potential security vulnerabilities</li>
+<li>Configured to exclude test directories and example code with intentional vulnerabilities</li>
+<li>Configuration is located in <code>.github/codeql/codeql-config.yml</code></li>
+<li>
+<p>Runs on every push to main, pull requests to main, and weekly scheduled scans</p>
+</li>
+<li>
+<p><strong>Bandit</strong>: Python-specific security linter integrated into our CI/CD pipeline</p>
+</li>
+<li>Detects common security issues in Python code</li>
+<li>Run via <code>bandit -r src -c .bandit.yml</code> in our CI process</li>
+</ul>
+<h3 id="dependency-management">Dependency Management<a class="headerlink" href="#dependency-management" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Dependabot</strong>: Automatically monitors our dependencies for vulnerabilities</li>
+<li>Creates pull requests when security updates are available</li>
+<li>Configured to exclude test directories and example code</li>
+<li>
+<p>Configuration is located in <code>.github/dependabot.yml</code></p>
+</li>
+<li>
+<p><strong>Self-analysis</strong>: We regularly run the Dependency Risk Profiler against itself</p>
+</li>
+</ul>
+<h3 id="security-in-testing">Security in Testing<a class="headerlink" href="#security-in-testing" title="Permanent link">&para;</a></h3>
+<p>Our project contains intentionally outdated dependencies and vulnerability examples in the following directories:
+- <code>/examples/</code> 
+- <code>/testing/projects/</code></p>
+<p>These files are used for testing and demonstration purposes of the tool's capabilities and are excluded from security scanning to avoid false positives.</p>
+<p><strong>⚠️ WARNING: The demonstration dependencies in test and example code should not be used in production environments.</strong></p>
 <h2 id="security-updates">Security Updates<a class="headerlink" href="#security-updates" title="Permanent link">&para;</a></h2>
 <p>Security updates are announced through:</p>
 <ol>
