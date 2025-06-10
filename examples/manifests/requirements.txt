@@ -1,5 +1,5 @@
 # Sample requirements.txt file for testing
-requests==2.32.2
+requests==2.32.4
 Flask==3.0.3
 numpy==2.2.4
 pandas==2.2.2
