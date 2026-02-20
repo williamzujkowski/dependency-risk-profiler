@@ -6,9 +6,9 @@
 #
 asgiref==3.8.1
     # via -r typing.in
-cffi==1.17.1
+cffi==2.0.0
     # via cryptography
-cryptography==44.0.2
+cryptography==46.0.5
     # via -r typing.in
 iniconfig==2.1.0
     # via pytest
