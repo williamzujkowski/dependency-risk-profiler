@@ -34,7 +34,7 @@ pygments==2.19.1
     # via
     #   sphinx
     #   sphinx-tabs
-requests==2.32.3
+requests==2.32.4
     # via sphinx
 roman-numerals-py==3.1.0
     # via sphinx
@@ -65,5 +65,5 @@ sphinxcontrib-qthelp==2.0.0
     # via sphinx
 sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-urllib3==2.3.0
+urllib3==2.6.3
     # via requests
