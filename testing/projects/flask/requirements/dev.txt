@@ -36,7 +36,7 @@ charset-normalizer==3.4.1
     #   requests
 colorama==0.4.6
     # via tox
-cryptography==46.0.5
+cryptography==46.0.7
     # via -r typing.txt
 distlib==0.3.9
     # via virtualenv
