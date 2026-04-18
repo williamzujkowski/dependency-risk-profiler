@@ -130,7 +130,7 @@ python-dotenv==1.1.0
     #   -r typing.txt
 pyyaml==6.0.2
     # via pre-commit
-requests==2.32.4
+requests==2.33.0
     # via
     #   -r docs.txt
     #   sphinx
