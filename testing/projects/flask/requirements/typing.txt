@@ -28,7 +28,7 @@ pyright==1.1.398
     # via -r typing.in
 pytest==8.3.5
     # via -r typing.in
-python-dotenv==1.1.0
+python-dotenv==1.2.2
     # via -r typing.in
 types-contextvars==2.4.7.3
     # via -r typing.in
