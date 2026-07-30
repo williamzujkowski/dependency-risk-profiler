@@ -1,7 +1,9 @@
 """Tests for the risk scoring system."""
 
 from datetime import datetime, timedelta
+from typing import Dict, List
 
+from dependency_risk_profiler.cli.formatter import JsonFormatter, TerminalFormatter
 from dependency_risk_profiler.models import (
     CommunityMetrics,
     DependencyMetadata,
@@ -11,6 +13,9 @@ from dependency_risk_profiler.models import (
     SecurityMetrics,
 )
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.vulnerabilities.aggregator import (
+    _update_dependency_with_vulnerabilities,
+)
 
 
 def test_scoring_system() -> None:
@@ -261,3 +266,155 @@ def test_aggregate_ignores_unknown_signals() -> None:
     assert score.measured_signal_count == 5
     assert score.insufficient_data is True
     assert score.total_score == 5.0 * (1.0 + 1.0) / 5.0
+
+
+def test_info_and_withdrawn_vulnerabilities_do_not_raise_exploit_score() -> None:
+    """Filtered low-value advisories should be visible but not scored."""
+    dep = DependencyMetadata(name="noise-only", installed_version="1.0.0")
+    vulnerabilities: List[Dict[str, object]] = [
+        {
+            "id": "OSV-INFO",
+            "source": "OSV",
+            "severity": "INFO",
+            "summary": "Informational scanner result",
+            "cvss_score": None,
+            "fixed_versions": [],
+            "references": [],
+        },
+        {
+            "id": "OSV-WITHDRAWN",
+            "source": "OSV",
+            "severity": "CRITICAL",
+            "withdrawn": True,
+            "summary": "Withdrawn advisory",
+            "cvss_score": 9.8,
+            "fixed_versions": [],
+            "references": [],
+        },
+    ]
+
+    updated = _update_dependency_with_vulnerabilities(dep, vulnerabilities)
+    score = RiskScorer().score_dependency(updated)
+
+    assert score.exploit_score == 0.0
+    assert updated.has_known_exploits is False
+    assert updated.security_metrics is not None
+    assert updated.security_metrics.vulnerability_count == 2
+    assert updated.security_metrics.counted_vulnerability_count == 0
+    assert updated.security_metrics.filtered_vulnerability_count == 2
+    assert updated.security_metrics.filtered_vulnerability_reasons == {
+        "informational": 1,
+        "withdrawn": 1,
+    }
+    assert all(
+        advisory["filtered"] is True
+        for advisory in updated.security_metrics.vulnerability_details
+    )
+
+
+def test_critical_vulnerability_scores_higher_than_low() -> None:
+    """Exploit scoring should be graduated by counted advisory severity."""
+    scorer = RiskScorer()
+    low = DependencyMetadata(
+        name="low-vuln",
+        installed_version="1.0.0",
+        security_metrics=SecurityMetrics(
+            vulnerability_count=1,
+            counted_vulnerability_count=1,
+            filtered_vulnerability_count=0,
+            max_cvss_score=3.1,
+            max_vulnerability_severity="LOW",
+        ),
+    )
+    critical = DependencyMetadata(
+        name="critical-vuln",
+        installed_version="1.0.0",
+        security_metrics=SecurityMetrics(
+            vulnerability_count=1,
+            counted_vulnerability_count=1,
+            filtered_vulnerability_count=0,
+            max_cvss_score=9.8,
+            max_vulnerability_severity="CRITICAL",
+        ),
+    )
+
+    low_score = scorer.score_dependency(low)
+    critical_score = scorer.score_dependency(critical)
+
+    assert low_score.exploit_score is not None
+    assert critical_score.exploit_score is not None
+    assert low_score.exploit_score < critical_score.exploit_score
+    assert low_score.exploit_score == 0.2
+    assert critical_score.exploit_score == 1.0
+
+
+def test_vulnerability_minimum_severity_threshold_is_respected() -> None:
+    """Configurable threshold should filter advisories below the selected tier."""
+    dep = DependencyMetadata(name="thresholded", installed_version="1.0.0")
+    vulnerabilities = [
+        {
+            "id": "OSV-MEDIUM",
+            "source": "OSV",
+            "severity": "MEDIUM",
+            "cvss_score": 5.0,
+            "fixed_versions": [],
+            "references": [],
+        },
+        {
+            "id": "OSV-CRITICAL",
+            "source": "OSV",
+            "severity": "CRITICAL",
+            "cvss_score": 9.8,
+            "fixed_versions": [],
+            "references": [],
+        },
+    ]
+
+    updated = _update_dependency_with_vulnerabilities(dep, vulnerabilities, "HIGH")
+
+    assert updated.security_metrics is not None
+    assert updated.security_metrics.vulnerability_count == 2
+    assert updated.security_metrics.counted_vulnerability_count == 1
+    assert updated.security_metrics.filtered_vulnerability_count == 1
+    assert updated.security_metrics.filtered_vulnerability_reasons == {
+        "below high threshold": 1
+    }
+    assert updated.security_metrics.max_vulnerability_severity == "CRITICAL"
+
+
+def test_vulnerability_counts_are_reported_in_terminal_and_json() -> None:
+    """Report output should include total, counted, and filtered vuln counts."""
+    dep = DependencyMetadata(name="reported", installed_version="1.0.0")
+    updated = _update_dependency_with_vulnerabilities(
+        dep,
+        [
+            {
+                "id": "OSV-LOW",
+                "source": "OSV",
+                "severity": "LOW",
+                "cvss_score": 3.1,
+                "fixed_versions": [],
+                "references": [],
+            },
+            {
+                "id": "OSV-INFO",
+                "source": "OSV",
+                "severity": "INFO",
+                "cvss_score": None,
+                "fixed_versions": [],
+                "references": [],
+            },
+        ],
+    )
+    profile = RiskScorer().create_project_profile(
+        "requirements.txt", "python", {"reported": updated}
+    )
+
+    terminal_output = TerminalFormatter(color=False).format_profile(profile)
+    json_output = JsonFormatter().format_profile(profile)
+
+    assert "2/1 score 1 filt" in terminal_output
+    assert '"total_found": 2' in json_output
+    assert '"counted_in_score": 1' in json_output
+    assert '"filtered": 1' in json_output
+    assert '"filtered": true' in json_output

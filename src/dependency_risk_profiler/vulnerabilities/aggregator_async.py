@@ -1,6 +1,4 @@
-"""
-Asynchronous vulnerability data aggregator that collects and normalizes vulnerability
-information from multiple sources.
+"""Collect and normalize vulnerability information asynchronously.
 
 This module provides asynchronous implementations of the vulnerability aggregation
 functions to improve performance when processing multiple dependencies.
@@ -13,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from ..async_http import AsyncHTTPClient, batch_client
 from ..models import DependencyMetadata
 from .aggregator import (
+    DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
     GitHubAdvisorySource,
     NVDSource,
     OSVSource,
@@ -171,6 +170,7 @@ class AsyncGitHubAdvisorySource(GitHubAdvisorySource):
                 summary
                 description
                 publishedAt
+                withdrawnAt
                 references {
                   url
                 }
@@ -224,6 +224,7 @@ async def aggregate_vulnerabilities_for_package_async(
     enable_osv: bool = True,
     enable_nvd: bool = False,
     enable_github: bool = False,
+    minimum_severity: str = DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
 ) -> Tuple[DependencyMetadata, List[Dict[str, Any]]]:
     """Aggregate vulnerability data for a single package asynchronously.
 
@@ -233,6 +234,7 @@ async def aggregate_vulnerabilities_for_package_async(
         enable_osv: Whether to enable OSV vulnerability source
         enable_nvd: Whether to enable NVD vulnerability source
         enable_github: Whether to enable GitHub Advisory vulnerability source
+        minimum_severity: Minimum severity that counts toward scoring
 
     Returns:
         Tuple of (updated dependency metadata, vulnerability details)
@@ -252,7 +254,9 @@ async def aggregate_vulnerabilities_for_package_async(
     if cached:
         vulnerabilities, _ = cached
         return (
-            _update_dependency_with_vulnerabilities(dependency, vulnerabilities),
+            _update_dependency_with_vulnerabilities(
+                dependency, vulnerabilities, minimum_severity
+            ),
             vulnerabilities,
         )
 
@@ -313,7 +317,7 @@ async def aggregate_vulnerabilities_for_package_async(
 
         # Update dependency metadata
         updated_dependency = _update_dependency_with_vulnerabilities(
-            dependency, unique_vulnerabilities
+            dependency, unique_vulnerabilities, minimum_severity
         )
 
         return updated_dependency, unique_vulnerabilities
@@ -333,6 +337,7 @@ async def aggregate_vulnerability_data_async_impl(
     enable_nvd: bool = False,
     enable_github: bool = False,
     batch_size: int = 10,
+    minimum_severity: str = DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
 ) -> Tuple[Dict[str, DependencyMetadata], Dict[str, int]]:
     """Aggregate vulnerability data for multiple dependencies asynchronously.
 
@@ -343,12 +348,14 @@ async def aggregate_vulnerability_data_async_impl(
         enable_nvd: Whether to enable NVD vulnerability source
         enable_github: Whether to enable GitHub Advisory vulnerability source
         batch_size: Number of dependencies to process in parallel
+        minimum_severity: Minimum severity that counts toward scoring
 
     Returns:
         Tuple of (updated dependencies, vulnerability counts)
     """
     logger.info(
-        f"Aggregating vulnerability data for {len(dependencies)} dependencies asynchronously"
+        "Aggregating vulnerability data for "
+        f"{len(dependencies)} dependencies asynchronously"
     )
 
     # Process dependencies in batches
@@ -363,7 +370,12 @@ async def aggregate_vulnerability_data_async_impl(
         # Create tasks for the batch
         tasks = [
             aggregate_vulnerabilities_for_package_async(
-                dependencies[name], api_keys, enable_osv, enable_nvd, enable_github
+                dependencies[name],
+                api_keys,
+                enable_osv,
+                enable_nvd,
+                enable_github,
+                minimum_severity,
             )
             for name in batch
         ]
@@ -398,6 +410,7 @@ def aggregate_vulnerability_data_async(
     enable_nvd: bool = False,
     enable_github: bool = False,
     batch_size: int = 10,
+    minimum_severity: str = DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
 ) -> Tuple[Dict[str, DependencyMetadata], Dict[str, int]]:
     """Aggregate vulnerability data for multiple dependencies asynchronously.
 
@@ -410,6 +423,7 @@ def aggregate_vulnerability_data_async(
         enable_nvd: Whether to enable NVD vulnerability source
         enable_github: Whether to enable GitHub Advisory vulnerability source
         batch_size: Number of dependencies to process in parallel
+        minimum_severity: Minimum severity that counts toward scoring
 
     Returns:
         Tuple of (updated dependencies, vulnerability counts)
@@ -428,6 +442,7 @@ def aggregate_vulnerability_data_async(
                     enable_nvd,
                     enable_github,
                     batch_size,
+                    minimum_severity,
                 )
             )
         finally:

@@ -170,9 +170,9 @@ class TerminalFormatter(BaseFormatter):
         header = (
             f"{'Dependency':<30} {'Installed':<15} {'Latest':<15} "
             f"{'Last Update':<15} {'Maintainers':<10} {'Risk Score':<10} "
-            f"{'Unknown':<9} {'Status':<25}"
+            f"{'Unknown':<9} {'Vulns':<16} {'Status':<25}"
         )
-        separator = "-" * 130
+        separator = "-" * 146
         return self._colored(f"{self.BOLD}{header}{self.RESET}\n{separator}")
 
     def _format_dependency_row(self, dep: DependencyRiskScore) -> str:
@@ -228,6 +228,7 @@ class TerminalFormatter(BaseFormatter):
             if dep.total_signal_count > 0
             else "0/0"
         )
+        vulnerability_summary = self._format_vulnerability_summary(dep)
 
         # Format risk level and factors
         risk_level = (
@@ -244,8 +245,30 @@ class TerminalFormatter(BaseFormatter):
         return (
             f"{name:<30} {installed:<15} {latest:<15} {last_update:<15} "
             f"{maintainers:<10} {risk_score:<10} {unknown_summary:<9} "
-            f"{risk_level:<25}"
+            f"{vulnerability_summary:<16} {risk_level:<25}"
         )
+
+    def _format_vulnerability_summary(self, dep: DependencyRiskScore) -> str:
+        """Format vulnerability total/counted/filtered counts for the table.
+
+        Args:
+            dep: Dependency risk score.
+
+        Returns:
+            Compact vulnerability count summary.
+        """
+        metrics = dep.dependency.security_metrics
+        if metrics is None or metrics.vulnerability_count is None:
+            return "Unknown"
+
+        total = metrics.vulnerability_count
+        counted = metrics.counted_vulnerability_count
+        filtered = metrics.filtered_vulnerability_count
+        if counted is None or filtered is None:
+            return str(total)
+        if filtered > 0:
+            return f"{total}/{counted} score {filtered} filt"
+        return f"{total}/{counted} score"
 
 
 class JsonFormatter(BaseFormatter):
@@ -308,6 +331,7 @@ class JsonFormatter(BaseFormatter):
             Dictionary representation of the dependency risk score.
         """
         metadata = dep.dependency
+        vulnerability_summary = self._format_vulnerability_details(dep)
 
         # Create dependency dict
         return {
@@ -324,6 +348,8 @@ class JsonFormatter(BaseFormatter):
             "has_tests": metadata.has_tests,
             "has_ci": metadata.has_ci,
             "has_contribution_guidelines": metadata.has_contribution_guidelines,
+            "vulnerability_summary": vulnerability_summary,
+            "vulnerabilities": vulnerability_summary["advisories"],
             "scores": {
                 "staleness_score": dep.staleness_score,
                 "maintainer_score": dep.maintainer_score,
@@ -348,4 +374,37 @@ class JsonFormatter(BaseFormatter):
             "total_signal_count": dep.total_signal_count,
             "insufficient_data": dep.insufficient_data,
             "risk_factors": dep.factors,
+        }
+
+    def _format_vulnerability_details(
+        self, dep: DependencyRiskScore
+    ) -> Dict[str, object]:
+        """Format vulnerability accounting and advisory details for JSON output.
+
+        Args:
+            dep: Dependency risk score.
+
+        Returns:
+            Vulnerability summary dictionary.
+        """
+        metrics = dep.dependency.security_metrics
+        if metrics is None:
+            return {
+                "total_found": None,
+                "counted_in_score": None,
+                "filtered": None,
+                "filtered_reasons": {},
+                "max_counted_cvss_score": None,
+                "max_counted_severity": None,
+                "advisories": [],
+            }
+
+        return {
+            "total_found": metrics.vulnerability_count,
+            "counted_in_score": metrics.counted_vulnerability_count,
+            "filtered": metrics.filtered_vulnerability_count,
+            "filtered_reasons": metrics.filtered_vulnerability_reasons,
+            "max_counted_cvss_score": metrics.max_cvss_score,
+            "max_counted_severity": metrics.max_vulnerability_severity,
+            "advisories": metrics.vulnerability_details,
         }

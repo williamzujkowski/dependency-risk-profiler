@@ -2,10 +2,8 @@
 
 import os
 import tempfile
-from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 import yaml
 
 from dependency_risk_profiler.config import Config, get_config
@@ -14,8 +12,8 @@ from dependency_risk_profiler.config import Config, get_config
 class TestConfig:
     """Tests for the Config class."""
 
-    def test_default_config_values(self):
-        """HYPOTHESIS: Config should have default values when initialized without a file."""
+    def test_default_config_values(self) -> None:
+        """HYPOTHESIS: Config should have default values without a file."""
         # Act
         config = Config()
 
@@ -23,10 +21,11 @@ class TestConfig:
         assert config.get("general", "output_format") == "terminal"
         assert config.get("scoring_weights", "staleness") == 0.25
         assert config.get("vulnerability", "enable_osv") is True
+        assert config.get("vulnerability", "minimum_severity_for_scoring") == "LOW"
         assert config.get("trends", "limit") == 10
         assert config.get("graph", "format") == "d3"
 
-    def test_load_toml_config(self):
+    def test_load_toml_config(self) -> None:
         """HYPOTHESIS: Config should load values from TOML file."""
         # Arrange
         with tempfile.NamedTemporaryFile(
@@ -63,7 +62,7 @@ maintainer = 0.3
             # Clean up the temporary file
             os.unlink(temp_file_path)
 
-    def test_load_yaml_config(self):
+    def test_load_yaml_config(self) -> None:
         """HYPOTHESIS: Config should load values from YAML file."""
         # Arrange
         with tempfile.NamedTemporaryFile(
@@ -94,7 +93,7 @@ maintainer = 0.3
             # Clean up the temporary file
             os.unlink(temp_file_path)
 
-    def test_load_from_env_variables(self):
+    def test_load_from_env_variables(self) -> None:
         """HYPOTHESIS: Config should load values from environment variables."""
         # Arrange
         with patch.dict(
@@ -118,7 +117,7 @@ maintainer = 0.3
             assert config.get("vulnerability", "enable_github_advisory") is True
             assert config.get("vulnerability", "cache_expiry") == 7200
 
-    def test_update_from_args(self):
+    def test_update_from_args(self) -> None:
         """HYPOTHESIS: Config should update values from command line arguments."""
         # Arrange
         config = Config()
@@ -148,7 +147,15 @@ maintainer = 0.3
         assert config.get("graph", "format") == "graphviz"
         assert config.get("trends", "limit") == 5
 
-    def test_priority_cli_over_env_over_file(self):
+    def test_minimum_vulnerability_severity_from_args(self) -> None:
+        """HYPOTHESIS: Config should store the vuln scoring severity threshold."""
+        config = Config()
+
+        config.update_from_args({"minimum_vulnerability_severity": "HIGH"})
+
+        assert config.get("vulnerability", "minimum_severity_for_scoring") == "HIGH"
+
+    def test_priority_cli_over_env_over_file(self) -> None:
         """HYPOTHESIS: CLI args should override env vars which override file config."""
         # Arrange
         with tempfile.NamedTemporaryFile(
@@ -189,7 +196,7 @@ enable_osv = true
             # Clean up the temporary file
             os.unlink(temp_file_path)
 
-    def test_get_scoring_weights(self):
+    def test_get_scoring_weights(self) -> None:
         """HYPOTHESIS: get_scoring_weights should return all scoring weights."""
         # Arrange
         config = Config()
@@ -209,16 +216,20 @@ enable_osv = true
         assert "community_weight" in weights
         assert "transitive_weight" in weights
 
-    def test_get_api_keys(self):
+    def test_get_api_keys(self) -> None:
         """HYPOTHESIS: get_api_keys should return configured API keys."""
         # Arrange
         config = Config()
 
         # Update with API keys
-        config._config["vulnerability"]["github_token"] = "github_token_value"
-        config._config["vulnerability"]["nvd_api_key"] = "nvd_key_value"
-        config._config["vulnerability"]["enable_github_advisory"] = True
-        config._config["vulnerability"]["enable_nvd"] = True
+        config.update_from_args(
+            {
+                "github_token": "github_token_value",
+                "nvd_api_key": "nvd_key_value",
+                "enable_github_advisory": True,
+                "enable_nvd": True,
+            }
+        )
 
         # Act
         api_keys = config.get_api_keys()
@@ -229,7 +240,7 @@ enable_osv = true
         assert api_keys["github"] == "github_token_value"
         assert api_keys["nvd"] == "nvd_key_value"
 
-    def test_generate_sample_config_toml(self):
+    def test_generate_sample_config_toml(self) -> None:
         """HYPOTHESIS: generate_sample_config should create a valid TOML config file."""
         # Arrange
         with tempfile.NamedTemporaryFile(suffix=".toml", delete=False) as temp_file:
@@ -265,7 +276,7 @@ enable_osv = true
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
 
-    def test_generate_sample_config_yaml(self):
+    def test_generate_sample_config_yaml(self) -> None:
         """HYPOTHESIS: generate_sample_config should create a valid YAML config file."""
         # Arrange
         with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as temp_file:
@@ -298,8 +309,8 @@ enable_osv = true
                 os.unlink(temp_file_path)
 
 
-def test_get_config_singleton():
-    """HYPOTHESIS: get_config should return the same config instance when called multiple times."""
+def test_get_config_singleton() -> None:
+    """HYPOTHESIS: get_config should return the same config instance."""
     # Act
     config1 = get_config()
     config2 = get_config()
@@ -308,7 +319,7 @@ def test_get_config_singleton():
     assert config1 is config2
 
 
-def test_get_config_new_path():
+def test_get_config_new_path() -> None:
     """HYPOTHESIS: get_config should return a new instance when a path is provided."""
     # Act
     config1 = get_config()

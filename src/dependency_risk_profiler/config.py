@@ -59,6 +59,7 @@ DEFAULT_CONFIG = {
         "disable_cache": False,
         "clear_cache": False,
         "cache_expiry": 86400,  # 24 hours in seconds
+        "minimum_severity_for_scoring": "LOW",
     },
     "trends": {
         "limit": 10,
@@ -81,7 +82,8 @@ class Config:
         """Initialize configuration manager.
 
         Args:
-            config_path: Optional explicit path to config file (overrides default search paths)
+            config_path: Optional explicit path to config file
+                (overrides default search paths)
         """
         self._config = DEFAULT_CONFIG.copy()
 
@@ -190,6 +192,11 @@ class Config:
             except ValueError:
                 pass
 
+        if "DRP_MINIMUM_VULNERABILITY_SEVERITY" in os.environ:
+            self._config["vulnerability"]["minimum_severity_for_scoring"] = os.environ[
+                "DRP_MINIMUM_VULNERABILITY_SEVERITY"
+            ]
+
     def _merge_config(self, config_data: Dict[str, Any]) -> None:
         """Merge configuration data with current config.
 
@@ -288,6 +295,14 @@ class Config:
 
         if "clear_cache" in args:
             self._config["vulnerability"]["clear_cache"] = args["clear_cache"]
+
+        if (
+            "minimum_vulnerability_severity" in args
+            and args["minimum_vulnerability_severity"]
+        ):
+            self._config["vulnerability"]["minimum_severity_for_scoring"] = args[
+                "minimum_vulnerability_severity"
+            ]
 
         # Trends settings
         if "trend_limit" in args and args["trend_limit"] is not None:
@@ -407,10 +422,12 @@ class Config:
                     # General section
                     f.write("[general]\n")
                     f.write(
-                        f"output_format = \"{DEFAULT_CONFIG['general']['output_format']}\"\n"
+                        "output_format = "
+                        f"\"{DEFAULT_CONFIG['general']['output_format']}\"\n"
                     )
                     f.write(
-                        f"use_color = {str(DEFAULT_CONFIG['general']['use_color']).lower()}\n"
+                        "use_color = "
+                        f"{str(DEFAULT_CONFIG['general']['use_color']).lower()}\n"
                     )
                     f.write(
                         f"debug = {str(DEFAULT_CONFIG['general']['debug']).lower()}\n\n"

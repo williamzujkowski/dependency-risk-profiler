@@ -278,7 +278,7 @@ class AsyncHTTPBatchClient:
     async def batch_get(
         self,
         urls: List[str],
-        params: Optional[List[Dict[str, Any]]] = None,
+        params: Optional[List[Optional[Dict[str, object]]]] = None,
         headers: Optional[Dict[str, str]] = None,
     ) -> List[Optional[Dict[str, Any]]]:
         """Make multiple GET requests in parallel.
@@ -294,7 +294,7 @@ class AsyncHTTPBatchClient:
         """
         if params is None:
             # params will contain None values which is expected
-            params = [None] * len(urls)  # type: ignore
+            params = [None] * len(urls)
         elif len(params) != len(urls):
             raise ValueError("params must be the same length as urls")
 
@@ -395,7 +395,7 @@ async def fetch_url_async(url: str, timeout: int = 10) -> Optional[str]:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(url, headers=headers, follow_redirects=True)
             response.raise_for_status()
-            text = response.text
+            text = str(response.text)
             return text
     except (HTTPError, RequestError) as e:
         logger.debug(f"Error fetching {url}: {e}")
