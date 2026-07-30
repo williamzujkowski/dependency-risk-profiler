@@ -7,20 +7,20 @@ optConfig:
 policy:
   # Enforces presence of a SECURITY.md file (we already have this)
   requireSecurityPolicy: true
-  
+
   # Specify alternates names and locations
   securityPolicyPaths:
     - SECURITY.md
     - docs/security/SECURITY.md
     - .github/SECURITY.md
-    
+
   # Specify minimum content length to be valid
   securityPolicyMinimumLength: 100
 
 action:
   # Create an issue when non-compliant
   issue: true
-  
+
   # Add labels to created issues
   issueLabels:
     - security

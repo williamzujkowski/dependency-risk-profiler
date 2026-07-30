@@ -1,8 +1,7 @@
 import os
 
-import pytest
-
 import flask
+import pytest
 
 
 def test_explicit_instance_paths(modules_tmp_path):

@@ -115,7 +115,8 @@ def _generate_d3_graph(
                         {
                             "id": trans_id,
                             "name": trans_dep,
-                            "version": "?",  # May not have version info for transitive deps
+                            # May not have version info for transitive deps.
+                            "version": "?",
                             "color": "#aaaaaa",  # Gray for transitive deps
                             "radius": 5,  # Smaller radius for transitive deps
                             "level": level,  # Transitive dependency level

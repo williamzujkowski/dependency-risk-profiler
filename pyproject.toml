@@ -57,7 +57,8 @@ dev = [
     "flake8>=7.0.0",
     "mypy>=1.9.0",
     "responses>=0.25.0",        # For HTTP mocking in tests
-    "aioresponses>=0.7.4",      # For mocking async HTTP requests
+    "aiohttp>=3.8.6,<3.14",     # Keep aioresponses mocks compatible in tests
+    "aioresponses>=0.7.9",      # For mocking async HTTP requests
     "tomli>=2.0.1",  # TOML parsing/writing in tests (make available for all Python versions)
     "tomli-w>=1.0.0",           # For TOML writing in tests
     "pre-commit>=3.5.0",        # For pre-commit hooks
@@ -97,13 +98,13 @@ line_length = 88
 multi_line_output = 3
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 exclude = [
-    "tests/",
+    "testing/",
     "venv/",
     "build/",
     "dist/",
@@ -130,6 +131,14 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "requests.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "aiohttp.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "httpx.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -209,7 +218,7 @@ version = {attr = "dependency_risk_profiler.__version__"}
 [tool.ruff]
 target-version = "py39"
 line-length = 88
-exclude = ["tests/*", "**/tests/*"]
+exclude = ["testing/projects/*", "**/testing/projects/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"]

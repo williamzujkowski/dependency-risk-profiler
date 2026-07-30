@@ -7,7 +7,7 @@ optConfig:
 policy:
   # Minimum acceptable OSSF Scorecard score
   minScore: 7.0
-  
+
   # Checks that must pass
   requiredChecks:
     - Branch-Protection
@@ -16,17 +16,17 @@ policy:
     - Maintained
     - Security-Policy
     - Vulnerabilities
-  
+
   # Specify a threshold for specific checks
   checkScoreThresholds:
     Branch-Protection: 7.0
     Dangerous-Workflow: 8.0
     Maintained: 7.0
-    
+
 action:
   # Create an issue when non-compliant
   issue: true
-  
+
   # Add labels to created issues
   issueLabels:
     - security

@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from http import HTTPStatus
 
-from werkzeug.exceptions import BadRequest
-from werkzeug.exceptions import NotFound
-
 from flask import Flask
+from werkzeug.exceptions import BadRequest, NotFound
 
 app = Flask(__name__)
 

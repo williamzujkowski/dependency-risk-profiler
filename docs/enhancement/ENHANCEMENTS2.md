@@ -15,7 +15,7 @@ Below are a few example prompts you can provide to a code generation LLM. Each p
   - Includes a time-stamp in the signature.
   - Logs all signing activities for audit purposes.
 - Pushes the signed artifact to an artifact repository.
-  
+
 Ensure that the configuration is modular so that the signing steps can be swapped out or extended, and include comments explaining each stage. Use secret-management best practices (e.g., reference secrets from environment variables rather than embedding them directly).”*
 
 ---

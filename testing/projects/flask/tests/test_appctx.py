@@ -1,8 +1,6 @@
-import pytest
-
 import flask
-from flask.globals import app_ctx
-from flask.globals import request_ctx
+import pytest
+from flask.globals import app_ctx, request_ctx
 
 
 def test_basic_url_generation(app):

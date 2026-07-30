@@ -136,7 +136,7 @@ MIT License
 ## Important Note About Example Files
 
 This project contains intentionally outdated dependencies in the following directories:
-- `/examples/` 
+- `/examples/`
 - `/dependabot_check/`
 
 These files contain dependencies with known vulnerabilities for testing and demonstration purposes. They serve as test cases for the Dependency Risk Profiler tool to identify and classify various risks. These dependencies are excluded from Dependabot alerts via configuration in `.github/dependabot.yml`.

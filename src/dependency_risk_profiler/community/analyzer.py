@@ -4,7 +4,7 @@ import logging
 import re
 import subprocess  # nosec B404
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from ..models import CommunityMetrics, DependencyMetadata
 from ..utils import extract_github_repo_info, fetch_json, fetch_url
@@ -248,7 +248,7 @@ def analyze_pypi_community_metrics(
         dependency.community_metrics.releases_count = len(pypi_data["releases"])
 
         latest_release_date = None
-        for version, releases in pypi_data["releases"].items():
+        for releases in pypi_data["releases"].values():
             if releases:
                 for release in releases:
                     if "upload_time" in release:
@@ -267,7 +267,7 @@ def analyze_pypi_community_metrics(
         if latest_release_date:
             dependency.community_metrics.last_release_date = latest_release_date
 
-    # Try to get download stats from PyPI Stats API (this is a simple approach, actual PyPI does not provide this directly)
+    # PyPI does not provide this directly; PyPI Stats is a simple fallback.
     try:
         download_stats = fetch_json(
             f"https://pypistats.org/api/packages/{dependency.name}/recent"

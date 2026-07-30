@@ -82,4 +82,3 @@ function shouldSkipQuery(versionString) {
   // express tracking issue: https://github.com/expressjs/express/issues/5615
   return Number(getMajorVersion(versionString)) === 21
 }
-

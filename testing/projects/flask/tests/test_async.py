@@ -1,12 +1,8 @@
 import asyncio
 
 import pytest
-
-from flask import Blueprint
-from flask import Flask
-from flask import request
-from flask.views import MethodView
-from flask.views import View
+from flask import Blueprint, Flask, request
+from flask.views import MethodView, View
 
 pytest.importorskip("asgiref")
 

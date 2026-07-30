@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_with_real_repository():
-    """Test with a real open source repository that has both security policy and dependency update tools."""
+    """Test a real repo with security policy and dependency update tools."""
     logger.info("\n=== INTEGRATION TEST WITH REAL REPOSITORY ===")
 
     # Clone a well-maintained repository
@@ -71,9 +71,8 @@ def test_with_real_repository():
         logger.info(f"Has dependency update tools: {has_update_tools}")
         logger.info(f"Dependency update tools score: {update_tools_score}")
         logger.info(f"Dependency update tools issues: {update_issues}")
-        logger.info(
-            f"Update tools found: {dependency.additional_info.get('dependency_update_tools', 'None')}"
-        )
+        update_tools = dependency.additional_info.get("dependency_update_tools", "None")
+        logger.info(f"Update tools found: {update_tools}")
 
         # Calculate risk score
         logger.info("Calculating risk score...")
@@ -85,7 +84,8 @@ def test_with_real_repository():
             f"Security policy score in risk model: {score_result.security_policy_score}"
         )
         logger.info(
-            f"Dependency update score in risk model: {score_result.dependency_update_score}"
+            "Dependency update score in risk model: "
+            f"{score_result.dependency_update_score}"
         )
         logger.info(f"Total risk score: {score_result.total_score}")
         logger.info(f"Risk level: {score_result.risk_level}")

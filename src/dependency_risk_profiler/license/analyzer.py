@@ -221,7 +221,8 @@ def analyze_license(
         if license_info:
             dependency.license_info = license_info
             logger.info(
-                f"Found license {license_info.license_id} ({license_info.category.value}) for {dependency.name}"
+                f"Found license {license_info.license_id} "
+                f"({license_info.category.value}) for {dependency.name}"
             )
         else:
             logger.warning(f"No license information found for {dependency.name}")

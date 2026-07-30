@@ -85,7 +85,7 @@ When contributing to this project, please follow these best practices:
 ## Example Files and Intentional Vulnerabilities
 
 The project contains intentionally outdated dependencies in the following directories:
-- `/examples/` 
+- `/examples/`
 - `/dependabot_check/`
 
 These files contain dependencies with known vulnerabilities for testing and demonstration purposes of the Dependency Risk Profiler tool. These intentional vulnerabilities are excluded from Dependabot alerts via the configuration in `.github/dependabot.yml`.

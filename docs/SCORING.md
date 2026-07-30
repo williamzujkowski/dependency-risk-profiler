@@ -157,7 +157,7 @@ Evaluates security practices in the repository:
    ```
 
 4. **Risk Level Assignment**: The normalized score is mapped to a risk level:
-   
+
    | Score Range (% of max) | Risk Level |
    |------------------------|------------|
    | 0% - 25% (0.0 - 1.25)  | LOW        |

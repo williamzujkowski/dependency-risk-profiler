@@ -30,7 +30,7 @@ if "%choice%"=="1" (
     REM Navigate to the project root directory (parent of scripts directory)
     cd %~dp0\..
     pip install .
-    
+
     echo Installation complete!
     echo You can now use the dependency-risk-profiler command from anywhere.
 ) else (
@@ -39,18 +39,18 @@ if "%choice%"=="1" (
     REM Navigate to the project root directory (parent of scripts directory)
     cd %~dp0\..
     python -m venv venv
-    
+
     REM Activate virtual environment
     call venv\Scripts\activate.bat
-    
+
     REM Install the package
     echo Installing package in virtual environment...
     pip install .
-    
+
     REM Test installation
     echo Testing installation...
     dependency-risk-profiler --help
-    
+
     echo.
     echo Installation complete! Dependency Risk Profiler is now available in the virtual environment.
     echo.

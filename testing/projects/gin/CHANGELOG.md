@@ -26,7 +26,7 @@
 * fix(uri): query binding bug (#3236) (@illiafox)
 * fix: Add pointer support for url query params (#3659) (#3666) (@omkar-foss)
 * fix: protect Context.Keys map when call Copy method (#3873) (@kingcanfish)
- 
+
 ### Enhancements
 
 * chore(CI): update release args (#3595) (@qloog)
@@ -82,7 +82,7 @@
 
 ### SECURITY
 
-* fix lack of escaping of filename in Content-Disposition [#3556](https://github.com/gin-gonic/gin/pull/3556) 
+* fix lack of escaping of filename in Content-Disposition [#3556](https://github.com/gin-gonic/gin/pull/3556)
 
 ### ENHANCEMENTS
 

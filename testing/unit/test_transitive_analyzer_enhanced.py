@@ -3,7 +3,6 @@
 import json
 import os
 import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -11,7 +10,6 @@ import pytest
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.transitive.analyzer_enhanced import (
     analyze_pipfile_lock_dependencies,
-    analyze_pyproject_toml_dependencies,
     analyze_python_transitive_dependencies,
     analyze_transitive_dependencies_enhanced,
     build_dependency_graph,
@@ -49,7 +47,7 @@ class TestVirtualEnvFunctions:
                 assert os.path.exists(os.path.join(temp_dir, "bin", "python"))
 
     def test_get_pip_path(self):
-        """HYPOTHESIS: get_pip_path should return the correct pip path for the platform."""
+        """HYPOTHESIS: get_pip_path should return the platform pip path."""
         # Arrange
         venv_path = "/path/to/venv"
 
@@ -65,7 +63,7 @@ class TestVirtualEnvFunctions:
         assert windows_path == "/path/to/venv/Scripts/pip.exe"
 
     def test_get_python_path(self):
-        """HYPOTHESIS: get_python_path should return the correct python path for the platform."""
+        """HYPOTHESIS: get_python_path should return the platform python path."""
         # Arrange
         venv_path = "/path/to/venv"
 
@@ -86,7 +84,7 @@ class TestDependencyInstallation:
 
     @patch("subprocess.run")
     def test_install_packages_success(self, mock_run):
-        """HYPOTHESIS: install_packages should return True on successful installation."""
+        """HYPOTHESIS: install_packages should return True on success."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
         requirements_file = "/path/to/requirements.txt"
@@ -122,7 +120,7 @@ class TestDependencyInstallation:
 
     @patch("subprocess.run")
     def test_install_pipdeptree_success(self, mock_run):
-        """HYPOTHESIS: install_pipdeptree should return True on successful installation."""
+        """HYPOTHESIS: install_pipdeptree should return True on success."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
         mock_run.return_value = Mock(returncode=0, stderr="")
@@ -141,7 +139,7 @@ class TestDependencyInstallation:
 
     @patch("subprocess.run")
     def test_install_pipdeptree_failure(self, mock_run):
-        """HYPOTHESIS: install_pipdeptree should return False on installation failure."""
+        """HYPOTHESIS: install_pipdeptree should return False on failure."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
         mock_run.return_value = Mock(
@@ -240,7 +238,7 @@ class TestDependencyGraphBuilding:
     """Tests for dependency graph building."""
 
     def test_build_dependency_graph(self):
-        """HYPOTHESIS: build_dependency_graph should correctly build transitive dependencies."""
+        """HYPOTHESIS: build_dependency_graph should build transitive deps."""
         # Arrange
         direct_dependencies = ["packageA", "packageB"]
         dependency_map = {
@@ -306,7 +304,7 @@ class TestDependencyAnalysis:
         mock_install_packages,
         mock_create_venv,
     ):
-        """HYPOTHESIS: analyze_python_transitive_dependencies should extract dependencies from pipdeptree."""
+        """HYPOTHESIS: Python transitive analysis should use pipdeptree."""
         # Arrange
         requirements_file = "/path/to/requirements.txt"
 
@@ -382,7 +380,7 @@ class TestDependencyAnalysis:
         "dependency_risk_profiler.transitive.analyzer_enhanced.analyze_python_transitive_dependencies"
     )
     def test_analyze_pyproject_toml_dependencies(self, mock_analyze_python):
-        """HYPOTHESIS: analyze_pyproject_toml_dependencies should extract dependencies from pyproject.toml."""
+        """HYPOTHESIS: pyproject transitive analysis should extract deps."""
         # Skip for complex implementation
         pytest.skip("Requires tomli and file operations, mocking is complex")
 
@@ -390,7 +388,7 @@ class TestDependencyAnalysis:
         "dependency_risk_profiler.transitive.analyzer_enhanced.analyze_python_transitive_dependencies"
     )
     def test_analyze_pipfile_lock_dependencies(self, mock_analyze_python):
-        """HYPOTHESIS: analyze_pipfile_lock_dependencies should extract dependencies from Pipfile.lock."""
+        """HYPOTHESIS: Pipfile.lock transitive analysis should extract deps."""
         # Arrange
         pipfile_lock = "/tmp/test_Pipfile.lock"
         mock_analyze_python.return_value = {"requests": {"urllib3"}}
@@ -432,7 +430,7 @@ class TestDependencyAnalysis:
     def test_extract_python_dependencies_enhanced(
         self, mock_pipfile, mock_pyproject, mock_requirements
     ):
-        """HYPOTHESIS: extract_python_dependencies_enhanced should call the correct analyzer."""
+        """HYPOTHESIS: enhanced extraction should call the correct analyzer."""
         # Arrange
         mock_requirements.return_value = {"pkg1": {"dep1"}}
         mock_pyproject.return_value = {"pkg2": {"dep2"}}
@@ -458,7 +456,7 @@ class TestDependencyAnalysis:
     "dependency_risk_profiler.transitive.analyzer_enhanced.extract_python_dependencies_enhanced"
 )
 def test_analyze_transitive_dependencies_enhanced(mock_extract_python):
-    """HYPOTHESIS: analyze_transitive_dependencies_enhanced should update dependency metadata."""
+    """HYPOTHESIS: enhanced transitive analysis should update metadata."""
     # Arrange
     dependencies = {
         "requests": DependencyMetadata(name="requests", installed_version="2.28.1"),
@@ -485,10 +483,10 @@ def test_analyze_transitive_dependencies_enhanced(mock_extract_python):
 
 @pytest.mark.benchmark
 def test_transitive_analysis_performance():
-    """BENCHMARK: The enhanced analysis should handle large dependency trees efficiently.
+    """BENCHMARK: Enhanced analysis should handle large dependency trees.
 
     SLA Requirements:
-    - Should process a reasonable number of dependencies in < 1s (excluding venv creation)
+    - Should process dependencies in < 1s (excluding venv creation)
     """
     # Skip actual benchmark as it would create venvs
     pytest.skip("Skipping performance benchmark that would create venvs")

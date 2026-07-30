@@ -58,13 +58,13 @@ The Dependency Risk Profiler project employs several security measures for its o
   - Creates pull requests when security updates are available
   - Configured to exclude test directories and example code
   - Configuration is located in `.github/dependabot.yml`
-  
+
 - **Self-analysis**: We regularly run the Dependency Risk Profiler against itself
 
 ### Security in Testing
 
 Our project contains intentionally outdated dependencies and vulnerability examples in the following directories:
-- `/examples/` 
+- `/examples/`
 - `/testing/projects/`
 
 These files are used for testing and demonstration purposes of the tool's capabilities and are excluded from security scanning to avoid false positives.

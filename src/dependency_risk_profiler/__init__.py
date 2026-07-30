@@ -23,7 +23,7 @@ from .supply_chain import (
 # Imports for vulnerability aggregation
 from .vulnerabilities import aggregate_vulnerability_data, normalize_cvss_score
 
-# Explicitly define __all__ to indicate what should be imported with "from dependency_risk_profiler import *"
+# Explicitly define __all__ for "from dependency_risk_profiler import *".
 __all__ = [
     "DependencyMetadata",
     "DependencyRiskScore",

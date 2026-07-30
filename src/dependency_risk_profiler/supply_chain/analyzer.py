@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def calculate_path_criticality(
     dependency: str, transitive_deps: Dict[str, Set[str]], visited: Set[str] = None
 ) -> int:
-    """Calculate the criticality of a dependency based on its position in the dependency graph.
+    """Calculate dependency criticality from its dependency graph position.
 
     Args:
         dependency: Name of the dependency to analyze.
@@ -137,12 +137,12 @@ def analyze_supply_chain_risk(
     }
 
     # Calculate transitive dependency count
-    for name, dep in dependencies.items():
+    for dep in dependencies.values():
         results["transitive_dependency_count"] += len(dep.transitive_dependencies)
 
     # Build maintainer count histogram
     maintainer_counts = {}
-    for name, dep in dependencies.items():
+    for dep in dependencies.values():
         if dep.maintainer_count is not None:
             count = min(10, dep.maintainer_count)  # Cap at 10+ for better visualization
             maintainer_counts[count] = maintainer_counts.get(count, 0) + 1

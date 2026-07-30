@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import importlib.metadata
 import typing as t
-from contextlib import contextmanager
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from copy import copy
 from types import TracebackType
 from urllib.parse import urlsplit
 
 import werkzeug.test
-from click.testing import CliRunner
-from click.testing import Result
+from click.testing import CliRunner, Result
 from werkzeug.test import Client
 from werkzeug.wrappers import Request as BaseRequest
 
@@ -58,9 +56,9 @@ class EnvironBuilder(werkzeug.test.EnvironBuilder):
     ) -> None:
         assert not (base_url or subdomain or url_scheme) or (
             base_url is not None
-        ) != bool(subdomain or url_scheme), (
-            'Cannot pass "subdomain" or "url_scheme" with "base_url".'
-        )
+        ) != bool(
+            subdomain or url_scheme
+        ), 'Cannot pass "subdomain" or "url_scheme" with "base_url".'
 
         if base_url is None:
             http_host = app.config.get("SERVER_NAME") or "localhost"

@@ -6,8 +6,6 @@ These tests verify that environment variables are properly handled in the config
 import os
 from unittest import mock
 
-import pytest
-
 from dependency_risk_profiler.config import Config, get_config
 
 
@@ -92,7 +90,6 @@ def test_get_config_singleton():
     """Test that get_config returns a singleton instance."""
     # Clear any existing instance
     import dependency_risk_profiler.config
-    from dependency_risk_profiler.config import _config_instance
 
     dependency_risk_profiler.config._config_instance = None
 

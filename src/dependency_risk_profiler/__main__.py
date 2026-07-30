@@ -5,7 +5,7 @@ import sys
 
 # Declare the main function with a consistent return type
 def cli_main() -> int:
-    """Main CLI entry point that returns an exit code."""
+    """Run the CLI and return an exit code."""
     # Use the Typer CLI as the default entry point
     try:
         from .cli.typer_cli import main

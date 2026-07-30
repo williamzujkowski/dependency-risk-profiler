@@ -28,7 +28,7 @@ This document provides an overview of the Dependency Risk Profiler project struc
 
 - `docs/CHANGELOG.md` - Version history and changes
 - `docs/development/CLAUDE.md` - Instructions for Claude AI when working with the codebase
-- `docs/CONTRIBUTING.md` - Guide for contributors 
+- `docs/CONTRIBUTING.md` - Guide for contributors
 - `docs/security/DEPENDENCY_SECURITY.md` - Security policy for dependencies
 - `docs/development/PROMPT.md` - AI assistant context and prompts
 - `docs/security/SECURITY.md` - Security policies and procedures

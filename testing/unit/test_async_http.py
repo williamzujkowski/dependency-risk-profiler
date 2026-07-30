@@ -1,9 +1,7 @@
 """Tests for the async_http module."""
 
 import asyncio
-import json
-import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 try:
     import aiohttp
@@ -155,20 +153,12 @@ class TestAsyncHTTPClient:
         # Create a client with very low concurrency limit
         client = AsyncHTTPClient(concurrent_requests=2)
 
-        # Act - start timer
-        import time
-
-        start_time = time.time()
-
         # Make 5 requests that should be limited by concurrency
         # Reduced from 10 to 5 for test reliability
         tasks = [client.get(url) for _ in range(5)]
         results = await asyncio.gather(*tasks)
 
-        # End timer
-        end_time = time.time()
-
-        # Assert - just check that we got responses, not testing actual concurrency timing
+        # Assert responses, not actual concurrency timing.
         # which is hard to test reliably in a CI environment
         assert len(results) == 5
         assert all(result is not None for result in results)

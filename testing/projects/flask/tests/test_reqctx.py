@@ -1,11 +1,9 @@
 import warnings
 
-import pytest
-
 import flask
+import pytest
 from flask.globals import request_ctx
-from flask.sessions import SecureCookieSessionInterface
-from flask.sessions import SessionInterface
+from flask.sessions import SecureCookieSessionInterface, SessionInterface
 
 try:
     from greenlet import greenlet

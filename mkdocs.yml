@@ -54,7 +54,7 @@ nav:
     - 'Migration Summary': 'MIGRATION_SUMMARY.md'
     - 'Testing Standards': 'project_standards/TESTING_STANDARDS.md'
     - 'Testing Implementation': 'project_standards/TESTING_IMPLEMENTATION.md'
-    - 'Enhancements': 
+    - 'Enhancements':
       - 'Overview': 'enhancement/README.md'
       - 'Phase 2 Enhancements': 'enhancement/ENHANCEMENTS2.md'
       - 'Phase 3 Enhancements': 'enhancement/ENHANCEMENTS3.md'

@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
   id-token: write  # Required for trusted publishing to PyPI
-  
+
 jobs:
   build-and-publish:
     name: Build and Publish Release
@@ -18,23 +18,23 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # We need the full history for the changelog
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         cache: 'pip'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install build wheel twine
         pip install -e .
-    
+
     - name: Extract version from tag
       id: get_version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-    
+
     - name: Generate Release Notes
       id: changelog
       run: |
@@ -59,12 +59,12 @@ jobs:
         echo "" >> RELEASE_NOTES.md
         echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^)...v${{ env.VERSION }}" >> RELEASE_NOTES.md
         cat RELEASE_NOTES.md
-    
+
     - name: Build package
       run: |
         python -m build
         twine check dist/*
-        
+
     - name: Sign package artifacts
       run: |
         echo "Signing release artifacts..."
@@ -73,15 +73,15 @@ jobs:
         from dependency_risk_profiler.secure_release.code_signing import sign_artifact, SigningMode
         import glob
         import os
-        
+
         # Sign each artifact
         for artifact in glob.glob('dist/*.tar.gz') + glob.glob('dist/*.whl'):
             print(f'Signing {artifact}')
             signature_path = artifact + '.sig'
             signature_info = sign_artifact(
-                artifact, 
-                '${{ github.run_id }}', 
-                SigningMode.RELEASE, 
+                artifact,
+                '${{ github.run_id }}',
+                SigningMode.RELEASE,
                 output_path=signature_path,
                 log_file='dist/signing.log'
             )
@@ -89,7 +89,7 @@ jobs:
         "
         # Create a SHA256 checksum file
         cd dist && sha256sum *.tar.gz *.whl > SHA256SUMS.txt
-    
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -103,7 +103,7 @@ jobs:
           dist/*.sig
           dist/SHA256SUMS.txt
           dist/signing.log
-    
+
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
@@ -115,12 +115,12 @@ jobs:
         verify-metadata: true
         # Enable attestations for trusted publishing
         attestations: true
-    
+
     - name: Build docs
       run: |
         pip install -e ".[docs]"
         mkdocs build
-    
+
     - name: Deploy docs
       uses: JamesIves/github-pages-deploy-action@v4
       with:

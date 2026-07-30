@@ -111,7 +111,7 @@ def scan_for_malware(file_path: Union[str, Path]) -> bool:
 
     except Exception as e:
         logger.error(f"Malware scan failed: {e}")
-        raise MalwareScanError(f"Failed to scan {file_path}: {e}")
+        raise MalwareScanError(f"Failed to scan {file_path}: {e}") from e
 
 
 def retrieve_signing_key(mode: SigningMode) -> bytes:
@@ -150,7 +150,9 @@ def retrieve_signing_key(mode: SigningMode) -> bytes:
 
     except Exception as e:
         logger.error(f"Failed to retrieve signing key: {e}")
-        raise KeyRetrievalError(f"Failed to retrieve {mode.name} signing key: {e}")
+        raise KeyRetrievalError(
+            f"Failed to retrieve {mode.name} signing key: {e}"
+        ) from e
 
 
 def get_timestamp_token() -> str:
@@ -180,7 +182,7 @@ def get_timestamp_token() -> str:
 
     except Exception as e:
         logger.error(f"Failed to obtain timestamp: {e}")
-        raise SignatureError(f"Failed to obtain trusted timestamp: {e}")
+        raise SignatureError(f"Failed to obtain trusted timestamp: {e}") from e
 
 
 def create_signature(file_hash: str, key: bytes) -> bytes:
@@ -218,7 +220,7 @@ def create_signature(file_hash: str, key: bytes) -> bytes:
 
     except Exception as e:
         logger.error(f"Failed to create signature: {e}")
-        raise SignatureError(f"Failed to create signature: {e}")
+        raise SignatureError(f"Failed to create signature: {e}") from e
 
 
 def log_signing_operation(
@@ -353,7 +355,8 @@ def sign_artifact(
                 f.write(f"Artifact: {signature_info['artifact']}\n")
                 f.write(f"Build ID: {signature_info['build_id']}\n")
                 f.write(
-                    f"Hash ({signature_info['hash_algorithm']}): {signature_info['hash']}\n"
+                    f"Hash ({signature_info['hash_algorithm']}): "
+                    f"{signature_info['hash']}\n"
                 )
                 f.write(f"Timestamp: {signature_info['timestamp']}\n")
                 f.write(f"Signature: {signature_info['signature']}\n")
@@ -365,7 +368,7 @@ def sign_artifact(
 
     except Exception as e:
         logger.error(f"Signing failed: {e}")
-        raise SigningError(f"Failed to sign {artifact_path}: {e}")
+        raise SigningError(f"Failed to sign {artifact_path}: {e}") from e
 
 
 def verify_signature(

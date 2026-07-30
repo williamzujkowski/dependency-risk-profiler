@@ -117,11 +117,11 @@ version = "0.1.0"
 
 [dependencies]
 # Git dependency with branch, tag and rev
-git_complex = { git = "https://github.com/example/repo.git", branch = "main", tag = "v1.0.0", rev = "abcdef123456" }
+git_complex = { git = "https://example/repo.git", tag = "v1", rev = "abc" }
 # Path dependency
 path_dep = { path = "../local_package" }
 # Registry dependency with complex features
-complex_features = { version = "1.0.0", features = ["feature1", "feature2"], default-features = false, optional = true }
+complex_features = { version = "1", features = ["f1", "f2"], optional = true }
 # Dependencies with target-specific overrides
 standard = "1.0.0"
 """
@@ -223,7 +223,7 @@ def test_nested_dependencies(nested_dependencies_toml):
     assert "normal" in dependencies
     assert dependencies["normal"].installed_version == "1.0.0"
 
-    # Our current implementation doesn't deeply traverse TOML structure for nested dependencies
+    # Current implementation does not deeply traverse nested TOML dependencies.
     # For now, we just make sure it doesn't crash on nested structures
     assert isinstance(dependencies, dict)
 

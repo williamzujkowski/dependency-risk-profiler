@@ -257,7 +257,8 @@ def calculate_security_policy_score(
         other_indicators: Optional results from check_other_security_indicators.
 
     Returns:
-        Security policy score between 0.0 (no security policy) and 1.0 (comprehensive security policy).
+        Security policy score between 0.0 (no security policy) and 1.0
+        (comprehensive security policy).
     """
     # Initialize with a base score
     score = 0.0
@@ -323,7 +324,8 @@ def identify_security_policy_issues(
 
         if not file_content.get("has_private_reporting", False):
             issues.append(
-                "Security policy does not provide private vulnerability reporting instructions"
+                "Security policy does not provide private vulnerability "
+                "reporting instructions"
             )
 
     return issues
@@ -382,11 +384,11 @@ def check_security_policy(
             dependency.security_metrics.has_security_policy = has_security_policy
 
             # Log results
+            policy_status = "Found" if has_security_policy else "Not found"
+            logger.info(f"Security policy check for {dependency.name}: {policy_status}")
             logger.info(
-                f"Security policy check for {dependency.name}: {'Found' if has_security_policy else 'Not found'}"
-            )
-            logger.info(
-                f"Security policy score for {dependency.name}: {security_policy_score:.2f}"
+                "Security policy score for "
+                f"{dependency.name}: {security_policy_score:.2f}"
             )
             for issue in issues:
                 logger.info(f"Security policy issue for {dependency.name}: {issue}")

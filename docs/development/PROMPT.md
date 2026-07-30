@@ -27,10 +27,10 @@ Create a command-line tool (CLI) called **“Dependency Risk Profiler”** that 
      - Optionally, check for the presence of standard repository files that indicate healthy maintenance (e.g., existence of tests, CI configuration files, contribution guidelines).
    - **Public Exploit Information:**
      - Optionally, scan for any public exploit or vulnerability warnings (this can be integrated by scraping public feeds or searching for alerts associated with the package, always using publicly available data).
-     
+
 3. **Risk Scoring and Output:**
    - Compute a composite risk score for each dependency based on weighted factors:
-     - Example weights might be: 
+     - Example weights might be:
        - **Staleness:** Longer time since last update increases risk.
        - **Single Maintainer:** Fewer maintainers increases risk.
        - **Deprecated Status:** A deprecated flag adds a significant risk factor.

@@ -460,5 +460,5 @@ def check_maintained_status(
 
     # Consider a package maintained if score is greater than 0.6
     is_maintained = maintained_score > 0.6
-    
+
     return is_maintained, maintained_score, maintenance_issues

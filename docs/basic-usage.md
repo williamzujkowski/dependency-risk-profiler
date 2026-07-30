@@ -151,7 +151,7 @@ To track how dependency risks change over time:
 
 ```bash
 # Generate initial trend data
-dependency-risk-profiler analyze --save-trends . 
+dependency-risk-profiler analyze --save-trends .
 
 # After some time/changes, update trends
 dependency-risk-profiler analyze --save-trends .

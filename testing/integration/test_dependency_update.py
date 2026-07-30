@@ -39,7 +39,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
-    
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -144,9 +144,8 @@ def test_with_dependabot():
     logger.info(f"Has dependency update tools: {has_update_tools}")
     logger.info(f"Update tools score: {update_tools_score}")
     logger.info(f"Issues: {issues}")
-    logger.info(
-        f"Tools found: {dependency.additional_info.get('dependency_update_tools', 'None')}"
-    )
+    update_tools = dependency.additional_info.get("dependency_update_tools", "None")
+    logger.info(f"Tools found: {update_tools}")
 
     # Test the risk scorer integration
     logger.info("Testing risk scorer integration...")
@@ -196,9 +195,8 @@ def test_with_renovate():
     logger.info(f"Has dependency update tools: {has_update_tools}")
     logger.info(f"Update tools score: {update_tools_score}")
     logger.info(f"Issues: {issues}")
-    logger.info(
-        f"Tools found: {dependency.additional_info.get('dependency_update_tools', 'None')}"
-    )
+    update_tools = dependency.additional_info.get("dependency_update_tools", "None")
+    logger.info(f"Tools found: {update_tools}")
 
     # Test the risk scorer integration
     logger.info("Testing risk scorer integration...")

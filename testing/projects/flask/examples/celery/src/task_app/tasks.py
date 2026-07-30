@@ -1,7 +1,6 @@
 import time
 
-from celery import shared_task
-from celery import Task
+from celery import Task, shared_task
 
 
 @shared_task(ignore_result=False)

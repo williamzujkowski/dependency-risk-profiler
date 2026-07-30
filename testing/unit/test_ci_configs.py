@@ -3,7 +3,6 @@
 These tests verify that our CI/CD configuration files are valid and work as expected.
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -84,7 +83,7 @@ def test_flake8_ignores_are_effective():
     """Test that flake8 ignores are properly configured."""
     # Get the root directory
     root_dir = Path(__file__).parent.parent.parent
-    
+
     # Create a temp file with common errors that should be ignored
     temp_file = root_dir / "temp_flake8_test.py"
     try:
@@ -92,10 +91,14 @@ def test_flake8_ignores_are_effective():
             f.write(
                 """
 # This file has long lines but should be ignored due to E501 in extend-ignore
-very_long_line = "This is a very long line that should normally trigger an E501 error but we have configured flake8 to ignore line length errors across the codebase so this should pass"
+very_long_line = (
+    "This is a very long line that should normally trigger an E501 error but "
+    "we have configured flake8 to ignore line length errors across the "
+    "codebase so this should pass"
+)
 
 # This has no blank line at the end (W292) but should be ignored
-# This has trailing whitespace (W291) but should be ignored   
+# This has trailing whitespace (W291) but should be ignored
 """
             )
 

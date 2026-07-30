@@ -1,9 +1,6 @@
 """Tests for async vulnerability aggregator."""
 
-import asyncio
-import json
-import sys
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -12,19 +9,18 @@ try:
 except ImportError:
     aioresponses = None
 
-# Mark tests as async
-async_test = pytest.mark.asyncio
-
 from dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from dependency_risk_profiler.vulnerabilities.aggregator_async import (
     AsyncGitHubAdvisorySource,
-    AsyncHTTPClient,
     AsyncNVDSource,
     AsyncOSVSource,
     aggregate_vulnerabilities_for_package_async,
     aggregate_vulnerability_data_async,
     aggregate_vulnerability_data_async_impl,
 )
+
+# Mark tests as async
+async_test = pytest.mark.asyncio
 
 
 @pytest.fixture
@@ -186,7 +182,7 @@ class TestAsyncVulnerabilitySources:
     async def test_github_source_get_vulnerabilities(
         self, mock_post, mock_normalize, github_source
     ):
-        """HYPOTHESIS: AsyncGitHubAdvisorySource should retrieve and normalize vulnerabilities."""
+        """HYPOTHESIS: GitHub source should retrieve and normalize vulnerabilities."""
         # Arrange
         package_name = "test-package"
         ecosystem = "npm"
@@ -236,7 +232,7 @@ class TestAsyncVulnerabilityAggregation:
     async def test_aggregate_vulnerabilities_for_package(
         self, mock_cache_data, mock_get_cached, mock_get_vulns, test_dependency
     ):
-        """HYPOTHESIS: aggregate_vulnerabilities_for_package_async should gather vulnerabilities."""
+        """HYPOTHESIS: per-package async aggregation should gather vulnerabilities."""
         # Arrange
         mock_get_cached.return_value = None  # No cache hit
 
@@ -273,7 +269,7 @@ class TestAsyncVulnerabilityAggregation:
     async def test_aggregate_vulnerabilities_with_cache(
         self, mock_get_cached, test_dependency
     ):
-        """HYPOTHESIS: aggregate_vulnerabilities_for_package_async should use cache when available."""
+        """HYPOTHESIS: per-package async aggregation should use cache."""
         # Arrange
         cached_vulns = [
             {
@@ -302,7 +298,7 @@ class TestAsyncVulnerabilityAggregation:
         "dependency_risk_profiler.vulnerabilities.aggregator_async.aggregate_vulnerabilities_for_package_async"
     )
     async def test_aggregate_vulnerability_data_async_impl(self, mock_aggregate_pkg):
-        """HYPOTHESIS: aggregate_vulnerability_data_async_impl should process multiple dependencies."""
+        """HYPOTHESIS: async aggregation should process multiple dependencies."""
         # Arrange
         deps = {
             "pkg1": DependencyMetadata(name="pkg1", installed_version="1.0.0"),
@@ -346,7 +342,7 @@ class TestAsyncVulnerabilityAggregation:
         "dependency_risk_profiler.vulnerabilities.aggregator_async.aggregate_vulnerability_data_async_impl"
     )
     def test_aggregate_vulnerability_data_async(self, mock_impl, test_dependency):
-        """HYPOTHESIS: aggregate_vulnerability_data_async should correctly invoke the async implementation."""
+        """HYPOTHESIS: sync wrapper should invoke the async implementation."""
         # Arrange
         deps = {"pkg1": test_dependency}
         mock_impl.return_value = (deps, {"pkg1": 1})
@@ -365,7 +361,7 @@ class TestAsyncVulnerabilityAggregation:
 
 @pytest.mark.benchmark
 def test_aggregator_async_performance():
-    """BENCHMARK: Async aggregator should be faster than synchronous version with many dependencies.
+    """BENCHMARK: Async aggregator should beat sync for many dependencies.
 
     SLA Requirements:
     - Should be at least 2x faster than synchronous version for 10+ dependencies

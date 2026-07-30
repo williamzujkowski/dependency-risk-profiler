@@ -79,10 +79,10 @@ After the workflow completes successfully:
    wget https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/dependency_risk_profiler-X.Y.Z-py3-none-any.whl
    wget https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/dependency_risk_profiler-X.Y.Z-py3-none-any.whl.sig
    wget https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/SHA256SUMS.txt
-   
+
    # Verify checksum
    sha256sum -c SHA256SUMS.txt
-   
+
    # Verify signature (requires the package to be installed)
    pip install dependency-risk-profiler==X.Y.Z
    python -m dependency_risk_profiler.secure_release.code_signing dependency_risk_profiler-X.Y.Z-py3-none-any.whl --verify dependency_risk_profiler-X.Y.Z-py3-none-any.whl.sig

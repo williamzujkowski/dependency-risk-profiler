@@ -48,7 +48,7 @@ if [ "$choice" == "1" ]; then
     # Navigate to the project root directory (parent of scripts directory)
     cd "$(dirname "$0")/.."
     pip3 install .
-    
+
     echo "Installation complete!"
     echo "You can now use the dependency-risk-profiler command from anywhere."
 else
@@ -57,7 +57,7 @@ else
     # Navigate to the project root directory (parent of scripts directory)
     cd "$(dirname "$0")/.."
     python3 -m venv venv
-    
+
     # Activate virtual environment based on OS
     if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
         # Windows
@@ -79,7 +79,7 @@ else
     echo "Installation complete! Dependency Risk Profiler is now available in the virtual environment."
     echo ""
     echo "To use it, activate the virtual environment first:"
-    
+
     if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
         echo "  source venv/Scripts/activate"
     else

@@ -33,28 +33,29 @@ def create_test_repository(with_security_policy=True):
     if with_security_policy:
         # Create a SECURITY.md file with good security policy content
         security_content = """# Security Policy
-    
+
     ## Supported Versions
-    
+
     Only the latest version is actively maintained and supported with security updates.
-    
+
     | Version | Supported          |
     | ------- | ------------------ |
     | 1.0.x   | :white_check_mark: |
     | < 1.0   | :x:                |
-    
+
     ## Reporting a Vulnerability
-    
+
     Please report security vulnerabilities by emailing security@example.com.
-    
+
     Do not report security vulnerabilities through public GitHub issues.
-    
-    We will acknowledge your email within 48 hours and provide a detailed response within 1 week.
-    
+
+    We will acknowledge your email within 48 hours and provide a detailed
+    response within 1 week.
+
     ## Security Updates
-    
+
     Security updates are announced through GitHub releases and the CHANGELOG.md file.
-    
+
     Please keep your installation up to date with the latest releases.
     """
 
@@ -69,7 +70,8 @@ def create_test_repository(with_security_policy=True):
         # Create a repository without a security policy
         with open(Path(repo_dir) / "README.md", "w") as f:
             f.write(
-                "# Test Repository\n\nThis is a test repository without a security policy."
+                "# Test Repository\n\n"
+                "This is a test repository without a security policy."
             )
 
     return repo_dir
