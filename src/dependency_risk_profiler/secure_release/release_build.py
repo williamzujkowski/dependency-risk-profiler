@@ -97,11 +97,11 @@ def fetch_latest_code(repo_url: str, branch: str, temp_dir: Union[str, Path]) ->
         logger.error(f"Failed to fetch code: {e}")
         logger.error(f"Stdout: {e.stdout}")
         logger.error(f"Stderr: {e.stderr}")
-        raise BuildError(f"Failed to fetch code from {repo_url}: {e}")
+        raise BuildError(f"Failed to fetch code from {repo_url}: {e}") from e
 
     except Exception as e:
         logger.error(f"Error fetching code: {e}")
-        raise BuildError(f"Failed to fetch code: {e}")
+        raise BuildError(f"Failed to fetch code: {e}") from e
 
 
 def run_tests(code_dir: Union[str, Path], build_env: Dict[str, str]) -> bool:
@@ -261,11 +261,11 @@ def build_package(
         logger.error(f"Build failed: {e}")
         logger.error(f"Stdout: {e.stdout}")
         logger.error(f"Stderr: {e.stderr}")
-        raise BuildError("Failed to build package")
+        raise BuildError("Failed to build package") from e
 
     except Exception as e:
         logger.error(f"Error building package: {e}")
-        raise BuildError(f"Failed to build package: {e}")
+        raise BuildError(f"Failed to build package: {e}") from e
 
 
 def scan_artifacts(artifacts: List[Path]) -> bool:
@@ -339,7 +339,7 @@ def sign_artifacts(
 
     except Exception as e:
         logger.error(f"Artifact signing failed: {e}")
-        raise BuildError(f"Failed to sign artifacts: {e}")
+        raise BuildError(f"Failed to sign artifacts: {e}") from e
 
 
 def create_build_manifest(
@@ -403,7 +403,7 @@ def create_build_manifest(
 
     except Exception as e:
         logger.error(f"Failed to create build manifest: {e}")
-        raise BuildError(f"Failed to create build manifest: {e}")
+        raise BuildError(f"Failed to create build manifest: {e}") from e
 
 
 def run_build_process(
@@ -514,7 +514,7 @@ def run_build_process(
 
     except Exception as e:
         logger.error(f"Build process failed: {e}")
-        raise BuildError(f"Build process failed: {e}")
+        raise BuildError(f"Build process failed: {e}") from e
 
     finally:
         # Remove the file handler

@@ -1,9 +1,8 @@
 import json
 import os
 
-import pytest
-
 import flask
+import pytest
 
 # config keys used for the TestConfig
 TEST_KEY = "foo"

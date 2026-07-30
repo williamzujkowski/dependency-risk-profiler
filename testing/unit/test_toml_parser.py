@@ -3,11 +3,9 @@
 import os
 import sys
 import tempfile
-from pathlib import Path
 
 import pytest
 
-from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.toml import TomlParser
 
 
@@ -42,7 +40,6 @@ dev = [
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
     current_module = sys.modules[__name__]
     current_module.pyproject_toml_path = temp_file
@@ -74,7 +71,6 @@ black = "^22.0.0"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
     current_module = sys.modules[__name__]
     current_module.poetry_toml_path = temp_file
@@ -105,7 +101,6 @@ mockall = "0.11"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
     current_module = sys.modules[__name__]
     current_module.cargo_toml_path = temp_file
@@ -252,7 +247,6 @@ def test_invalid_toml():
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
     current_module = sys.modules[__name__]
     current_module.invalid_toml_path = temp_file

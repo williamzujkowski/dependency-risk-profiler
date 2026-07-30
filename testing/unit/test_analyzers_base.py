@@ -1,11 +1,5 @@
 """Tests for the base analyzer module."""
 
-from abc import ABC
-import importlib
-import os
-import sys
-import tempfile
-from unittest.mock import MagicMock, patch
 import unittest
 
 import pytest
@@ -14,7 +8,6 @@ from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.golang import GoAnalyzer
 from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer
 from dependency_risk_profiler.analyzers.python import PythonAnalyzer
-from dependency_risk_profiler.models import DependencyMetadata
 
 
 class TestBaseAnalyzer:
@@ -30,6 +23,7 @@ class TestBaseAnalyzer:
 
     def test_base_analyzer_initialization_with_concrete_subclass(self):
         """Test that a concrete subclass of BaseAnalyzer can be instantiated."""
+
         class ConcreteAnalyzer(BaseAnalyzer):
             def analyze(self, dependencies):
                 return dependencies
@@ -101,12 +95,13 @@ class TestBaseAnalyzerImportLogic:
         """Test that the method body has ImportError handling."""
         # Get the source code of the get_analyzer_for_ecosystem method
         import inspect
+
         source = inspect.getsource(BaseAnalyzer.get_analyzer_for_ecosystem)
-        
+
         # Check that the method has a try-except block for ImportError
         assert "try:" in source
         assert "except ImportError:" in source
-        
+
         # Since we've verified that the exception handling code exists,
         # we can reasonably assume it works correctly
 

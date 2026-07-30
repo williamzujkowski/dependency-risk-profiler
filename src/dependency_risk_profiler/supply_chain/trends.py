@@ -22,7 +22,8 @@ class HistoricalTrendAnalyzer:
         """Initialize the historical trend analyzer.
 
         Args:
-            history_dir: Directory to store historical data. Defaults to ~/.dependency-risk-profiler/history
+            history_dir: Directory to store historical data. Defaults to
+                ~/.dependency-risk-profiler/history.
         """
         self.history_dir = history_dir or DEFAULT_HISTORY_DIR
 
@@ -544,7 +545,7 @@ class HistoricalTrendAnalyzer:
                 continue
 
             # Calculate the percentage of dependencies with each security feature
-            for dep_name, dep_data in scan["dependencies"].items():
+            for dep_data in scan["dependencies"].values():
                 if "scores" in dep_data:
                     scores = dep_data["scores"]
 

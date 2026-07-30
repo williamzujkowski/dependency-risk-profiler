@@ -33,13 +33,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          
+
       - name: Cache pre-commit hooks
         uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip 'setuptools==69.0.2' 'wheel>=0.42.0'
@@ -47,7 +47,7 @@ jobs:
           # Install stubs for mypy and security tools
           pip install types-PyYAML types-requests types-setuptools
           pip install bandit
-          
+
       - name: Run lint checks
         run: |
           flake8 --config=.flake8
@@ -58,11 +58,11 @@ jobs:
           # Run mypy with our fixed configuration
           echo "Running mypy type checking"
           mypy --config-file=mypy.ini src/
-          
+
       - name: Run unit tests
         run: |
           pytest -xvs testing/unit testing/integration
-          
+
       - name: Run bandit security check
         run: |
           # Run security audits on the code
@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "Skipping safety dependency check due to known compatibility issues - will be re-enabled in future PR"
           echo "Using bandit and snyk for security scanning instead"
-          
+
       - name: Run dependency vulnerability scan
         uses: snyk/actions/python@master
         continue-on-error: true # Don't fail the build, just report
@@ -88,19 +88,19 @@ jobs:
     permissions:
       id-token: write  # Required for OIDC authentication with AWS
       contents: read  # Required for checkout
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for all branches and tags
-          
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-          
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip 'setuptools==69.0.2' 'wheel>=0.42.0' twine build
@@ -124,13 +124,13 @@ jobs:
             echo "VERSION=$VERSION" >> $GITHUB_ENV
             echo "BUILD_TYPE=development" >> $GITHUB_ENV
           fi
-          
+
           # Generate unique build ID
           BUILD_ID="build-${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}"
           echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
-          
+
           echo "✅ Building version: $VERSION (build: $BUILD_ID, type: ${{ env.BUILD_TYPE }})"
-      
+
       # Build the package in a hermetic/reproducible manner
       - name: Build package
         id: build
@@ -138,22 +138,22 @@ jobs:
           # Make deterministic builds
           export SOURCE_DATE_EPOCH=$(git show -s --format=%at)
           export PYTHONHASHSEED=0
-          
+
           # Create build directory for artifacts
           mkdir -p dist
-          
+
           # Build sdist and wheel
           python -m build
-          
+
           # Record the paths of the built artifacts
           echo "SDIST_PATH=$(ls dist/*.tar.gz)" >> $GITHUB_ENV
           echo "WHEEL_PATH=$(ls dist/*.whl)" >> $GITHUB_ENV
-          
+
           # Generate SHA256 checksums for the artifacts
           cd dist
           sha256sum *.tar.gz *.whl > SHA256SUMS.txt
           cd ..
-          
+
           echo "✅ Built artifacts: ${{ env.SDIST_PATH }}, ${{ env.WHEEL_PATH }}"
 
       # Scan the built artifact for security issues
@@ -162,18 +162,18 @@ jobs:
           echo "Running security scan on built artifacts..."
           # Install security tools
           pip install bandit
-          
+
           # Run security audit on the package contents
           bandit -r src/ -c .bandit.yml
-          
+
           echo "✅ Bandit security scan completed"
-          
+
       - name: Note on security checks
         run: |
           # Note about skipped safety check
           echo "Skipping safety dependency check due to known compatibility issues - will be re-enabled in future PR"
           echo "Using bandit and snyk for security scanning instead"
-          
+
       - name: Run dependency vulnerability scan
         uses: snyk/actions/python@master
         continue-on-error: true # Don't fail the build, just report
@@ -187,45 +187,45 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
-          
+
       - name: Sign artifacts
         id: sign
         run: |
           if [[ "${{ env.BUILD_TYPE }}" == "release" ]]; then
             echo "Signing release artifacts using AWS KMS..."
-            
+
             # For a real implementation, you would use AWS KMS to sign the artifacts
             # Example:
             # aws kms sign --key-id ${{ secrets.AWS_SIGNING_KEY_ID }} \
             #   --message-type RAW --signing-algorithm RSASSA_PKCS1_V1_5_SHA_256 \
             #   --message fileb://<(cat dist/SHA256SUMS.txt) \
             #   --output text --query Signature | base64 -d > dist/SHA256SUMS.sig
-            
+
             # For this example, we're simulating the signing process
             echo "Simulating artifact signing for release build..."
             touch dist/SHA256SUMS.sig
-            
+
             echo "SIGNING_MODE=release" >> $GITHUB_ENV
           else
             echo "Signing development artifacts..."
-            
+
             # For development builds, use a simpler signing process
             # In this example, we're simulating the signing
             touch dist/SHA256SUMS.sig
-            
+
             echo "SIGNING_MODE=test" >> $GITHUB_ENV
           fi
-          
+
           echo "✅ Artifacts signed (${{ env.SIGNING_MODE }} mode)"
-          
+
           # Generate signing timestamp for audit
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           echo "SIGNING_TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
-          
+
           # Log signing activity for audit purposes
           SIGNING_LOG="{\"timestamp\":\"$TIMESTAMP\",\"version\":\"${{ env.VERSION }}\",\"build_id\":\"${{ env.BUILD_ID }}\",\"mode\":\"${{ env.SIGNING_MODE }}\",\"artifacts\":[\"${{ env.SDIST_PATH }}\",\"${{ env.WHEEL_PATH }}\"]}"
           echo "$SIGNING_LOG" > dist/signing-log.json
-          
+
           echo "signing_log=$(cat dist/signing-log.json)" >> $GITHUB_OUTPUT
 
       # Upload artifacts to GitHub Actions artifacts
@@ -240,7 +240,7 @@ jobs:
             dist/SHA256SUMS.sig
             dist/signing-log.json
           retention-days: 7
-          
+
       # Push to PyPI for tagged releases
       - name: Publish to PyPI
         if: startsWith(github.ref, 'refs/tags/v')
@@ -251,12 +251,12 @@ jobs:
           username = __token__
           password = ${{ secrets.PYPI_API_TOKEN }}
           EOF
-          
+
           # Upload to PyPI
           twine upload dist/*.tar.gz dist/*.whl
-          
+
           echo "✅ Published to PyPI: ${{ env.VERSION }}"
-          
+
       # Create GitHub release for tagged releases
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -265,17 +265,17 @@ jobs:
           name: "Release ${{ env.VERSION }}"
           body: |
             ## Release ${{ env.VERSION }}
-            
+
             Build ID: ${{ env.BUILD_ID }}
             Build Time: ${{ env.SIGNING_TIMESTAMP }}
-            
+
             ### Files
             - Source distribution: ${{ env.SDIST_PATH }}
             - Wheel distribution: ${{ env.WHEEL_PATH }}
-            
+
             SHA256 checksums are provided in the SHA256SUMS.txt file.
             Digital signature is provided in the SHA256SUMS.sig file.
-            
+
             This release was built and signed in a secure CI/CD pipeline with cryptographic verification.
           files: |
             dist/*.tar.gz
@@ -284,7 +284,7 @@ jobs:
             dist/SHA256SUMS.sig
           draft: false
           prerelease: false
-          
+
       # Notify success
       - name: Send notification
         if: success()
@@ -293,7 +293,7 @@ jobs:
           echo "Version: ${{ env.VERSION }}"
           echo "Build ID: ${{ env.BUILD_ID }}"
           echo "Timestamp: ${{ env.SIGNING_TIMESTAMP }}"
-          
+
           # In a real-world scenario, you might send a notification to Slack, Teams, etc.
           # Example:
           # curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ Build and signing completed for ${{ env.VERSION }}"}' ${{ secrets.SLACK_WEBHOOK_URL }}

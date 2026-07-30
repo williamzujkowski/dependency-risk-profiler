@@ -119,7 +119,7 @@ class PythonParser(BaseParser):
 
             return dependencies
         except Exception as e:
-            raise ValueError(f"Error parsing requirements.txt: {e}")
+            raise ValueError(f"Error parsing requirements.txt: {e}") from e
 
     def _parse_pipfile_lock(self) -> Dict[str, DependencyMetadata]:
         """Parse a Pipfile.lock file.
@@ -168,4 +168,4 @@ class PythonParser(BaseParser):
 
             return dependencies
         except Exception as e:
-            raise ValueError(f"Error parsing Pipfile.lock: {e}")
+            raise ValueError(f"Error parsing Pipfile.lock: {e}") from e

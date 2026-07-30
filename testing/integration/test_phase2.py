@@ -9,9 +9,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from dependency_risk_profiler.analyzers.common import clone_repo
 from dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
-from dependency_risk_profiler.scorecard.branch_protection import (
-    check_branch_protection,
-)
+from dependency_risk_profiler.scorecard.branch_protection import check_branch_protection
 from dependency_risk_profiler.scorecard.signed_commits import check_signed_commits
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_with_real_repository():
-    """Test with a real open source repository that has code signing and branch protection."""
+    """Test a real repository with code signing and branch protection."""
     logger.info("\n=== INTEGRATION TEST WITH REAL REPOSITORY (PHASE 2) ===")
 
     # Clone a well-maintained repository
@@ -80,7 +78,8 @@ def test_with_real_repository():
         logger.info(f"Branch protection issues: {branch_protection_issues}")
         if dependency.additional_info.get("branch_protection"):
             logger.info(
-                f"Branch protection details: {dependency.additional_info['branch_protection']}"
+                "Branch protection details: "
+                f"{dependency.additional_info['branch_protection']}"
             )
 
         # Calculate risk score
@@ -93,7 +92,8 @@ def test_with_real_repository():
             f"Signed commits score in risk model: {score_result.signed_commits_score}"
         )
         logger.info(
-            f"Branch protection score in risk model: {score_result.branch_protection_score}"
+            "Branch protection score in risk model: "
+            f"{score_result.branch_protection_score}"
         )
         logger.info(f"Overall risk score: {score_result.total_score}")
         logger.info(f"Risk level: {score_result.risk_level}")

@@ -1,7 +1,6 @@
+import flask.views
 import pytest
 from werkzeug.http import parse_set_header
-
-import flask.views
 
 
 def common_test(app):

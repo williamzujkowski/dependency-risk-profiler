@@ -7,7 +7,7 @@ optConfig:
 policy:
   # Enforces restriction of binary artifacts
   denyBinaryArtifacts: true
-  
+
   # Allowed file extensions (example: images and docs that are fine)
   allowlistedExtensions:
     - .png
@@ -18,7 +18,7 @@ policy:
     - .pdf
     - .ico
     - .webp
-  
+
   # Specific binaries files to allow
   # allowListedPaths:
   #   - path/to/binary/file
@@ -26,7 +26,7 @@ policy:
 action:
   # Create an issue when non-compliant
   issue: true
-  
+
   # Add labels to created issues
   issueLabels:
     - security

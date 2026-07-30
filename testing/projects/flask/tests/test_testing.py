@@ -1,15 +1,13 @@
 import importlib.metadata
 
 import click
-import pytest
-
 import flask
+import pytest
 from flask import appcontext_popped
 from flask.cli import ScriptInfo
 from flask.globals import _cv_request
 from flask.json import jsonify
-from flask.testing import EnvironBuilder
-from flask.testing import FlaskCliRunner
+from flask.testing import EnvironBuilder, FlaskCliRunner
 
 
 def test_environ_defaults_from_config(app, client):

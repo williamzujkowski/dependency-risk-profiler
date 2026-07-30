@@ -54,7 +54,7 @@ class NodeJSParser(BaseParser):
 
             return dependencies
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in package-lock.json: {e}")
+            raise ValueError(f"Invalid JSON in package-lock.json: {e}") from e
 
     def _extract_dependencies(
         self, deps_dict: Dict, result: Dict[str, DependencyMetadata]

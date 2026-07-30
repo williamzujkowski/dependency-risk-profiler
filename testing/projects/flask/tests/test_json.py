@@ -3,12 +3,11 @@ import decimal
 import io
 import uuid
 
-import pytest
-from werkzeug.http import http_date
-
 import flask
+import pytest
 from flask import json
 from flask.json.provider import DefaultJSONProvider
+from werkzeug.http import http_date
 
 
 @pytest.mark.parametrize("debug", (True, False))

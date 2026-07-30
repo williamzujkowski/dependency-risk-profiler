@@ -232,7 +232,8 @@ def calculate_dependency_update_score(
         github_actions_results: Results from check_github_actions_dependency_updates.
 
     Returns:
-        Dependency update tools score between 0.0 (no tools) and 1.0 (comprehensive tools).
+        Dependency update tools score between 0.0 (no tools) and 1.0
+        (comprehensive tools).
     """
     # Start with a base score of 0
     score = 0.0
@@ -387,15 +388,18 @@ def check_dependency_update_tools(
                 )
 
             # Log results
+            tools_status = "Found" if has_update_tools else "Not found"
             logger.info(
-                f"Dependency update tools check for {dependency.name}: {'Found' if has_update_tools else 'Not found'}"
+                f"Dependency update tools check for {dependency.name}: {tools_status}"
             )
             if has_update_tools:
-                logger.info(
-                    f"Update tools found for {dependency.name}: {dependency.additional_info.get('dependency_update_tools', '')}"
+                update_tools = dependency.additional_info.get(
+                    "dependency_update_tools", ""
                 )
+                logger.info(f"Update tools found for {dependency.name}: {update_tools}")
             logger.info(
-                f"Dependency update tools score for {dependency.name}: {update_tools_score:.2f}"
+                "Dependency update tools score for "
+                f"{dependency.name}: {update_tools_score:.2f}"
             )
             for issue in issues:
                 logger.info(

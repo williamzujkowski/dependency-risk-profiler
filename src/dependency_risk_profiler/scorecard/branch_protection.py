@@ -223,7 +223,8 @@ def calculate_branch_protection_score(
         pr_patterns: Results from check_pull_request_patterns.
 
     Returns:
-        Branch protection score between 0.0 (no protection) and 1.0 (comprehensive protection).
+        Branch protection score between 0.0 (no protection) and 1.0
+        (comprehensive protection).
     """
     # Start with a base score of 0
     score = 0.0
@@ -372,8 +373,9 @@ def check_branch_protection(
                 dependency.additional_info["branch_protection"] = str(protection_info)
 
             # Log results
+            protection_status = "Found" if has_branch_protection else "Not found"
             logger.info(
-                f"Branch protection check for {dependency.name}: {'Found' if has_branch_protection else 'Not found'}"
+                f"Branch protection check for {dependency.name}: {protection_status}"
             )
             if has_branch_protection:
                 if github_protection["has_branch_protection"]:
@@ -381,11 +383,13 @@ def check_branch_protection(
                         github_protection.get("protection_details", [])
                     )
                     logger.info(
-                        f"Branch protection details for {dependency.name}: {details_str}"
+                        "Branch protection details for "
+                        f"{dependency.name}: {details_str}"
                     )
 
             logger.info(
-                f"Branch protection score for {dependency.name}: {branch_protection_score:.2f}"
+                "Branch protection score for "
+                f"{dependency.name}: {branch_protection_score:.2f}"
             )
             for issue in issues:
                 logger.info(f"Branch protection issue for {dependency.name}: {issue}")

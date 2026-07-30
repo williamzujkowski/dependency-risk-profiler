@@ -271,7 +271,8 @@ def identify_signed_commits_issues(
 
         if commit_signature_data["unverified_commits"] > 0:
             issues.append(
-                f"{commit_signature_data['unverified_commits']} recent commits have problematic signatures"
+                f"{commit_signature_data['unverified_commits']} recent commits "
+                "have problematic signatures"
             )
     else:
         issues.append("No commit history available for signature verification")
@@ -284,12 +285,14 @@ def identify_signed_commits_issues(
 
         if verified_ratio < 0.5:
             issues.append(
-                f"Less than half of recent release tags are signed ({verified_ratio:.0%})"
+                "Less than half of recent release tags are signed "
+                f"({verified_ratio:.0%})"
             )
 
         if tag_signature_data["unverified_tags"] > 0:
             issues.append(
-                f"{tag_signature_data['unverified_tags']} recent tags have problematic signatures"
+                f"{tag_signature_data['unverified_tags']} recent tags have "
+                "problematic signatures"
             )
     else:
         issues.append("No release tags found for signature verification")
@@ -373,15 +376,19 @@ def check_signed_commits(
                 dependency.additional_info["signature_data"] = str(signature_data)
 
             # Log results
-            logger.info(
-                f"Signed commits check for {dependency.name}: {'Found' if has_signed_commits else 'Not found'}"
-            )
+            signed_status = "Found" if has_signed_commits else "Not found"
+            logger.info(f"Signed commits check for {dependency.name}: {signed_status}")
             if has_signed_commits:
                 logger.info(
-                    f"Signed commits for {dependency.name}: Verified commits: {commit_signature_data['verified_commits']}/{commit_signature_data['total_commits']}, Tags: {tag_signature_data['verified_tags']}/{tag_signature_data['total_tags']}"
+                    f"Signed commits for {dependency.name}: "
+                    f"Verified commits: {commit_signature_data['verified_commits']}/"
+                    f"{commit_signature_data['total_commits']}, "
+                    f"Tags: {tag_signature_data['verified_tags']}/"
+                    f"{tag_signature_data['total_tags']}"
                 )
             logger.info(
-                f"Signed commits score for {dependency.name}: {signed_commits_score:.2f}"
+                "Signed commits score for "
+                f"{dependency.name}: {signed_commits_score:.2f}"
             )
             for issue in issues:
                 logger.info(f"Signed commits issue for {dependency.name}: {issue}")

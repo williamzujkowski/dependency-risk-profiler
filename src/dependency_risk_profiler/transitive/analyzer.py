@@ -87,7 +87,7 @@ def extract_python_dependencies(requirements_file: str) -> Dict[str, Set[str]]:
                                 pkg_name = line.split(";")[0].strip()
 
                         # Initialize empty dependencies
-                        # (would require inspecting the package to find real dependencies)
+                        # Real dependencies require inspecting the package.
                         dependency_map[pkg_name] = set()
     except Exception as e:
         logger.error(f"Error extracting Python dependencies: {e}")

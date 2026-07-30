@@ -3,7 +3,6 @@ import sys
 
 import pytest
 from _pytest import monkeypatch
-
 from flask import Flask
 from flask.globals import request_ctx
 

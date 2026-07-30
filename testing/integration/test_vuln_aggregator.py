@@ -70,14 +70,17 @@ def vuln_aggregator_test_func(
             print("\nVulnerability Details:")
             for i, vuln in enumerate(vulnerabilities, 1):
                 print(
-                    f"\n{i}. {vuln.get('id', 'Unknown ID')} ({vuln.get('source', 'Unknown Source')})"
+                    f"\n{i}. {vuln.get('id', 'Unknown ID')} "
+                    f"({vuln.get('source', 'Unknown Source')})"
                 )
                 print(
-                    f"   Severity: {vuln.get('severity', 'Unknown')} (CVSS: {vuln.get('cvss_score', 'N/A')})"
+                    f"   Severity: {vuln.get('severity', 'Unknown')} "
+                    f"(CVSS: {vuln.get('cvss_score', 'N/A')})"
                 )
                 print(f"   Published: {vuln.get('published', 'Unknown')}")
                 print(
-                    f"   Summary: {vuln.get('summary', 'No summary available')[:100]}..."
+                    "   Summary: "
+                    f"{vuln.get('summary', 'No summary available')[:100]}..."
                 )
                 if vuln.get("fixed_versions"):
                     print(f"   Fixed in: {', '.join(vuln.get('fixed_versions', []))}")
@@ -96,7 +99,7 @@ def vuln_aggregator_test_func(
 
 
 def main() -> int:
-    """Main function."""
+    """Run the vulnerability aggregator test harness."""
     parser = argparse.ArgumentParser(description="Test vulnerability aggregator")
 
     parser.add_argument("package_name", help="Name of the package to check")

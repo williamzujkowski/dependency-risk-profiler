@@ -31,6 +31,6 @@ This directory contains all documentation for the Dependency Risk Profiler proje
 ## Enhancements
 
 - [Enhancements Overview](enhancement/README.md) - Overview of planned enhancements
-- [Improvements](enhancement/Improvements.md) - Specific improvement tasks 
+- [Improvements](enhancement/Improvements.md) - Specific improvement tasks
 - [Enhancements v2](enhancement/ENHANCEMENTS2.md) - Version 2 enhancements
 - [Enhancements v3](enhancement/ENHANCEMENTS3.md) - Version 3 enhancements

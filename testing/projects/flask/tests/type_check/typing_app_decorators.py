@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from flask import Flask
-from flask import Response
+from flask import Flask, Response
 
 app = Flask(__name__)
 

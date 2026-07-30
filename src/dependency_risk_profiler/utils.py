@@ -178,9 +178,17 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
         Tuple of (has_tests, has_ci, has_contribution_guidelines).
     """
     repo_path = Path(repo_dir)
-    
+
     # Check for tests directory or test files
-    test_patterns = ["test/", "tests/", "spec/", "specs/", "*_test.py", "*_spec.js", "test_*.py"]
+    test_patterns = [
+        "test/",
+        "tests/",
+        "spec/",
+        "specs/",
+        "*_test.py",
+        "*_spec.js",
+        "test_*.py",
+    ]
     has_tests = False
     for pattern in test_patterns:
         if "*" in pattern:
@@ -231,7 +239,8 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
 def check_for_vulnerabilities(package_name: str, ecosystem: str) -> bool:
     """Check if a package has known vulnerabilities.
 
-    This is a simple placeholder that should be replaced with actual vulnerability checking.
+    This is a simple placeholder that should be replaced with actual
+    vulnerability checking.
     In a real implementation, this would query vulnerability databases.
 
     Args:
@@ -244,7 +253,7 @@ def check_for_vulnerabilities(package_name: str, ecosystem: str) -> bool:
     # This is a placeholder implementation
     # In a real implementation, this would query vulnerability databases
     # like OSV, GitHub Advisory, etc.
-    
+
     # For demonstration purposes, just check if the package name contains
     # known vulnerable library patterns
     vulnerable_patterns = ["log4j", "shelljs", "prototype", "lodash"]

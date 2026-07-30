@@ -2,7 +2,8 @@
 """
 Dependency Risk Profiler installer script.
 
-This script provides a modern, flexible way to install the Dependency Risk Profiler tool.
+This script provides a modern, flexible way to install the Dependency Risk
+Profiler tool.
 It supports development mode, pre-commit hooks, and various installation options.
 """
 import argparse
@@ -22,13 +23,15 @@ def check_python_version():
 
     if current_version < required_version:
         print(
-            f"Error: Python {required_version[0]}.{required_version[1]} or higher is required."
+            "Error: Python "
+            f"{required_version[0]}.{required_version[1]} or higher is required."
         )
         print(f"Current version is {current_version.major}.{current_version.minor}")
         return False
 
     print(
-        f"Python {current_version.major}.{current_version.minor} detected (required: >= {required_version[0]}.{required_version[1]})"
+        f"Python {current_version.major}.{current_version.minor} detected "
+        f"(required: >= {required_version[0]}.{required_version[1]})"
     )
     return True
 
@@ -84,7 +87,6 @@ def run_command(command, cwd=None, env=None, check=True):
 
 def install_package(venv_path=None, dev=True, editable=True):
     """Install the package with pip."""
-
     # Determine pip executable
     pip_exe = "pip"
     env = os.environ.copy()
@@ -176,7 +178,8 @@ def test_installation(venv_path=None):
         return True
     else:
         print(
-            "Warning: Installation test failed. The tool might not be correctly installed."
+            "Warning: Installation test failed. The tool might not be correctly "
+            "installed."
         )
         return False
 
@@ -310,7 +313,8 @@ def interactive_install():
             try:
                 reinstall = (
                     input(
-                        f"Virtual environment already exists at {venv_path}. Recreate? (y/n) [n]: "
+                        f"Virtual environment already exists at {venv_path}. "
+                        "Recreate? (y/n) [n]: "
                     )
                     .strip()
                     .lower()
@@ -343,7 +347,8 @@ def interactive_install():
             try:
                 reinstall = (
                     input(
-                        f"Virtual environment already exists at {venv_path}. Recreate? (y/n) [n]: "
+                        f"Virtual environment already exists at {venv_path}. "
+                        "Recreate? (y/n) [n]: "
                     )
                     .strip()
                     .lower()
@@ -368,7 +373,7 @@ def interactive_install():
 
 
 def main():
-    """Main entry point for the installer."""
+    """Run the installer."""
     args = parse_args()
 
     # Check Python version

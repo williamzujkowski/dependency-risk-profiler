@@ -1,7 +1,6 @@
 """Mock HTTP responses for testing."""
 
-import json
-from typing import Dict, List, Optional, Union
+from typing import Dict
 
 # GitHub API mock responses
 GITHUB_SECURITY_POLICY_RESPONSE = {
@@ -60,7 +59,7 @@ NPM_VULN_RESPONSE = {
             "affected_versions": "<=4.17.20",
             "patched_versions": ">=4.17.21",
         }
-    ]
+    ],
 }
 
 # PyPI vulnerability data mock
@@ -75,7 +74,7 @@ PYPI_VULN_RESPONSE = {
             "affected_versions": "<2.0.0",
             "patched_versions": ">=2.0.0",
         }
-    ]
+    ],
 }
 
 # Go vulnerability data mock
@@ -90,16 +89,16 @@ GO_VULN_RESPONSE = {
             "affected_versions": "<1.7.0",
             "patched_versions": ">=1.7.0",
         }
-    ]
+    ],
 }
 
 
 def get_mock_response(dependency_name: str) -> Dict:
     """Get mock vulnerability data for a dependency.
-    
+
     Args:
         dependency_name: Name of the dependency
-        
+
     Returns:
         Mock vulnerability data
     """

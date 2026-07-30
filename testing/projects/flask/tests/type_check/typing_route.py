@@ -3,9 +3,7 @@ from __future__ import annotations
 import typing as t
 from http import HTTPStatus
 
-from flask import Flask
-from flask import jsonify
-from flask import stream_template
+from flask import Flask, jsonify, stream_template
 from flask.templating import render_template
 from flask.views import View
 from flask.wrappers import Response

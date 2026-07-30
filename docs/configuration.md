@@ -142,7 +142,7 @@ You can fine-tune risk scoring to match your organization's risk tolerance:
 [scoring]
 # Custom scoring model
 vulnerability_weight = 0.5   # Higher weight for security issues
-maintenance_weight = 0.3    
+maintenance_weight = 0.3
 community_weight = 0.1
 license_weight = 0.1
 

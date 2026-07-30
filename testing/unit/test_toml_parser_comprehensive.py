@@ -2,11 +2,9 @@
 
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
-from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.toml import TomlParser
 
 
@@ -233,7 +231,7 @@ def test_flit_pyproject_parsing(flit_pyproject_toml):
     assert "celery" in dependencies
     assert dependencies["celery"].installed_version == ">=5.2.0"
 
-    # Check for dependency with extras - the name might contain extras or the parser might handle it differently
+    # Check dependency with extras; parsers may preserve or strip extras.
     assert "pydantic[email]" in dependencies or "pydantic" in dependencies
     if "pydantic[email]" in dependencies:
         assert dependencies["pydantic[email]"].installed_version == ">=1.9.0"
@@ -242,16 +240,6 @@ def test_flit_pyproject_parsing(flit_pyproject_toml):
             dependencies["pydantic"].installed_version.startswith(">=")
             or "[email]" in dependencies["pydantic"].installed_version
         )
-
-    # Check for test dependencies if they exist
-    test_deps = [
-        name
-        for name, dep in dependencies.items()
-        if (
-            "project.optional-dependencies.test" == dep.additional_info.get("section")
-            or "test" in dep.additional_info.get("groups", "")
-        )
-    ]
 
     # If we have test dependencies, verify them
     if "pytest" in dependencies:

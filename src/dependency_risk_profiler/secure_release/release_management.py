@@ -169,7 +169,7 @@ def bump_version(current_version: str, bump_type: VersionBumpType) -> str:
 
     except Exception as e:
         logger.error(f"Error bumping version {current_version}: {e}")
-        raise ValueError(f"Invalid version format: {current_version}")
+        raise ValueError(f"Invalid version format: {current_version}") from e
 
 
 def update_version_file(version_file: Union[str, Path], new_version: str) -> None:
@@ -232,7 +232,7 @@ def update_version_file(version_file: Union[str, Path], new_version: str) -> Non
 
     except Exception as e:
         logger.error(f"Error updating version in {version_file}: {e}")
-        raise ValueError(f"Failed to update version file: {e}")
+        raise ValueError(f"Failed to update version file: {e}") from e
 
 
 def build_artifact(
@@ -296,7 +296,7 @@ def build_artifact(
 
     except Exception as e:
         logger.error(f"Build failed: {e}")
-        raise ReleaseError(f"Failed to build artifact: {e}")
+        raise ReleaseError(f"Failed to build artifact: {e}") from e
 
 
 def generate_checksum(file_path: Union[str, Path], algorithm: str = "sha256") -> str:
@@ -325,7 +325,7 @@ def generate_checksum(file_path: Union[str, Path], algorithm: str = "sha256") ->
 
     except Exception as e:
         logger.error(f"Error generating checksum for {file_path}: {e}")
-        raise ReleaseError(f"Failed to generate checksum: {e}")
+        raise ReleaseError(f"Failed to generate checksum: {e}") from e
 
 
 def generate_release_notes(
@@ -501,7 +501,7 @@ def create_release(
 
     except Exception as e:
         logger.error(f"Release process failed: {e}")
-        raise ReleaseError(f"Failed to create release: {e}")
+        raise ReleaseError(f"Failed to create release: {e}") from e
 
 
 def main() -> int:

@@ -75,7 +75,7 @@ def test_mypy_ignores_are_effective():
             text=True,
         )
 
-        # For ignored modules, we should get return code 0 (success) even if they have errors
+        # Ignored modules should return 0 even if they have errors.
         assert (
             result.returncode == 0
         ), f"Module {module} should be ignored by mypy, error: {result.stderr}"
@@ -90,9 +90,6 @@ def test_non_ignored_modules_have_valid_types():
     This test is skipped by default as it's meant to be run manually when we're ready
     to enforce type annotations in specific modules.
     """
-    # Get the root directory
-    root_dir = Path(__file__).parent.parent.parent
-
     # List of modules that should NOT be ignored
     non_ignored_modules = [
         "dependency_risk_profiler.models",

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from flask import Flask
-from flask import Request
-from flask import request
+from flask import Flask, Request, request
 from flask.testing import FlaskClient
 
 

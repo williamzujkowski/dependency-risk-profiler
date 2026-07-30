@@ -21,13 +21,15 @@ def check_python_version():
 
     if current_version < required_version:
         print(
-            f"Error: Python {required_version[0]}.{required_version[1]} or higher is required."
+            "Error: Python "
+            f"{required_version[0]}.{required_version[1]} or higher is required."
         )
         print(f"Current version is {current_version.major}.{current_version.minor}")
         return False
 
     print(
-        f"Python {current_version.major}.{current_version.minor} detected (required: >= {required_version[0]}.{required_version[1]})"
+        f"Python {current_version.major}.{current_version.minor} detected "
+        f"(required: >= {required_version[0]}.{required_version[1]})"
     )
     return True
 
@@ -84,7 +86,7 @@ def test_installation(venv_path=None):
 
 
 def main():
-    """Main installer function."""
+    """Run the quick installer."""
     print("Dependency Risk Profiler Quick Installer")
     print("=======================================")
 
@@ -127,7 +129,8 @@ def main():
         if install_from_pypi(PACKAGE_NAME, venv_path):
             print("\nInstallation complete!")
             print(
-                f"Dependency Risk Profiler is now available in the virtual environment {venv_path}"
+                "Dependency Risk Profiler is now available in the virtual "
+                f"environment {venv_path}"
             )
             print("\nTo use it, activate the virtual environment first:")
 
@@ -145,10 +148,12 @@ def main():
         "  dependency-risk-profiler --manifest /path/to/requirements.txt --save-history"
     )
     print(
-        "  dependency-risk-profiler --manifest /path/to/requirements.txt --analyze-trends"
+        "  dependency-risk-profiler --manifest /path/to/requirements.txt "
+        "--analyze-trends"
     )
     print(
-        "  dependency-risk-profiler --manifest /path/to/requirements.txt --generate-graph"
+        "  dependency-risk-profiler --manifest /path/to/requirements.txt "
+        "--generate-graph"
     )
 
     print("\nEnhanced features:")

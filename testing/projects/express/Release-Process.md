@@ -191,9 +191,9 @@ $ npm publish
 ```
 
 > [!NOTE]
-> The version number to publish will be picked up automatically from 
+> The version number to publish will be picked up automatically from
 > package.json.
-          
+
 ### Step 7. Update documentation website
 
 The documentation website https://expressjs.com/ documents the current release version in various places. To update these, follow these steps:

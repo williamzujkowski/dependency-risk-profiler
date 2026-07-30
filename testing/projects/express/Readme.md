@@ -245,7 +245,7 @@ The original author of Express is [TJ Holowaychuk](https://github.com/tj)
   * [dakshkhetan](https://github.com/dakshkhetan) - **Daksh Khetan** (he/him)
   * [lucasraziel](https://github.com/lucasraziel) - **Lucas Soares Do Rego**
   * [mertcanaltin](https://github.com/mertcanaltin) - **Mert Can Altin**
-  
+
 </details>
 
 

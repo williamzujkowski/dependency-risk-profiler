@@ -1,10 +1,6 @@
-import pytest
-from werkzeug.exceptions import Forbidden
-from werkzeug.exceptions import HTTPException
-from werkzeug.exceptions import InternalServerError
-from werkzeug.exceptions import NotFound
-
 import flask
+import pytest
+from werkzeug.exceptions import Forbidden, HTTPException, InternalServerError, NotFound
 
 
 def test_error_handler_no_match(app, client):

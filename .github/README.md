@@ -17,7 +17,7 @@ The repository includes a custom CodeQL configuration to exclude test files and 
 
 If you're adapting this configuration for your own repository:
 1. Go to GitHub repository → Settings → Code security and analysis
-2. Enable "Advanced setup" for CodeQL Analysis 
+2. Enable "Advanced setup" for CodeQL Analysis
 3. Update the generated workflow to use the custom config file
 
 ### Dependabot Configuration

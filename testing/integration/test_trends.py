@@ -222,7 +222,7 @@ def generate_test_history(project_id: str, num_profiles: int = 5):
 
 
 def main():
-    """Main function."""
+    """Run the historical trends test harness."""
     parser = argparse.ArgumentParser(description="Test historical trends analysis")
 
     parser.add_argument(

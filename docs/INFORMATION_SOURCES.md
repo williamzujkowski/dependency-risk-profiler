@@ -23,7 +23,7 @@ Example API response structure:
   "version": "1.2.3",
   "deprecated": false,
   "repository": {
-    "type": "git", 
+    "type": "git",
     "url": "https://github.com/org/repo"
   },
   "time": {

@@ -1,7 +1,6 @@
 """Common analysis functions shared across different ecosystems."""
 
 import logging
-from typing import Optional, Tuple
 
 from ..utils import (
     check_for_vulnerabilities,

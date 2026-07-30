@@ -1,7 +1,5 @@
-from celery import Celery
-from celery import Task
-from flask import Flask
-from flask import render_template
+from celery import Celery, Task
+from flask import Flask, render_template
 
 
 def create_app() -> Flask:

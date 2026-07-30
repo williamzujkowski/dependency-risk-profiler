@@ -1,12 +1,9 @@
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
+from flask.json.tag import JSONTag, TaggedJSONSerializer
 from markupsafe import Markup
-
-from flask.json.tag import JSONTag
-from flask.json.tag import TaggedJSONSerializer
 
 
 @pytest.mark.parametrize(

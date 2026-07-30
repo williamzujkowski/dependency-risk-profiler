@@ -1,11 +1,10 @@
 import logging
 
+import flask
 import pytest
 import werkzeug.serving
 from jinja2 import TemplateNotFound
 from markupsafe import Markup
-
-import flask
 
 
 def test_context_processing(app, client):

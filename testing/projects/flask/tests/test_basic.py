@@ -5,21 +5,16 @@ import uuid
 import warnings
 import weakref
 from contextlib import nullcontext
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from platform import python_implementation
 
+import flask
 import pytest
 import werkzeug.serving
 from markupsafe import Markup
-from werkzeug.exceptions import BadRequest
-from werkzeug.exceptions import Forbidden
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 from werkzeug.http import parse_date
-from werkzeug.routing import BuildError
-from werkzeug.routing import RequestRedirect
-
-import flask
+from werkzeug.routing import BuildError, RequestRedirect
 
 require_cpython_gc = pytest.mark.skipif(
     python_implementation() != "CPython",
@@ -191,8 +186,7 @@ def test_url_mapping(app, client):
 
 
 def test_werkzeug_routing(app, client):
-    from werkzeug.routing import Rule
-    from werkzeug.routing import Submount
+    from werkzeug.routing import Rule, Submount
 
     app.url_map.add(
         Submount("/foo", [Rule("/bar", endpoint="bar"), Rule("/", endpoint="index")])
@@ -212,8 +206,7 @@ def test_werkzeug_routing(app, client):
 
 
 def test_endpoint_decorator(app, client):
-    from werkzeug.routing import Rule
-    from werkzeug.routing import Submount
+    from werkzeug.routing import Rule, Submount
 
     app.url_map.add(
         Submount("/foo", [Rule("/bar", endpoint="bar"), Rule("/", endpoint="index")])

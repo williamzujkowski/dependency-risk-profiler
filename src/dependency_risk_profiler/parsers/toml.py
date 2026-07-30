@@ -45,13 +45,13 @@ class TomlParser(BaseParser):
 
                 with open(self.manifest_path, "rb") as f:
                     return tomli.load(f)
-        except ImportError:
+        except ImportError as e:
             raise ValueError(
                 "TOML parsing requires tomli package for Python < 3.11. "
                 "Install with 'pip install tomli'"
-            )
+            ) from e
         except Exception as e:
-            raise ValueError(f"Error parsing TOML file: {e}")
+            raise ValueError(f"Error parsing TOML file: {e}") from e
 
     def _parse_pyproject_toml(self) -> Dict[str, DependencyMetadata]:
         """Parse a pyproject.toml file.
@@ -192,7 +192,7 @@ class TomlParser(BaseParser):
 
             return dependencies
         except Exception as e:
-            raise ValueError(f"Error parsing pyproject.toml: {e}")
+            raise ValueError(f"Error parsing pyproject.toml: {e}") from e
 
     def _parse_cargo_toml(self) -> Dict[str, DependencyMetadata]:
         """Parse a Cargo.toml file for Rust dependencies.
@@ -279,7 +279,7 @@ class TomlParser(BaseParser):
 
             return dependencies
         except Exception as e:
-            raise ValueError(f"Error parsing Cargo.toml: {e}")
+            raise ValueError(f"Error parsing Cargo.toml: {e}") from e
 
     def _parse_generic_toml(self) -> Dict[str, DependencyMetadata]:
         """Parse a generic TOML file looking for common dependency patterns.
@@ -365,7 +365,7 @@ class TomlParser(BaseParser):
 
             return dependencies
         except Exception as e:
-            raise ValueError(f"Error parsing generic TOML file: {e}")
+            raise ValueError(f"Error parsing generic TOML file: {e}") from e
 
     def _find_nested_dependency_sections(
         self, data: Dict, prefix: str = ""
@@ -489,11 +489,14 @@ class TomlParser(BaseParser):
             for source_type in ["git", "path", "url"]:
                 if source_type in version_info:
                     if "tag" in version_info:
-                        return f"{source_type}:{version_info[source_type]}@{version_info['tag']}"
+                        source = version_info[source_type]
+                        return f"{source_type}:{source}@{version_info['tag']}"
                     elif "branch" in version_info:
-                        return f"{source_type}:{version_info[source_type]}#{version_info['branch']}"
+                        source = version_info[source_type]
+                        return f"{source_type}:{source}#{version_info['branch']}"
                     elif "rev" in version_info:
-                        return f"{source_type}:{version_info[source_type]}@{version_info['rev']}"
+                        source = version_info[source_type]
+                        return f"{source_type}:{source}@{version_info['rev']}"
                     else:
                         return f"{source_type}:{version_info[source_type]}"
 

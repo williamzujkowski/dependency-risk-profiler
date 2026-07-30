@@ -34,7 +34,7 @@ def sample_nodejs_manifest() -> str:
         "node_modules/express": {
           "version": "4.17.1",
           "resolved": "https://registry.npmjs.org/express/-/express-4.17.1.tgz",
-          "integrity": "sha512-mHJ9O79RqluphRrcw2X/GTh3k9tVv8YcoyY4Kkh4WDMUYKRZUq0h1o0w2rrrxBqM7VoeUVqgb27xlEMXTnYt4g==",
+          "integrity": "sha512-express-test",
           "dependencies": {
             "accepts": "~1.3.7",
             "array-flatten": "1.1.1"
@@ -43,14 +43,14 @@ def sample_nodejs_manifest() -> str:
         "node_modules/lodash": {
           "version": "4.17.20",
           "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.20.tgz",
-          "integrity": "sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA=="
+          "integrity": "sha512-lodash-test"
         }
       },
       "dependencies": {
         "express": {
           "version": "4.17.1",
           "resolved": "https://registry.npmjs.org/express/-/express-4.17.1.tgz",
-          "integrity": "sha512-mHJ9O79RqluphRrcw2X/GTh3k9tVv8YcoyY4Kkh4WDMUYKRZUq0h1o0w2rrrxBqM7VoeUVqgb27xlEMXTnYt4g==",
+          "integrity": "sha512-express-test",
           "requires": {
             "accepts": "~1.3.7",
             "array-flatten": "1.1.1"
@@ -59,7 +59,7 @@ def sample_nodejs_manifest() -> str:
         "lodash": {
           "version": "4.17.20",
           "resolved": "https://registry.npmjs.org/lodash/-/lodash-4.17.20.tgz",
-          "integrity": "sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA=="
+          "integrity": "sha512-lodash-test"
         }
       }
     }
