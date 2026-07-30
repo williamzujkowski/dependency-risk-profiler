@@ -42,27 +42,30 @@ class BaseAnalyzer(ABC):
             An instance of the appropriate analyzer, or None if no analyzer matches.
         """
         try:
+            from .crates import CratesIOAnalyzer
             from .golang import GoAnalyzer
             from .nodejs import NodeJSAnalyzer
             from .python import PythonAnalyzer
-            
+
             if not ecosystem:
                 return None
-                
+
             ecosystem = ecosystem.lower().strip()
 
             if ecosystem == "nodejs":
                 return NodeJSAnalyzer()
-            elif ecosystem == "python":
+            elif ecosystem in ["python", "pyproject"]:
                 return PythonAnalyzer()
             elif ecosystem == "golang":
                 return GoAnalyzer()
+            elif ecosystem in ["cargo", "rust", "crates"]:
+                return CratesIOAnalyzer()
             elif ecosystem == "toml":
-                # Fallback to Python analyzer for toml files (pyproject.toml)
+                # Backward-compatible fallback for generic TOML files.
                 return PythonAnalyzer()
             else:
                 return None
-                
+
         except ImportError:
             # Handle the case where one of the analyzers can't be imported
             return None

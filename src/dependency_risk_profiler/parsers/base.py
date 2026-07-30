@@ -107,17 +107,32 @@ class BaseParser(ABC):
             ],
         )
 
-        # Register TOML parser
+        # Register TOML parsers with analyzer-specific ecosystems.
+        EcosystemRegistry.register_parser(
+            "pyproject",
+            TomlParser,
+            [
+                {"type": "filename", "pattern": "pyproject.toml"},
+            ],
+        )
+
+        EcosystemRegistry.register_parser(
+            "cargo",
+            TomlParser,
+            [
+                {"type": "filename", "pattern": "cargo.toml"},
+            ],
+        )
+
         EcosystemRegistry.register_parser(
             "toml",
             TomlParser,
             [
-                {"type": "filename", "pattern": "pyproject.toml"},
-                {"type": "filename", "pattern": "cargo.toml"},
                 {"type": "extension", "pattern": ".toml"},
             ],
         )
 
         logger.debug(
-            f"Initialized ecosystem registry with built-in parsers: {EcosystemRegistry.get_available_ecosystems()}"
+            "Initialized ecosystem registry with built-in parsers: "
+            f"{EcosystemRegistry.get_available_ecosystems()}"
         )

@@ -135,7 +135,11 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "python"
     elif file_name == "go.mod":
         return "golang"
-    elif file_name in ["pyproject.toml", "cargo.toml"] or file_name.endswith(".toml"):
+    elif file_name == "pyproject.toml":
+        return "pyproject"
+    elif file_name == "cargo.toml":
+        return "cargo"
+    elif file_name.endswith(".toml"):
         return "toml"
     else:
         return "unknown"
