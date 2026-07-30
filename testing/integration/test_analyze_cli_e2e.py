@@ -67,6 +67,13 @@ def _patch_offline_analysis(monkeypatch: MonkeyPatchFixture) -> None:
     )
 
 
+def _patch_history_dir(monkeypatch: MonkeyPatchFixture, history_dir: Path) -> None:
+    monkeypatch.setattr(
+        "dependency_risk_profiler.supply_chain.trends.DEFAULT_HISTORY_DIR",
+        str(history_dir),
+    )
+
+
 def _dependency_count(output: str) -> int:
     match = re.search(r"Total dependencies analyzed:\s*(\d+)", output)
     assert match, output
@@ -169,3 +176,116 @@ def test_analyze_json_stdout_is_valid_json_with_dependencies(
     payload = _parse_analyze_payload(result.stdout)
     assert payload["dependency_count"] >= 2
     assert {dep["name"] for dep in payload["dependencies"]} >= {"requests", "flask"}
+
+
+def test_analyze_generate_graph_writes_requested_graph_file(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """The analyze graph flag should invoke graph generation and write output."""
+    _patch_offline_analysis(monkeypatch)
+    requirements = tmp_path / "requirements.txt"
+    graph_file = tmp_path / "requirements_graph.json"
+    requirements.write_text("requests==2.31.0\nflask==2.0.0\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            str(requirements),
+            "--generate-graph",
+            str(graph_file),
+            "--graph-format",
+            "d3",
+            "--graph-depth",
+            "1",
+            "--disable-osv",
+            "--no-color",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Dependency graph saved to" in result.stdout
+    assert graph_file.exists()
+
+    decoded: object = json.loads(graph_file.read_text(encoding="utf-8"))
+    assert isinstance(decoded, dict)
+    nodes = decoded.get("nodes")
+    links = decoded.get("links")
+    assert isinstance(nodes, list)
+    assert isinstance(links, list)
+    assert {node["name"] for node in nodes if isinstance(node, dict)} >= {
+        "requests",
+        "flask",
+    }
+
+
+def test_analyze_save_history_persists_profile(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """The analyze history flag should save a scan under the trends history dir."""
+    _patch_offline_analysis(monkeypatch)
+    history_dir = tmp_path / "history"
+    _patch_history_dir(monkeypatch, history_dir)
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("requests==2.31.0\nflask==2.0.0\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            str(requirements),
+            "--save-history",
+            "--disable-osv",
+            "--no-color",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Scan results saved to historical data at" in result.stdout
+
+    history_files = list(history_dir.glob("*.json"))
+    assert len(history_files) == 1
+    decoded: object = json.loads(history_files[0].read_text(encoding="utf-8"))
+    assert isinstance(decoded, dict)
+    scans = decoded.get("scans")
+    assert isinstance(scans, dict)
+    assert len(scans) == 1
+
+
+def test_analyze_trends_prints_seeded_history(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """The analyze trends flag should read saved history and print trend data."""
+    _patch_offline_analysis(monkeypatch)
+    history_dir = tmp_path / "history"
+    _patch_history_dir(monkeypatch, history_dir)
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("requests==2.31.0\nflask==2.0.0\n", encoding="utf-8")
+
+    seed_result = runner.invoke(
+        app,
+        [
+            "analyze",
+            str(requirements),
+            "--save-history",
+            "--disable-osv",
+            "--no-color",
+        ],
+    )
+    assert seed_result.exit_code == 0, seed_result.output
+
+    result = runner.invoke(
+        app,
+        [
+            "analyze",
+            str(requirements),
+            "--analyze-trends",
+            "--disable-osv",
+            "--no-color",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Historical Trend Analysis:" in result.stdout
+    assert "Average Risk Score:" in result.stdout
+    assert "Scans Analyzed: 1" in result.stdout

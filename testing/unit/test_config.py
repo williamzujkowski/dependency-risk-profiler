@@ -129,8 +129,14 @@ maintainer = 0.3
             "maintainer_weight": 0.3,
             "github_token": "cli_token",
             "enable_nvd": True,
+            "generate_graph": True,
             "graph_format": "graphviz",
+            "graph_depth": 2,
+            "graph_output": "/tmp/dependencies.dot",
+            "save_history": True,
+            "analyze_trends": True,
             "trend_limit": 5,
+            "trend_visualization": "overall",
         }
 
         # Act
@@ -144,8 +150,14 @@ maintainer = 0.3
         assert config.get("scoring_weights", "maintainer") == 0.3
         assert config.get("vulnerability", "github_token") == "cli_token"
         assert config.get("vulnerability", "enable_nvd") is True
+        assert config.get("graph", "generate") is True
         assert config.get("graph", "format") == "graphviz"
+        assert config.get("graph", "depth") == 2
+        assert config.get("graph", "output") == "/tmp/dependencies.dot"
+        assert config.get("trends", "save_history") is True
+        assert config.get("trends", "analyze") is True
         assert config.get("trends", "limit") == 5
+        assert config.get("trends", "visualization") == "overall"
 
     def test_minimum_vulnerability_severity_from_args(self) -> None:
         """HYPOTHESIS: Config should store the vuln scoring severity threshold."""
