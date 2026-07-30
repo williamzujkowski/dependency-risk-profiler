@@ -118,7 +118,10 @@ def parse_args() -> argparse.Namespace:
         "--trend-limit",
         type=int,
         default=10,
-        help="Maximum number of historical scans to include in trend analysis. Defaults to 10.",
+        help=(
+            "Maximum number of historical scans to include in trend analysis. "
+            "Defaults to 10."
+        ),
     )
 
     trends_group.add_argument(
@@ -147,7 +150,10 @@ def parse_args() -> argparse.Namespace:
         "--graph-depth",
         type=int,
         default=3,
-        help="Maximum depth of transitive dependencies to include in the graph. Defaults to 3.",
+        help=(
+            "Maximum depth of transitive dependencies to include in the graph. "
+            "Defaults to 3."
+        ),
     )
 
     # Base risk factors
@@ -299,14 +305,18 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "python"
     elif file_name == "go.mod":
         return "golang"
-    elif file_name in ["pyproject.toml", "cargo.toml"] or file_name.endswith(".toml"):
+    elif file_name == "pyproject.toml":
+        return "pyproject"
+    elif file_name == "cargo.toml":
+        return "cargo"
+    elif file_name.endswith(".toml"):
         return "toml"
     else:
         return "unknown"
 
 
 def main() -> int:
-    """Main entry point for the command-line interface.
+    """Run the command-line interface.
 
     Returns:
         Exit code.
@@ -324,7 +334,8 @@ def main() -> int:
     # Check if manifest argument is provided
     if not args.manifest:
         print(
-            "Error: the --manifest argument is required unless --list-ecosystems is specified."
+            "Error: the --manifest argument is required unless "
+            "--list-ecosystems is specified."
         )
         print(
             "Run with --list-ecosystems to see all supported ecosystems and file types."
@@ -358,7 +369,8 @@ def main() -> int:
         if not analyzer:
             logger.error(f"Unsupported ecosystem: {ecosystem}")
             print(
-                f"\nThe ecosystem '{ecosystem}' was detected for {manifest_path}, but no analyzer is available for it."
+                f"\nThe ecosystem '{ecosystem}' was detected for {manifest_path}, "
+                "but no analyzer is available for it."
             )
             print("Please check if you have all required analyzers installed.")
             return 1
@@ -554,38 +566,49 @@ def main() -> int:
                     # Overall risk summary
                     avg_risk = trends["average_risk_over_time"]
                     print(
-                        f"  Average Risk Score: {avg_risk['average']:.2f}/5.0 ({avg_risk['trend']})"
+                        "  Average Risk Score: "
+                        f"{avg_risk['average']:.2f}/5.0 ({avg_risk['trend']})"
                     )
 
                     # Improving and deteriorating dependencies
                     print(
-                        f"  Improving Dependencies: {len(trends['improving_dependencies'])}"
+                        "  Improving Dependencies: "
+                        f"{len(trends['improving_dependencies'])}"
                     )
                     print(
-                        f"  Deteriorating Dependencies: {len(trends['deteriorating_dependencies'])}"
+                        "  Deteriorating Dependencies: "
+                        f"{len(trends['deteriorating_dependencies'])}"
                     )
 
                     # Period analyzed
                     print(
-                        f"  Analysis Period: {trends['analyzed_period']['start']} to {trends['analyzed_period']['end']}"
+                        "  Analysis Period: "
+                        f"{trends['analyzed_period']['start']} to "
+                        f"{trends['analyzed_period']['end']}"
                     )
                     print(
-                        f"  Scans Analyzed: {trends['analyzed_period']['scans_analyzed']}"
+                        "  Scans Analyzed: "
+                        f"{trends['analyzed_period']['scans_analyzed']}"
                     )
 
                     # Velocity metrics
                     if "velocity_metrics" in trends and trends["velocity_metrics"]:
                         vm = trends["velocity_metrics"]
                         print("\n  Dependency Velocity Metrics:")
-                        print(f"    New Dependencies: {vm.get('new_dependencies', 0)}")
                         print(
-                            f"    Updated Dependencies: {vm.get('updated_dependencies', 0)}"
+                            "    New Dependencies: " f"{vm.get('new_dependencies', 0)}"
                         )
                         print(
-                            f"    Removed Dependencies: {vm.get('removed_dependencies', 0)}"
+                            "    Updated Dependencies: "
+                            f"{vm.get('updated_dependencies', 0)}"
                         )
                         print(
-                            f"    Dependency Churn Rate: {vm.get('dependency_churn_rate', 0)} deps/day"
+                            "    Removed Dependencies: "
+                            f"{vm.get('removed_dependencies', 0)}"
+                        )
+                        print(
+                            "    Dependency Churn Rate: "
+                            f"{vm.get('dependency_churn_rate', 0)} deps/day"
                         )
 
             if args.trend_visualization:

@@ -224,8 +224,8 @@ class TestEcosystemFunctions:
             assert get_ecosystem_from_manifest("/path/to/requirements.txt") == "python"
             assert get_ecosystem_from_manifest("/path/to/Pipfile.lock") == "python"
             assert get_ecosystem_from_manifest("/path/to/go.mod") == "golang"
-            assert get_ecosystem_from_manifest("/path/to/pyproject.toml") == "toml"
-            assert get_ecosystem_from_manifest("/path/to/cargo.toml") == "toml"
+            assert get_ecosystem_from_manifest("/path/to/pyproject.toml") == "pyproject"
+            assert get_ecosystem_from_manifest("/path/to/cargo.toml") == "cargo"
             assert get_ecosystem_from_manifest("/path/to/config.toml") == "toml"
             assert get_ecosystem_from_manifest("/path/to/unknown.file") == "unknown"
 
