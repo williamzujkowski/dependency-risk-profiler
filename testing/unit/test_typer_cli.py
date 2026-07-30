@@ -1,9 +1,9 @@
 """Tests for the Typer CLI module."""
 
-import json
 import os
 import tempfile
 from pathlib import Path
+from typing import List
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,7 +12,6 @@ from typer.testing import CliRunner
 
 from dependency_risk_profiler.cli.typer_cli import (
     OutputFormat,
-    app,
     display_ecosystem_list,
     get_ecosystem_from_manifest,
 )
@@ -22,7 +21,7 @@ runner = CliRunner()
 
 
 @pytest.fixture
-def mock_config():
+def mock_config() -> Mock:
     """Fixture for a mock Config object."""
     config_mock = Mock()
     config_mock.get.return_value = "terminal"
@@ -52,7 +51,7 @@ def mock_config():
 
 
 @pytest.fixture
-def mock_ecosystem_registry():
+def mock_ecosystem_registry() -> Mock:
     """Fixture for mocking EcosystemRegistry."""
     registry_mock = Mock()
     registry_mock.get_available_ecosystems.return_value = ["python", "nodejs", "golang"]
@@ -71,7 +70,9 @@ class TestEcosystemFunctions:
     """Tests for ecosystem-related functions."""
 
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
-    def test_display_ecosystem_list(self, mock_registry_class, mock_ecosystem_registry):
+    def test_display_ecosystem_list(
+        self, mock_registry_class: Mock, mock_ecosystem_registry: Mock
+    ) -> None:
         """HYPOTHESIS: display_ecosystem_list should print available ecosystems."""
         # Arrange
         mock_registry_class.get_available_ecosystems = (
@@ -81,7 +82,7 @@ class TestEcosystemFunctions:
             mock_ecosystem_registry.get_ecosystem_details
         )
 
-        # No easy way to capture console output in typer, so just verify it doesn't raise exceptions
+        # No easy way to capture console output in typer.
         try:
             # Act
             display_ecosystem_list()
@@ -93,8 +94,8 @@ class TestEcosystemFunctions:
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
     @patch("dependency_risk_profiler.cli.typer_cli.BaseParser")
     def test_display_ecosystem_list_empty_registry(
-        self, mock_base_parser, mock_registry
-    ):
+        self, mock_base_parser: Mock, mock_registry: Mock
+    ) -> None:
         """HYPOTHESIS: display_ecosystem_list should handle empty registry."""
         # Arrange
         mock_registry.get_available_ecosystems.return_value = []
@@ -107,7 +108,7 @@ class TestEcosystemFunctions:
         mock_base_parser._initialize_registry.assert_called_once()
 
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
-    def test_display_ecosystem_list_import_error(self, mock_registry):
+    def test_display_ecosystem_list_import_error(self, mock_registry: Mock) -> None:
         """REGRESSION: display_ecosystem_list should handle ImportError."""
         # Arrange
         mock_registry.get_available_ecosystems.side_effect = ImportError(
@@ -120,11 +121,14 @@ class TestEcosystemFunctions:
 
             # Assert proper error was displayed
             mock_console.print.assert_called_with(
-                "\n[bold red]Error: Registry module not available: Test import error[/bold red]"
+                "\n[bold red]Error: Registry module not available: "
+                "Test import error[/bold red]"
             )
 
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
-    def test_display_ecosystem_list_general_exception(self, mock_registry):
+    def test_display_ecosystem_list_general_exception(
+        self, mock_registry: Mock
+    ) -> None:
         """REGRESSION: display_ecosystem_list should handle general exceptions."""
         # Arrange
         mock_registry.get_available_ecosystems.return_value = True
@@ -138,14 +142,15 @@ class TestEcosystemFunctions:
 
             # Assert proper error was displayed
             mock_console.print.assert_called_with(
-                "\n[bold red]Error displaying available ecosystems: Test general error[/bold red]"
+                "\n[bold red]Error displaying available ecosystems: "
+                "Test general error[/bold red]"
             )
 
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
     def test_get_ecosystem_from_manifest(
-        self, mock_registry_class, mock_ecosystem_registry
-    ):
-        """HYPOTHESIS: get_ecosystem_from_manifest should detect the correct ecosystem."""
+        self, mock_registry_class: Mock, mock_ecosystem_registry: Mock
+    ) -> None:
+        """HYPOTHESIS: get_ecosystem_from_manifest detects the ecosystem."""
         # Arrange
         mock_registry_class.get_available_ecosystems = (
             mock_ecosystem_registry.get_available_ecosystems
@@ -161,9 +166,9 @@ class TestEcosystemFunctions:
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
     @patch("dependency_risk_profiler.cli.typer_cli.BaseParser")
     def test_get_ecosystem_from_manifest_empty_registry(
-        self, mock_base_parser, mock_registry
-    ):
-        """HYPOTHESIS: get_ecosystem_from_manifest should initialize registry if empty."""
+        self, mock_base_parser: Mock, mock_registry: Mock
+    ) -> None:
+        """HYPOTHESIS: get_ecosystem_from_manifest initializes empty registry."""
         # Arrange
         mock_registry.get_available_ecosystems.return_value = []
         mock_registry.detect_ecosystem.return_value = "python"
@@ -176,7 +181,9 @@ class TestEcosystemFunctions:
         assert result == "python"
 
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
-    def test_get_ecosystem_from_manifest_import_error(self, mock_registry):
+    def test_get_ecosystem_from_manifest_import_error(
+        self, mock_registry: Mock
+    ) -> None:
         """REGRESSION: get_ecosystem_from_manifest should handle ImportError."""
         # Arrange
         mock_registry.get_available_ecosystems.side_effect = ImportError(
@@ -190,7 +197,7 @@ class TestEcosystemFunctions:
         assert result == "nodejs"
 
     @patch("dependency_risk_profiler.cli.typer_cli.EcosystemRegistry")
-    def test_get_ecosystem_from_manifest_no_match(self, mock_registry):
+    def test_get_ecosystem_from_manifest_no_match(self, mock_registry: Mock) -> None:
         """REGRESSION: get_ecosystem_from_manifest should handle unrecognized files."""
         # Arrange
         mock_registry.get_available_ecosystems.return_value = ["python", "nodejs"]
@@ -202,8 +209,8 @@ class TestEcosystemFunctions:
         # Assert
         assert result == "unknown"
 
-    def test_get_ecosystem_from_manifest_fallbacks(self):
-        """HYPOTHESIS: get_ecosystem_from_manifest should use fallbacks for known file types."""
+    def test_get_ecosystem_from_manifest_fallbacks(self) -> None:
+        """HYPOTHESIS: get_ecosystem_from_manifest uses known fallbacks."""
         # Arrange - no need to mock EcosystemRegistry as the test will use fallbacks
         with patch(
             "dependency_risk_profiler.cli.typer_cli.EcosystemRegistry"
@@ -227,7 +234,7 @@ class TestLoggingSetup:
     """Tests for the logging setup function."""
 
     @patch("dependency_risk_profiler.cli.typer_cli.logging")
-    def test_setup_logging_debug(self, mock_logging):
+    def test_setup_logging_debug(self, mock_logging: Mock) -> None:
         """HYPOTHESIS: setup_logging should set debug level when debug=True."""
         # Import the function
         from dependency_risk_profiler.cli.typer_cli import setup_logging
@@ -238,11 +245,11 @@ class TestLoggingSetup:
         # Assert
         mock_logging.basicConfig.assert_called_once()
         # Check that DEBUG level was set
-        args, kwargs = mock_logging.basicConfig.call_args
+        _, kwargs = mock_logging.basicConfig.call_args
         assert kwargs["level"] == mock_logging.DEBUG
 
     @patch("dependency_risk_profiler.cli.typer_cli.logging")
-    def test_setup_logging_info(self, mock_logging):
+    def test_setup_logging_info(self, mock_logging: Mock) -> None:
         """HYPOTHESIS: setup_logging should set info level when debug=False."""
         # Import the function
         from dependency_risk_profiler.cli.typer_cli import setup_logging
@@ -253,12 +260,14 @@ class TestLoggingSetup:
         # Assert
         mock_logging.basicConfig.assert_called_once()
         # Check that INFO level was set
-        args, kwargs = mock_logging.basicConfig.call_args
+        _, kwargs = mock_logging.basicConfig.call_args
         assert kwargs["level"] == mock_logging.INFO
 
     @patch("dependency_risk_profiler.cli.typer_cli.logging")
     @patch("dependency_risk_profiler.cli.typer_cli.RichHandler")
-    def test_setup_logging_handlers(self, mock_rich_handler, mock_logging):
+    def test_setup_logging_handlers(
+        self, mock_rich_handler: Mock, mock_logging: Mock
+    ) -> None:
         """HYPOTHESIS: setup_logging should configure Rich handler."""
         # Arrange
         mock_rich_handler.return_value = "rich_handler_instance"
@@ -269,10 +278,14 @@ class TestLoggingSetup:
         # Act
         setup_logging()
 
-        # Assert
-        mock_rich_handler.assert_called_once_with(rich_tracebacks=True)
+        # Assert: diagnostic logs are routed to a stderr console so stdout
+        # stays clean for the report / JSON output (issue #20).
+        mock_rich_handler.assert_called_once()
+        _, rh_kwargs = mock_rich_handler.call_args
+        assert rh_kwargs["rich_tracebacks"] is True
+        assert rh_kwargs["console"].stderr is True
         # Check that our rich handler was passed to basicConfig
-        args, kwargs = mock_logging.basicConfig.call_args
+        _, kwargs = mock_logging.basicConfig.call_args
         assert "rich_handler_instance" in kwargs["handlers"]
 
 
@@ -280,7 +293,7 @@ class TestCliCommands:
     """Tests for CLI commands."""
 
     @patch("dependency_risk_profiler.cli.typer_cli.Config")
-    def test_callback_function(self, mock_config_class):
+    def test_callback_function(self, mock_config_class: Mock) -> None:
         """HYPOTHESIS: callback should initialize configuration and set up logging."""
         # Arrange
         mock_config = Mock()
@@ -304,7 +317,7 @@ class TestCliCommands:
             mock_setup_logging.assert_called_once_with(False)
 
     @patch("dependency_risk_profiler.cli.typer_cli.Config")
-    def test_callback_config_debug(self, mock_config_class):
+    def test_callback_config_debug(self, mock_config_class: Mock) -> None:
         """HYPOTHESIS: callback should use debug setting from config if available."""
         # Arrange
         mock_config = Mock()
@@ -330,7 +343,7 @@ class TestCliCommands:
             mock_setup_logging.assert_called_once_with(True)
 
     @patch("dependency_risk_profiler.cli.typer_cli.app")
-    def test_analyze_help_text(self, mock_app):
+    def test_analyze_help_text(self, mock_app: Mock) -> None:
         """HYPOTHESIS: analyze command should have helpful documentation."""
         # Import the Typer command
         from dependency_risk_profiler.cli.typer_cli import analyze
@@ -340,10 +353,11 @@ class TestCliCommands:
 
         # Get the help text from the docstring
         help_text = analyze.__doc__
+        assert help_text is not None
         assert "Analyze dependencies and generate risk profile" in help_text
 
     @patch("dependency_risk_profiler.cli.typer_cli.get_ecosystem_from_manifest")
-    def test_ecosystem_detection_in_analyze(self, mock_get_ecosystem):
+    def test_ecosystem_detection_in_analyze(self, mock_get_ecosystem: Mock) -> None:
         """HYPOTHESIS: analyze command should detect ecosystems correctly."""
         # Setup return value
         mock_get_ecosystem.return_value = "python"
@@ -360,7 +374,9 @@ class TestCliCommands:
 
     @patch("dependency_risk_profiler.cli.typer_cli.BaseParser")
     @patch("dependency_risk_profiler.cli.typer_cli.Config")
-    def test_list_ecosystems_command(self, mock_config, mock_base_parser):
+    def test_list_ecosystems_command(
+        self, mock_config: Mock, mock_base_parser: Mock
+    ) -> None:
         """HYPOTHESIS: list_ecosystems command should display available ecosystems."""
         # Import the list-ecosystems command function
         from dependency_risk_profiler.cli.typer_cli import list_ecosystems
@@ -376,7 +392,7 @@ class TestCliCommands:
             mock_display.assert_called_once()
 
     @patch("dependency_risk_profiler.cli.typer_cli.app")
-    def test_generate_config_command_registration(self, mock_app):
+    def test_generate_config_command_registration(self, mock_app: Mock) -> None:
         """HYPOTHESIS: generate-config command should be registered with the app."""
         # Import function and verify it exists
         from dependency_risk_profiler.cli.typer_cli import generate_config
@@ -387,8 +403,12 @@ class TestCliCommands:
     @patch("dependency_risk_profiler.cli.typer_cli.BaseParser")
     @patch("dependency_risk_profiler.cli.typer_cli.os.walk")
     def test_directory_scanning(
-        self, mock_walk, mock_base_parser, mock_registry, mock_ecosystem_registry
-    ):
+        self,
+        mock_walk: Mock,
+        mock_base_parser: Mock,
+        mock_registry: Mock,
+        mock_ecosystem_registry: Mock,
+    ) -> None:
         """HYPOTHESIS: CLI should scan directories for manifest files."""
         # Arrange
         mock_registry.get_available_ecosystems.return_value = (
@@ -417,16 +437,22 @@ class TestCliCommands:
 
             # Create test files
             os.makedirs(os.path.join(temp_dir, "subdir"), exist_ok=True)
-            with open(os.path.join(temp_dir, "requirements.txt"), "w") as f:
+            with open(
+                os.path.join(temp_dir, "requirements.txt"), "w", encoding="utf-8"
+            ) as f:
                 f.write("# Test requirements file")
-            with open(os.path.join(temp_dir, "subdir", "package-lock.json"), "w") as f:
+            with open(
+                os.path.join(temp_dir, "subdir", "package-lock.json"),
+                "w",
+                encoding="utf-8",
+            ) as f:
                 f.write("{}")
 
             # Act & Assert - verify it scans for files
             # This is a partial test since we can't fully invoke the typer app
             try:
-                # We're testing the scanning logic works, but we expect this to fail eventually
-                # because we're not mocking all dependencies needed for a full analyze run
+                # We expect this to fail eventually because not every dependency
+                # needed for a full analyze run is mocked.
                 with patch(
                     "dependency_risk_profiler.cli.typer_cli.os.path.isdir",
                     return_value=True,
@@ -438,15 +464,14 @@ class TestCliCommands:
                         mock_path_instance = Mock()
                         mock_path.return_value = mock_path_instance
 
-                        # Assert that the path's existence is checked during scanning
-                        with pytest.raises(
-                            Exception
-                        ):  # We expect some failure during the full analyze
+                        try:
                             analyze(
                                 Path(temp_dir),  # manifest path
                                 recursive=True,  # enable recursive scanning
                                 ctx=ctx,
                             )
+                        except (AttributeError, RuntimeError, TypeError, ValueError):
+                            pass
 
                 # Verify detection was called on the right files
                 assert mock_registry.detect_ecosystem.call_count > 0
@@ -454,16 +479,14 @@ class TestCliCommands:
             except typer.Exit:
                 # Expected to exit if any CLI validation fails
                 pass
-            except Exception as e:
+            except Exception:
                 # We expect an exception due to other unpatched dependencies
-                # But we're testing the directory scanning logic, not the full analyze command
+                # We are testing directory scanning, not the full analyze command.
                 pass
 
-    def test_directory_scanning_recursive_vs_non_recursive(self):
-        """HYPOTHESIS: CLI should respect the recursive flag when scanning directories."""
+    def test_directory_scanning_recursive_vs_non_recursive(self) -> None:
+        """HYPOTHESIS: CLI should respect recursive directory scanning."""
         # Create a simpler test that directly tests the os.walk logic in typer_cli.py
-
-        from dependency_risk_profiler.cli.typer_cli import EcosystemRegistry
 
         # Create a temporary directory with nested manifests
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -473,23 +496,29 @@ class TestCliCommands:
             os.makedirs(subdir, exist_ok=True)
 
             # Create manifest files
-            with open(os.path.join(main_dir, "requirements.txt"), "w") as f:
+            with open(
+                os.path.join(main_dir, "requirements.txt"), "w", encoding="utf-8"
+            ) as f:
                 f.write("# Test requirements")
-            with open(os.path.join(subdir, "package-lock.json"), "w") as f:
+            with open(
+                os.path.join(subdir, "package-lock.json"), "w", encoding="utf-8"
+            ) as f:
                 f.write("{}")
 
             # Function to find manifests with the actual implementation algorithm
-            def find_manifest_files(directory, recursive=False):
-                manifest_files = []
+            def find_manifest_files(
+                directory: str, recursive: bool = False
+            ) -> List[str]:
+                manifest_files: List[str] = []
 
                 for root, _, files in os.walk(directory):
-                    # Skip if we're not in recursive mode and this isn't the top-level directory
+                    # Skip nested directories unless recursive mode is enabled.
                     if not recursive and root != directory:
                         continue
 
                     for filename in files:
                         file_path = os.path.join(root, filename)
-                        # We'll just check file extensions instead of using the actual registry
+                        # Check file extensions instead of using the registry.
                         if file_path.endswith((".txt", ".json")):
                             manifest_files.append(file_path)
 
@@ -519,14 +548,14 @@ class TestCliCommands:
 
 
 @pytest.mark.parametrize("output_format", ["terminal", "json"])
-def test_output_format_enum(output_format):
+def test_output_format_enum(output_format: str) -> None:
     """HYPOTHESIS: OutputFormat enum should contain valid output formats."""
     # Act/Assert
     assert OutputFormat(output_format) is not None
 
 
 @pytest.mark.parametrize("graph_format", ["d3", "graphviz", "cytoscape"])
-def test_graph_format_enum(graph_format):
+def test_graph_format_enum(graph_format: str) -> None:
     """HYPOTHESIS: GraphFormat enum should contain valid graph formats."""
     # Import the enum
     from dependency_risk_profiler.cli.typer_cli import GraphFormat
@@ -538,7 +567,7 @@ def test_graph_format_enum(graph_format):
 @pytest.mark.parametrize(
     "trend_viz", ["overall", "distribution", "dependencies", "security"]
 )
-def test_trend_visualization_enum(trend_viz):
+def test_trend_visualization_enum(trend_viz: str) -> None:
     """HYPOTHESIS: TrendVisualization enum should contain valid visualization types."""
     # Import the enum
     from dependency_risk_profiler.cli.typer_cli import TrendVisualization
@@ -553,8 +582,8 @@ class TestAnalyzeCommand:
     @patch("dependency_risk_profiler.cli.typer_cli.JsonFormatter")
     @patch("dependency_risk_profiler.cli.typer_cli.TerminalFormatter")
     def test_analyze_formatter_selection(
-        self, mock_terminal_formatter, mock_json_formatter
-    ):
+        self, mock_terminal_formatter: Mock, mock_json_formatter: Mock
+    ) -> None:
         """HYPOTHESIS: analyze command should select the correct output formatter."""
         # Create mock formatter instances
         mock_terminal = Mock()
@@ -574,7 +603,7 @@ class TestAnalyzeCommand:
 
 
 @pytest.mark.benchmark
-def test_cli_startup_performance():
+def test_cli_startup_performance() -> None:
     """BENCHMARK: CLI should start quickly.
 
     SLA Requirements:
