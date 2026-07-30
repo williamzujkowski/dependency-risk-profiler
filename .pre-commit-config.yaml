@@ -50,4 +50,4 @@ repos:
     hooks:
     -   id: bandit
         args: ["-r", "src/"]
-        exclude: ^(tests/|venv/|build/|dist/)
+        exclude: ^(testing/|tests/|venv/|build/|dist/)

@@ -5,7 +5,7 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import typer
 from rich.console import Console
@@ -14,7 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ..analyzers.base import BaseAnalyzer
 from ..config import Config
-from ..models import ProjectRiskProfile
+from ..models import DependencyMetadata, ProjectRiskProfile
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
 from ..scoring.risk_scorer import RiskScorer
@@ -70,7 +70,9 @@ def setup_logging(debug: bool = False) -> None:
         level=log_level,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True)],
+        # Route diagnostic logs to stderr so stdout carries only the report
+        # (or, in --output json mode, only valid JSON). See issue #20.
+        handlers=[RichHandler(rich_tracebacks=True, console=Console(stderr=True))],
     )
 
 
@@ -157,9 +159,7 @@ def callback(
         help="Enable debug logging",
     ),
 ) -> None:
-    """
-    Dependency Risk Profiler - A tool to evaluate the health and risk of a project's dependencies.
-    """
+    """Initialize Dependency Risk Profiler command configuration."""
     # Initialize configuration
     ctx.obj = Config(config_path)
 
@@ -419,12 +419,11 @@ def analyze(
             if not EcosystemRegistry.get_available_ecosystems():
                 BaseParser._initialize_registry()
 
-            console.print(
-                f"[bold]Scanning {'recursively' if recursive else 'directory'} for manifest files...[/bold]"
-            )
+            scan_mode = "recursively" if recursive else "directory"
+            console.print(f"[bold]Scanning {scan_mode} for manifest files...[/bold]")
 
             for root, _, files in os.walk(manifest_path):
-                # Skip if we're not in recursive mode and this isn't the top-level directory
+                # Skip nested directories unless recursive mode is enabled.
                 if not recursive and root != manifest_path:
                     continue
 
@@ -448,7 +447,8 @@ def analyze(
                 raise typer.Exit(code=0)
 
             console.print(
-                f"[bold green]Found {len(manifest_files)} manifest files to analyze[/bold green]"
+                "[bold green]Found "
+                f"{len(manifest_files)} manifest files to analyze[/bold green]"
             )
         else:
             # Single file mode
@@ -456,7 +456,7 @@ def analyze(
 
         # Track overall results and failures
         overall_results: List[ProjectRiskProfile] = []
-        failed_files: List[Dict[str, Any]] = []
+        failed_files: List[Dict[str, object]] = []
 
         # Process each manifest file
         for manifest_path in manifest_files:
@@ -477,7 +477,11 @@ def analyze(
                         progress.add_task("Parsing", total=None)
 
                         # Create an asyncio task with timeout
-                        async def parse_with_timeout():
+                        async def parse_with_timeout(
+                            manifest_path: str = manifest_path,
+                        ) -> Tuple[
+                            Optional[Dict[str, DependencyMetadata]], Optional[str]
+                        ]:
                             parser = BaseParser.get_parser_for_file(manifest_path)
                             if not parser:
                                 logger.error(
@@ -499,6 +503,8 @@ def analyze(
 
                         try:
                             loop = asyncio.get_event_loop()
+                            if loop.is_closed():
+                                raise RuntimeError("Event loop is closed")
                         except RuntimeError:
                             loop = asyncio.new_event_loop()
                             asyncio.set_event_loop(loop)
@@ -512,22 +518,27 @@ def analyze(
 
                             if error == "unsupported":
                                 console.print(
-                                    f"[bold yellow]Skipping unsupported file: {manifest_path}[/bold yellow]"
+                                    "[bold yellow]Skipping unsupported file: "
+                                    f"{manifest_path}[/bold yellow]"
                                 )
                                 continue
                             elif error == "empty":
                                 console.print(
-                                    f"[bold yellow]No dependencies found in {manifest_path}[/bold yellow]"
+                                    "[bold yellow]No dependencies found in "
+                                    f"{manifest_path}[/bold yellow]"
                                 )
                                 continue
 
                         except asyncio.TimeoutError:
                             logger.error(
-                                f"Analysis timed out after {timeout_seconds} seconds for {manifest_path}"
+                                "Analysis timed out after "
+                                f"{timeout_seconds} seconds for {manifest_path}"
                             )
                             console.print(
-                                f"[bold red]Analysis timed out after {timeout_seconds} seconds for {manifest_path}. "
-                                f"Try increasing the timeout with --timeout option or reducing the scope of analysis.[/bold red]"
+                                "[bold red]Analysis timed out after "
+                                f"{timeout_seconds} seconds for {manifest_path}. "
+                                "Try increasing the timeout with --timeout "
+                                "option or reducing the scope of analysis.[/bold red]"
                             )
                             # Add a record of the failed file to the summary
                             failed_file = {
@@ -539,21 +550,23 @@ def analyze(
 
                             # Log the error for debug
                             logger.debug(
-                                f"Added file to failed_files due to timeout: {manifest_path}"
+                                "Added file to failed_files due to timeout: "
+                                f"{manifest_path}"
                             )
                             logger.debug(
                                 f"Current failed_files count: {len(failed_files)}"
                             )
                             continue
                 except Exception as e:
-                    # Fall back to non-async if there's an issue with the async implementation
+                    # Fall back if there's an issue with the async implementation.
                     logger.warning(f"Falling back to non-async parsing due to: {e}")
 
                     parser = BaseParser.get_parser_for_file(manifest_path)
                     if not parser:
                         logger.error(f"Unsupported manifest file: {manifest_path}")
                         console.print(
-                            f"[bold yellow]Skipping unsupported file: {manifest_path}[/bold yellow]"
+                            "[bold yellow]Skipping unsupported file: "
+                            f"{manifest_path}[/bold yellow]"
                         )
                         # Add unsupported file to failed list
                         failed_file = {
@@ -567,7 +580,8 @@ def analyze(
                     if not dependencies:
                         logger.warning(f"No dependencies found in {manifest_path}")
                         console.print(
-                            f"[bold yellow]No dependencies found in {manifest_path}[/bold yellow]"
+                            "[bold yellow]No dependencies found in "
+                            f"{manifest_path}[/bold yellow]"
                         )
                         # Add empty file to failed list
                         failed_file = {
@@ -577,352 +591,368 @@ def analyze(
                         failed_files.append(failed_file)
                         continue
 
-                    logger.info(f"Found {len(dependencies)} dependencies")
+                logger.info(f"Found {len(dependencies)} dependencies")
 
-                    # Analyze dependencies
-                    ecosystem = get_ecosystem_from_manifest(manifest_path)
-                    analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(ecosystem)
-                    if not analyzer:
-                        logger.error(f"Unsupported ecosystem: {ecosystem}")
-                        console.print(
-                            f"[bold red]The ecosystem '{ecosystem}' was detected for {manifest_path}, but no analyzer is available for it.[/bold red]"
-                        )
-                        console.print(
-                            "Please check if you have all required analyzers installed."
-                        )
-                        continue
+                # Analyze dependencies
+                ecosystem = get_ecosystem_from_manifest(manifest_path)
+                analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(ecosystem)
+                if not analyzer:
+                    logger.error(f"Unsupported ecosystem: {ecosystem}")
+                    console.print(
+                        "[bold red]The ecosystem "
+                        f"'{ecosystem}' was detected for {manifest_path}, "
+                        "but no analyzer is available for it.[/bold red]"
+                    )
+                    console.print(
+                        "Please check if you have all required analyzers installed."
+                    )
+                    continue
 
-                    logger.info(f"Analyzing dependencies for {ecosystem}")
-                    dependencies = analyzer.analyze(dependencies)
+                logger.info(f"Analyzing dependencies for {ecosystem}")
+                dependencies = analyzer.analyze(dependencies)
 
-                    # Apply enhanced analyzers
-                    try:
-                        # Import enhanced analyzers
-                        from ..community.analyzer import analyze_community_metrics
-                        from ..license.analyzer import analyze_license
-                        from ..transitive.analyzer_enhanced import (
-                            analyze_transitive_dependencies_enhanced,
-                        )
-
-                        logger.info("Analyzing license information")
-                        # Apply license analysis to each dependency
-                        for name, dep in dependencies.items():
-                            if (
-                                hasattr(analyzer, "metadata_cache")
-                                and name in analyzer.metadata_cache
-                            ):
-                                dependencies[name] = analyze_license(
-                                    dep, analyzer.metadata_cache[name]
-                                )
-
-                        logger.info("Analyzing community metrics")
-                        # Apply community metrics analysis to each dependency
-                        for name, dep in dependencies.items():
-                            if (
-                                hasattr(analyzer, "metadata_cache")
-                                and name in analyzer.metadata_cache
-                            ):
-                                dependencies[name] = analyze_community_metrics(
-                                    dep, analyzer.metadata_cache[name]
-                                )
-                            else:
-                                dependencies[name] = analyze_community_metrics(dep)
-
-                        logger.info("Analyzing transitive dependencies")
-                        dependencies = analyze_transitive_dependencies_enhanced(
-                            dependencies, manifest_path
-                        )
-
-                        # Aggregate vulnerability data from multiple sources
-                        vuln_config = config.get_vulnerability_config()
-                        if (
-                            vuln_config.get("enable_osv")
-                            or vuln_config.get("enable_nvd")
-                            or vuln_config.get("enable_github_advisory")
-                        ):
-                            try:
-                                from ..vulnerabilities.aggregator_async import (
-                                    aggregate_vulnerability_data_async,
-                                )
-
-                                logger.info(
-                                    "Aggregating vulnerability data from multiple sources"
-                                )
-
-                                # Handle cache settings
-                                if vuln_config.get("disable_cache"):
-                                    # Set environment variable to disable cache
-                                    os.environ["DEPENDENCY_RISK_DISABLE_CACHE"] = "1"
-                                    logger.info(
-                                        "Vulnerability data caching is disabled"
-                                    )
-
-                                if vuln_config.get("clear_cache"):
-                                    try:
-                                        from ..vulnerabilities.cache import (
-                                            default_cache,
-                                        )
-
-                                        cleared = default_cache.clear()
-                                        logger.info(
-                                            f"Cleared {cleared} entries from vulnerability cache"
-                                        )
-                                    except ImportError:
-                                        logger.warning(
-                                            "Vulnerability cache module not available"
-                                        )
-
-                                # Configure API keys
-                                api_keys = config.get_api_keys()
-
-                                # Process dependencies
-                                updated_dependencies, vuln_counts = (
-                                    aggregate_vulnerability_data_async(
-                                        dependencies,
-                                        api_keys=api_keys,
-                                        enable_osv=vuln_config.get("enable_osv", True),
-                                        enable_nvd=vuln_config.get("enable_nvd", False),
-                                        enable_github=vuln_config.get(
-                                            "enable_github_advisory", False
-                                        ),
-                                    )
-                                )
-
-                                dependencies = updated_dependencies
-                                logger.info(
-                                    f"Found vulnerabilities in {len(vuln_counts)} dependencies"
-                                )
-
-                            except ImportError as e:
-                                logger.warning(
-                                    f"Async vulnerability aggregation not available: {e}"
-                                )
-                                # Fall back to synchronous implementation
-                                try:
-                                    from ..vulnerabilities.aggregator import (
-                                        aggregate_vulnerability_data,
-                                    )
-
-                                    # Process each dependency
-                                    for name, dep in dependencies.items():
-                                        try:
-                                            logger.debug(
-                                                f"Checking vulnerability data for {name}"
-                                            )
-                                            dependencies[name], vulns = (
-                                                aggregate_vulnerability_data(
-                                                    dep, api_keys
-                                                )
-                                            )
-                                            logger.debug(
-                                                f"Found {len(vulns)} vulnerabilities for {name}"
-                                            )
-                                        except Exception as e:
-                                            logger.warning(
-                                                f"Error aggregating vulnerability data for {name}: {e}"
-                                            )
-                                except ImportError as e:
-                                    logger.warning(
-                                        f"Vulnerability aggregation not available: {e}"
-                                    )
-
-                    except ImportError as e:
-                        logger.warning(f"Enhanced analyzers not available: {e}")
-                    except Exception as e:
-                        logger.error(f"Error during enhanced analysis: {e}")
-
-                    # Score dependencies
-                    logger.info("Scoring dependencies")
-                    scorer = RiskScorer(**config.get_scoring_weights())
-
-                    profile = scorer.create_project_profile(
-                        manifest_path, ecosystem, dependencies
+                # Apply enhanced analyzers
+                try:
+                    # Import enhanced analyzers
+                    from ..community.analyzer import analyze_community_metrics
+                    from ..license.analyzer import analyze_license
+                    from ..transitive.analyzer_enhanced import (
+                        analyze_transitive_dependencies_enhanced,
                     )
 
-                    # Format output
-                    use_color = config.get("general", "use_color", True)
-                    if config.get("general", "output_format") == "json":
-                        formatter = JsonFormatter()
-                    else:
-                        formatter = TerminalFormatter(color=use_color)
+                    logger.info("Analyzing license information")
+                    # Apply license analysis to each dependency
+                    for name, dep in dependencies.items():
+                        if (
+                            hasattr(analyzer, "metadata_cache")
+                            and name in analyzer.metadata_cache
+                        ):
+                            dependencies[name] = analyze_license(
+                                dep, analyzer.metadata_cache[name]
+                            )
 
-                    output = formatter.format_profile(profile)
+                    logger.info("Analyzing community metrics")
+                    # Apply community metrics analysis to each dependency
+                    for name, dep in dependencies.items():
+                        if (
+                            hasattr(analyzer, "metadata_cache")
+                            and name in analyzer.metadata_cache
+                        ):
+                            dependencies[name] = analyze_community_metrics(
+                                dep, analyzer.metadata_cache[name]
+                            )
+                        else:
+                            dependencies[name] = analyze_community_metrics(dep)
 
-                    # In multi-file mode, prefix with the manifest path
-                    if len(manifest_files) > 1:
-                        console.print(
-                            f"\n[bold blue]===== Results for {manifest_path} =====[/bold blue]"
-                        )
+                    logger.info("Analyzing transitive dependencies")
+                    dependencies = analyze_transitive_dependencies_enhanced(
+                        dependencies, manifest_path
+                    )
 
-                    console.print(output)
-
-                    # Save the profile to our results
-                    overall_results.append(profile)
-
-                    # Process supply chain visualization if requested
-                    if config.get("general", "generate_graph", False):
+                    # Aggregate vulnerability data from multiple sources
+                    vuln_config = config.get_vulnerability_config()
+                    if (
+                        vuln_config.get("enable_osv")
+                        or vuln_config.get("enable_nvd")
+                        or vuln_config.get("enable_github_advisory")
+                    ):
                         try:
-                            from ..supply_chain import generate_dependency_graph
+                            from ..vulnerabilities.aggregator_async import (
+                                aggregate_vulnerability_data_async,
+                            )
 
                             logger.info(
-                                f"Generating dependency graph in {config.get('graph', 'format')} format"
+                                "Aggregating vulnerability data from multiple "
+                                "sources"
                             )
 
-                            # Extract risk scores for graph coloring
-                            risk_scores = {}
-                            for dep in profile.dependencies:
-                                risk_scores[dep.dependency.name] = (
-                                    dep.total_score / 5.0
-                                )  # Normalize to 0-1
+                            # Handle cache settings
+                            if vuln_config.get("disable_cache"):
+                                # Set environment variable to disable cache
+                                os.environ["DEPENDENCY_RISK_DISABLE_CACHE"] = "1"
+                                logger.info("Vulnerability data caching is disabled")
 
-                            # Generate the graph
-                            graph_data = generate_dependency_graph(
-                                dependencies={
-                                    dep.dependency.name: dep.dependency
-                                    for dep in profile.dependencies
-                                },
-                                output_format=config.get("graph", "format"),
-                                risk_scores=risk_scores,
-                                depth_limit=config.get("graph", "depth"),
+                            if vuln_config.get("clear_cache"):
+                                try:
+                                    from ..vulnerabilities.cache import default_cache
+
+                                    cleared = default_cache.clear()
+                                    logger.info(
+                                        "Cleared "
+                                        f"{cleared} entries from vulnerability "
+                                        "cache"
+                                    )
+                                except ImportError:
+                                    logger.warning(
+                                        "Vulnerability cache module not available"
+                                    )
+
+                            # Configure API keys
+                            api_keys = config.get_api_keys()
+
+                            # Process dependencies
+                            updated_dependencies, vuln_counts = (
+                                aggregate_vulnerability_data_async(
+                                    dependencies,
+                                    api_keys=api_keys,
+                                    enable_osv=vuln_config.get("enable_osv", True),
+                                    enable_nvd=vuln_config.get("enable_nvd", False),
+                                    enable_github=vuln_config.get(
+                                        "enable_github_advisory", False
+                                    ),
+                                )
                             )
 
-                            # Determine output file name
-                            base_name = os.path.splitext(
-                                os.path.basename(manifest_path)
-                            )[0]
-                            graph_file = f"{base_name}_dependency_graph.json"
-
-                            # Save the graph data
-                            with open(graph_file, "w") as f:
-                                json.dump(graph_data, f, indent=2)
-
-                            logger.info(f"Dependency graph saved to {graph_file}")
-                            console.print(
-                                f"\n[bold green]Dependency graph saved to {graph_file}[/bold green]"
+                            dependencies = updated_dependencies
+                            logger.info(
+                                "Found vulnerabilities in "
+                                f"{len(vuln_counts)} dependencies"
                             )
 
                         except ImportError as e:
                             logger.warning(
-                                f"Supply chain visualization not available: {e}"
+                                "Async vulnerability aggregation not " f"available: {e}"
                             )
-                        except Exception as e:
-                            logger.error(f"Error generating dependency graph: {e}")
+                            # Fall back to synchronous implementation
+                            try:
+                                from ..vulnerabilities.aggregator import (
+                                    aggregate_vulnerability_data,
+                                )
 
-                    # Handle historical trends functionality
+                                # Process each dependency
+                                for name, dep in dependencies.items():
+                                    try:
+                                        logger.debug(
+                                            "Checking vulnerability data for " f"{name}"
+                                        )
+                                        dependencies[name], vulns = (
+                                            aggregate_vulnerability_data(dep, api_keys)
+                                        )
+                                        logger.debug(
+                                            "Found "
+                                            f"{len(vulns)} vulnerabilities for "
+                                            f"{name}"
+                                        )
+                                    except Exception as e:
+                                        logger.warning(
+                                            "Error aggregating vulnerability "
+                                            f"data for {name}: {e}"
+                                        )
+                            except ImportError as e:
+                                logger.warning(
+                                    f"Vulnerability aggregation not available: {e}"
+                                )
+
+                except ImportError as e:
+                    logger.warning(f"Enhanced analyzers not available: {e}")
+                except Exception as e:
+                    logger.error(f"Error during enhanced analysis: {e}")
+
+                # Score dependencies
+                logger.info("Scoring dependencies")
+                scorer = RiskScorer(**config.get_scoring_weights())
+
+                profile = scorer.create_project_profile(
+                    manifest_path, ecosystem, dependencies
+                )
+
+                # Format output
+                use_color = config.get("general", "use_color", True)
+                json_output = config.get("general", "output_format") == "json"
+                if json_output:
+                    formatter = JsonFormatter()
+                else:
+                    formatter = TerminalFormatter(color=use_color)
+
+                output = formatter.format_profile(profile)
+
+                # In multi-file mode, prefix with the manifest path
+                if not json_output and len(manifest_files) > 1:
+                    console.print(
+                        "\n[bold blue]===== Results for "
+                        f"{manifest_path} =====[/bold blue]"
+                    )
+
+                if json_output:
+                    print(output)
+                else:
+                    console.print(output)
+
+                # Save the profile to our results
+                overall_results.append(profile)
+
+                # Process supply chain visualization if requested
+                if config.get("general", "generate_graph", False):
                     try:
-                        if config.get("general", "save_history", False):
-                            from ..supply_chain import save_historical_profile
+                        from ..supply_chain import generate_dependency_graph
 
-                            logger.info("Saving scan results to historical data")
-                            history_path = save_historical_profile(profile)
-                            console.print(
-                                (
-                                    f"\n[bold green]Scan results saved to historical data at "
-                                    f"{history_path}[/bold green]"
-                                )
-                            )
+                        logger.info(
+                            "Generating dependency graph in "
+                            f"{config.get('graph', 'format')} format"
+                        )
 
-                        if config.get("general", "analyze_trends", False):
-                            from ..supply_chain import analyze_historical_trends
+                        # Extract risk scores for graph coloring
+                        risk_scores = {}
+                        for dep in profile.dependencies:
+                            risk_scores[dep.dependency.name] = (
+                                dep.total_score / 5.0
+                            )  # Normalize to 0-1
 
-                            logger.info("Analyzing historical trends")
-                            trends = analyze_historical_trends(
-                                profile.manifest_path, config.get("trends", "limit")
-                            )
+                        # Generate the graph
+                        graph_data = generate_dependency_graph(
+                            dependencies={
+                                dep.dependency.name: dep.dependency
+                                for dep in profile.dependencies
+                            },
+                            output_format=config.get("graph", "format"),
+                            risk_scores=risk_scores,
+                            depth_limit=config.get("graph", "depth"),
+                        )
 
-                            if "error" in trends:
-                                console.print(
-                                    f"\n[bold red]Trend analysis error: {trends['error']}[/bold red]"
-                                )
-                            else:
-                                # Output trend summary
-                                console.print(
-                                    "\n[bold]Historical Trend Analysis:[/bold]"
-                                )
+                        # Determine output file name
+                        base_name = os.path.splitext(os.path.basename(manifest_path))[0]
+                        graph_file = f"{base_name}_dependency_graph.json"
 
-                                # Overall risk summary
-                                avg_risk = trends["average_risk_over_time"]
-                                console.print(
-                                    f"  Average Risk Score: {avg_risk['average']:.2f}/5.0 ({avg_risk['trend']})"
-                                )
+                        # Save the graph data
+                        with open(graph_file, "w") as f:
+                            json.dump(graph_data, f, indent=2)
 
-                                # Improving and deteriorating dependencies
-                                console.print(
-                                    f"  Improving Dependencies: {len(trends['improving_dependencies'])}"
-                                )
-                                console.print(
-                                    f"  Deteriorating Dependencies: {len(trends['deteriorating_dependencies'])}"
-                                )
-
-                                # Period analyzed
-                                console.print(
-                                    f"  Analysis Period: {trends['analyzed_period']['start']} to {trends['analyzed_period']['end']}"
-                                )
-                                console.print(
-                                    f"  Scans Analyzed: {trends['analyzed_period']['scans_analyzed']}"
-                                )
-
-                                # Velocity metrics
-                                if (
-                                    "velocity_metrics" in trends
-                                    and trends["velocity_metrics"]
-                                ):
-                                    vm = trends["velocity_metrics"]
-                                    console.print(
-                                        "\n  [bold]Dependency Velocity Metrics:[/bold]"
-                                    )
-                                    console.print(
-                                        f"    New Dependencies: {vm.get('new_dependencies', 0)}"
-                                    )
-                                    console.print(
-                                        f"    Updated Dependencies: {vm.get('updated_dependencies', 0)}"
-                                    )
-                                    console.print(
-                                        f"    Removed Dependencies: {vm.get('removed_dependencies', 0)}"
-                                    )
-                                    console.print(
-                                        f"    Dependency Churn Rate: {vm.get('dependency_churn_rate', 0)} deps/day"
-                                    )
-
-                        if config.get("general", "trend_visualization"):
-                            from ..supply_chain import generate_trend_visualization
-
-                            viz_type = config.get("general", "trend_visualization")
-                            logger.info(
-                                f"Generating trend visualization for {viz_type}"
-                            )
-                            viz_data = generate_trend_visualization(
-                                profile.manifest_path,
-                                viz_type,
-                                config.get("trends", "limit"),
-                            )
-
-                            if "error" in viz_data:
-                                console.print(
-                                    f"\n[bold red]Visualization error: {viz_data['error']}[/bold red]"
-                                )
-                            else:
-                                # Determine output file name
-                                base_name = os.path.splitext(
-                                    os.path.basename(manifest_path)
-                                )[0]
-                                viz_file = f"{base_name}_{viz_type}_trend.json"
-
-                                # Save the visualization data
-                                with open(viz_file, "w") as f:
-                                    json.dump(viz_data, f, indent=2)
-
-                                logger.info(
-                                    f"Trend visualization data saved to {viz_file}"
-                                )
-                                console.print(
-                                    f"\n[bold green]Trend visualization data saved to {viz_file}[/bold green]"
-                                )
+                        logger.info(f"Dependency graph saved to {graph_file}")
+                        console.print(
+                            "\n[bold green]Dependency graph saved to "
+                            f"{graph_file}[/bold green]"
+                        )
 
                     except ImportError as e:
-                        logger.warning(f"Historical trends analysis not available: {e}")
+                        logger.warning(f"Supply chain visualization not available: {e}")
                     except Exception as e:
-                        logger.error(f"Error in historical trends analysis: {e}")
+                        logger.error(f"Error generating dependency graph: {e}")
+
+                # Handle historical trends functionality
+                try:
+                    if config.get("general", "save_history", False):
+                        from ..supply_chain import save_historical_profile
+
+                        logger.info("Saving scan results to historical data")
+                        history_path = save_historical_profile(profile)
+                        console.print(
+                            (
+                                "\n[bold green]Scan results saved to "
+                                "historical data at "
+                                f"{history_path}[/bold green]"
+                            )
+                        )
+
+                    if config.get("general", "analyze_trends", False):
+                        from ..supply_chain import analyze_historical_trends
+
+                        logger.info("Analyzing historical trends")
+                        trends = analyze_historical_trends(
+                            profile.manifest_path, config.get("trends", "limit")
+                        )
+
+                        if "error" in trends:
+                            console.print(
+                                "\n[bold red]Trend analysis error: "
+                                f"{trends['error']}[/bold red]"
+                            )
+                        else:
+                            # Output trend summary
+                            console.print("\n[bold]Historical Trend Analysis:[/bold]")
+
+                            # Overall risk summary
+                            avg_risk = trends["average_risk_over_time"]
+                            console.print(
+                                "  Average Risk Score: "
+                                f"{avg_risk['average']:.2f}/5.0 "
+                                f"({avg_risk['trend']})"
+                            )
+
+                            # Improving and deteriorating dependencies
+                            console.print(
+                                "  Improving Dependencies: "
+                                f"{len(trends['improving_dependencies'])}"
+                            )
+                            console.print(
+                                "  Deteriorating Dependencies: "
+                                f"{len(trends['deteriorating_dependencies'])}"
+                            )
+
+                            # Period analyzed
+                            console.print(
+                                "  Analysis Period: "
+                                f"{trends['analyzed_period']['start']} to "
+                                f"{trends['analyzed_period']['end']}"
+                            )
+                            console.print(
+                                "  Scans Analyzed: "
+                                f"{trends['analyzed_period']['scans_analyzed']}"
+                            )
+
+                            # Velocity metrics
+                            if (
+                                "velocity_metrics" in trends
+                                and trends["velocity_metrics"]
+                            ):
+                                vm = trends["velocity_metrics"]
+                                console.print(
+                                    "\n  [bold]Dependency Velocity Metrics:[/bold]"
+                                )
+                                console.print(
+                                    "    New Dependencies: "
+                                    f"{vm.get('new_dependencies', 0)}"
+                                )
+                                console.print(
+                                    "    Updated Dependencies: "
+                                    f"{vm.get('updated_dependencies', 0)}"
+                                )
+                                console.print(
+                                    "    Removed Dependencies: "
+                                    f"{vm.get('removed_dependencies', 0)}"
+                                )
+                                console.print(
+                                    "    Dependency Churn Rate: "
+                                    f"{vm.get('dependency_churn_rate', 0)} "
+                                    "deps/day"
+                                )
+
+                    if config.get("general", "trend_visualization"):
+                        from ..supply_chain import generate_trend_visualization
+
+                        viz_type = config.get("general", "trend_visualization")
+                        logger.info(f"Generating trend visualization for {viz_type}")
+                        viz_data = generate_trend_visualization(
+                            profile.manifest_path,
+                            viz_type,
+                            config.get("trends", "limit"),
+                        )
+
+                        if "error" in viz_data:
+                            console.print(
+                                "\n[bold red]Visualization error: "
+                                f"{viz_data['error']}[/bold red]"
+                            )
+                        else:
+                            # Determine output file name
+                            base_name = os.path.splitext(
+                                os.path.basename(manifest_path)
+                            )[0]
+                            viz_file = f"{base_name}_{viz_type}_trend.json"
+
+                            # Save the visualization data
+                            with open(viz_file, "w") as f:
+                                json.dump(viz_data, f, indent=2)
+
+                            logger.info(f"Trend visualization data saved to {viz_file}")
+                            console.print(
+                                "\n[bold green]Trend visualization data saved "
+                                f"to {viz_file}[/bold green]"
+                            )
+
+                except ImportError as e:
+                    logger.warning(f"Historical trends analysis not available: {e}")
+                except Exception as e:
+                    logger.error(f"Error in historical trends analysis: {e}")
 
             except Exception as e:
                 logger.error(f"Error processing {manifest_path}: {e}", exc_info=True)
@@ -938,7 +968,7 @@ def analyze(
                 failed_files.append(failed_file)
 
         # Display summary if manifest files were scanned
-        if len(manifest_files) > 0:
+        if len(manifest_files) > 0 and config.get("general", "output_format") != "json":
             console.print("\n[bold]======== Overall Summary ========[/bold]")
 
             # Calculate total dependencies and risk levels
@@ -980,7 +1010,8 @@ def analyze(
                     f"High risk dependencies: [bold red]{high_risk}[/bold red]"
                 )
                 console.print(
-                    f"Medium risk dependencies: [bold yellow]{medium_risk}[/bold yellow]"
+                    "Medium risk dependencies: "
+                    f"[bold yellow]{medium_risk}[/bold yellow]"
                 )
                 console.print(
                     f"Low risk dependencies: [bold green]{low_risk}[/bold green]"
@@ -1003,7 +1034,10 @@ def analyze(
                         else "yellow" if profile.overall_risk_score > 2.0 else "green"
                     )
                     console.print(
-                        f"{i}. [bold]{profile.manifest_path}[/bold]: [{risk_color}]{profile.overall_risk_score:.2f}/5.0[/{risk_color}] ({len(profile.dependencies)} dependencies)"
+                        f"{i}. [bold]{profile.manifest_path}[/bold]: "
+                        f"[{risk_color}]{profile.overall_risk_score:.2f}/5.0"
+                        f"[/{risk_color}] "
+                        f"({len(profile.dependencies)} dependencies)"
                     )
 
                 if len(sorted_results) > 5:
@@ -1014,16 +1048,19 @@ def analyze(
                 console.print("\n[bold red]Files that failed analysis:[/bold red]")
                 logger.debug(f"Failed files: {len(failed_files)}")
 
-                # Print failed files directly to console when debugging to diagnose issues
+                # Print failed files directly when debugging to diagnose issues.
                 for f in failed_files:
                     logger.debug(f"Failed file: {f}")
 
                 # Track failure reasons
-                failure_reasons = {}
+                failure_reasons: Dict[str, List[Dict[str, object]]] = {}
 
                 # Group by failure reason
                 for failed in failed_files:
-                    reason = failed.get("reason", "unknown")
+                    reason_value = failed.get("reason", "unknown")
+                    reason = (
+                        reason_value if isinstance(reason_value, str) else "unknown"
+                    )
                     if reason not in failure_reasons:
                         failure_reasons[reason] = []
                     failure_reasons[reason].append(failed)
@@ -1032,7 +1069,8 @@ def analyze(
                 for reason, files in failure_reasons.items():
                     if reason == "timeout":
                         console.print(
-                            f"  [bold yellow]Timed out[/bold yellow]: {len(files)} file(s)"
+                            "  [bold yellow]Timed out[/bold yellow]: "
+                            f"{len(files)} file(s)"
                         )
                         for f in files[:3]:  # Show first 3
                             timeout = f.get("timeout", "unknown")
@@ -1041,13 +1079,15 @@ def analyze(
                             )
                     elif reason == "empty":
                         console.print(
-                            f"  [bold blue]No dependencies[/bold blue]: {len(files)} file(s)"
+                            "  [bold blue]No dependencies[/bold blue]: "
+                            f"{len(files)} file(s)"
                         )
                         for f in files[:3]:  # Show first 3
                             console.print(f"    - {f['manifest_path']}")
                     elif reason == "unsupported":
                         console.print(
-                            f"  [bold magenta]Unsupported format[/bold magenta]: {len(files)} file(s)"
+                            "  [bold magenta]Unsupported format[/bold magenta]: "
+                            f"{len(files)} file(s)"
                         )
                         for f in files[:3]:  # Show first 3
                             console.print(f"    - {f['manifest_path']}")
@@ -1066,13 +1106,14 @@ def analyze(
                 # Show tip for timeouts
                 if "timeout" in failure_reasons:
                     console.print(
-                        "\n[italic]Tip: Use --timeout option to increase timeout for slow-to-analyze files.[/italic]"
+                        "\n[italic]Tip: Use --timeout option to increase timeout "
+                        "for slow-to-analyze files.[/italic]"
                     )
 
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)
         console.print(f"[bold red]Error: {e}[/bold red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 @app.command("list-ecosystems")
@@ -1101,7 +1142,8 @@ def generate_config(
     config = get_config()
     if config.generate_sample_config(output_path, format):
         console.print(
-            f"[bold green]Sample configuration file generated at {output_path}[/bold green]"
+            "[bold green]Sample configuration file generated at "
+            f"{output_path}[/bold green]"
         )
     else:
         console.print(
@@ -1126,7 +1168,9 @@ if __name__ == "__main__":
     #     return await asyncio.sleep(2)
     # try:
     #     loop = asyncio.get_event_loop()
-    #     loop.run_until_complete(asyncio.wait_for(parse_test(), timeout=timeout_seconds))
+    #     loop.run_until_complete(
+    #         asyncio.wait_for(parse_test(), timeout=timeout_seconds)
+    #     )
     # except asyncio.TimeoutError:
     #     print(f"Timeout detected after {timeout_seconds} seconds")
     #     # This works, so our async code should be working!
