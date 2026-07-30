@@ -269,6 +269,16 @@ def parse_args() -> argparse.Namespace:
         help="Clear the vulnerability cache before running.",
     )
 
+    vuln_group.add_argument(
+        "--minimum-vulnerability-severity",
+        choices=["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
+        default="LOW",
+        help=(
+            "Minimum vulnerability severity that counts toward scoring. "
+            "Defaults to LOW."
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -451,7 +461,7 @@ def main() -> int:
                         try:
                             logger.debug(f"Checking vulnerability data for {name}")
                             dependencies[name], vulns = aggregate_vulnerability_data(
-                                dep, api_keys
+                                dep, api_keys, args.minimum_vulnerability_severity
                             )
                             logger.debug(
                                 f"Found {len(vulns)} vulnerabilities for {name}"

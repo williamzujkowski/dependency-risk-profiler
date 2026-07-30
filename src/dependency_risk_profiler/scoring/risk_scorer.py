@@ -15,6 +15,10 @@ from ..models import (
     RiskLevel,
     SecurityMetrics,
 )
+from ..vulnerabilities.aggregator import (
+    exploit_score_from_cvss,
+    exploit_score_from_severity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +99,9 @@ class RiskScorer:
         staleness_score = self._calculate_staleness_score(dependency.last_updated)
         maintainer_score = self._calculate_maintainer_score(dependency.maintainer_count)
         deprecation_score = self._calculate_deprecation_score(dependency.is_deprecated)
-        exploit_score = self._calculate_exploit_score(dependency.has_known_exploits)
+        exploit_score = self._calculate_exploit_score(
+            dependency.has_known_exploits, dependency.security_metrics
+        )
         version_score = self._calculate_version_difference_score(
             dependency.installed_version, dependency.latest_version
         )
@@ -366,15 +372,36 @@ class RiskScorer:
         """
         return 1.0 if is_deprecated else 0.0
 
-    def _calculate_exploit_score(self, has_known_exploits: bool) -> float:
+    def _calculate_exploit_score(
+        self,
+        has_known_exploits: bool,
+        security_metrics: Optional[SecurityMetrics] = None,
+    ) -> float:
         """Calculate exploit score.
 
         Args:
             has_known_exploits: Whether the dependency has known exploits.
+            security_metrics: Optional vulnerability metrics from aggregation.
 
         Returns:
-            Exploit score of 0.0 or 1.0.
+            Exploit score between 0.0 and 1.0.
         """
+        if security_metrics is not None:
+            counted_count = security_metrics.counted_vulnerability_count
+            if counted_count is not None:
+                if counted_count == 0:
+                    return 0.0
+
+                if security_metrics.max_cvss_score is not None:
+                    return exploit_score_from_cvss(security_metrics.max_cvss_score)
+
+                if security_metrics.max_vulnerability_severity is not None:
+                    return exploit_score_from_severity(
+                        security_metrics.max_vulnerability_severity
+                    )
+
+                return 0.0
+
         return 1.0 if has_known_exploits else 0.0
 
     def _calculate_version_difference_score(
@@ -792,7 +819,18 @@ class RiskScorer:
             factors.append("Deprecated")
 
         if exploit_score and exploit_score > 0:
-            factors.append("Known security issues")
+            if dependency.security_metrics:
+                counted_count = dependency.security_metrics.counted_vulnerability_count
+                max_severity = dependency.security_metrics.max_vulnerability_severity
+                if counted_count is not None and max_severity is not None:
+                    factors.append(
+                        f"Known security issues ({counted_count} counted, "
+                        f"max severity {max_severity})"
+                    )
+                else:
+                    factors.append("Known security issues")
+            else:
+                factors.append("Known security issues")
 
         if version_score and version_score > 0.5:
             factors.append(

@@ -59,6 +59,16 @@ class TrendVisualization(str, Enum):
     SECURITY = "security"
 
 
+class VulnerabilitySeverity(str, Enum):
+    """Minimum vulnerability severity for scoring."""
+
+    INFO = "INFO"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
 def setup_logging(debug: bool = False) -> None:
     """Set up logging with rich handler.
 
@@ -313,6 +323,11 @@ def analyze(
         "--clear-cache",
         help="Clear the vulnerability cache before running",
     ),
+    minimum_vulnerability_severity: VulnerabilitySeverity = typer.Option(
+        "LOW",
+        "--minimum-vulnerability-severity",
+        help="Minimum vulnerability severity that counts toward scoring",
+    ),
     # Supply chain visualization options
     generate_graph: bool = typer.Option(
         False,
@@ -381,6 +396,7 @@ def analyze(
         "nvd_api_key": nvd_api_key,
         "no_cache": no_cache,
         "clear_cache": clear_cache,
+        "minimum_vulnerability_severity": minimum_vulnerability_severity.value,
         "generate_graph": generate_graph,
         "graph_format": graph_format.value if graph_format else None,
         "graph_depth": graph_depth,
@@ -704,6 +720,9 @@ def analyze(
                                     enable_github=vuln_config.get(
                                         "enable_github_advisory", False
                                     ),
+                                    minimum_severity=vuln_config.get(
+                                        "minimum_severity_for_scoring", "LOW"
+                                    ),
                                 )
                             )
 
@@ -730,7 +749,14 @@ def analyze(
                                             "Checking vulnerability data for " f"{name}"
                                         )
                                         dependencies[name], vulns = (
-                                            aggregate_vulnerability_data(dep, api_keys)
+                                            aggregate_vulnerability_data(
+                                                dep,
+                                                api_keys,
+                                                vuln_config.get(
+                                                    "minimum_severity_for_scoring",
+                                                    "LOW",
+                                                ),
+                                            )
                                         )
                                         logger.debug(
                                             "Found "

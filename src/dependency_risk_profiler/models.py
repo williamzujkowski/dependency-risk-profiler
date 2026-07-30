@@ -73,6 +73,11 @@ class SecurityMetrics:
     vulnerability_count: Optional[int] = None  # Number of known vulnerabilities
     fixed_vulnerability_count: Optional[int] = None  # Number of fixed vulnerabilities
     max_cvss_score: Optional[float] = None  # Maximum CVSS score of vulnerabilities
+    counted_vulnerability_count: Optional[int] = None
+    filtered_vulnerability_count: Optional[int] = None
+    filtered_vulnerability_reasons: Dict[str, int] = field(default_factory=dict)
+    max_vulnerability_severity: Optional[str] = None
+    vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
     average_time_to_fix_days: Optional[float] = (
         None  # Average days to fix vulnerabilities
     )
