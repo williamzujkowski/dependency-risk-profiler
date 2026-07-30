@@ -1,173 +1,130 @@
 # Basic Usage
 
-This guide covers the essential commands and workflows for using Dependency Risk Profiler.
-
-## Command Line Interface
-
-Dependency Risk Profiler provides a comprehensive command-line interface (CLI) for analyzing projects.
-
-### Available Commands
+The CLI has three commands:
 
 ```bash
-# Show help and available commands
 dependency-risk-profiler --help
-
-# List supported ecosystems
+dependency-risk-profiler analyze --help
 dependency-risk-profiler list-ecosystems
-
-# Analyze a project
-dependency-risk-profiler analyze path/to/project
-
-# Generate a sample configuration file
-dependency-risk-profiler generate-config --format toml
+dependency-risk-profiler generate-config dependency-risk-profiler.toml
 ```
 
-## Analyzing Projects
+## Analyze One Manifest
 
-The core functionality is provided by the `analyze` command:
-
-```bash
-dependency-risk-profiler analyze [OPTIONS] PATH
-```
-
-### Common Options
-
-- `--ecosystem TEXT`: Specify the ecosystem (python, nodejs, golang)
-- `--output-format [terminal|json]`: Output format (default: terminal)
-- `--config PATH`: Path to configuration file
-- `--output PATH`: Write output to file
-- `--verbose / --quiet`: Control log verbosity
-
-### Examples
+Pass the manifest path as a positional argument:
 
 ```bash
-# Basic analysis with auto-detection
-dependency-risk-profiler analyze .
-
-# Specify ecosystem explicitly
-dependency-risk-profiler analyze --ecosystem python .
-
-# Output results as JSON
-dependency-risk-profiler analyze --output-format json .
-
-# Write results to a file
-dependency-risk-profiler analyze --output results.json .
-
-# Use a custom configuration
-dependency-risk-profiler analyze --config my-config.toml .
-
-# Analyze a specific manifest file
 dependency-risk-profiler analyze requirements.txt
 ```
 
-## Analyzing Multiple Projects
+Supported formats are detected from the file name and contents.
 
-To analyze multiple projects or compare different dependency files:
+## JSON Output
 
-```bash
-# Analyze all Python projects in a directory
-dependency-risk-profiler analyze --recursive .
-
-# Analyze specific files
-dependency-risk-profiler analyze package.json requirements.txt go.mod
-```
-
-## Working with Results
-
-The analysis results can be used in various ways:
-
-### Terminal Output
-
-By default, results are displayed in a formatted terminal output:
-
-```
-Project Risk Analysis: my-project
---------------------------------
-Overall Risk Score: 0.65 (MEDIUM)
-
-Risk Categories:
-  Vulnerability: 0.8 (HIGH)
-  Maintenance:   0.4 (LOW)
-  Community:     0.6 (MEDIUM)
-  License:       0.3 (LOW)
-
-High Risk Dependencies:
-  outdated-pkg (0.9.2): 3 critical vulnerabilities
-  abandoned-lib (1.0.0): No updates in 32 months
-```
-
-### JSON Output
-
-For programmatic use or further processing, use the JSON output format:
+Use `--output json` when another tool needs to consume the result:
 
 ```bash
-dependency-risk-profiler analyze --output-format json . > results.json
+dependency-risk-profiler analyze requirements.txt --output json
 ```
 
-This produces structured data that can be processed by other tools:
+## Recursive Directory Scans
 
-```json
-{
-  "project": "my-project",
-  "timestamp": "2025-04-18T12:34:56Z",
-  "overall_risk": {
-    "score": 0.65,
-    "level": "MEDIUM"
-  },
-  "categories": {
-    "vulnerability": {"score": 0.8, "level": "HIGH"},
-    "maintenance": {"score": 0.4, "level": "LOW"},
-    "community": {"score": 0.6, "level": "MEDIUM"},
-    "license": {"score": 0.3, "level": "LOW"}
-  },
-  "dependencies": [
-    {
-      "name": "outdated-pkg",
-      "version": "0.9.2",
-      "risk_score": 0.9,
-      "risk_level": "HIGH",
-      "issues": ["3 critical vulnerabilities"]
-    },
-    // More dependencies...
-  ]
-}
-```
-
-## Visualizing Dependencies
-
-To visualize dependency relationships and risks:
+Use `--recursive` to scan supported manifests under a directory:
 
 ```bash
-dependency-risk-profiler analyze path/to/requirements.txt --generate-graph
-
-# Write graph data to a specific file
-dependency-risk-profiler analyze path/to/requirements.txt --generate-graph graph.json
-
-# Output as different graph data formats
-dependency-risk-profiler analyze path/to/requirements.txt --generate-graph graph.json --graph-format d3
-dependency-risk-profiler analyze path/to/requirements.txt --generate-graph graph.dot --graph-format graphviz
+dependency-risk-profiler analyze path/to/project --recursive
 ```
 
-## Tracking Trends Over Time
+Without `--recursive`, directory analysis only checks the provided directory level.
 
-To track how dependency risks change over time:
+## Dependency Graph Data
+
+Generate graph data during analysis:
 
 ```bash
-# Generate initial trend data
-dependency-risk-profiler analyze path/to/requirements.txt --save-history
-
-# After some time/changes, update trends
-dependency-risk-profiler analyze path/to/requirements.txt --save-history
-
-# Analyze saved trend data
-dependency-risk-profiler analyze path/to/requirements.txt --analyze-trends
-
-# Generate visualization data for a trend type
-dependency-risk-profiler analyze path/to/requirements.txt --trend-visualization overall
+dependency-risk-profiler analyze requirements.txt --generate-graph out.json --graph-format d3
 ```
+
+Available graph formats are `d3`, `graphviz`, and `cytoscape`.
+
+For Graphviz DOT output, use a `.dot` path:
+
+```bash
+dependency-risk-profiler analyze go.mod --generate-graph graph.dot --graph-format graphviz
+```
+
+## Trends
+
+Save a scan to local history:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --save-history
+```
+
+Analyze saved history:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --analyze-trends
+```
+
+Limit the number of historical scans used:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --analyze-trends --trend-limit 5
+```
+
+Generate trend visualization data:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --trend-visualization overall
+```
+
+Trend visualization types are `overall`, `distribution`, `dependencies`, and `security`.
+
+## Vulnerability Sources And Noise Filtering
+
+OSV is enabled by default. NVD and GitHub Advisory data can be enabled when needed:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --enable-nvd
+dependency-risk-profiler analyze requirements.txt --enable-github-advisory --github-token "$GITHUB_TOKEN"
+```
+
+Control which advisory severities affect scoring:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --minimum-vulnerability-severity MEDIUM
+```
+
+The default threshold is `LOW`. `INFO`, withdrawn, and low-confidence findings are kept out of scoring noise.
+
+## Configuration
+
+Generate a sample config file:
+
+```bash
+dependency-risk-profiler generate-config dependency-risk-profiler.toml
+```
+
+Use a specific config file with the top-level `--config` option:
+
+```bash
+dependency-risk-profiler --config dependency-risk-profiler.toml analyze requirements.txt
+```
+
+## Supported Ecosystems
+
+```bash
+dependency-risk-profiler list-ecosystems
+```
+
+- Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
+- Node.js: `package-lock.json`
+- Go: `go.mod`
+- Rust: `Cargo.toml`
 
 ## Next Steps
 
-- Learn about [Configuration](configuration.md) options
-- Understand [Risk Scoring](SCORING.md) methodologies
-- Explore [Information Sources](INFORMATION_SOURCES.md) used for risk assessment
+- [Configuration](configuration.md)
+- [Scoring](SCORING.md)
+- [Information Sources](INFORMATION_SOURCES.md)
