@@ -1,4 +1,4 @@
-# Dependency Risk Profiler 🔍
+# Dependency Risk Profiler
 
 [![CI](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
 [![Docs](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/docs.yml/badge.svg)](https://williamzujkowski.github.io/dependency-risk-profiler/)
@@ -8,140 +8,120 @@
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Overview
+CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages Python, Node, Go, and Rust manifests on leading signals like release cadence, maintainer concentration, provenance, version drift, and license risk; it also reports unknown signals as unknown and filters advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure. Companion post: [Zero CVEs Is Not a Safety Rating](https://williamzujkowski.github.io/posts/2026-08-06-dependency-risk-leading-indicators/).
 
-Dependency Risk Profiler is a comprehensive tool for evaluating the health and risk of your project's dependencies beyond traditional vulnerability scanning. It analyzes multiple risk factors such as maintainer activity, update frequency, community health, license compliance, and known vulnerabilities to provide a holistic risk assessment.
+## Install
 
-## Key Features
-
-- **Multi-language Support**: Analyze dependencies in Python, JavaScript/Node.js, and Go projects
-- **Comprehensive Risk Scoring**: Assess risk based on multiple factors, not just vulnerabilities
-- **Supply Chain Insights**: Understand your dependency graph and identify potential risks
-- **Vulnerability Detection**: Identify security vulnerabilities in your dependencies
-- **License Compliance**: Check for license compatibility and compliance issues
-- **Community Health Metrics**: Evaluate the health of dependency maintainer communities
-- **Trend Analysis**: Track risk scores over time to identify patterns
-- **CLI & API Access**: Use as a command-line tool or integrate into your own applications
-
-## Installation
+From PyPI:
 
 ```bash
 pip install dependency-risk-profiler
 ```
 
-Or use our scripts for a customized installation:
+From source:
 
 ```bash
-# Python cross-platform installer
-python scripts/install.py
-
-# Linux/macOS installer
-./scripts/install.sh
-
-# Windows installer
-scripts\install.bat
+pip install -e .
 ```
 
 ## Quick Start
 
-Analyze a project with a single command:
+Run the profiler against a manifest file:
 
 ```bash
-dependency-risk-profiler analyze path/to/project
+$ dependency-risk-profiler analyze requirements.txt
+
+Dependency Risk Profile
+Ecosystem: python   Dependencies: 3
+Overall Risk Score: 2.44/5.0   (High: 1  Medium: 2  Low: 0  Unknown: 0)
+Unknown Signals: 2
+
+Dependency   Installed  Latest   Last Update   Maintainers  Risk       Vulns                              Status
+flask        2.0.0      3.1.3    2 months ago  1            3.2/5.0    10 found/5 scored (5 filtered)     HIGH (single maintainer)
+urllib3      1.26.5     2.7.0    < 1 month     1            2.3/5.0    38 found/19 scored (19 filtered)   MEDIUM (single maintainer)
+requests     2.31.0     2.34.2   < 1 month     1            1.9/5.0    16 found/8 scored (8 filtered)     MEDIUM (single maintainer)
 ```
 
-For more advanced usage:
+For machine-readable output:
 
 ```bash
-# Analyze a specific manifest file
-dependency-risk-profiler analyze path/to/requirements.txt
-
-# Generate dependency graph visualization
-dependency-risk-profiler analyze path/to/go.mod --generate-graph go_graph.json
-
-# Save scan history and analyze trends
-dependency-risk-profiler analyze path/to/requirements.txt --save-history
-dependency-risk-profiler analyze path/to/requirements.txt --analyze-trends
+dependency-risk-profiler analyze requirements.txt --output json
 ```
+
+## What It Scores
+
+- Version drift: how far the installed version is behind the current release.
+- Release cadence: whether the package still receives updates.
+- Maintainer concentration: single-maintainer and low-maintainer packages carry more continuity risk.
+- Provenance and repository health: source location, project metadata, tests, CI, contribution signals, and related supply-chain health checks.
+- License risk: permissive, copyleft, missing, or unusual license signals.
+- Vulnerabilities: advisories are considered, but withdrawn, informational, low-confidence, and below-threshold findings are filtered out of scoring.
+
+Two behaviors are intentionally conservative:
+
+- Unknown signals stay unknown. The tool does not fill missing data with a confident medium score.
+- Advisory noise is separated from scored vulnerability risk. Use `--minimum-vulnerability-severity MEDIUM` or a higher threshold when you only want more severe advisories to affect the score.
+
+## More Usage
+
+Analyze every supported manifest under a directory:
+
+```bash
+dependency-risk-profiler analyze path/to/project --recursive
+```
+
+Generate dependency graph data:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --generate-graph out.json --graph-format d3
+```
+
+Track risk over time:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --save-history
+dependency-risk-profiler analyze requirements.txt --analyze-trends
+```
+
+List supported manifest types:
+
+```bash
+dependency-risk-profiler list-ecosystems
+```
+
+Generate a sample config:
+
+```bash
+dependency-risk-profiler generate-config dependency-risk-profiler.toml
+```
+
+## Supported Ecosystems
+
+- Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
+- Node.js: `package-lock.json`
+- Go: `go.mod`
+- Rust: `Cargo.toml` via crates.io
+
+## Honest Limits
+
+Dependency Risk Profiler is a heuristic triage tool, not a safety oracle. OpenSSF Scorecard describes its own checks as [automated heuristics](https://github.com/ossf/scorecard), and this project uses the same kind of evidence-driven approach: useful signals, not proof.
+
+The tool relies on public package and advisory data such as deps.dev, package registries, OSV, NVD, and GitHub Advisory data. Missing metadata, registry outages, unpublished maintainer context, and private build systems can all affect results. Provenance can tell you who built or published an artifact; it does not prove that the publisher is trustworthy.
+
+Use the output to prioritize review, upgrades, replacement decisions, and follow-up questions. Do not treat a low score, zero CVEs, or clean provenance as a guarantee.
 
 ## Documentation
 
-Explore our [online documentation](https://williamzujkowski.github.io/dependency-risk-profiler/) for detailed guides on:
-
-- Getting Started
-- Installation Options
-- Basic Usage
-- Advanced Configuration
-- Understanding Risk Scores
-
-## How It Works
-
-The Dependency Risk Profiler analyzes your project's dependencies in three main steps:
-
-1. **Parsing**: Reads your dependency manifest file to extract dependency information
-2. **Analysis**: Collects metadata for each dependency (version info, update dates, maintainer counts, etc.)
-   - Optionally uses parallel processing for network requests to improve performance
-   - For Python projects, can create isolated virtual environments to resolve transitive dependencies
-3. **Scoring**: Calculates risk scores based on multiple factors and provides a detailed report
-
-Risk factors include:
-
-- How long since the last update
-- Number of maintainers
-- Whether the package is deprecated
-- If there are known security exploits (from multiple sources, checked in parallel)
-- Version difference between installed and latest
-- Presence of health indicators (tests, CI, docs)
-- License compatibility
-- Repository activity metrics
-
-## Project Structure
-
-The project follows a clean, modular architecture:
-
-- `src/dependency_risk_profiler/`: Core library code
-- `scripts/`: Installation and utility scripts
-- `docs/`: Comprehensive documentation
-- `examples/`: Example scripts and sample data
-- `testing/`: Test suite including unit and integration tests
+- [Getting Started](docs/getting-started.md)
+- [Basic Usage](docs/basic-usage.md)
+- [Configuration](docs/configuration.md)
+- [Scoring](docs/SCORING.md)
+- [Information Sources](docs/INFORMATION_SOURCES.md)
 
 ## Contributing
 
-We welcome contributions! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-See the [Contributing Guide](https://williamzujkowski.github.io/dependency-risk-profiler/CONTRIBUTING/) for more details.
-
-## Security Practices
-
-The Dependency Risk Profiler project follows security best practices in open source development:
-
-- **OSSF Scorecard**: We regularly run [OpenSSF Scorecard](https://securityscorecards.dev/) to maintain high security standards
-- **OSSF Allstar**: Our repository is protected by [OpenSSF Allstar](https://github.com/ossf/allstar) to enforce security policies
-- **Branch Protection**: We enforce branch protection on main branches to prevent unauthorized changes
-- **Code Review**: All changes require peer review before merging
-- **Dependency Management**: We use Dependabot to keep dependencies up-to-date
-- **Secure Publishing**: We use OpenID Connect trusted publishing for PyPI releases
-
-For more information, please review our [Security Policy](SECURITY.md).
+See the [Contributing Guide](CONTRIBUTING.md).
 
 ## License
 
-MIT License
-
-## Important Note About Example Files
-
-This project contains intentionally outdated dependencies in the following directories:
-- `/examples/`
-- `/dependabot_check/`
-
-These files contain dependencies with known vulnerabilities for testing and demonstration purposes. They serve as test cases for the Dependency Risk Profiler tool to identify and classify various risks. These dependencies are excluded from Dependabot alerts via configuration in `.github/dependabot.yml`.
-
-**⚠️ WARNING: DO NOT use these example dependencies in production environments.**
-
-Please review our [Security Policy](https://williamzujkowski.github.io/dependency-risk-profiler/security/SECURITY/) and [Dependency Security](https://williamzujkowski.github.io/dependency-risk-profiler/security/DEPENDENCY_SECURITY/) documentation for more information.
+MIT License.

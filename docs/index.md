@@ -1,52 +1,50 @@
 # Dependency Risk Profiler
 
 [![CI](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
-[![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![Coverage](https://raw.githubusercontent.com/williamzujkowski/dependency-risk-profiler/main/.github/badges/coverage.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
+[![OSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/williamzujkowski/dependency-risk-profiler/badge)](https://securityscorecards.dev/viewer/?uri=github.com/williamzujkowski/dependency-risk-profiler)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Overview
+Dependency Risk Profiler helps answer a practical dependency question: which packages deserve review before they become incidents? CVE count is only a lagging signal, so the tool scores leading indicators such as version drift, release cadence, maintainer concentration, provenance, and license risk. It also reports unknown signals honestly and filters advisory noise out of scoring.
 
-Dependency Risk Profiler is a comprehensive tool for evaluating the health and risk of your project's dependencies beyond traditional vulnerability scanning. It analyzes multiple risk factors such as maintainer activity, update frequency, community health, license compliance, and known vulnerabilities to provide a holistic risk assessment.
+Read the companion post: [Zero CVEs Is Not a Safety Rating](https://williamzujkowski.github.io/posts/2026-08-06-dependency-risk-leading-indicators/).
 
-## Key Features
-
-- **Multi-language Support**: Analyze dependencies in Python, JavaScript/Node.js, and Go projects
-- **Comprehensive Risk Scoring**: Assess risk based on multiple factors, not just vulnerabilities
-- **Supply Chain Insights**: Understand your dependency graph and identify potential risks
-- **Vulnerability Detection**: Identify security vulnerabilities in your dependencies
-- **License Compliance**: Check for license compatibility and compliance issues
-- **Community Health Metrics**: Evaluate the health of dependency maintainer communities
-- **Trend Analysis**: Track risk scores over time to identify patterns
-- **CLI & API Access**: Use as a command-line tool or integrate into your own applications
-
-## Installation
+## Install
 
 ```bash
 pip install dependency-risk-profiler
 ```
 
-## Quick Start
-
-Analyze a project with a single command:
+For source installs:
 
 ```bash
-dependency-risk-profiler analyze path/to/project
+pip install -e .
+```
+
+## Quick Start
+
+```bash
+dependency-risk-profiler analyze requirements.txt
+```
+
+For JSON output:
+
+```bash
+dependency-risk-profiler analyze requirements.txt --output json
 ```
 
 ## Documentation
 
-Explore our documentation for detailed guides on:
-
 - [Getting Started](getting-started.md)
-- [Installation Options](installation.md)
+- [Installation](installation.md)
 - [Basic Usage](basic-usage.md)
-- [Advanced Configuration](configuration.md)
-- [Understanding Risk Scores](SCORING.md)
+- [Configuration](configuration.md)
+- [Scoring](SCORING.md)
+- [Information Sources](INFORMATION_SOURCES.md)
 
-## Contributing
+## Supported Ecosystems
 
-We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details on how to get involved.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
+- Node.js: `package-lock.json`
+- Go: `go.mod`
+- Rust: `Cargo.toml` via crates.io

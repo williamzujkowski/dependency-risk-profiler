@@ -172,7 +172,7 @@ Evaluates security practices in the repository:
 Users can customize the weights for each risk component via command-line arguments:
 
 ```bash
-dependency-risk-profiler --manifest package-lock.json \
+dependency-risk-profiler analyze package-lock.json \
   --staleness-weight 0.3 \
   --maintainer-weight 0.2 \
   --deprecation-weight 0.3 \

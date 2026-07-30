@@ -79,10 +79,6 @@ pre-commit install
 After installation, verify that the tool is working correctly:
 
 ```bash
-# Check the installed version
-dependency-risk-profiler --version
-
-# Run a basic command
 dependency-risk-profiler list-ecosystems
 ```
 

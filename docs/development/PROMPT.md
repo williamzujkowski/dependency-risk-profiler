@@ -60,7 +60,7 @@ Create a command-line tool (CLI) called **“Dependency Risk Profiler”** that 
 
 A developer runs the command:
 ```
-$ dependency-risk-profiler --manifest /path/to/package-lock.json --output terminal
+$ dependency-risk-profiler analyze /path/to/package-lock.json --output terminal
 ```
 The tool parses the package-lock.json file, evaluates each dependency according to the metrics listed above, computes risk scores, and then outputs a color-coded report that might look like:
 ```

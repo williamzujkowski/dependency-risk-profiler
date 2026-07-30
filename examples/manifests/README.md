@@ -14,13 +14,13 @@ These manifests can be used with the Dependency Risk Profiler to demonstrate its
 
 ```bash
 # Analyze a Python project
-dependency-risk-profiler analyze --manifest examples/manifests/requirements.txt
+dependency-risk-profiler analyze examples/manifests/requirements.txt
 
 # Analyze a Node.js project
-dependency-risk-profiler analyze --manifest examples/manifests/package-lock.json
+dependency-risk-profiler analyze examples/manifests/package-lock.json
 
 # Analyze a Go project
-dependency-risk-profiler analyze --manifest examples/manifests/go.mod
+dependency-risk-profiler analyze examples/manifests/go.mod
 ```
 
 ## Notes
