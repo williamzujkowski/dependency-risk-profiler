@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime
+from enum import Enum
 from typing import Dict
 
 from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
@@ -66,18 +67,31 @@ class TerminalFormatter(BaseFormatter):
         # Add risk summary
         result.append(self._colored(f"{self.BOLD}Risk Summary{self.RESET}"))
         overall_risk = self._get_risk_color(profile.overall_risk_score / 5.0)
+        overall_score = self._colored(
+            f"{profile.overall_risk_score:.2f}/5.0", overall_risk
+        )
+        result.append(f"Overall Risk Score: {overall_score}")
         result.append(
-            f"Overall Risk Score: {self._colored(f'{profile.overall_risk_score:.2f}/5.0', overall_risk)}"
+            "High Risk Dependencies: "
+            f"{self._colored(str(profile.high_risk_dependencies), self.RED)}"
         )
         result.append(
-            f"High Risk Dependencies: {self._colored(str(profile.high_risk_dependencies), self.RED)}"
+            "Medium Risk Dependencies: "
+            f"{self._colored(str(profile.medium_risk_dependencies), self.YELLOW)}"
         )
         result.append(
-            f"Medium Risk Dependencies: {self._colored(str(profile.medium_risk_dependencies), self.YELLOW)}"
+            "Low Risk Dependencies: "
+            f"{self._colored(str(profile.low_risk_dependencies), self.GREEN)}"
         )
         result.append(
-            f"Low Risk Dependencies: {self._colored(str(profile.low_risk_dependencies), self.GREEN)}"
+            "Unknown Risk Dependencies: "
+            f"{self._colored(str(profile.unknown_risk_dependencies), self.CYAN)}"
         )
+        result.append(
+            "Insufficient Data Dependencies: "
+            f"{self._colored(str(profile.insufficient_data_dependencies), self.CYAN)}"
+        )
+        result.append(f"Unknown Signals: {profile.unknown_signal_count}")
         result.append("")
 
         # Add dependency table
@@ -142,6 +156,8 @@ class TerminalFormatter(BaseFormatter):
             return self.MAGENTA
         elif risk_level == RiskLevel.MEDIUM:
             return self.YELLOW
+        elif risk_level == RiskLevel.UNKNOWN:
+            return self.CYAN
         else:
             return self.GREEN
 
@@ -151,8 +167,12 @@ class TerminalFormatter(BaseFormatter):
         Returns:
             Formatted table header.
         """
-        header = f"{'Dependency':<30} {'Installed':<15} {'Latest':<15} {'Last Update':<15} {'Maintainers':<10} {'Risk Score':<10} {'Status':<20}"
-        separator = "-" * 115
+        header = (
+            f"{'Dependency':<30} {'Installed':<15} {'Latest':<15} "
+            f"{'Last Update':<15} {'Maintainers':<10} {'Risk Score':<10} "
+            f"{'Unknown':<9} {'Status':<25}"
+        )
+        separator = "-" * 130
         return self._colored(f"{self.BOLD}{header}{self.RESET}\n{separator}")
 
     def _format_dependency_row(self, dep: DependencyRiskScore) -> str:
@@ -203,9 +223,16 @@ class TerminalFormatter(BaseFormatter):
 
         # Format risk score
         risk_score = f"{dep.total_score:.1f}/5.0"
+        unknown_summary = (
+            f"{dep.unknown_signal_count}/{dep.total_signal_count}"
+            if dep.total_signal_count > 0
+            else "0/0"
+        )
 
         # Format risk level and factors
-        risk_level = dep.risk_level.value
+        risk_level = (
+            "INSUFFICIENT DATA" if dep.insufficient_data else dep.risk_level.value
+        )
         if dep.factors:
             risk_level += f" ({dep.factors[0]})"
 
@@ -214,7 +241,11 @@ class TerminalFormatter(BaseFormatter):
         risk_score = self._colored(risk_score, risk_color)
         risk_level = self._colored(risk_level, risk_color)
 
-        return f"{name:<30} {installed:<15} {latest:<15} {last_update:<15} {maintainers:<10} {risk_score:<10} {risk_level:<20}"
+        return (
+            f"{name:<30} {installed:<15} {latest:<15} {last_update:<15} "
+            f"{maintainers:<10} {risk_score:<10} {unknown_summary:<9} "
+            f"{risk_level:<25}"
+        )
 
 
 class JsonFormatter(BaseFormatter):
@@ -238,6 +269,9 @@ class JsonFormatter(BaseFormatter):
             "high_risk_dependencies": profile.high_risk_dependencies,
             "medium_risk_dependencies": profile.medium_risk_dependencies,
             "low_risk_dependencies": profile.low_risk_dependencies,
+            "unknown_risk_dependencies": profile.unknown_risk_dependencies,
+            "insufficient_data_dependencies": profile.insufficient_data_dependencies,
+            "unknown_signal_count": profile.unknown_signal_count,
             "overall_risk_score": profile.overall_risk_score,
             "dependencies": [
                 self._format_dependency(dep) for dep in profile.dependencies
@@ -247,8 +281,8 @@ class JsonFormatter(BaseFormatter):
         # Convert to JSON with datetime handling
         return json.dumps(profile_dict, indent=2, default=self._json_serializer)
 
-    def _json_serializer(self, obj):
-        """Custom JSON serializer for objects not serializable by default.
+    def _json_serializer(self, obj: object) -> object:
+        """Serialize objects not serializable by default.
 
         Args:
             obj: Object to serialize.
@@ -258,11 +292,13 @@ class JsonFormatter(BaseFormatter):
         """
         if isinstance(obj, datetime):
             return obj.isoformat()
+        if isinstance(obj, Enum):
+            return obj.value
         if hasattr(obj, "__dict__"):
             return obj.__dict__
         raise TypeError(f"Type {type(obj)} not serializable")
 
-    def _format_dependency(self, dep: DependencyRiskScore) -> Dict:
+    def _format_dependency(self, dep: DependencyRiskScore) -> Dict[str, object]:
         """Format dependency risk score as dict.
 
         Args:
@@ -298,8 +334,18 @@ class JsonFormatter(BaseFormatter):
                 "license_score": dep.license_score,
                 "community_score": dep.community_score,
                 "transitive_score": dep.transitive_score,
+                "security_policy_score": dep.security_policy_score,
+                "dependency_update_score": dep.dependency_update_score,
+                "signed_commits_score": dep.signed_commits_score,
+                "branch_protection_score": dep.branch_protection_score,
+                "maintained_score": dep.maintained_score,
                 "total_score": dep.total_score,
             },
             "risk_level": dep.risk_level.value,
+            "unknown_signals": dep.unknown_signals,
+            "unknown_signal_count": dep.unknown_signal_count,
+            "measured_signal_count": dep.measured_signal_count,
+            "total_signal_count": dep.total_signal_count,
+            "insufficient_data": dep.insufficient_data,
             "risk_factors": dep.factors,
         }

@@ -2,15 +2,18 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, List
+from typing import Collection, Dict, List, Optional, Sequence, Tuple
 
 from packaging import version
 
 from ..models import (
+    CommunityMetrics,
     DependencyMetadata,
     DependencyRiskScore,
+    LicenseInfo,
     ProjectRiskProfile,
     RiskLevel,
+    SecurityMetrics,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +40,7 @@ class RiskScorer:
         signed_commits_weight: float = 0.2,
         branch_protection_weight: float = 0.15,
         max_score: float = 5.0,
-    ):
+    ) -> None:
         """Initialize the risk scorer with customizable weights.
 
         Args:
@@ -122,73 +125,60 @@ class RiskScorer:
         branch_protection_score = self._calculate_branch_protection_score(
             dependency.security_metrics
         )
-        maintained_score = self._calculate_maintained_score(
-            dependency.security_metrics
-        )
+        maintained_score = self._calculate_maintained_score(dependency.security_metrics)
 
         # Calculate weighted score
         weighted_scores = [
-            (staleness_score, self.staleness_weight),
-            (maintainer_score, self.maintainer_weight),
-            (deprecation_score, self.deprecation_weight),
-            (exploit_score, self.exploit_weight),
-            (version_score, self.version_difference_weight),
-            (health_score, self.health_indicators_weight),
+            ("staleness", staleness_score, self.staleness_weight),
+            ("maintainer", maintainer_score, self.maintainer_weight),
+            ("deprecation", deprecation_score, self.deprecation_weight),
+            ("exploit", exploit_score, self.exploit_weight),
+            ("version", version_score, self.version_difference_weight),
+            ("health_indicators", health_score, self.health_indicators_weight),
             # Enhanced risk factors
+            ("license", license_score, self.license_weight),
+            ("community", community_score, self.community_weight),
+            ("transitive", transitive_score, self.transitive_weight),
             (
-                (license_score, self.license_weight)
-                if license_score is not None
-                else (None, 0)
+                "security_policy",
+                security_policy_score,
+                self.security_policy_weight,
             ),
             (
-                (community_score, self.community_weight)
-                if community_score is not None
-                else (None, 0)
+                "dependency_update",
+                dependency_update_score,
+                self.dependency_update_weight,
             ),
+            ("signed_commits", signed_commits_score, self.signed_commits_weight),
             (
-                (transitive_score, self.transitive_weight)
-                if transitive_score is not None
-                else (None, 0)
+                "branch_protection",
+                branch_protection_score,
+                self.branch_protection_weight,
             ),
-            (
-                (security_policy_score, self.security_policy_weight)
-                if security_policy_score is not None
-                else (None, 0)
-            ),
-            (
-                (dependency_update_score, self.dependency_update_weight)
-                if dependency_update_score is not None
-                else (None, 0)
-            ),
-            (
-                (signed_commits_score, self.signed_commits_weight)
-                if signed_commits_score is not None
-                else (None, 0)
-            ),
-            (
-                (branch_protection_score, self.branch_protection_weight)
-                if branch_protection_score is not None
-                else (None, 0)
-            ),
-            (
-                (maintained_score, self.branch_protection_weight)
-                if maintained_score is not None
-                else (None, 0)
-            ),
+            ("maintained", maintained_score, self.branch_protection_weight),
         ]
 
         total_score = 0.0
-        for score, weight in weighted_scores:
+        for _, score, weight in weighted_scores:
             if score is not None:  # Only count available scores
                 total_score += score * weight
 
         # Normalize to max_score
-        available_weights = sum(weight for _, weight in weighted_scores)
+        available_weights = sum(
+            weight for _, score, weight in weighted_scores if score is not None
+        )
         if available_weights > 0:
             total_score = (total_score / available_weights) * self.max_score
 
-        # Determine risk level
-        risk_level = self._determine_risk_level(total_score)
+        unknown_signals = self._determine_unknown_signals(weighted_scores)
+        measured_signal_count = len(weighted_scores) - len(unknown_signals)
+        insufficient_data = len(unknown_signals) > measured_signal_count
+
+        risk_level = (
+            RiskLevel.UNKNOWN
+            if insufficient_data
+            else self._determine_risk_level(total_score)
+        )
 
         # Determine risk factors
         risk_factors = self._determine_risk_factors(
@@ -208,26 +198,33 @@ class RiskScorer:
             branch_protection_score,
             maintained_score,
         )
+        if insufficient_data:
+            risk_factors.insert(0, "Insufficient data for confident risk level")
 
         return DependencyRiskScore(
             dependency=dependency,
-            staleness_score=staleness_score or 0.0,
-            maintainer_score=maintainer_score or 0.0,
-            deprecation_score=deprecation_score or 0.0,
-            exploit_score=exploit_score or 0.0,
-            version_score=version_score or 0.0,
-            health_indicators_score=health_score or 0.0,
-            license_score=license_score or 0.0,
-            community_score=community_score or 0.0,
-            transitive_score=transitive_score or 0.0,
-            security_policy_score=security_policy_score or 0.0,
-            dependency_update_score=dependency_update_score or 0.0,
-            signed_commits_score=signed_commits_score or 0.0,
-            branch_protection_score=branch_protection_score or 0.0,
-            maintained_score=maintained_score or 0.0,
+            staleness_score=staleness_score,
+            maintainer_score=maintainer_score,
+            deprecation_score=deprecation_score,
+            exploit_score=exploit_score,
+            version_score=version_score,
+            health_indicators_score=health_score,
+            license_score=license_score,
+            community_score=community_score,
+            transitive_score=transitive_score,
+            security_policy_score=security_policy_score,
+            dependency_update_score=dependency_update_score,
+            signed_commits_score=signed_commits_score,
+            branch_protection_score=branch_protection_score,
+            maintained_score=maintained_score,
             total_score=total_score,
             risk_level=risk_level,
             factors=risk_factors,
+            unknown_signals=unknown_signals,
+            unknown_signal_count=len(unknown_signals),
+            measured_signal_count=measured_signal_count,
+            total_signal_count=len(weighted_scores),
+            insufficient_data=insufficient_data,
         )
 
     def create_project_profile(
@@ -255,14 +252,21 @@ class RiskScorer:
         high_risk = 0
         medium_risk = 0
         low_risk = 0
+        unknown_risk = 0
+        insufficient_data = 0
 
         for dep in scored_dependencies:
             if dep.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL]:
                 high_risk += 1
             elif dep.risk_level == RiskLevel.MEDIUM:
                 medium_risk += 1
-            else:
+            elif dep.risk_level == RiskLevel.LOW:
                 low_risk += 1
+            else:
+                unknown_risk += 1
+
+            if dep.insufficient_data:
+                insufficient_data += 1
 
         # Calculate overall project risk score
         if scored_dependencies:
@@ -279,10 +283,23 @@ class RiskScorer:
             high_risk_dependencies=high_risk,
             medium_risk_dependencies=medium_risk,
             low_risk_dependencies=low_risk,
+            unknown_risk_dependencies=unknown_risk,
+            insufficient_data_dependencies=insufficient_data,
+            unknown_signal_count=sum(
+                dep.unknown_signal_count for dep in scored_dependencies
+            ),
             overall_risk_score=overall_score,
         )
 
-    def _calculate_staleness_score(self, last_updated: datetime) -> float:
+    def _determine_unknown_signals(
+        self, weighted_scores: Sequence[Tuple[str, Optional[float], float]]
+    ) -> List[str]:
+        """Return names for signals that could not be measured."""
+        return [name for name, score, _ in weighted_scores if score is None]
+
+    def _calculate_staleness_score(
+        self, last_updated: Optional[datetime]
+    ) -> Optional[float]:
         """Calculate staleness score based on last update date.
 
         Args:
@@ -291,8 +308,8 @@ class RiskScorer:
         Returns:
             Staleness score between 0.0 and 1.0.
         """
-        if not last_updated:
-            return 0.5  # Default score when data is missing
+        if last_updated is None:
+            return None
 
         # Ensure both datetimes are timezone-naive for comparison
         if last_updated.tzinfo:
@@ -314,7 +331,9 @@ class RiskScorer:
         else:  # More than a year
             return 1.0
 
-    def _calculate_maintainer_score(self, maintainer_count: int) -> float:
+    def _calculate_maintainer_score(
+        self, maintainer_count: Optional[int]
+    ) -> Optional[float]:
         """Calculate maintainer score based on maintainer count.
 
         Args:
@@ -323,8 +342,8 @@ class RiskScorer:
         Returns:
             Maintainer score between 0.0 and 1.0.
         """
-        if not maintainer_count:
-            return 0.5  # Default score when data is missing
+        if maintainer_count is None:
+            return None
 
         # Scoring thresholds for maintainers
         if maintainer_count >= 5:
@@ -359,8 +378,8 @@ class RiskScorer:
         return 1.0 if has_known_exploits else 0.0
 
     def _calculate_version_difference_score(
-        self, installed_version: str, latest_version: str
-    ) -> float:
+        self, installed_version: Optional[str], latest_version: Optional[str]
+    ) -> Optional[float]:
         """Calculate version difference score.
 
         Args:
@@ -370,7 +389,10 @@ class RiskScorer:
         Returns:
             Version difference score between 0.0 and 1.0.
         """
-        if not latest_version or installed_version == latest_version:
+        if not installed_version or not latest_version:
+            return None
+
+        if installed_version == latest_version:
             return 0.0
 
         try:
@@ -414,14 +436,17 @@ class RiskScorer:
             return 0.0
 
     def _calculate_health_indicators_score(
-        self, has_tests: bool, has_ci: bool, has_contribution_guidelines: bool
-    ) -> float:
+        self,
+        has_tests: Optional[bool],
+        has_ci: Optional[bool],
+        has_contribution_guidelines: Optional[bool],
+    ) -> Optional[float]:
         """Calculate health indicators score.
 
         Args:
             has_tests: Whether the dependency has tests.
             has_ci: Whether the dependency has CI configuration.
-            has_contribution_guidelines: Whether the dependency has contribution guidelines.
+            has_contribution_guidelines: Whether contribution guidelines exist.
 
         Returns:
             Health indicators score between 0.0 and 1.0.
@@ -433,9 +458,6 @@ class RiskScorer:
         # Count available indicators
         indicators = [has_tests, has_ci, has_contribution_guidelines]
         available = sum(1 for i in indicators if i is not None)
-
-        if available == 0:
-            return 0.5  # Default score when data is missing
 
         # Count positive indicators
         positive = sum(1 for i in indicators if i is True)
@@ -463,7 +485,9 @@ class RiskScorer:
         else:
             return RiskLevel.CRITICAL
 
-    def _calculate_license_score(self, license_info) -> float:
+    def _calculate_license_score(
+        self, license_info: Optional[LicenseInfo]
+    ) -> Optional[float]:
         """Calculate license risk score.
 
         Args:
@@ -472,8 +496,8 @@ class RiskScorer:
         Returns:
             License risk score between 0.0 and 1.0.
         """
-        if not license_info:
-            return 0.5  # Default score when data is missing
+        if license_info is None:
+            return None
 
         # Use the risk level already calculated for the license
         if license_info.risk_level == RiskLevel.CRITICAL:
@@ -487,7 +511,9 @@ class RiskScorer:
         else:
             return 0.5
 
-    def _calculate_community_score(self, community_metrics) -> float:
+    def _calculate_community_score(
+        self, community_metrics: Optional[CommunityMetrics]
+    ) -> Optional[float]:
         """Calculate community health risk score.
 
         Args:
@@ -496,10 +522,10 @@ class RiskScorer:
         Returns:
             Community health risk score between 0.0 and 1.0.
         """
-        if not community_metrics:
-            return 0.5  # Default score when data is missing
+        if community_metrics is None:
+            return None
 
-        sub_scores = []
+        sub_scores: List[float] = []
 
         # Star count score (more stars = lower risk)
         if community_metrics.star_count is not None:
@@ -553,10 +579,11 @@ class RiskScorer:
         # Calculate final score (average of sub-scores)
         if sub_scores:
             return sum(sub_scores) / len(sub_scores)
-        else:
-            return 0.5  # Default score when no metrics available
+        return None
 
-    def _calculate_transitive_score(self, transitive_dependencies) -> float:
+    def _calculate_transitive_score(
+        self, transitive_dependencies: Collection[str]
+    ) -> float:
         """Calculate transitive dependency risk score.
 
         Args:
@@ -582,7 +609,9 @@ class RiskScorer:
         else:
             return 0.1  # Very low transitive dependency count
 
-    def _calculate_security_policy_score(self, security_metrics) -> float:
+    def _calculate_security_policy_score(
+        self, security_metrics: Optional[SecurityMetrics]
+    ) -> Optional[float]:
         """Calculate security policy risk score.
 
         Args:
@@ -591,8 +620,8 @@ class RiskScorer:
         Returns:
             Security policy risk score between 0.0 and 1.0.
         """
-        if not security_metrics:
-            return 0.7  # Higher default risk when security data is missing
+        if security_metrics is None:
+            return None
 
         # If the dependency has a security policy, it's a good sign
         if security_metrics.has_security_policy is not None:
@@ -602,9 +631,11 @@ class RiskScorer:
                 return 1.0  # High risk - no security policy
 
         # If we don't have explicit security policy data
-        return 0.7  # Higher default risk when security policy status is unknown
+        return None
 
-    def _calculate_dependency_update_score(self, security_metrics) -> float:
+    def _calculate_dependency_update_score(
+        self, security_metrics: Optional[SecurityMetrics]
+    ) -> Optional[float]:
         """Calculate dependency update tools risk score.
 
         Args:
@@ -613,8 +644,8 @@ class RiskScorer:
         Returns:
             Dependency update tools risk score between 0.0 and 1.0.
         """
-        if not security_metrics:
-            return 0.7  # Higher default risk when security data is missing
+        if security_metrics is None:
+            return None
 
         # If the dependency uses dependency update tools, it's a good sign
         if security_metrics.has_dependency_update_tools is not None:
@@ -624,9 +655,11 @@ class RiskScorer:
                 return 1.0  # High risk - no dependency update tools
 
         # If we don't have explicit dependency update tools data
-        return 0.7  # Higher default risk when dependency update tools status is unknown
+        return None
 
-    def _calculate_signed_commits_score(self, security_metrics) -> float:
+    def _calculate_signed_commits_score(
+        self, security_metrics: Optional[SecurityMetrics]
+    ) -> Optional[float]:
         """Calculate signed commits risk score.
 
         Args:
@@ -635,8 +668,8 @@ class RiskScorer:
         Returns:
             Signed commits risk score between 0.0 and 1.0.
         """
-        if not security_metrics:
-            return 0.7  # Higher default risk when security data is missing
+        if security_metrics is None:
+            return None
 
         # If the dependency uses signed commits/releases, it's a good sign
         if security_metrics.has_signed_commits is not None:
@@ -646,9 +679,11 @@ class RiskScorer:
                 return 1.0  # High risk - no signed commits
 
         # If we don't have explicit signed commits data
-        return 0.7  # Higher default risk when signed commits status is unknown
+        return None
 
-    def _calculate_branch_protection_score(self, security_metrics) -> float:
+    def _calculate_branch_protection_score(
+        self, security_metrics: Optional[SecurityMetrics]
+    ) -> Optional[float]:
         """Calculate branch protection risk score.
 
         Args:
@@ -657,8 +692,8 @@ class RiskScorer:
         Returns:
             Branch protection risk score between 0.0 and 1.0.
         """
-        if not security_metrics:
-            return 0.7  # Higher default risk when security data is missing
+        if security_metrics is None:
+            return None
 
         # If the dependency uses branch protection, it's a good sign
         if security_metrics.has_branch_protection is not None:
@@ -668,9 +703,11 @@ class RiskScorer:
                 return 1.0  # High risk - no branch protection
 
         # If we don't have explicit branch protection data
-        return 0.7  # Higher default risk when branch protection status is unknown
-        
-    def _calculate_maintained_score(self, security_metrics) -> float:
+        return None
+
+    def _calculate_maintained_score(
+        self, security_metrics: Optional[SecurityMetrics]
+    ) -> Optional[float]:
         """Calculate maintained status risk score.
 
         Args:
@@ -679,8 +716,8 @@ class RiskScorer:
         Returns:
             Maintained status risk score between 0.0 and 1.0.
         """
-        if not security_metrics:
-            return 0.7  # Higher default risk when security data is missing
+        if security_metrics is None:
+            return None
 
         # If the dependency is maintained, it's a good sign
         if security_metrics.is_maintained is not None:
@@ -690,25 +727,25 @@ class RiskScorer:
                 return 1.0  # High risk - not maintained
 
         # If we don't have explicit maintained status data
-        return 0.7  # Higher default risk when maintained status is unknown
+        return None
 
     def _determine_risk_factors(
         self,
         dependency: DependencyMetadata,
-        staleness_score: float,
-        maintainer_score: float,
+        staleness_score: Optional[float],
+        maintainer_score: Optional[float],
         deprecation_score: float,
         exploit_score: float,
-        version_score: float,
-        health_score: float,
-        license_score: float,
-        community_score: float,
+        version_score: Optional[float],
+        health_score: Optional[float],
+        license_score: Optional[float],
+        community_score: Optional[float],
         transitive_score: float,
-        security_policy_score: float,
-        dependency_update_score: float,
-        signed_commits_score: float,
-        branch_protection_score: float,
-        maintained_score: float,
+        security_policy_score: Optional[float],
+        dependency_update_score: Optional[float],
+        signed_commits_score: Optional[float],
+        branch_protection_score: Optional[float],
+        maintained_score: Optional[float],
     ) -> List[str]:
         """Determine risk factors that contribute to the risk score.
 
@@ -782,7 +819,8 @@ class RiskScorer:
             if dependency.license_info:
                 if dependency.license_info.category.value == "NETWORK_COPYLEFT":
                     factors.append(
-                        f"Network copyleft license ({dependency.license_info.license_id})"
+                        "Network copyleft license "
+                        f"({dependency.license_info.license_id})"
                     )
                 elif dependency.license_info.category.value == "COPYLEFT":
                     factors.append(
@@ -806,9 +844,8 @@ class RiskScorer:
                     dependency.community_metrics.star_count is not None
                     and dependency.community_metrics.star_count < 100
                 ):
-                    factors.append(
-                        f"Low popularity ({dependency.community_metrics.star_count} stars)"
-                    )
+                    star_count = dependency.community_metrics.star_count
+                    factors.append(f"Low popularity ({star_count} stars)")
 
                 if (
                     dependency.community_metrics.commit_frequency is not None
@@ -819,9 +856,8 @@ class RiskScorer:
         # Transitive dependency risk factors
         if transitive_score and transitive_score > 0.5:
             if dependency.transitive_dependencies:
-                factors.append(
-                    f"Large dependency tree ({len(dependency.transitive_dependencies)} deps)"
-                )
+                transitive_count = len(dependency.transitive_dependencies)
+                factors.append(f"Large dependency tree ({transitive_count} deps)")
 
         # Security policy risk factors
         if security_policy_score and security_policy_score > 0.5:
@@ -866,13 +902,15 @@ class RiskScorer:
                     factors.append("Branch protection status unknown")
             else:
                 factors.append("No security metadata available")
-                
+
         # Maintained status risk factors
         if maintained_score and maintained_score > 0.5:
             if dependency.security_metrics:
                 if dependency.security_metrics.is_maintained is not None:
                     if not dependency.security_metrics.is_maintained:
-                        factors.append("Project does not appear to be actively maintained")
+                        factors.append(
+                            "Project does not appear to be actively maintained"
+                        )
                 else:
                     factors.append("Maintenance status unknown")
             else:

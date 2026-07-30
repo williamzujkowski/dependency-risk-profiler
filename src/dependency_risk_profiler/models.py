@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Set
 class RiskLevel(Enum):
     """Risk level classification for dependencies."""
 
+    UNKNOWN = "UNKNOWN"
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
@@ -110,28 +111,33 @@ class DependencyRiskScore:
     """Risk score for a dependency."""
 
     dependency: DependencyMetadata
-    staleness_score: float = 0.0
-    maintainer_score: float = 0.0
-    deprecation_score: float = 0.0
-    exploit_score: float = 0.0
-    version_score: float = 0.0
-    health_indicators_score: float = 0.0
+    staleness_score: Optional[float] = None
+    maintainer_score: Optional[float] = None
+    deprecation_score: Optional[float] = None
+    exploit_score: Optional[float] = None
+    version_score: Optional[float] = None
+    health_indicators_score: Optional[float] = None
 
     # Enhanced risk scores
-    license_score: float = 0.0
-    community_score: float = 0.0
-    transitive_score: float = 0.0
+    license_score: Optional[float] = None
+    community_score: Optional[float] = None
+    transitive_score: Optional[float] = None
 
     # OpenSSF Scorecard-inspired risk scores
-    security_policy_score: float = 0.0
-    dependency_update_score: float = 0.0
-    signed_commits_score: float = 0.0
-    branch_protection_score: float = 0.0
-    maintained_score: float = 0.0
+    security_policy_score: Optional[float] = None
+    dependency_update_score: Optional[float] = None
+    signed_commits_score: Optional[float] = None
+    branch_protection_score: Optional[float] = None
+    maintained_score: Optional[float] = None
 
     total_score: float = 0.0
-    risk_level: RiskLevel = RiskLevel.LOW
+    risk_level: RiskLevel = RiskLevel.UNKNOWN
     factors: List[str] = field(default_factory=list)
+    unknown_signals: List[str] = field(default_factory=list)
+    unknown_signal_count: int = 0
+    measured_signal_count: int = 0
+    total_signal_count: int = 0
+    insufficient_data: bool = False
 
 
 @dataclass
@@ -144,5 +150,8 @@ class ProjectRiskProfile:
     high_risk_dependencies: int = 0
     medium_risk_dependencies: int = 0
     low_risk_dependencies: int = 0
+    unknown_risk_dependencies: int = 0
+    insufficient_data_dependencies: int = 0
+    unknown_signal_count: int = 0
     overall_risk_score: float = 0.0
     scan_time: datetime = field(default_factory=datetime.now)
