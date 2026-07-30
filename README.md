@@ -54,13 +54,14 @@ For more advanced usage:
 
 ```bash
 # Analyze a specific manifest file
-dependency-risk-profiler analyze --manifest path/to/requirements.txt
-
-# Analyze with enhanced transitive dependency resolution
-dependency-risk-profiler analyze --manifest path/to/package-lock.json --enhanced-transitive
+dependency-risk-profiler analyze path/to/requirements.txt
 
 # Generate dependency graph visualization
-dependency-risk-profiler graph generate --manifest path/to/go.mod
+dependency-risk-profiler analyze path/to/go.mod --generate-graph go_graph.json
+
+# Save scan history and analyze trends
+dependency-risk-profiler analyze path/to/requirements.txt --save-history
+dependency-risk-profiler analyze path/to/requirements.txt --analyze-trends
 ```
 
 ## Documentation

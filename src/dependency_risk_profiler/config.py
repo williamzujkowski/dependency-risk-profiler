@@ -8,6 +8,7 @@ user-defined settings, with priority given to command-line arguments.
 import logging
 import os
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -62,11 +63,16 @@ DEFAULT_CONFIG = {
         "minimum_severity_for_scoring": "LOW",
     },
     "trends": {
+        "save_history": False,
+        "analyze": False,
         "limit": 10,
+        "visualization": None,
     },
     "graph": {
+        "generate": False,
         "format": "d3",
         "depth": 3,
+        "output": None,
     },
 }
 
@@ -85,7 +91,7 @@ class Config:
             config_path: Optional explicit path to config file
                 (overrides default search paths)
         """
-        self._config = DEFAULT_CONFIG.copy()
+        self._config = deepcopy(DEFAULT_CONFIG)
 
         # Load configuration file
         self.config_file_loaded = False
@@ -305,15 +311,30 @@ class Config:
             ]
 
         # Trends settings
+        if "save_history" in args and args["save_history"] is not None:
+            self._config["trends"]["save_history"] = args["save_history"]
+
+        if "analyze_trends" in args and args["analyze_trends"] is not None:
+            self._config["trends"]["analyze"] = args["analyze_trends"]
+
         if "trend_limit" in args and args["trend_limit"] is not None:
             self._config["trends"]["limit"] = args["trend_limit"]
 
+        if "trend_visualization" in args and args["trend_visualization"] is not None:
+            self._config["trends"]["visualization"] = args["trend_visualization"]
+
         # Graph settings
-        if "graph_format" in args and args["graph_format"]:
+        if "generate_graph" in args and args["generate_graph"] is not None:
+            self._config["graph"]["generate"] = args["generate_graph"]
+
+        if "graph_format" in args and args["graph_format"] is not None:
             self._config["graph"]["format"] = args["graph_format"]
 
         if "graph_depth" in args and args["graph_depth"] is not None:
             self._config["graph"]["depth"] = args["graph_depth"]
+
+        if "graph_output" in args and args["graph_output"] is not None:
+            self._config["graph"]["output"] = args["graph_output"]
 
     def get(self, section: str, key: str, default: Any = None) -> Any:
         """Get a configuration value.
@@ -452,10 +473,22 @@ class Config:
 
                     # Trends section
                     f.write("[trends]\n")
+                    f.write(
+                        "save_history = "
+                        f"{str(DEFAULT_CONFIG['trends']['save_history']).lower()}\n"
+                    )
+                    f.write(
+                        "analyze = "
+                        f"{str(DEFAULT_CONFIG['trends']['analyze']).lower()}\n"
+                    )
                     f.write(f"limit = {DEFAULT_CONFIG['trends']['limit']}\n\n")
 
                     # Graph section
                     f.write("[graph]\n")
+                    f.write(
+                        "generate = "
+                        f"{str(DEFAULT_CONFIG['graph']['generate']).lower()}\n"
+                    )
                     f.write(f"format = \"{DEFAULT_CONFIG['graph']['format']}\"\n")
                     f.write(f"depth = {DEFAULT_CONFIG['graph']['depth']}\n")
 

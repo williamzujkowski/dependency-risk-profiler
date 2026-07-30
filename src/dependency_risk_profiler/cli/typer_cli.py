@@ -155,6 +155,34 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "unknown"
 
 
+def _default_graph_output_path(manifest_path: str, graph_format: str) -> str:
+    """Build the default graph output path for an analyzed manifest."""
+    base_name = os.path.splitext(os.path.basename(manifest_path))[0]
+    extension = "dot" if graph_format == "graphviz" else "json"
+    return f"{base_name}_graph.{extension}"
+
+
+def _write_graph_file(
+    graph_data: Dict[str, object], graph_format: str, graph_file: str
+) -> None:
+    """Write graph data as JSON or DOT based on the selected output path."""
+    graph_path = Path(graph_file)
+    graph_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if graph_format == "graphviz" and graph_path.suffix == ".dot":
+        dot_source = graph_data.get("dot_source")
+        if isinstance(dot_source, str):
+            graph_path.write_text(dot_source, encoding="utf-8")
+            return
+
+    graph_path.write_text(json.dumps(graph_data, indent=2), encoding="utf-8")
+
+
+def _auxiliary_console(json_output: bool) -> Console:
+    """Use stderr for side-effect status messages when stdout is JSON."""
+    return Console(stderr=True) if json_output else console
+
+
 @app.callback()
 def callback(
     ctx: typer.Context,
@@ -197,6 +225,11 @@ def analyze(
         exists=True,
         dir_okay=True,
         file_okay=True,
+    ),
+    graph_output: Optional[str] = typer.Argument(
+        None,
+        help="Optional dependency graph output path used with --generate-graph",
+        hidden=True,
     ),
     recursive: bool = typer.Option(
         False,
@@ -332,7 +365,10 @@ def analyze(
     generate_graph: bool = typer.Option(
         False,
         "--generate-graph",
-        help="Generate a dependency graph for visualization",
+        help=(
+            "Generate dependency graph data. Add an output path after the option "
+            "or use the default path."
+        ),
     ),
     graph_format: GraphFormat = typer.Option(
         "d3",
@@ -398,6 +434,7 @@ def analyze(
         "clear_cache": clear_cache,
         "minimum_vulnerability_severity": minimum_vulnerability_severity.value,
         "generate_graph": generate_graph,
+        "graph_output": graph_output,
         "graph_format": graph_format.value if graph_format else None,
         "graph_depth": graph_depth,
         "save_history": save_history,
@@ -423,6 +460,13 @@ def analyze(
                     "Run [bold]dependency-risk-profiler list-ecosystems[/bold] to see "
                     "all supported ecosystems and file types."
                 )
+            )
+            raise typer.Exit(code=1)
+
+        if graph_output and not config.get("graph", "generate", False):
+            console.print(
+                "[bold red]Error: graph output path requires "
+                "--generate-graph.[/bold red]"
             )
             raise typer.Exit(code=1)
 
@@ -812,17 +856,19 @@ def analyze(
                 overall_results.append(profile)
 
                 # Process supply chain visualization if requested
-                if config.get("general", "generate_graph", False):
+                if config.get("graph", "generate", False):
                     try:
                         from ..supply_chain import generate_dependency_graph
 
+                        graph_format_config = config.get("graph", "format")
+                        graph_depth_config = config.get("graph", "depth")
                         logger.info(
                             "Generating dependency graph in "
-                            f"{config.get('graph', 'format')} format"
+                            f"{graph_format_config} format"
                         )
 
                         # Extract risk scores for graph coloring
-                        risk_scores = {}
+                        risk_scores: Dict[str, float] = {}
                         for dep in profile.dependencies:
                             risk_scores[dep.dependency.name] = (
                                 dep.total_score / 5.0
@@ -834,21 +880,23 @@ def analyze(
                                 dep.dependency.name: dep.dependency
                                 for dep in profile.dependencies
                             },
-                            output_format=config.get("graph", "format"),
+                            output_format=graph_format_config,
                             risk_scores=risk_scores,
-                            depth_limit=config.get("graph", "depth"),
+                            depth_limit=graph_depth_config,
                         )
 
                         # Determine output file name
-                        base_name = os.path.splitext(os.path.basename(manifest_path))[0]
-                        graph_file = f"{base_name}_dependency_graph.json"
+                        graph_file = config.get("graph", "output") or (
+                            _default_graph_output_path(
+                                manifest_path, graph_format_config
+                            )
+                        )
 
                         # Save the graph data
-                        with open(graph_file, "w") as f:
-                            json.dump(graph_data, f, indent=2)
+                        _write_graph_file(graph_data, graph_format_config, graph_file)
 
                         logger.info(f"Dependency graph saved to {graph_file}")
-                        console.print(
+                        _auxiliary_console(json_output).print(
                             "\n[bold green]Dependency graph saved to "
                             f"{graph_file}[/bold green]"
                         )
@@ -860,12 +908,12 @@ def analyze(
 
                 # Handle historical trends functionality
                 try:
-                    if config.get("general", "save_history", False):
+                    if config.get("trends", "save_history", False):
                         from ..supply_chain import save_historical_profile
 
                         logger.info("Saving scan results to historical data")
                         history_path = save_historical_profile(profile)
-                        console.print(
+                        _auxiliary_console(json_output).print(
                             (
                                 "\n[bold green]Scan results saved to "
                                 "historical data at "
@@ -873,7 +921,7 @@ def analyze(
                             )
                         )
 
-                    if config.get("general", "analyze_trends", False):
+                    if config.get("trends", "analyze", False):
                         from ..supply_chain import analyze_historical_trends
 
                         logger.info("Analyzing historical trends")
@@ -882,39 +930,42 @@ def analyze(
                         )
 
                         if "error" in trends:
-                            console.print(
+                            _auxiliary_console(json_output).print(
                                 "\n[bold red]Trend analysis error: "
                                 f"{trends['error']}[/bold red]"
                             )
                         else:
+                            trend_console = _auxiliary_console(json_output)
                             # Output trend summary
-                            console.print("\n[bold]Historical Trend Analysis:[/bold]")
+                            trend_console.print(
+                                "\n[bold]Historical Trend Analysis:[/bold]"
+                            )
 
                             # Overall risk summary
                             avg_risk = trends["average_risk_over_time"]
-                            console.print(
+                            trend_console.print(
                                 "  Average Risk Score: "
                                 f"{avg_risk['average']:.2f}/5.0 "
                                 f"({avg_risk['trend']})"
                             )
 
                             # Improving and deteriorating dependencies
-                            console.print(
+                            trend_console.print(
                                 "  Improving Dependencies: "
                                 f"{len(trends['improving_dependencies'])}"
                             )
-                            console.print(
+                            trend_console.print(
                                 "  Deteriorating Dependencies: "
                                 f"{len(trends['deteriorating_dependencies'])}"
                             )
 
                             # Period analyzed
-                            console.print(
+                            trend_console.print(
                                 "  Analysis Period: "
                                 f"{trends['analyzed_period']['start']} to "
                                 f"{trends['analyzed_period']['end']}"
                             )
-                            console.print(
+                            trend_console.print(
                                 "  Scans Analyzed: "
                                 f"{trends['analyzed_period']['scans_analyzed']}"
                             )
@@ -925,31 +976,31 @@ def analyze(
                                 and trends["velocity_metrics"]
                             ):
                                 vm = trends["velocity_metrics"]
-                                console.print(
+                                trend_console.print(
                                     "\n  [bold]Dependency Velocity Metrics:[/bold]"
                                 )
-                                console.print(
+                                trend_console.print(
                                     "    New Dependencies: "
                                     f"{vm.get('new_dependencies', 0)}"
                                 )
-                                console.print(
+                                trend_console.print(
                                     "    Updated Dependencies: "
                                     f"{vm.get('updated_dependencies', 0)}"
                                 )
-                                console.print(
+                                trend_console.print(
                                     "    Removed Dependencies: "
                                     f"{vm.get('removed_dependencies', 0)}"
                                 )
-                                console.print(
+                                trend_console.print(
                                     "    Dependency Churn Rate: "
                                     f"{vm.get('dependency_churn_rate', 0)} "
                                     "deps/day"
                                 )
 
-                    if config.get("general", "trend_visualization"):
+                    if config.get("trends", "visualization"):
                         from ..supply_chain import generate_trend_visualization
 
-                        viz_type = config.get("general", "trend_visualization")
+                        viz_type = config.get("trends", "visualization")
                         logger.info(f"Generating trend visualization for {viz_type}")
                         viz_data = generate_trend_visualization(
                             profile.manifest_path,
@@ -958,7 +1009,7 @@ def analyze(
                         )
 
                         if "error" in viz_data:
-                            console.print(
+                            _auxiliary_console(json_output).print(
                                 "\n[bold red]Visualization error: "
                                 f"{viz_data['error']}[/bold red]"
                             )
@@ -974,7 +1025,7 @@ def analyze(
                                 json.dump(viz_data, f, indent=2)
 
                             logger.info(f"Trend visualization data saved to {viz_file}")
-                            console.print(
+                            _auxiliary_console(json_output).print(
                                 "\n[bold green]Trend visualization data saved "
                                 f"to {viz_file}[/bold green]"
                             )

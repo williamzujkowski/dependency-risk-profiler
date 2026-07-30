@@ -15,6 +15,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_HISTORY_DIR = os.path.expanduser("~/.dependency-risk-profiler/history")
 
 
+def _score_or_zero(value: Optional[float]) -> float:
+    """Return a numeric score for stored history data."""
+    return value if value is not None else 0.0
+
+
 class HistoricalTrendAnalyzer:
     """Analyzer for historical trends in dependency risk profiles."""
 
@@ -76,21 +81,33 @@ class HistoricalTrendAnalyzer:
                     "installed_version": dep.dependency.installed_version,
                     "scores": {
                         # Using getattr with default values to handle missing attributes
-                        "staleness_score": getattr(dep, "staleness_score", 0),
-                        "maintainer_score": getattr(dep, "maintainer_score", 0),
-                        "security_policy_score": getattr(
-                            dep, "security_policy_score", 0
+                        "staleness_score": _score_or_zero(
+                            getattr(dep, "staleness_score", None)
                         ),
-                        "dependency_update_score": getattr(
-                            dep, "dependency_update_score", 0
+                        "maintainer_score": _score_or_zero(
+                            getattr(dep, "maintainer_score", None)
                         ),
-                        "signed_commits_score": getattr(dep, "signed_commits_score", 0),
-                        "branch_protection_score": getattr(
-                            dep, "branch_protection_score", 0
+                        "security_policy_score": _score_or_zero(
+                            getattr(dep, "security_policy_score", None)
                         ),
-                        "license_score": getattr(dep, "license_score", 0),
-                        "community_score": getattr(dep, "community_score", 0),
-                        "transitive_score": getattr(dep, "transitive_score", 0),
+                        "dependency_update_score": _score_or_zero(
+                            getattr(dep, "dependency_update_score", None)
+                        ),
+                        "signed_commits_score": _score_or_zero(
+                            getattr(dep, "signed_commits_score", None)
+                        ),
+                        "branch_protection_score": _score_or_zero(
+                            getattr(dep, "branch_protection_score", None)
+                        ),
+                        "license_score": _score_or_zero(
+                            getattr(dep, "license_score", None)
+                        ),
+                        "community_score": _score_or_zero(
+                            getattr(dep, "community_score", None)
+                        ),
+                        "transitive_score": _score_or_zero(
+                            getattr(dep, "transitive_score", None)
+                        ),
                     },
                 }
                 for dep in profile.dependencies

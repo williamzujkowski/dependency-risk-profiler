@@ -138,11 +138,14 @@ This produces structured data that can be processed by other tools:
 To visualize dependency relationships and risks:
 
 ```bash
-dependency-risk-profiler visualize-graph path/to/project
+dependency-risk-profiler analyze path/to/requirements.txt --generate-graph
 
-# Output as different graph formats
-dependency-risk-profiler visualize-graph --format d3 path/to/project
-dependency-risk-profiler visualize-graph --format graphviz path/to/project
+# Write graph data to a specific file
+dependency-risk-profiler analyze path/to/requirements.txt --generate-graph graph.json
+
+# Output as different graph data formats
+dependency-risk-profiler analyze path/to/requirements.txt --generate-graph graph.json --graph-format d3
+dependency-risk-profiler analyze path/to/requirements.txt --generate-graph graph.dot --graph-format graphviz
 ```
 
 ## Tracking Trends Over Time
@@ -151,13 +154,16 @@ To track how dependency risks change over time:
 
 ```bash
 # Generate initial trend data
-dependency-risk-profiler analyze --save-trends .
+dependency-risk-profiler analyze path/to/requirements.txt --save-history
 
 # After some time/changes, update trends
-dependency-risk-profiler analyze --save-trends .
+dependency-risk-profiler analyze path/to/requirements.txt --save-history
 
-# Visualize trends
-dependency-risk-profiler visualize-trends
+# Analyze saved trend data
+dependency-risk-profiler analyze path/to/requirements.txt --analyze-trends
+
+# Generate visualization data for a trend type
+dependency-risk-profiler analyze path/to/requirements.txt --trend-visualization overall
 ```
 
 ## Next Steps
