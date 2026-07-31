@@ -271,6 +271,7 @@ class OrgScanRunner:
     ) -> OrgScanReport:
         """Aggregate dependency profiles into org-wide exposure views."""
         by_key: Dict[DependencyKey, AggregatedDependency] = {}
+        repo_by_name = {repo.full_name: repo for repo in parsed.repositories}
         for key, score in profiles.items():
             by_key[key] = AggregatedDependency(
                 key=key,
@@ -287,6 +288,12 @@ class OrgScanRunner:
             aggregate.manifests.add(
                 f"{occurrence.repo_full_name}:{occurrence.manifest_path}"
             )
+            repo_ref = repo_by_name.get(occurrence.repo_full_name)
+            if repo_ref is not None:
+                aggregate.repo_refs[occurrence.repo_full_name] = repo_ref
+            aggregate.manifest_paths_by_repo.setdefault(
+                occurrence.repo_full_name, set()
+            ).add(occurrence.manifest_path)
 
         inventory = sorted(by_key.values(), key=self._dependency_sort_key)
         most_exposed = [
