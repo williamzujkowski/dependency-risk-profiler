@@ -1,5 +1,6 @@
 """Tests for GitHub account-wide dependency risk scans."""
 
+import csv
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Protocol, cast
@@ -32,6 +33,7 @@ from dependency_risk_profiler.org_scan.report import (
     render_html_report,
     render_terminal_summary,
     report_to_dict,
+    write_csv_report,
     write_json_report,
 )
 from dependency_risk_profiler.org_scan.scanner import (
@@ -431,8 +433,9 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert '<span class="badge unknown">UNKNOWN</span>' in html
     assert '<details class="exp-row drill" data-risk="1"' in html
     assert '<summary class="exp-summary">' in html
-    assert 'class="bar-fill high" style="width:100%"></span>' in html
-    assert 'role="img" aria-label="2 / 2 repos exposed to risky"' in html
+    assert '<meter class="bar high"' in html
+    assert 'max="2"' in html and 'value="2"' in html
+    assert 'aria-label="2 / 2 repos exposed to risky"' in html
     assert "2 / 2 repos" in html
     assert "2 scored · 1 filtered" in html
     assert "advisories: unknown" in html
@@ -462,6 +465,39 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     json_path = tmp_path / "report.json"
     write_json_report(report, json_path)
     assert json_path.exists()
+
+    csv_path = tmp_path / "report.csv"
+    write_csv_report(report, csv_path)
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        csv_rows = list(csv.DictReader(handle))
+    assert len(csv_rows) == report.unique_dependency_count
+    first_csv = csv_rows[0]
+    assert set(first_csv) == {
+        "package",
+        "ecosystem",
+        "risk_level",
+        "risk_score",
+        "repos_exposed",
+        "repos_scanned",
+        "installed_version",
+        "version_specs",
+        "latest_version",
+        "stars",
+        "contributors",
+        "last_updated",
+        "license",
+        "deprecated",
+        "advisories_scored",
+        "advisories_filtered",
+        "signals",
+        "repositories",
+        "manifests",
+        "source_repo",
+        "deps_dev",
+    }
+    assert first_csv["risk_level"] in {"CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"}
+    assert first_csv["deps_dev"].startswith("https://deps.dev/")
+
     model = report_to_dict(report)
     assert model["unique_dependency_count"] == 4
     assert "most_exposed_risky_dependencies" in model

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 from datetime import datetime
@@ -77,6 +78,87 @@ def write_json_report(report: OrgScanReport, output_path: Path) -> None:
     )
 
 
+CSV_COLUMNS: Tuple[str, ...] = (
+    "package",
+    "ecosystem",
+    "risk_level",
+    "risk_score",
+    "repos_exposed",
+    "repos_scanned",
+    "installed_version",
+    "version_specs",
+    "latest_version",
+    "stars",
+    "contributors",
+    "last_updated",
+    "license",
+    "deprecated",
+    "advisories_scored",
+    "advisories_filtered",
+    "signals",
+    "repositories",
+    "manifests",
+    "source_repo",
+    "deps_dev",
+)
+
+
+def write_csv_report(report: OrgScanReport, output_path: Path) -> None:
+    """Write the dependency inventory as a flat CSV, one row per dependency.
+
+    The CSV is the spreadsheet-friendly companion to the HTML report: every
+    dependency becomes a row with its risk verdict, blast radius, real GitHub
+    signals, advisory counts, and the same investigate-upstream links, so a
+    triager can sort and filter in any spreadsheet or BI tool.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    repo_count = len(report.repositories_scanned)
+    with output_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(CSV_COLUMNS))
+        writer.writeheader()
+        for dependency in report.inventory:
+            writer.writerow(_dependency_to_csv_row(dependency, repo_count))
+
+
+def _dependency_to_csv_row(
+    dependency: AggregatedDependency, repo_count: int
+) -> Dict[str, object]:
+    """Flatten one dependency into a CSV row."""
+    metadata = dependency.risk_score.dependency
+    community = metadata.community_metrics
+    metrics = metadata.security_metrics
+    license_info = metadata.license_info
+    return {
+        "package": dependency.key.name,
+        "ecosystem": dependency.key.ecosystem,
+        "risk_level": dependency.risk_level.value,
+        "risk_score": f"{dependency.risk_score.total_score:.3f}",
+        "repos_exposed": dependency.blast_radius,
+        "repos_scanned": repo_count,
+        "installed_version": metadata.installed_version,
+        "version_specs": dependency.versions_display,
+        "latest_version": metadata.latest_version or "",
+        "stars": community.star_count if community is not None else "",
+        "contributors": community.contributor_count if community is not None else "",
+        "last_updated": (
+            metadata.last_updated.date().isoformat() if metadata.last_updated else ""
+        ),
+        "license": license_info.license_id if license_info is not None else "",
+        "deprecated": "yes" if metadata.is_deprecated else "no",
+        "advisories_scored": (
+            metrics.counted_vulnerability_count if metrics is not None else ""
+        ),
+        "advisories_filtered": (
+            metrics.filtered_vulnerability_count if metrics is not None else ""
+        ),
+        "signals": "; ".join(dependency.key_signals),
+        "repositories": "; ".join(sorted(dependency.repositories)),
+        "manifests": "; ".join(sorted(dependency.manifests)),
+        "source_repo": metadata.repository_url or "",
+        "deps_dev": _deps_dev_url(dependency.key.ecosystem, dependency.key.name) or "",
+    }
+
+
 def render_html_report(report: OrgScanReport) -> str:
     """Render a self-contained offline HTML report."""
     return "\n".join(
@@ -97,7 +179,6 @@ def render_html_report(report: OrgScanReport) -> str:
             _inventory_section(report),
             _methodology_footer(report),
             "</main>",
-            f"<script>{_javascript()}</script>",
             "</body>",
             "</html>",
         ]
@@ -250,16 +331,16 @@ def _riskiest_repos_section(report: OrgScanReport) -> str:
     Ranked by aggregate exposure. Bars show each repo's high-risk dependency load.
   </p>
   <div class="tbl-wrap">
-    <table data-sortable>
+    <table>
       <caption class="sr-only">
         Repositories ranked by aggregate dependency risk
       </caption>
       <thead>
         <tr>
-          <th><button type="button" data-sort="text">Repository</button></th>
-          <th><button type="button" data-sort="number">Risk load</button></th>
-          <th>High-risk deps</th>
-          <th>Worst deps</th>
+          <th scope="col">Repository</th>
+          <th scope="col">Risk load</th>
+          <th scope="col">High-risk deps</th>
+          <th scope="col">Worst deps</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
@@ -277,22 +358,20 @@ def _inventory_section(report: OrgScanReport) -> str:
     return f"""
 <section id="full-dependency-inventory" class="section">
   <h2>Full inventory</h2>
-  <div class="search">
-    <input id="inventory-search" type="search" autocomplete="off"
-      placeholder="filter · dependency, repo, signal"
-      aria-label="Filter dependency inventory"
-      aria-controls="inventory-table">
-  </div>
+  <p class="sub">
+    Every unique dependency, ordered worst-first. To sort, filter, or pivot,
+    open the CSV export alongside this report.
+  </p>
   <div class="tbl-wrap">
-    <table id="inventory-table" data-sortable data-filterable>
-      <caption class="sr-only">Searchable inventory of every unique dependency</caption>
+    <table id="inventory-table">
+      <caption class="sr-only">Inventory of every unique dependency</caption>
       <thead>
         <tr>
-          <th><button type="button" data-sort="text">Dependency</button></th>
-          <th><button type="button" data-sort="text">Eco</button></th>
-          <th><button type="button" data-sort="risk">Risk</button></th>
-          <th><button type="button" data-sort="number">Repos</button></th>
-          <th>Signals</th>
+          <th scope="col">Dependency</th>
+          <th scope="col">Eco</th>
+          <th scope="col">Risk</th>
+          <th scope="col">Repos</th>
+          <th scope="col">Signals</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
@@ -335,7 +414,6 @@ def _methodology_footer(report: OrgScanReport) -> str:
 
 def _exposure_row(dependency: AggregatedDependency, repo_count: int) -> str:
     """Render a dependency exposure row."""
-    width = _exposure_width(dependency.blast_radius, repo_count)
     risk_class = _risk_class(dependency.risk_level)
     advisory = _advisory_line(dependency)
     signal_text = _signals_text(dependency)
@@ -351,10 +429,9 @@ def _exposure_row(dependency: AggregatedDependency, repo_count: int) -> str:
         <span class="eco">· {escape(dependency.key.ecosystem)}</span>
       </span>
       <span>{_risk_badge(dependency.risk_level)}</span>
-      <span class="exp-bar" role="img" aria-label="{escape(label)}">
-        <span class="bar-track">
-          <span class="bar-fill {risk_class}" style="width:{width}%"></span>
-        </span>
+      <span class="exp-bar">
+        <meter class="bar {risk_class}" min="0" max="{max(repo_count, 1)}"
+          value="{dependency.blast_radius}" aria-label="{escape(label)}"></meter>
         <span class="bar-label">
           <b>{dependency.blast_radius}</b> / {repo_count} repos
         </span>
@@ -1073,14 +1150,6 @@ def _counted_advisory_count(metrics: Optional[SecurityMetrics]) -> int:
     return 0
 
 
-def _exposure_width(blast_radius: int, repo_count: int) -> int:
-    """Return the exposure bar width as an integer percentage."""
-    if repo_count <= 0:
-        return 0
-    percent = int((blast_radius / repo_count) * 100)
-    return min(100, max(0, percent))
-
-
 def _pluralize(count: int, singular: str) -> str:
     """Return a count-aware noun phrase without the count."""
     if count == 1:
@@ -1224,12 +1293,17 @@ def _metadata_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
     """Serialize dependency metadata relevant to the org report."""
     dependency = score.dependency
     license_info = dependency.license_info
+    community = dependency.community_metrics
     return {
         "latest_version": dependency.latest_version,
         "last_updated": (
             dependency.last_updated.isoformat() if dependency.last_updated else None
         ),
         "maintainer_count": dependency.maintainer_count,
+        "star_count": community.star_count if community is not None else None,
+        "contributor_count": (
+            community.contributor_count if community is not None else None
+        ),
         "is_deprecated": dependency.is_deprecated,
         "repository_url": dependency.repository_url,
         "license": license_info.license_id if license_info is not None else None,
@@ -1249,44 +1323,64 @@ def _metadata_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
 def _css() -> str:
     """Return inline CSS."""
     return """
+/* Palette ported from the Remarque design system (williamzujkowski.io):
+   warm-cream / ferric-ink light, phosphor-green dark, radar-green accent.
+   Severity ramp derived in the same oklch space as Remarque's semantic
+   error/warning/success tokens. */
 :root{
-  --paper:#f4f6f1; --surface:#ffffff; --raise:#fbfcf9;
-  --ink:#15201a; --muted:#5b6b61; --faint:#8a978d; --hair:#dbe2da;
-  --crit:#9e1f12; --high:#b25415; --med:#8f6d12; --low:#2f7d52;
-  --unknown:#6b7570;
-  --crit-wash:#9e1f1216; --high-wash:#b2541516;
-  --med-wash:#8f6d1216; --low-wash:#2f7d5216; --unk-wash:#6b757012;
-  --accent:#1c7d51; --focus:#1c7d51;
+  --paper:oklch(0.95 0.015 75); --surface:oklch(0.975 0.008 75);
+  --raise:oklch(0.93 0.015 75);
+  --ink:oklch(0.18 0.04 25); --muted:oklch(0.42 0.04 25);
+  --faint:oklch(0.52 0.03 25); --hair:oklch(0.85 0.02 75);
+  --crit:oklch(0.50 0.15 25); --high:oklch(0.55 0.13 52);
+  --med:oklch(0.60 0.10 85); --low:oklch(0.50 0.13 145);
+  --unknown:oklch(0.52 0.03 25);
+  --crit-wash:oklch(0.50 0.15 25 / 0.12); --high-wash:oklch(0.55 0.13 52 / 0.12);
+  --med-wash:oklch(0.60 0.10 85 / 0.14); --low-wash:oklch(0.50 0.13 145 / 0.12);
+  --unk-wash:oklch(0.52 0.03 25 / 0.10);
+  --accent:oklch(0.48 0.15 140); --focus:oklch(0.48 0.15 140);
   --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --paper:#0d1310; --surface:#121b16; --raise:#16211b;
-  --ink:#e6ede8; --muted:#8ba295; --faint:#5f7268; --hair:#25332b;
-  --crit:#ef6a55; --high:#e08a3c; --med:#d3b24e; --low:#57c98a;
-  --unknown:#8ba295;
-  --crit-wash:#ef6a5520; --high-wash:#e08a3c20;
-  --med-wash:#d3b24e20; --low-wash:#57c98a20; --unk-wash:#8ba29518;
-  --accent:#57c98a; --focus:#57c98a; color-scheme:dark;
+  --paper:oklch(0.14 0.015 140); --surface:oklch(0.17 0.015 140);
+  --raise:oklch(0.19 0.015 140);
+  --ink:oklch(0.92 0.03 140); --muted:oklch(0.85 0.03 140);
+  --faint:oklch(0.70 0.03 140); --hair:oklch(0.28 0.02 140);
+  --crit:oklch(0.68 0.16 25); --high:oklch(0.74 0.14 55);
+  --med:oklch(0.80 0.11 90); --low:oklch(0.78 0.16 145);
+  --unknown:oklch(0.70 0.03 140);
+  --crit-wash:oklch(0.68 0.16 25 / 0.18); --high-wash:oklch(0.74 0.14 55 / 0.18);
+  --med-wash:oklch(0.80 0.11 90 / 0.16); --low-wash:oklch(0.78 0.16 145 / 0.16);
+  --unk-wash:oklch(0.70 0.03 140 / 0.14);
+  --accent:oklch(0.82 0.17 140); --focus:oklch(0.82 0.17 140); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --paper:#0d1310; --surface:#121b16; --raise:#16211b;
-  --ink:#e6ede8; --muted:#8ba295; --faint:#5f7268; --hair:#25332b;
-  --crit:#ef6a55; --high:#e08a3c; --med:#d3b24e; --low:#57c98a;
-  --unknown:#8ba295;
-  --crit-wash:#ef6a5520; --high-wash:#e08a3c20;
-  --med-wash:#d3b24e20; --low-wash:#57c98a20; --unk-wash:#8ba29518;
-  --accent:#57c98a; --focus:#57c98a; color-scheme:dark;
+  --paper:oklch(0.14 0.015 140); --surface:oklch(0.17 0.015 140);
+  --raise:oklch(0.19 0.015 140);
+  --ink:oklch(0.92 0.03 140); --muted:oklch(0.85 0.03 140);
+  --faint:oklch(0.70 0.03 140); --hair:oklch(0.28 0.02 140);
+  --crit:oklch(0.68 0.16 25); --high:oklch(0.74 0.14 55);
+  --med:oklch(0.80 0.11 90); --low:oklch(0.78 0.16 145);
+  --unknown:oklch(0.70 0.03 140);
+  --crit-wash:oklch(0.68 0.16 25 / 0.18); --high-wash:oklch(0.74 0.14 55 / 0.18);
+  --med-wash:oklch(0.80 0.11 90 / 0.16); --low-wash:oklch(0.78 0.16 145 / 0.16);
+  --unk-wash:oklch(0.70 0.03 140 / 0.14);
+  --accent:oklch(0.82 0.17 140); --focus:oklch(0.82 0.17 140); color-scheme:dark;
 }
 :root[data-theme="light"]{
-  --paper:#f4f6f1; --surface:#ffffff; --raise:#fbfcf9;
-  --ink:#15201a; --muted:#5b6b61; --faint:#8a978d; --hair:#dbe2da;
-  --crit:#9e1f12; --high:#b25415; --med:#8f6d12; --low:#2f7d52;
-  --unknown:#6b7570;
-  --crit-wash:#9e1f1216; --high-wash:#b2541516;
-  --med-wash:#8f6d1216; --low-wash:#2f7d5216; --unk-wash:#6b757012;
-  --accent:#1c7d51; --focus:#1c7d51; color-scheme:light;
+  --paper:oklch(0.95 0.015 75); --surface:oklch(0.975 0.008 75);
+  --raise:oklch(0.93 0.015 75);
+  --ink:oklch(0.18 0.04 25); --muted:oklch(0.42 0.04 25);
+  --faint:oklch(0.52 0.03 25); --hair:oklch(0.85 0.02 75);
+  --crit:oklch(0.50 0.15 25); --high:oklch(0.55 0.13 52);
+  --med:oklch(0.60 0.10 85); --low:oklch(0.50 0.13 145);
+  --unknown:oklch(0.52 0.03 25);
+  --crit-wash:oklch(0.50 0.15 25 / 0.12); --high-wash:oklch(0.55 0.13 52 / 0.12);
+  --med-wash:oklch(0.60 0.10 85 / 0.14); --low-wash:oklch(0.50 0.13 145 / 0.12);
+  --unk-wash:oklch(0.52 0.03 25 / 0.10);
+  --accent:oklch(0.48 0.15 140); --focus:oklch(0.48 0.15 140); color-scheme:light;
 }
 *{box-sizing:border-box;}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
@@ -1347,17 +1441,24 @@ border-radius:999px;border:1px solid transparent;}
 .badge.low{color:var(--low);background:var(--low-wash);border-color:var(--low);}
 .badge.unknown{color:var(--unknown);background:var(--unk-wash);
 border-color:var(--unknown);border-style:dashed;}
-/* the exposure bar */
+/* the exposure bar — semantic <meter>, blast radius = value / repos scanned */
 .exp-bar{display:flex;flex-direction:column;gap:4px;}
-.bar-track{display:block;position:relative;height:9px;border-radius:5px;background:var(--hair);
-overflow:hidden;}
-.bar-fill{display:block;position:absolute;inset:0 auto 0 0;border-radius:5px;}
-.bar-fill.crit{background:var(--crit);}
-.bar-fill.high{background:var(--high);}
-.bar-fill.med{background:var(--med);}
-.bar-fill.low{background:var(--low);}
-.bar-fill.unknown{background:repeating-linear-gradient(90deg,var(--unknown),
-var(--unknown) 3px,transparent 3px,transparent 6px);}
+meter.bar{-webkit-appearance:none;appearance:none;width:100%;height:9px;
+border:0;border-radius:5px;background:var(--hair);}
+meter.bar::-webkit-meter-bar{background:var(--hair);border:0;border-radius:5px;}
+meter.bar::-moz-meter-bar{border-radius:5px;}
+meter.bar.crit::-webkit-meter-optimum-value{background:var(--crit);border-radius:5px;}
+meter.bar.high::-webkit-meter-optimum-value{background:var(--high);border-radius:5px;}
+meter.bar.med::-webkit-meter-optimum-value{background:var(--med);border-radius:5px;}
+meter.bar.low::-webkit-meter-optimum-value{background:var(--low);border-radius:5px;}
+meter.bar.unknown::-webkit-meter-optimum-value{background:repeating-linear-gradient(
+90deg,var(--unknown),var(--unknown) 3px,transparent 3px,transparent 6px);}
+meter.bar.crit::-moz-meter-bar{background:var(--crit);}
+meter.bar.high::-moz-meter-bar{background:var(--high);}
+meter.bar.med::-moz-meter-bar{background:var(--med);}
+meter.bar.low::-moz-meter-bar{background:var(--low);}
+meter.bar.unknown::-moz-meter-bar{background:repeating-linear-gradient(
+90deg,var(--unknown),var(--unknown) 3px,transparent 3px,transparent 6px);}
 .bar-label{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
 .bar-label b{color:var(--ink);}
 .exp-signals{font-size:12.5px;color:var(--muted);}
@@ -1431,55 +1532,5 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   .fact-grid{grid-template-columns:1fr;}
   .readout{grid-template-columns:1fr 1fr;}
   .readout div:nth-child(2){border-right:0;}
-}
-"""
-
-
-def _javascript() -> str:
-    """Return inline vanilla JavaScript for sorting and filtering."""
-    return """
-function cellValue(row, index) {
-  const cell = row.children[index];
-  if (!cell) return "";
-  return cell.getAttribute("data-value") || cell.textContent.trim();
-}
-document.querySelectorAll("table[data-sortable]").forEach((table) => {
-  table.querySelectorAll("th button[data-sort]").forEach((button, index) => {
-    button.setAttribute("aria-sort", "none");
-    button.addEventListener("click", () => {
-      const tbody = table.querySelector("tbody");
-      const rows = Array.from(tbody.querySelectorAll("tr"));
-      const type = button.getAttribute("data-sort");
-      const current = button.getAttribute("aria-sort");
-      const ascending = current !== "ascending";
-      table.querySelectorAll("th button[data-sort]").forEach((other) => {
-        other.setAttribute("aria-sort", "none");
-      });
-      button.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-      rows.sort((a, b) => {
-        const av = cellValue(a, index);
-        const bv = cellValue(b, index);
-        let result = 0;
-        if (type === "number" || type === "risk") {
-          result = Number(av) - Number(bv);
-        } else {
-          result = av.localeCompare(bv, undefined, { sensitivity: "base" });
-        }
-        return ascending ? result : -result;
-      });
-      rows.forEach((row) => tbody.appendChild(row));
-    });
-  });
-});
-const search = document.getElementById("inventory-search");
-const inventory = document.getElementById("inventory-table");
-if (search && inventory) {
-  search.addEventListener("input", () => {
-    const term = search.value.trim().toLowerCase();
-    inventory.querySelectorAll("tbody tr").forEach((row) => {
-      const haystack = row.getAttribute("data-search") || row.textContent.toLowerCase();
-      row.hidden = term.length > 0 && !haystack.includes(term);
-    });
-  });
 }
 """

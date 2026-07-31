@@ -22,6 +22,7 @@ from ..org_scan import (
     OrgScanRunner,
     render_html_report,
     render_terminal_summary,
+    write_csv_report,
     write_json_report,
 )
 from ..org_scan.models import AccountType, RepositoryRef
@@ -1234,6 +1235,12 @@ def scan_org(
         help="Path for the aggregate JSON report",
         dir_okay=False,
     ),
+    output_csv: Optional[Path] = typer.Option(
+        None,
+        "--output-csv",
+        help="Optional path for a flat CSV of the dependency inventory",
+        dir_okay=False,
+    ),
     max_repos: Optional[int] = typer.Option(
         None,
         "--max-repos",
@@ -1266,6 +1273,7 @@ def scan_org(
         github_token=github_token,
         output_html=output_html,
         output_json=output_json,
+        output_csv=output_csv,
         max_repos=max_repos,
         include_archived=include_archived,
         manifest_glob=manifest_glob,
@@ -1292,6 +1300,12 @@ def scan_user(
         Path("dependency-risk-user-report.json"),
         "--output-json",
         help="Path for the aggregate JSON report",
+        dir_okay=False,
+    ),
+    output_csv: Optional[Path] = typer.Option(
+        None,
+        "--output-csv",
+        help="Optional path for a flat CSV of the dependency inventory",
         dir_okay=False,
     ),
     max_repos: Optional[int] = typer.Option(
@@ -1326,6 +1340,7 @@ def scan_user(
         github_token=github_token,
         output_html=output_html,
         output_json=output_json,
+        output_csv=output_csv,
         max_repos=max_repos,
         include_archived=include_archived,
         manifest_glob=manifest_glob,
@@ -1340,6 +1355,7 @@ def _scan_github_account(
     github_token: Optional[str],
     output_html: Path,
     output_json: Path,
+    output_csv: Optional[Path],
     max_repos: Optional[int],
     include_archived: bool,
     manifest_glob: Optional[List[str]],
@@ -1395,6 +1411,9 @@ def _scan_github_account(
     console.print(render_terminal_summary(report), soft_wrap=True)
     console.print(f"\n[bold green]HTML report written to {output_html}[/bold green]")
     console.print(f"[bold green]JSON report written to {output_json}[/bold green]")
+    if output_csv is not None:
+        write_csv_report(report, output_csv)
+        console.print(f"[bold green]CSV report written to {output_csv}[/bold green]")
 
 
 def _vulnerability_options(config: Config, token: str) -> VulnerabilityOptions:
