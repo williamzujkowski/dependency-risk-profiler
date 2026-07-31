@@ -52,6 +52,9 @@ health_indicators = 0.1
 license = 0.3
 community = 0.2
 transitive = 0.15
+popularity_high_stars = 2000
+popularity_high_contributors = 25
+staleness_popularity_dampening = 0.5
 
 [trends]
 save_history = false
@@ -122,6 +125,12 @@ maintainer = 0.25
 version_difference = 0.2
 license = 0.25
 ```
+
+`popularity_high_stars`, `popularity_high_contributors`, and
+`staleness_popularity_dampening` calibrate staleness only when real popularity
+metadata is available. This treats mature, widely adopted projects with slow
+release cadence as lower abandonment risk without reducing bus-factor or
+vulnerability/advisory risk.
 
 ## Ignoring Files and Dependencies
 

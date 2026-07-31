@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.text import Text
 
 from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
+from ..popularity import should_soften_low_release_cadence
 
 
 class BaseFormatter:
@@ -256,7 +257,10 @@ class TerminalFormatter(BaseFormatter):
             and dep.staleness_score > 0
             and metadata.last_updated is not None
         ):
-            signals.append(self._format_release_signal(metadata.last_updated))
+            if should_soften_low_release_cadence(metadata):
+                signals.append("stable, low release cadence")
+            else:
+                signals.append(self._format_release_signal(metadata.last_updated))
 
         if dep.version_score is not None and dep.version_score > 0:
             signals.append(self._format_version_signal(dep))
@@ -296,7 +300,11 @@ class TerminalFormatter(BaseFormatter):
             signals.append("no branch protection")
 
         if dep.maintained_score is not None and dep.maintained_score > 0.5:
-            signals.append("not actively maintained")
+            if should_soften_low_release_cadence(metadata):
+                if "stable, low release cadence" not in signals:
+                    signals.append("stable, low release cadence")
+            else:
+                signals.append("not actively maintained")
 
         if dep.community_score is not None and dep.community_score > 0.5:
             community_signal = self._format_community_signal(dep)

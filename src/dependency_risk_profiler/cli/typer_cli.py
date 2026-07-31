@@ -1359,12 +1359,13 @@ def _scan_github_account(
     vulnerability_options = _vulnerability_options(config, token)
     manifest_globs = _manifest_globs(manifest_glob)
 
+    client = GitHubOrgClient(token=token)
     profiler = ExistingDependencyProfiler(
         scoring_weights=config.get_scoring_weights(),
         vulnerability_options=vulnerability_options,
         timeout=int(config.get("general", "timeout", 120)),
+        repository_signals_client=client,
     )
-    client = GitHubOrgClient(token=token)
     runner = OrgScanRunner(
         github_client=client,
         dependency_profiler=profiler,

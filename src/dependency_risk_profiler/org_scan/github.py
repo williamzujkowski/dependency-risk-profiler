@@ -6,6 +6,7 @@ import logging
 import time
 from dataclasses import dataclass
 from typing import Iterable, List, Mapping, Optional
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
@@ -39,6 +40,15 @@ class GitHubRepository:
             archived=self.archived,
             fork=self.fork,
         )
+
+
+@dataclass(frozen=True)
+class RepoSignals:
+    """Authenticated GitHub repository popularity signals."""
+
+    star_count: Optional[int] = None
+    contributor_count: Optional[int] = None
+    archived: Optional[bool] = None
 
 
 class GitHubOrgClient:
@@ -174,6 +184,52 @@ class GitHubOrgClient:
         )
         return str(response.text)
 
+    def get_repository_signals(self, owner_repo: str) -> RepoSignals:
+        """Fetch cheap authenticated popularity signals for a GitHub repository."""
+        normalized = owner_repo.strip().strip("/")
+        if normalized.count("/") != 1:
+            return RepoSignals()
+
+        try:
+            repository_payload = self._get_json(f"/repos/{normalized}", {})
+            star_count: Optional[int] = None
+            archived: Optional[bool] = None
+            if isinstance(repository_payload, Mapping):
+                star_count = self._optional_int(
+                    repository_payload.get("stargazers_count")
+                )
+                archived_value = repository_payload.get("archived")
+                if isinstance(archived_value, bool):
+                    archived = archived_value
+
+            contributors_response = self._request(
+                f"/repos/{normalized}/contributors",
+                {"per_page": "1", "anon": "true"},
+                accept="application/vnd.github+json",
+            )
+            contributor_payload = contributors_response.json()
+            contributor_count = self._contributor_count(
+                contributor_payload,
+                contributors_response.headers.get("Link"),
+            )
+            return RepoSignals(
+                star_count=star_count,
+                contributor_count=contributor_count,
+                archived=archived,
+            )
+        except (
+            GitHubRateLimitError,
+            requests.RequestException,
+            RuntimeError,
+            ValueError,
+        ) as exc:
+            logger.warning(
+                "GitHub repository signal enrichment failed for %s: %s",
+                normalized,
+                exc,
+            )
+            return RepoSignals()
+
     def _get_json(self, path: str, params: Mapping[str, str]) -> object:
         """GET a GitHub endpoint and parse JSON."""
         response = self._request(path, params, accept="application/vnd.github+json")
@@ -239,6 +295,53 @@ class GitHubOrgClient:
                 pass
 
         return float(2**attempt)
+
+    def _contributor_count(
+        self, payload: object, link_header: Optional[str]
+    ) -> Optional[int]:
+        """Return contributor count from GitHub pagination."""
+        if link_header is not None:
+            last_page = self._last_page_from_link_header(link_header)
+            if last_page is not None:
+                return last_page
+
+        if isinstance(payload, list):
+            return len(payload)
+        return None
+
+    def _last_page_from_link_header(self, link_header: str) -> Optional[int]:
+        """Extract the rel=last page number from a GitHub Link header."""
+        for link_part in link_header.split(","):
+            sections = [section.strip() for section in link_part.split(";")]
+            if len(sections) < 2:
+                continue
+            url_section = sections[0]
+            rel_sections = sections[1:]
+            if not (url_section.startswith("<") and url_section.endswith(">")):
+                continue
+            if 'rel="last"' not in rel_sections:
+                continue
+            parsed_url = urlparse(url_section[1:-1])
+            page_values = parse_qs(parsed_url.query).get("page")
+            if page_values is None:
+                continue
+            page = self._optional_int(page_values[-1])
+            if page is not None:
+                return page
+        return None
+
+    def _optional_int(self, value: object) -> Optional[int]:
+        """Return an integer only when GitHub returned a real integer value."""
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                return None
+        return None
 
     def _repository_from_mapping(
         self, item: Mapping[object, object]

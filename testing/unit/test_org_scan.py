@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from dependency_risk_profiler.cli.typer_cli import app
 from dependency_risk_profiler.models import (
+    CommunityMetrics,
     DependencyMetadata,
     DependencyRiskScore,
     LicenseCategory,
@@ -16,11 +17,16 @@ from dependency_risk_profiler.models import (
     RiskLevel,
     SecurityMetrics,
 )
-from dependency_risk_profiler.org_scan.github import GitHubOrgClient
+from dependency_risk_profiler.org_scan.github import GitHubOrgClient, RepoSignals
 from dependency_risk_profiler.org_scan.models import (
     DependencyKey,
     DependencyProfiler,
     RepositoryRef,
+)
+from dependency_risk_profiler.org_scan.pipeline import (
+    ExistingDependencyProfiler,
+    RepositorySignalsClient,
+    VulnerabilityOptions,
 )
 from dependency_risk_profiler.org_scan.report import (
     render_html_report,
@@ -197,6 +203,7 @@ class CliFixtureProfiler(FixtureProfiler):
         scoring_weights: object,
         vulnerability_options: object,
         timeout: int = 30,
+        repository_signals_client: Optional[object] = None,
     ) -> None:
         """Accept production constructor arguments."""
         super().__init__()
@@ -235,11 +242,13 @@ class CliFixtureGitHubClient(FixtureGitHubClient):
 class _FixtureResponse:
     """Small requests.Response stand-in for GitHub client endpoint tests."""
 
-    def __init__(self, payload: object) -> None:
+    def __init__(
+        self, payload: object, headers: Optional[Dict[str, str]] = None
+    ) -> None:
         """Store response payload and request-compatible attributes."""
         self._payload = payload
         self.status_code = 200
-        self.headers: Dict[str, str] = {}
+        self.headers = headers or {}
         self.text = ""
 
     def json(self) -> object:
@@ -273,6 +282,45 @@ class RecordingSession:
         if index < len(self.pages):
             return _FixtureResponse(self.pages[index])
         return _FixtureResponse([])
+
+
+class SignalSession:
+    """Requests-compatible session that returns prebuilt responses."""
+
+    def __init__(self, responses: List[_FixtureResponse]) -> None:
+        """Initialize response queue."""
+        self.responses = responses
+        self.urls: List[str] = []
+        self.params: List[Dict[str, str]] = []
+
+    def get(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        params: Dict[str, str],
+        timeout: int,
+    ) -> _FixtureResponse:
+        """Record request details and return the next response."""
+        self.urls.append(url)
+        self.params.append(params)
+        index = len(self.urls) - 1
+        if index < len(self.responses):
+            return self.responses[index]
+        return _FixtureResponse([])
+
+
+class FixtureRepositorySignalsClient(RepositorySignalsClient):
+    """Offline authenticated repository signal fixture."""
+
+    def __init__(self, signals: RepoSignals) -> None:
+        """Initialize fixture signal payload."""
+        self.signals = signals
+        self.calls: List[str] = []
+
+    def get_repository_signals(self, owner_repo: str) -> RepoSignals:
+        """Return fixture signals and record the normalized repo key."""
+        self.calls.append(owner_repo)
+        return self.signals
 
 
 def test_org_scan_aggregates_blast_radius_and_rankings() -> None:
@@ -464,6 +512,73 @@ def test_github_client_lists_user_repositories_with_filters() -> None:
     assert session.urls[0].endswith("/users/williamzujkowski/repos")
     assert session.params[0]["type"] == "all"
     assert session.params[0]["per_page"] == "100"
+
+
+def test_github_client_fetches_repository_signals_from_authenticated_api() -> None:
+    """REGRESSION: repo signals use API JSON and Link header contributor counts."""
+    session = SignalSession(
+        [
+            _FixtureResponse({"stargazers_count": 12345, "archived": False}),
+            _FixtureResponse(
+                [{"login": "first"}],
+                {
+                    "Link": (
+                        "<https://api.github.com/repos/pallets/jinja/contributors"
+                        '?per_page=1&anon=true&page=248>; rel="last"'
+                    )
+                },
+            ),
+        ]
+    )
+    client = GitHubOrgClient(
+        token="fixture-token",
+        session=cast(requests.Session, session),
+    )
+
+    signals = client.get_repository_signals("pallets/jinja")
+
+    assert signals.star_count == 12345
+    assert signals.contributor_count == 248
+    assert signals.archived is False
+    assert session.urls == [
+        "https://api.github.com/repos/pallets/jinja",
+        "https://api.github.com/repos/pallets/jinja/contributors",
+    ]
+    assert session.params[1] == {"per_page": "1", "anon": "true"}
+
+
+def test_profiler_applies_authenticated_repository_signals_and_caches() -> None:
+    """REGRESSION: GitHub repo signals replace registry maintainer guesses."""
+    signals_client = FixtureRepositorySignalsClient(
+        RepoSignals(star_count=12345, contributor_count=248, archived=False)
+    )
+    profiler = ExistingDependencyProfiler(
+        scoring_weights={},
+        vulnerability_options=VulnerabilityOptions(),
+        repository_signals_client=signals_client,
+    )
+    dependency = DependencyMetadata(
+        name="jinja2",
+        installed_version="3.1.6",
+        maintainer_count=1,
+        repository_url="https://github.com/pallets/jinja/",
+        community_metrics=CommunityMetrics(),
+    )
+
+    enriched = profiler._apply_github_repository_signals(dependency)
+    second = DependencyMetadata(
+        name="jinja2",
+        installed_version="3.1.6",
+        repository_url="git+https://github.com/pallets/jinja.git",
+    )
+    profiler._apply_github_repository_signals(second)
+
+    assert enriched.community_metrics is not None
+    assert enriched.community_metrics.star_count == 12345
+    assert enriched.community_metrics.contributor_count == 248
+    assert enriched.maintainer_count == 248
+    assert enriched.additional_info["github_repository_archived"] == "false"
+    assert signals_client.calls == ["pallets/jinja"]
 
 
 def test_user_scan_aggregates_blast_radius_and_report_labels() -> None:
