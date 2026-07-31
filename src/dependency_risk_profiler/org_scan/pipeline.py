@@ -140,6 +140,9 @@ class ExistingDependencyProfiler(DependencyProfiler):
                 logger.warning("No analyzer available for ecosystem %s", ecosystem)
                 return None
             analyzer.timeout = self.timeout
+            # Org scans derive last-update / tests / CI from the GitHub API
+            # (see _apply_github_repository_signals) instead of cloning each dep.
+            analyzer.clone_repos = False
             analyzers[ecosystem] = analyzer
         return analyzers[ecosystem]
 
@@ -186,6 +189,9 @@ class ExistingDependencyProfiler(DependencyProfiler):
             signals.star_count is None
             and signals.contributor_count is None
             and signals.archived is None
+            and signals.pushed_at is None
+            and signals.has_tests is None
+            and signals.has_ci is None
         ):
             return dependency
 
@@ -200,6 +206,14 @@ class ExistingDependencyProfiler(DependencyProfiler):
             dependency.additional_info[GITHUB_REPOSITORY_ARCHIVED_KEY] = (
                 "true" if signals.archived else "false"
             )
+        # These replace what the per-dependency git clone used to provide, so an
+        # org scan gets maintenance cadence and test/CI presence from the API.
+        if signals.pushed_at is not None:
+            dependency.last_updated = signals.pushed_at
+        if signals.has_tests is not None:
+            dependency.has_tests = signals.has_tests
+        if signals.has_ci is not None:
+            dependency.has_ci = signals.has_ci
         return dependency
 
     def _github_owner_repo(self, repository_url: Optional[str]) -> Optional[str]:

@@ -6,7 +6,12 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import check_for_vulnerabilities, cloned_repo, fetch_json
+from .common import (
+    check_for_vulnerabilities,
+    cloned_repo,
+    fetch_json,
+    is_cloneable_repo_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +74,7 @@ class NodeJSAnalyzer(BaseAnalyzer):
                     dep.has_known_exploits = check_for_vulnerabilities(name, "npm")
 
                     # Get additional info from GitHub if available
-                    if dep.repository_url and ("github.com" in dep.repository_url):
+                    if self.clone_repos and is_cloneable_repo_url(dep.repository_url):
                         # Clone the repository into a self-cleaning temp dir.
                         with cloned_repo(dep.repository_url) as clone_result:
                             if clone_result:

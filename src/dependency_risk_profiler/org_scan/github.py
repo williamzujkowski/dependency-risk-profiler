@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Iterable, List, Mapping, Optional
 from urllib.parse import parse_qs, urlparse
 
@@ -44,11 +45,18 @@ class GitHubRepository:
 
 @dataclass(frozen=True)
 class RepoSignals:
-    """Authenticated GitHub repository popularity signals."""
+    """Authenticated GitHub repository signals fetched without cloning."""
 
     star_count: Optional[int] = None
     contributor_count: Optional[int] = None
     archived: Optional[bool] = None
+    # `pushed_at` is the server-asserted last push (more trustworthy than a
+    # shallow clone's author-controlled commit date). None = unknown.
+    pushed_at: Optional[datetime] = None
+    # Derived from the repo file tree; None when the tree was truncated
+    # (very large repos) so an unknown is reported honestly rather than a guess.
+    has_tests: Optional[bool] = None
+    has_ci: Optional[bool] = None
 
 
 class GitHubOrgClient:
@@ -194,6 +202,8 @@ class GitHubOrgClient:
             repository_payload = self._get_json(f"/repos/{normalized}", {})
             star_count: Optional[int] = None
             archived: Optional[bool] = None
+            pushed_at: Optional[datetime] = None
+            default_branch: Optional[str] = None
             if isinstance(repository_payload, Mapping):
                 star_count = self._optional_int(
                     repository_payload.get("stargazers_count")
@@ -201,6 +211,12 @@ class GitHubOrgClient:
                 archived_value = repository_payload.get("archived")
                 if isinstance(archived_value, bool):
                     archived = archived_value
+                pushed_at = self._parse_github_datetime(
+                    repository_payload.get("pushed_at")
+                )
+                branch_value = repository_payload.get("default_branch")
+                if isinstance(branch_value, str) and branch_value:
+                    default_branch = branch_value
 
             contributors_response = self._request(
                 f"/repos/{normalized}/contributors",
@@ -212,10 +228,15 @@ class GitHubOrgClient:
                 contributor_payload,
                 contributors_response.headers.get("Link"),
             )
+
+            has_tests, has_ci = self._repo_health_from_tree(normalized, default_branch)
             return RepoSignals(
                 star_count=star_count,
                 contributor_count=contributor_count,
                 archived=archived,
+                pushed_at=pushed_at,
+                has_tests=has_tests,
+                has_ci=has_ci,
             )
         except (
             GitHubRateLimitError,
@@ -342,6 +363,83 @@ class GitHubOrgClient:
             except ValueError:
                 return None
         return None
+
+    def _parse_github_datetime(self, value: object) -> Optional[datetime]:
+        """Parse a GitHub ISO-8601 timestamp (e.g. pushed_at) as tz-aware UTC."""
+        if not isinstance(value, str) or not value:
+            return None
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed
+
+    # Root-anchored markers for CI config and test layout, matched against the
+    # repository's git tree so we never have to clone the repo to detect them.
+    _CI_TREE_MARKERS = (
+        ".github/workflows/",
+        ".gitlab-ci.yml",
+        ".travis.yml",
+        ".circleci/",
+        "azure-pipelines.yml",
+        "jenkinsfile",
+        ".drone.yml",
+        "appveyor.yml",
+    )
+    _TEST_DIR_MARKERS = ("test/", "tests/", "spec/", "__tests__/")
+
+    def _repo_health_from_tree(
+        self, owner_repo: str, default_branch: Optional[str]
+    ) -> tuple[Optional[bool], Optional[bool]]:
+        """Detect (has_tests, has_ci) from the repo git tree without cloning.
+
+        Returns ``(None, None)`` when the branch is unknown, the request fails,
+        or the tree is truncated (very large repos) — reporting an honest
+        unknown rather than guessing.
+        """
+        if not default_branch:
+            return None, None
+        try:
+            payload = self._get_json(
+                f"/repos/{owner_repo}/git/trees/{default_branch}",
+                {"recursive": "1"},
+            )
+        except (
+            GitHubRateLimitError,
+            requests.RequestException,
+            RuntimeError,
+            ValueError,
+        ) as exc:
+            logger.debug("Tree fetch failed for %s: %s", owner_repo, exc)
+            return None, None
+        if not isinstance(payload, Mapping) or payload.get("truncated") is True:
+            return None, None
+        entries = payload.get("tree")
+        if not isinstance(entries, list):
+            return None, None
+
+        has_tests = False
+        has_ci = False
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                continue
+            raw_path = entry.get("path")
+            if not isinstance(raw_path, str):
+                continue
+            path = raw_path.lower()
+            if not has_ci and any(m in path for m in self._CI_TREE_MARKERS):
+                has_ci = True
+            if not has_tests and (
+                any(seg in f"/{path}/" for seg in self._TEST_DIR_MARKERS)
+                or path.endswith(("_test.go", ".test.js", ".test.ts", ".spec.js"))
+                or path.rsplit("/", 1)[-1].startswith("test_")
+            ):
+                has_tests = True
+            if has_tests and has_ci:
+                break
+        return has_tests, has_ci
 
     def _repository_from_mapping(
         self, item: Mapping[object, object]

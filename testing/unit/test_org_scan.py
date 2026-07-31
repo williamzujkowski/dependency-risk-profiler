@@ -1,7 +1,7 @@
 """Tests for GitHub account-wide dependency risk scans."""
 
 import csv
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Protocol, cast
 
@@ -581,6 +581,107 @@ def test_github_client_fetches_repository_signals_from_authenticated_api() -> No
         "https://api.github.com/repos/pallets/jinja/contributors",
     ]
     assert session.params[1] == {"per_page": "1", "anon": "true"}
+
+
+def test_github_client_derives_pushed_at_and_health_from_tree() -> None:
+    """Repo signals get last-push + tests/CI from the API tree, no clone."""
+    session = SignalSession(
+        [
+            _FixtureResponse(
+                {
+                    "stargazers_count": 100,
+                    "archived": False,
+                    "pushed_at": "2026-01-15T10:30:00Z",
+                    "default_branch": "main",
+                }
+            ),
+            _FixtureResponse([{"login": "one"}], {}),
+            _FixtureResponse(
+                {
+                    "truncated": False,
+                    "tree": [
+                        {"path": "src/app.py", "type": "blob"},
+                        {"path": "tests/test_app.py", "type": "blob"},
+                        {"path": ".github/workflows/ci.yml", "type": "blob"},
+                    ],
+                }
+            ),
+        ]
+    )
+    client = GitHubOrgClient(
+        token="fixture-token", session=cast(requests.Session, session)
+    )
+
+    signals = client.get_repository_signals("acme/widget")
+
+    assert signals.pushed_at is not None
+    assert signals.pushed_at.year == 2026 and signals.pushed_at.month == 1
+    assert signals.has_tests is True
+    assert signals.has_ci is True
+    assert session.urls[2] == "https://api.github.com/repos/acme/widget/git/trees/main"
+
+
+def test_github_client_reports_unknown_health_on_truncated_tree() -> None:
+    """A truncated tree yields unknown tests/CI rather than a false negative."""
+    session = SignalSession(
+        [
+            _FixtureResponse(
+                {"stargazers_count": 5, "default_branch": "main", "archived": False}
+            ),
+            _FixtureResponse([{"login": "one"}], {}),
+            _FixtureResponse({"truncated": True, "tree": []}),
+        ]
+    )
+    client = GitHubOrgClient(
+        token="fixture-token", session=cast(requests.Session, session)
+    )
+
+    signals = client.get_repository_signals("acme/huge")
+
+    assert signals.has_tests is None
+    assert signals.has_ci is None
+
+
+def test_profiler_applies_pushed_at_and_health_signals() -> None:
+    """pushed_at becomes last_updated and tests/CI flags are applied."""
+    pushed = datetime(2026, 1, 15, tzinfo=timezone.utc)
+    signals_client = FixtureRepositorySignalsClient(
+        RepoSignals(
+            star_count=100,
+            contributor_count=50,
+            archived=False,
+            pushed_at=pushed,
+            has_tests=True,
+            has_ci=False,
+        )
+    )
+    profiler = ExistingDependencyProfiler(
+        scoring_weights={},
+        vulnerability_options=VulnerabilityOptions(),
+        repository_signals_client=signals_client,
+    )
+    dependency = DependencyMetadata(
+        name="jinja2",
+        installed_version="3.1.6",
+        repository_url="https://github.com/pallets/jinja/",
+    )
+
+    enriched = profiler._apply_github_repository_signals(dependency)
+
+    assert enriched.last_updated == pushed
+    assert enriched.has_tests is True
+    assert enriched.has_ci is False
+
+
+def test_org_scan_profiler_disables_cloning() -> None:
+    """Org-scan analyzers never clone; API signals stand in for repo inspection."""
+    profiler = ExistingDependencyProfiler(
+        scoring_weights={},
+        vulnerability_options=VulnerabilityOptions(),
+    )
+    analyzer = profiler._get_analyzer("python")
+    assert analyzer is not None
+    assert analyzer.clone_repos is False
 
 
 def test_profiler_applies_authenticated_repository_signals_and_caches() -> None:

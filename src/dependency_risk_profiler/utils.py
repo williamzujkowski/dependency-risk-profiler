@@ -95,6 +95,17 @@ def normalize_clone_url(repo_url: str) -> Optional[str]:
     return url
 
 
+def is_cloneable_repo_url(repo_url: Optional[str]) -> bool:
+    """Return True if the URL is a cloneable https repo on a supported host.
+
+    Uses full URL parsing (not a substring host check) so lookalike hosts such
+    as ``https://github.com.evil.example/x/y`` are correctly rejected.
+    """
+    if not repo_url:
+        return False
+    return normalize_clone_url(repo_url) is not None
+
+
 def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
     """Clone a git repository to a temporary directory.
 

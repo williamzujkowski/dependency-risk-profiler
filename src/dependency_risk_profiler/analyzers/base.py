@@ -16,6 +16,11 @@ class BaseAnalyzer(ABC):
             timeout: HTTP request timeout in seconds.
         """
         self.timeout = timeout
+        # When False, skip cloning each dependency's source repo. Org/user scans
+        # set this off and derive the same signals (last update, tests, CI) from
+        # the GitHub API instead, which is far faster at scale. The single-project
+        # `analyze` command leaves it on, where per-dependency depth is the point.
+        self.clone_repos = True
 
     @abstractmethod
     def analyze(
