@@ -52,8 +52,10 @@ jobs:
           build-mode: none
         - language: go
           build-mode: autobuild
-        - language: javascript-typescript
-          build-mode: none
+        # javascript-typescript removed: the repo authors no first-party JS/TS
+        # (the only .js files are vendored express test fixtures under
+        # testing/projects/, and the HTML report's script is a Python string),
+        # so CodeQL fatally errors "no source code seen during build".
         - language: python
           build-mode: none
         # CodeQL supports the following values keywords for 'language': 'actions', 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
