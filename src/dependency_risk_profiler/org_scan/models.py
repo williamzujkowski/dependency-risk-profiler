@@ -4,11 +4,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Literal, Set
+from typing import Dict, List, Literal, Set, Tuple
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 
 AccountType = Literal["organization", "user"]
+
+_CANONICAL_ECOSYSTEM_ALIASES = {
+    "pyproject": "python",
+}
+
+
+def canonical_ecosystem(raw: str) -> str:
+    """Return the package-identity ecosystem for report aggregation."""
+    normalized = raw.lower().strip()
+    return _CANONICAL_ECOSYSTEM_ALIASES.get(normalized, normalized)
 
 
 @dataclass(frozen=True)
@@ -82,6 +92,7 @@ class AggregatedDependency:
     manifest_paths_by_repo: Dict[str, Set[str]] = field(default_factory=dict)
     key_signals: List[str] = field(default_factory=list)
     advisory_summary: str = "unknown"
+    version_specs: Set[str] = field(default_factory=set)
 
     @property
     def blast_radius(self) -> int:
@@ -92,6 +103,25 @@ class AggregatedDependency:
     def risk_level(self) -> RiskLevel:
         """Return the dependency risk level."""
         return self.risk_score.risk_level
+
+    @property
+    def versions_display(self) -> str:
+        """Return a deterministic compact display of all seen version specs."""
+        return ", ".join(self.version_specs_list)
+
+    @property
+    def version_specs_list(self) -> List[str]:
+        """Return all seen version specs in deterministic display order."""
+        if not self.version_specs:
+            return [self.key.version]
+        return sorted(self.version_specs, key=_version_spec_sort_key)
+
+
+def _version_spec_sort_key(version_spec: str) -> Tuple[int, str]:
+    """Sort range-like specs before concrete pins for compact display."""
+    first_character = version_spec[:1]
+    range_prefixes = {"<", ">", "=", "~", "^"}
+    return (0 if first_character in range_prefixes else 1, version_spec.lower())
 
 
 @dataclass
