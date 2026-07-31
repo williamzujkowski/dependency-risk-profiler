@@ -11,6 +11,7 @@ from ..utils import (
     fetch_json,
     fetch_url,
     get_last_commit_date,
+    is_cloneable_repo_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ __all__ = [
     "fetch_json",
     "clone_repo",
     "cloned_repo",
+    "is_cloneable_repo_url",
     "get_last_commit_date",
     "count_contributors",
     "check_health_indicators",

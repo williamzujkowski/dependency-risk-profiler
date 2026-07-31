@@ -30,6 +30,25 @@ def test_normalize_clone_url(raw: str, expected: Optional[str]) -> None:
     assert utils.normalize_clone_url(raw) == expected
 
 
+@pytest.mark.parametrize(
+    "url, expected",
+    [
+        ("https://github.com/a/b", True),
+        ("git+https://github.com/a/b.git", True),
+        ("https://gitlab.com/a/b", True),
+        # Lookalike / embedded host must NOT pass a real host check.
+        ("https://github.com.evil.example/a/b", False),
+        ("https://evil.example/github.com/a/b", False),
+        ("git://internal.host/secret", False),
+        (None, False),
+        ("", False),
+    ],
+)
+def test_is_cloneable_repo_url(url: Optional[str], expected: bool) -> None:
+    """Only real supported-host https URLs are cloneable; lookalikes are not."""
+    assert utils.is_cloneable_repo_url(url) is expected
+
+
 def test_clone_repo_skips_uncloneable_url_without_running_git() -> None:
     """A non-cloneable URL returns None and never shells out to git."""
     with mock.patch.object(utils.subprocess, "run") as run:

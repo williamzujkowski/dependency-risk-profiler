@@ -7,7 +7,12 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import check_for_vulnerabilities, cloned_repo, fetch_json
+from .common import (
+    check_for_vulnerabilities,
+    cloned_repo,
+    fetch_json,
+    is_cloneable_repo_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,24 +100,14 @@ class PythonAnalyzer(BaseAnalyzer):
                         and "home_page" in pypi_data["info"]
                     ):
                         home_page = pypi_data["info"]["home_page"]
-                        if any(
-                            host in home_page
-                            for host in ["github.com", "gitlab.com", "bitbucket.org"]
-                        ):
+                        if is_cloneable_repo_url(home_page):
                             dep.repository_url = home_page
 
                     # Check for known vulnerabilities
                     dep.has_known_exploits = check_for_vulnerabilities(name, "pypi")
 
                     # Get additional info from repository if available
-                    if (
-                        self.clone_repos
-                        and dep.repository_url
-                        and any(
-                            host in dep.repository_url
-                            for host in ["github.com", "gitlab.com", "bitbucket.org"]
-                        )
-                    ):
+                    if self.clone_repos and is_cloneable_repo_url(dep.repository_url):
                         # Clone the repository into a self-cleaning temp dir.
                         with cloned_repo(dep.repository_url) as clone_result:
                             if clone_result:
