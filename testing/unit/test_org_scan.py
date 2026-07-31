@@ -1,9 +1,8 @@
 """Tests for GitHub account-wide dependency risk scans."""
 
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, cast
+from typing import Dict, Iterable, List, Optional, Protocol, cast
 
-import pytest
 import requests
 from typer.testing import CliRunner
 
@@ -31,6 +30,13 @@ from dependency_risk_profiler.org_scan.scanner import (
     OrgScanOptions,
     OrgScanRunner,
 )
+
+
+class MonkeyPatchFixture(Protocol):
+    """Subset of pytest monkeypatch used by these tests."""
+
+    def setattr(self, target: str, value: object, raising: bool = True) -> None:
+        """Set an import-path target to a replacement value."""
 
 
 class FixtureGitHubClient(GitHubDiscoveryClient):
@@ -251,6 +257,11 @@ def test_org_scan_aggregates_blast_radius_and_rankings() -> None:
     assert sorted(risky.repositories) == ["acme/api", "acme/web"]
 
     assert report.most_exposed_risky_dependencies[0].key.name == "risky"
+    assert [dep.key.name for dep in report.most_exposed_risky_dependencies] == [
+        "risky",
+        "medium",
+        "mystery",
+    ]
     assert report.riskiest_repositories[0].repo_full_name == "acme/web"
     assert report.headline == "1 high-risk dependencies exposed across 2 repositories"
 
@@ -264,9 +275,20 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     html = render_html_report(report)
     assert "Most exposed risky dependencies" in html
     assert "Riskiest repositories" in html
-    assert "Full dependency inventory" in html
+    assert "Full inventory" in html
+    assert '<dl class="readout" aria-label="Scan totals">' in html
+    assert "<dt>High-risk</dt>" in html
+    assert ":root{" in html
+    assert ':root[data-theme="dark"]' in html
+    assert '<span class="badge high">HIGH</span>' in html
+    assert '<span class="badge unknown">UNKNOWN</span>' in html
+    assert 'class="bar-fill high" style="width:100%"></div>' in html
+    assert 'role="img" aria-label="2 / 2 repos exposed to risky"' in html
     assert "2 / 2 repos" in html
-    assert "Filtered advisories are excluded from scoring" in html
+    assert "2 scored · 1 filtered" in html
+    assert "advisories: unknown" in html
+    assert "<b>How to read this.</b>" in html
+    assert "filtered out of the score" in html
 
     json_path = tmp_path / "report.json"
     write_json_report(report, json_path)
@@ -325,10 +347,10 @@ def test_user_scan_aggregates_blast_radius_and_report_labels() -> None:
     assert report.most_exposed_risky_dependencies[0].blast_radius == 2
 
     html = render_html_report(report)
-    assert "GitHub user dependency exposure" in html
+    assert "Dependency exposure · github user" in html
     assert "Most exposed risky dependencies" in html
     assert "Riskiest repositories" in html
-    assert "Full dependency inventory" in html
+    assert "Full inventory" in html
     assert "2 / 2 repos" in html
 
     model = report_to_dict(report)
@@ -338,7 +360,7 @@ def test_user_scan_aggregates_blast_radius_and_report_labels() -> None:
 
 def test_scan_org_cli_writes_html_and_json(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: MonkeyPatchFixture,
 ) -> None:
     """HYPOTHESIS: scan-org command runs end-to-end with offline fixtures."""
     html_path = tmp_path / "org.html"
@@ -376,7 +398,7 @@ def test_scan_org_cli_writes_html_and_json(
 
 def test_scan_user_cli_writes_html_and_json(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: MonkeyPatchFixture,
 ) -> None:
     """HYPOTHESIS: scan-user command runs end-to-end with offline fixtures."""
     html_path = tmp_path / "user.html"
@@ -411,7 +433,7 @@ def test_scan_user_cli_writes_html_and_json(
     assert CliFixtureGitHubClient.listed_sources == ["user:acme"]
     assert "Dependency Risk User Scan · acme" in result.output
     assert "python:risky@1.0 · HIGH · 2 / 2 repos" in result.output
-    assert "GitHub user dependency exposure" in html_path.read_text(encoding="utf-8")
+    assert "Dependency exposure · github user" in html_path.read_text(encoding="utf-8")
 
 
 def _repo_payload(full_name: str, archived: bool, fork: bool) -> Dict[str, object]:

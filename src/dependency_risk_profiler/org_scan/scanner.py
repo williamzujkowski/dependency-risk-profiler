@@ -292,7 +292,13 @@ class OrgScanRunner:
         most_exposed = [
             item
             for item in inventory
-            if item.risk_level in {RiskLevel.CRITICAL, RiskLevel.HIGH, RiskLevel.MEDIUM}
+            if item.risk_level
+            in {
+                RiskLevel.CRITICAL,
+                RiskLevel.HIGH,
+                RiskLevel.MEDIUM,
+                RiskLevel.UNKNOWN,
+            }
         ]
         repo_summaries = self._repository_summaries(parsed, by_key)
 
