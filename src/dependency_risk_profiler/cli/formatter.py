@@ -3,7 +3,15 @@
 import json
 from datetime import datetime
 from enum import Enum
+from io import StringIO
+from pathlib import Path
+from textwrap import wrap
 from typing import Dict
+
+from packaging.version import InvalidVersion, Version, parse
+from rich.cells import cell_len, set_cell_size
+from rich.console import Console
+from rich.text import Text
 
 from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
 
@@ -26,17 +34,14 @@ class BaseFormatter:
 class TerminalFormatter(BaseFormatter):
     """Terminal output formatter with color support."""
 
-    # ANSI color codes
-    RESET = "\033[0m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-    BOLD = "\033[1m"
+    RISK_WIDTH = 8
+    DEPENDENCY_WIDTH = 12
+    VERSION_WIDTH = 18
+    SIGNALS_WIDTH = 45
+    ADVISORIES_WIDTH = 26
+    TABLE_SEPARATOR = "  "
 
-    def __init__(self, color: bool = True):
+    def __init__(self, color: bool = True) -> None:
         """Initialize the terminal formatter.
 
         Args:
@@ -53,222 +58,350 @@ class TerminalFormatter(BaseFormatter):
         Returns:
             Formatted profile.
         """
-        result = []
+        manifest_name = Path(profile.manifest_path).name
+        dependency_label = self._pluralize(
+            len(profile.dependencies), "dependency", "dependencies"
+        )
+        unknown_signal_label = self._pluralize(
+            profile.unknown_signal_count, "signal", "signals"
+        )
+        result = [
+            f"Dependency Risk · {manifest_name} ({profile.ecosystem})",
+            (
+                f"{len(profile.dependencies)} {dependency_label} · overall "
+                f"{profile.overall_risk_score:.1f} / 5.0 · "
+                f"{profile.unknown_signal_count} {unknown_signal_label} "
+                "could not be measured"
+            ),
+        ]
 
-        # Add header
-        result.append(self._colored(f"{self.BOLD}Dependency Risk Profile{self.RESET}"))
-        result.append("")
-        result.append(f"Manifest: {profile.manifest_path}")
-        result.append(f"Ecosystem: {profile.ecosystem}")
-        result.append(f"Scan Time: {profile.scan_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        result.append(f"Dependencies: {len(profile.dependencies)}")
-        result.append("")
-
-        # Add risk summary
-        result.append(self._colored(f"{self.BOLD}Risk Summary{self.RESET}"))
-        overall_risk = self._get_risk_color(profile.overall_risk_score / 5.0)
-        overall_score = self._colored(
-            f"{profile.overall_risk_score:.2f}/5.0", overall_risk
-        )
-        result.append(f"Overall Risk Score: {overall_score}")
-        result.append(
-            "High Risk Dependencies: "
-            f"{self._colored(str(profile.high_risk_dependencies), self.RED)}"
-        )
-        result.append(
-            "Medium Risk Dependencies: "
-            f"{self._colored(str(profile.medium_risk_dependencies), self.YELLOW)}"
-        )
-        result.append(
-            "Low Risk Dependencies: "
-            f"{self._colored(str(profile.low_risk_dependencies), self.GREEN)}"
-        )
-        result.append(
-            "Unknown Risk Dependencies: "
-            f"{self._colored(str(profile.unknown_risk_dependencies), self.CYAN)}"
-        )
-        result.append(
-            "Insufficient Data Dependencies: "
-            f"{self._colored(str(profile.insufficient_data_dependencies), self.CYAN)}"
-        )
-        result.append(f"Unknown Signals: {profile.unknown_signal_count}")
-        result.append("")
-
-        # Add dependency table
-        if profile.dependencies:
-            result.append(self._colored(f"{self.BOLD}Dependency Details{self.RESET}"))
-            result.append(self._format_table_header())
-
-            # Sort dependencies by risk score (highest first)
-            sorted_deps = sorted(
-                profile.dependencies, key=lambda d: d.total_score, reverse=True
+        if profile.insufficient_data_dependencies:
+            insufficient_label = self._pluralize(
+                profile.insufficient_data_dependencies, "dependency", "dependencies"
+            )
+            result.append(
+                f"{profile.insufficient_data_dependencies} {insufficient_label} "
+                "had insufficient data to score"
             )
 
-            for dep in sorted_deps:
-                result.append(self._format_dependency_row(dep))
+        if profile.dependencies:
+            result.extend(
+                [
+                    "",
+                    self._format_table_header(),
+                    self._format_separator(),
+                ]
+            )
+            for dep in sorted(profile.dependencies, key=self._risk_sort_key):
+                result.extend(self._format_dependency_rows(dep))
+
+        result.extend(
+            [
+                "",
+                (
+                    'Worst first. "filtered" = informational / withdrawn / '
+                    "low-confidence advisories excluded from the score."
+                ),
+            ]
+        )
 
         return "\n".join(result)
 
-    def _colored(self, text: str, color: str = "") -> str:
-        """Add color to text if color is enabled.
-
-        Args:
-            text: Text to color.
-            color: ANSI color code.
-
-        Returns:
-            Colored text or original text.
-        """
-        if not self.color or not color:
-            return text.replace(self.BOLD, "").replace(self.RESET, "")
-        return f"{color}{text}{self.RESET}"
-
-    def _get_risk_color(self, risk_factor: float) -> str:
-        """Get color for risk level.
-
-        Args:
-            risk_factor: Risk factor between 0.0 and 1.0.
-
-        Returns:
-            ANSI color code.
-        """
-        if risk_factor >= 0.75:
-            return self.RED
-        elif risk_factor >= 0.5:
-            return self.MAGENTA
-        elif risk_factor >= 0.25:
-            return self.YELLOW
-        else:
-            return self.GREEN
-
-    def _get_risk_level_color(self, risk_level: RiskLevel) -> str:
-        """Get color for risk level.
-
-        Args:
-            risk_level: Risk level.
-
-        Returns:
-            ANSI color code.
-        """
-        if risk_level == RiskLevel.CRITICAL:
-            return self.RED
-        elif risk_level == RiskLevel.HIGH:
-            return self.MAGENTA
-        elif risk_level == RiskLevel.MEDIUM:
-            return self.YELLOW
-        elif risk_level == RiskLevel.UNKNOWN:
-            return self.CYAN
-        else:
-            return self.GREEN
+    def _risk_sort_key(self, dep: DependencyRiskScore) -> tuple[int, float, str]:
+        """Return the display sort key for a dependency."""
+        risk_order = {
+            RiskLevel.CRITICAL: 0,
+            RiskLevel.HIGH: 1,
+            RiskLevel.MEDIUM: 2,
+            RiskLevel.LOW: 3,
+            RiskLevel.UNKNOWN: 4,
+        }
+        return (
+            risk_order[dep.risk_level],
+            -dep.total_score,
+            dep.dependency.name.lower(),
+        )
 
     def _format_table_header(self) -> str:
-        """Format table header.
-
-        Returns:
-            Formatted table header.
-        """
-        header = (
-            f"{'Dependency':<30} {'Installed':<15} {'Latest':<15} "
-            f"{'Last Update':<15} {'Maintainers':<10} {'Risk Score':<10} "
-            f"{'Unknown':<9} {'Vulns':<16} {'Status':<25}"
+        """Format the dependency table header."""
+        return self.TABLE_SEPARATOR.join(
+            [
+                self._fit_cell("RISK", self.RISK_WIDTH),
+                self._fit_cell("DEPENDENCY", self.DEPENDENCY_WIDTH),
+                self._fit_cell("VERSION", self.VERSION_WIDTH),
+                self._fit_cell("LEADING SIGNALS", self.SIGNALS_WIDTH),
+                self._fit_cell("ADVISORIES", self.ADVISORIES_WIDTH),
+            ]
         )
-        separator = "-" * 146
-        return self._colored(f"{self.BOLD}{header}{self.RESET}\n{separator}")
 
-    def _format_dependency_row(self, dep: DependencyRiskScore) -> str:
-        """Format dependency row.
+    def _format_separator(self) -> str:
+        """Format the dependency table separator."""
+        return "─" * self._table_width()
 
-        Args:
-            dep: Dependency risk score.
+    def _table_width(self) -> int:
+        """Return the rendered table width."""
+        column_width = (
+            self.RISK_WIDTH
+            + self.DEPENDENCY_WIDTH
+            + self.VERSION_WIDTH
+            + self.SIGNALS_WIDTH
+            + self.ADVISORIES_WIDTH
+        )
+        separator_width = len(self.TABLE_SEPARATOR) * 4
+        return column_width + separator_width
 
-        Returns:
-            Formatted dependency row.
-        """
+    def _format_dependency_rows(self, dep: DependencyRiskScore) -> list[str]:
+        """Format one dependency into one or more rendered table lines."""
         metadata = dep.dependency
-
-        # Format fields
-        name = metadata.name[:28] + ".." if len(metadata.name) > 30 else metadata.name
-        installed = (
-            metadata.installed_version[:13] + ".."
-            if len(metadata.installed_version) > 15
-            else metadata.installed_version
+        signal_lines = wrap(
+            self._format_leading_signals(dep),
+            width=self.SIGNALS_WIDTH,
+            break_long_words=False,
+            break_on_hyphens=False,
         )
-        latest = (
-            metadata.latest_version[:13] + ".."
-            if metadata.latest_version and len(metadata.latest_version) > 15
-            else (metadata.latest_version or "Unknown")
+        if not signal_lines:
+            signal_lines = ["—"]
+
+        risk_level = "UNKNOWN" if dep.insufficient_data else dep.risk_level.value
+        lines = [
+            self.TABLE_SEPARATOR.join(
+                [
+                    self._format_risk_cell(risk_level, dep.risk_level),
+                    self._fit_cell(metadata.name, self.DEPENDENCY_WIDTH),
+                    self._fit_cell(
+                        self._format_version_summary(dep), self.VERSION_WIDTH
+                    ),
+                    self._fit_cell(signal_lines[0], self.SIGNALS_WIDTH),
+                    self._fit_cell(
+                        self._format_vulnerability_summary(dep),
+                        self.ADVISORIES_WIDTH,
+                    ),
+                ]
+            )
+        ]
+
+        for signal_line in signal_lines[1:]:
+            lines.append(
+                self.TABLE_SEPARATOR.join(
+                    [
+                        self._fit_cell("", self.RISK_WIDTH),
+                        self._fit_cell("", self.DEPENDENCY_WIDTH),
+                        self._fit_cell("", self.VERSION_WIDTH),
+                        self._fit_cell(signal_line, self.SIGNALS_WIDTH),
+                        self._fit_cell("", self.ADVISORIES_WIDTH),
+                    ]
+                )
+            )
+
+        return lines
+
+    def _format_risk_cell(self, text: str, risk_level: RiskLevel) -> str:
+        """Format the styled risk cell."""
+        cell = self._fit_cell(text, self.RISK_WIDTH)
+        if not self.color:
+            return cell
+
+        console = Console(
+            file=StringIO(),
+            force_terminal=True,
+            color_system="standard",
+            record=True,
         )
+        console.print(Text(cell, style=self._risk_style(risk_level)), end="")
+        return console.export_text(styles=True, clear=True)
 
-        # Format last update
-        if metadata.last_updated:
-            # Ensure both datetimes are timezone-naive for comparison
-            last_updated = metadata.last_updated
-            if last_updated.tzinfo:
-                last_updated = last_updated.replace(tzinfo=None)
+    def _risk_style(self, risk_level: RiskLevel) -> str:
+        """Return the Rich style for a risk level."""
+        if risk_level in {RiskLevel.CRITICAL, RiskLevel.HIGH}:
+            return "red"
+        if risk_level == RiskLevel.MEDIUM:
+            return "yellow"
+        if risk_level == RiskLevel.LOW:
+            return "green"
+        return "dim"
 
-            if (datetime.now() - last_updated).days < 30:
-                last_update = "< 1 month ago"
+    def _fit_cell(self, text: str, width: int) -> str:
+        """Pad or truncate a string to a fixed terminal cell width."""
+        if cell_len(text) <= width:
+            return set_cell_size(text, width)
+        return set_cell_size(set_cell_size(text, width - 1) + "…", width)
+
+    def _format_version_summary(self, dep: DependencyRiskScore) -> str:
+        """Format installed and latest versions in plain language."""
+        metadata = dep.dependency
+        if metadata.latest_version:
+            return f"{metadata.installed_version} → {metadata.latest_version}"
+        return f"{metadata.installed_version} → latest unknown"
+
+    def _format_leading_signals(self, dep: DependencyRiskScore) -> str:
+        """Build a plain-language signal summary from measured risk inputs."""
+        metadata = dep.dependency
+        if dep.insufficient_data:
+            return "insufficient data to score"
+
+        signals: list[str] = []
+
+        if (
+            dep.maintainer_score is not None
+            and dep.maintainer_score > 0.5
+            and metadata.maintainer_count is not None
+        ):
+            if metadata.maintainer_count <= 1:
+                signals.append("single maintainer")
             else:
-                months = (datetime.now() - last_updated).days // 30
-                last_update = f"{months} months ago"
-        else:
-            last_update = "Unknown"
+                signals.append(f"{metadata.maintainer_count} maintainers")
 
-        # Format maintainers
-        maintainers = (
-            str(metadata.maintainer_count)
-            if metadata.maintainer_count is not None
-            else "Unknown"
+        if (
+            dep.staleness_score is not None
+            and dep.staleness_score > 0
+            and metadata.last_updated is not None
+        ):
+            signals.append(self._format_release_signal(metadata.last_updated))
+
+        if dep.version_score is not None and dep.version_score > 0:
+            signals.append(self._format_version_signal(dep))
+
+        if dep.deprecation_score > 0:
+            signals.append("deprecated")
+
+        if dep.license_score is not None and dep.license_score > 0.5:
+            license_info = metadata.license_info
+            if license_info is not None:
+                signals.append(f"{license_info.license_id} license flag")
+
+        if (
+            dep.health_indicators_score is not None
+            and dep.health_indicators_score > 0.5
+        ):
+            missing = self._missing_health_indicators(dep)
+            if missing:
+                signals.append(f"missing {', '.join(missing)}")
+
+        if dep.security_policy_score is not None and dep.security_policy_score > 0.5:
+            signals.append("missing security policy")
+
+        if (
+            dep.dependency_update_score is not None
+            and dep.dependency_update_score > 0.5
+        ):
+            signals.append("no dependency update tooling")
+
+        if dep.signed_commits_score is not None and dep.signed_commits_score > 0.5:
+            signals.append("unsigned commits")
+
+        if (
+            dep.branch_protection_score is not None
+            and dep.branch_protection_score > 0.5
+        ):
+            signals.append("no branch protection")
+
+        if dep.maintained_score is not None and dep.maintained_score > 0.5:
+            signals.append("not actively maintained")
+
+        if dep.community_score is not None and dep.community_score > 0.5:
+            community_signal = self._format_community_signal(dep)
+            if community_signal:
+                signals.append(community_signal)
+
+        if dep.transitive_score > 0.5:
+            signals.append(f"{len(metadata.transitive_dependencies)} transitive deps")
+
+        if signals:
+            return " · ".join(signals[:2])
+        return "no leading risk signals"
+
+    def _missing_health_indicators(self, dep: DependencyRiskScore) -> list[str]:
+        """Return measured health indicators that are missing."""
+        metadata = dep.dependency
+        missing: list[str] = []
+        if metadata.has_tests is False:
+            missing.append("tests")
+        if metadata.has_ci is False:
+            missing.append("CI")
+        if metadata.has_contribution_guidelines is False:
+            missing.append("contribution guidelines")
+        return missing
+
+    def _format_community_signal(self, dep: DependencyRiskScore) -> str:
+        """Format the strongest measured community signal."""
+        metrics = dep.dependency.community_metrics
+        if metrics is None:
+            return ""
+        if metrics.star_count is not None and metrics.star_count < 100:
+            return f"low popularity ({metrics.star_count} stars)"
+        if metrics.commit_frequency is not None and metrics.commit_frequency < 1:
+            return "low development activity"
+        return ""
+
+    def _format_release_signal(self, last_updated: datetime) -> str:
+        """Format release recency in human terms."""
+        normalized_update = (
+            last_updated.replace(tzinfo=None) if last_updated.tzinfo else last_updated
         )
+        days_since_update = max((datetime.now() - normalized_update).days, 0)
 
-        # Format risk score
-        risk_score = f"{dep.total_score:.1f}/5.0"
-        unknown_summary = (
-            f"{dep.unknown_signal_count}/{dep.total_signal_count}"
-            if dep.total_signal_count > 0
-            else "0/0"
-        )
-        vulnerability_summary = self._format_vulnerability_summary(dep)
+        if days_since_update < 30:
+            return "released < 1 month ago"
+        if days_since_update < 365:
+            months = max(days_since_update // 30, 1)
+            return (
+                f"released {months} "
+                f"{self._pluralize(months, 'month', 'months')} ago"
+            )
 
-        # Format risk level and factors
-        risk_level = (
-            "INSUFFICIENT DATA" if dep.insufficient_data else dep.risk_level.value
-        )
-        if dep.factors:
-            risk_level += f" ({dep.factors[0]})"
+        years = max(round(days_since_update / 365), 1)
+        return f"unmaintained ~{years} {self._pluralize(years, 'year', 'years')}"
 
-        # Apply color
-        risk_color = self._get_risk_level_color(dep.risk_level)
-        risk_score = self._colored(risk_score, risk_color)
-        risk_level = self._colored(risk_level, risk_color)
+    def _format_version_signal(self, dep: DependencyRiskScore) -> str:
+        """Format version drift in human terms."""
+        metadata = dep.dependency
+        if not metadata.latest_version:
+            return "latest version unknown"
 
-        return (
-            f"{name:<30} {installed:<15} {latest:<15} {last_update:<15} "
-            f"{maintainers:<10} {risk_score:<10} {unknown_summary:<9} "
-            f"{vulnerability_summary:<16} {risk_level:<25}"
-        )
+        try:
+            installed = parse(metadata.installed_version)
+            latest = parse(metadata.latest_version)
+        except InvalidVersion:
+            return "behind latest"
+
+        if not isinstance(installed, Version) or not isinstance(latest, Version):
+            return "behind latest"
+        if latest.major > installed.major:
+            major_diff = latest.major - installed.major
+            return (
+                f"{major_diff} "
+                f"{self._pluralize(major_diff, 'major version', 'major versions')} "
+                "behind"
+            )
+        if latest.minor > installed.minor:
+            minor_diff = latest.minor - installed.minor
+            return (
+                f"{minor_diff} "
+                f"{self._pluralize(minor_diff, 'minor version', 'minor versions')} "
+                "behind"
+            )
+        return "behind latest"
 
     def _format_vulnerability_summary(self, dep: DependencyRiskScore) -> str:
-        """Format vulnerability total/counted/filtered counts for the table.
-
-        Args:
-            dep: Dependency risk score.
-
-        Returns:
-            Compact vulnerability count summary.
-        """
+        """Format advisory counts in plain language."""
         metrics = dep.dependency.security_metrics
         if metrics is None or metrics.vulnerability_count is None:
-            return "Unknown"
+            return "unknown"
 
-        total = metrics.vulnerability_count
         counted = metrics.counted_vulnerability_count
         filtered = metrics.filtered_vulnerability_count
         if counted is None or filtered is None:
-            return str(total)
-        if filtered > 0:
-            return f"{total}/{counted} score {filtered} filt"
-        return f"{total}/{counted} score"
+            if metrics.vulnerability_count == 0:
+                return "none"
+            return f"{metrics.vulnerability_count} found"
+
+        if counted == 0 and filtered == 0:
+            return "none"
+        return f"{counted} scored · {filtered} filtered"
+
+    def _pluralize(self, count: int, singular: str, plural: str) -> str:
+        """Return singular or plural text for a count."""
+        return singular if count == 1 else plural
 
 
 class JsonFormatter(BaseFormatter):

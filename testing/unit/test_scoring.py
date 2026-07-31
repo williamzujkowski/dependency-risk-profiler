@@ -413,7 +413,8 @@ def test_vulnerability_counts_are_reported_in_terminal_and_json() -> None:
     terminal_output = TerminalFormatter(color=False).format_profile(profile)
     json_output = JsonFormatter().format_profile(profile)
 
-    assert "2/1 score 1 filt" in terminal_output
+    assert "1 scored · 1 filtered" in terminal_output
+    assert "2/1 score 1 filt" not in terminal_output
     assert '"total_found": 2' in json_output
     assert '"counted_in_score": 1' in json_output
     assert '"filtered": 1' in json_output
