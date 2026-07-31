@@ -10,6 +10,33 @@ import pytest
 from dependency_risk_profiler import utils
 
 
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("git://github.com/debug-js/debug", "https://github.com/debug-js/debug"),
+        ("git+https://github.com/foo/bar.git", "https://github.com/foo/bar.git"),
+        ("git@github.com:owner/repo.git", "https://github.com/owner/repo.git"),
+        ("ssh://git@github.com/owner/repo", "https://github.com/owner/repo"),
+        ("https://github.com/a/b", "https://github.com/a/b"),
+        ("https://gitlab.com/a/b", "https://gitlab.com/a/b"),
+        # Rejected: unsupported host, non-https scheme, and local paths.
+        ("https://evil.example.com/a/b", None),
+        ("file:///etc/passwd", None),
+        ("git://internal.host/secret", None),
+    ],
+)
+def test_normalize_clone_url(raw: str, expected: Optional[str]) -> None:
+    """Normalize to https for supported hosts; skip everything else."""
+    assert utils.normalize_clone_url(raw) == expected
+
+
+def test_clone_repo_skips_uncloneable_url_without_running_git() -> None:
+    """A non-cloneable URL returns None and never shells out to git."""
+    with mock.patch.object(utils.subprocess, "run") as run:
+        assert utils.clone_repo("git://internal.host/secret") is None
+        run.assert_not_called()
+
+
 def _fake_clone(_repo_url: str) -> Optional[Tuple[str, str]]:
     """Create a real temp clone dir like ``clone_repo`` would, without git."""
     temp_dir = tempfile.mkdtemp(prefix="dep-profiler-")
