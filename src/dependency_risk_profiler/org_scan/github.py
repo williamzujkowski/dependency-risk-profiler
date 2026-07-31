@@ -66,12 +66,43 @@ class GitHubOrgClient:
         max_repos: Optional[int] = None,
     ) -> List[RepositoryRef]:
         """List organization repos, skipping forks and archived repos by default."""
+        return self._list_repositories(
+            f"/orgs/{org}/repos",
+            {"per_page": "100", "type": "all"},
+            include_archived=include_archived,
+            max_repos=max_repos,
+        )
+
+    def list_user_repositories(
+        self,
+        user: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """List user repos, skipping forks and archived repos by default."""
+        return self._list_repositories(
+            f"/users/{user}/repos",
+            {"per_page": "100", "type": "all"},
+            include_archived=include_archived,
+            max_repos=max_repos,
+        )
+
+    def _list_repositories(
+        self,
+        path: str,
+        base_params: Mapping[str, str],
+        include_archived: bool,
+        max_repos: Optional[int],
+    ) -> List[RepositoryRef]:
+        """List repositories from a paginated GitHub repository endpoint."""
         repos: List[RepositoryRef] = []
         page = 1
         while True:
+            params = dict(base_params)
+            params["page"] = str(page)
             payload = self._get_json(
-                f"/orgs/{org}/repos",
-                {"per_page": "100", "page": str(page), "type": "all"},
+                path,
+                params,
             )
             if not isinstance(payload, list):
                 raise RuntimeError("GitHub repository listing returned invalid JSON")

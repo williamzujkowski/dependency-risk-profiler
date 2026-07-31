@@ -16,6 +16,7 @@ from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
 from .models import (
+    AccountType,
     AggregatedDependency,
     DependencyKey,
     DependencyOccurrence,
@@ -42,6 +43,7 @@ SUPPORTED_MANIFEST_NAMES = (
 
 
 ProgressCallback = Callable[[str], None]
+RepositoryLister = Callable[[str, bool, Optional[int]], List[RepositoryRef]]
 
 
 class GitHubDiscoveryClient:
@@ -54,6 +56,15 @@ class GitHubDiscoveryClient:
         max_repos: Optional[int] = None,
     ) -> List[RepositoryRef]:
         """List repositories to scan."""
+        raise NotImplementedError
+
+    def list_user_repositories(
+        self,
+        user: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """List user repositories to scan."""
         raise NotImplementedError
 
     def list_manifest_paths(
@@ -74,6 +85,8 @@ class OrgScanOptions:
     """Options controlling repository discovery and report aggregation."""
 
     org: str
+    account_type: AccountType = "organization"
+    repository_lister: Optional[RepositoryLister] = None
     include_archived: bool = False
     max_repos: Optional[int] = None
     manifest_globs: Tuple[str, ...] = SUPPORTED_MANIFEST_NAMES
@@ -108,11 +121,16 @@ class OrgScanRunner:
 
     def run(self, options: OrgScanOptions) -> OrgScanReport:
         """Run discovery, parse manifests, profile unique deps, and aggregate."""
-        self._emit(f"Listing repositories for {options.org}")
-        repositories = self.github_client.list_org_repositories(
+        account_label = options.account_type
+        repository_lister = options.repository_lister
+        if repository_lister is None:
+            repository_lister = self.github_client.list_org_repositories
+
+        self._emit(f"Listing {account_label} repositories for {options.org}")
+        repositories = repository_lister(
             options.org,
-            include_archived=options.include_archived,
-            max_repos=options.max_repos,
+            options.include_archived,
+            options.max_repos,
         )
         self._emit(f"Discovered {len(repositories)} repositories to scan")
 
@@ -130,7 +148,7 @@ class OrgScanRunner:
         profiles = self.dependency_profiler.profile(parsed.unique_dependencies)
         self._emit(f"Profiled {len(profiles)} unique dependency versions")
 
-        return self._aggregate(options.org, parsed, profiles)
+        return self._aggregate(options.org, options.account_type, parsed, profiles)
 
     def _discover_manifests(
         self, repositories: List[RepositoryRef], options: OrgScanOptions
@@ -247,6 +265,7 @@ class OrgScanRunner:
     def _aggregate(
         self,
         org: str,
+        account_type: AccountType,
         parsed: _ParsedInventory,
         profiles: Dict[DependencyKey, DependencyRiskScore],
     ) -> OrgScanReport:
@@ -293,6 +312,7 @@ class OrgScanRunner:
 
         return OrgScanReport(
             org=org,
+            account_type=account_type,
             generated_at=datetime.now(),
             repositories_scanned=[repo.full_name for repo in parsed.repositories],
             manifests_scanned=[manifest.display_path for manifest in parsed.manifests],

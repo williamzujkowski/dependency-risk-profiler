@@ -19,7 +19,7 @@ from .models import (
 def render_terminal_summary(report: OrgScanReport) -> str:
     """Render the org scan terminal summary."""
     lines = [
-        f"Dependency Risk Org Scan · {report.org}",
+        f"Dependency Risk {_account_title(report)} Scan · {report.org}",
         (
             f"{len(report.repositories_scanned)} repos · "
             f"{len(report.manifests_scanned)} manifests · "
@@ -82,7 +82,10 @@ def render_html_report(report: OrgScanReport) -> str:
             "<head>",
             '<meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1">',
-            f"<title>Dependency Risk Org Scan · {escape(report.org)}</title>",
+            (
+                f"<title>Dependency Risk {_account_title(report)} Scan · "
+                f"{escape(report.org)}</title>"
+            ),
             f"<style>{_css()}</style>",
             "</head>",
             "<body>",
@@ -104,6 +107,8 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
     """Convert an org scan report into JSON-compatible data."""
     return {
         "org": report.org,
+        "account": report.org,
+        "account_type": report.account_type,
         "generated_at": report.generated_at.isoformat(),
         "repositories_scanned": report.repositories_scanned,
         "repository_count": len(report.repositories_scanned),
@@ -143,7 +148,7 @@ def _header(report: OrgScanReport) -> str:
     return f"""
 <header class="report-header">
   <div>
-    <p class="eyebrow">GitHub organization dependency exposure</p>
+    <p class="eyebrow">GitHub {escape(report.account_type)} dependency exposure</p>
     <h1>{escape(report.org)}</h1>
     <p class="headline">{escape(report.headline)}</p>
   </div>
@@ -154,6 +159,13 @@ def _header(report: OrgScanReport) -> str:
   </dl>
 </header>
 """
+
+
+def _account_title(report: OrgScanReport) -> str:
+    """Return title-case account source for report labels."""
+    if report.account_type == "user":
+        return "User"
+    return "Org"
 
 
 def _most_exposed_section(report: OrgScanReport) -> str:

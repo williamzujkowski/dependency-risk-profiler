@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Set
+from typing import Dict, List, Literal, Set
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
+
+AccountType = Literal["organization", "user"]
 
 
 @dataclass(frozen=True)
@@ -110,6 +112,7 @@ class OrgScanReport:
     """Complete aggregate model for an organization scan."""
 
     org: str
+    account_type: AccountType
     generated_at: datetime
     repositories_scanned: List[str]
     manifests_scanned: List[str]

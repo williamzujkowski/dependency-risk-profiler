@@ -1,8 +1,10 @@
-"""Tests for organization-wide dependency risk scans."""
+"""Tests for GitHub account-wide dependency risk scans."""
 
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, cast
 
+import pytest
+import requests
 from typer.testing import CliRunner
 
 from dependency_risk_profiler.cli.typer_cli import app
@@ -12,6 +14,7 @@ from dependency_risk_profiler.models import (
     RiskLevel,
     SecurityMetrics,
 )
+from dependency_risk_profiler.org_scan.github import GitHubOrgClient
 from dependency_risk_profiler.org_scan.models import (
     DependencyKey,
     DependencyProfiler,
@@ -90,6 +93,23 @@ class FixtureGitHubClient(GitHubDiscoveryClient):
             return selected
         return selected[:max_repos]
 
+    def list_user_repositories(
+        self,
+        user: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """Return fixture user repositories."""
+        selected = [
+            repo
+            for repo in self.repositories
+            if repo.full_name.startswith(f"{user}/")
+            and (include_archived or not repo.archived)
+        ]
+        if max_repos is None:
+            return selected
+        return selected[:max_repos]
+
     def list_manifest_paths(
         self,
         repo: RepositoryRef,
@@ -142,9 +162,74 @@ class CliFixtureProfiler(FixtureProfiler):
 class CliFixtureGitHubClient(FixtureGitHubClient):
     """CLI-compatible fixture GitHub client."""
 
+    listed_sources: List[str] = []
+
     def __init__(self, token: str) -> None:
         """Accept production constructor arguments."""
         super().__init__()
+
+    def list_org_repositories(
+        self,
+        org: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """Track org listing calls."""
+        self.listed_sources.append(f"org:{org}")
+        return super().list_org_repositories(org, include_archived, max_repos)
+
+    def list_user_repositories(
+        self,
+        user: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """Track user listing calls and reuse account-shaped fixtures."""
+        self.listed_sources.append(f"user:{user}")
+        return super().list_org_repositories(user, include_archived, max_repos)
+
+
+class _FixtureResponse:
+    """Small requests.Response stand-in for GitHub client endpoint tests."""
+
+    def __init__(self, payload: object) -> None:
+        """Store response payload and request-compatible attributes."""
+        self._payload = payload
+        self.status_code = 200
+        self.headers: Dict[str, str] = {}
+        self.text = ""
+
+    def json(self) -> object:
+        """Return fixture JSON payload."""
+        return self._payload
+
+    def raise_for_status(self) -> None:
+        """Fixture responses are always successful."""
+
+
+class RecordingSession:
+    """Requests-compatible session that records GET calls."""
+
+    def __init__(self, pages: List[object]) -> None:
+        """Initialize paginated payloads."""
+        self.pages = pages
+        self.urls: List[str] = []
+        self.params: List[Dict[str, str]] = []
+
+    def get(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        params: Dict[str, str],
+        timeout: int,
+    ) -> _FixtureResponse:
+        """Record request details and return the next page."""
+        self.urls.append(url)
+        self.params.append(params)
+        index = len(self.urls) - 1
+        if index < len(self.pages):
+            return _FixtureResponse(self.pages[index])
+        return _FixtureResponse([])
 
 
 def test_org_scan_aggregates_blast_radius_and_rankings() -> None:
@@ -196,9 +281,64 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert "Riskiest repositories:" in summary
 
 
+def test_github_client_lists_user_repositories_with_filters() -> None:
+    """HYPOTHESIS: user repo listing calls /users/{user}/repos and filters repos."""
+    session = RecordingSession(
+        [
+            [
+                _repo_payload("williamzujkowski/kept", archived=False, fork=False),
+                _repo_payload("williamzujkowski/forked", archived=False, fork=True),
+                _repo_payload("williamzujkowski/archived", archived=True, fork=False),
+            ],
+            [],
+        ]
+    )
+    client = GitHubOrgClient(
+        token="fixture-token",
+        session=cast(requests.Session, session),
+    )
+
+    repos = client.list_user_repositories("williamzujkowski")
+
+    assert [repo.full_name for repo in repos] == ["williamzujkowski/kept"]
+    assert session.urls[0].endswith("/users/williamzujkowski/repos")
+    assert session.params[0]["type"] == "all"
+    assert session.params[0]["per_page"] == "100"
+
+
+def test_user_scan_aggregates_blast_radius_and_report_labels() -> None:
+    """HYPOTHESIS: user scans share aggregation and label the source as user."""
+    profiler = FixtureProfiler()
+    client = FixtureGitHubClient()
+    report = OrgScanRunner(client, profiler).run(
+        OrgScanOptions(
+            org="acme",
+            account_type="user",
+            repository_lister=client.list_user_repositories,
+        )
+    )
+
+    assert report.account_type == "user"
+    assert report.unique_dependency_count == 4
+    assert len(profiler.profiled_keys) == 4
+    assert report.most_exposed_risky_dependencies[0].key.name == "risky"
+    assert report.most_exposed_risky_dependencies[0].blast_radius == 2
+
+    html = render_html_report(report)
+    assert "GitHub user dependency exposure" in html
+    assert "Most exposed risky dependencies" in html
+    assert "Riskiest repositories" in html
+    assert "Full dependency inventory" in html
+    assert "2 / 2 repos" in html
+
+    model = report_to_dict(report)
+    assert model["account_type"] == "user"
+    assert model["account"] == "acme"
+
+
 def test_scan_org_cli_writes_html_and_json(
     tmp_path: Path,
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """HYPOTHESIS: scan-org command runs end-to-end with offline fixtures."""
     html_path = tmp_path / "org.html"
@@ -232,6 +372,59 @@ def test_scan_org_cli_writes_html_and_json(
     assert "Dependency Risk Org Scan · acme" in result.output
     assert "python:risky@1.0 · HIGH · 2 / 2 repos" in result.output
     assert "HTML report written" in result.output
+
+
+def test_scan_user_cli_writes_html_and_json(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HYPOTHESIS: scan-user command runs end-to-end with offline fixtures."""
+    html_path = tmp_path / "user.html"
+    json_path = tmp_path / "user.json"
+    CliFixtureGitHubClient.listed_sources = []
+    monkeypatch.setattr(
+        "dependency_risk_profiler.cli.typer_cli.GitHubOrgClient",
+        CliFixtureGitHubClient,
+    )
+    monkeypatch.setattr(
+        "dependency_risk_profiler.cli.typer_cli.ExistingDependencyProfiler",
+        CliFixtureProfiler,
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "scan-user",
+            "acme",
+            "--github-token",
+            "fixture-token",
+            "--output-html",
+            str(html_path),
+            "--output-json",
+            str(json_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert html_path.exists()
+    assert json_path.exists()
+    assert CliFixtureGitHubClient.listed_sources == ["user:acme"]
+    assert "Dependency Risk User Scan · acme" in result.output
+    assert "python:risky@1.0 · HIGH · 2 / 2 repos" in result.output
+    assert "GitHub user dependency exposure" in html_path.read_text(encoding="utf-8")
+
+
+def _repo_payload(full_name: str, archived: bool, fork: bool) -> Dict[str, object]:
+    """Build a minimal GitHub repository API payload."""
+    name = full_name.rsplit("/", 1)[-1]
+    return {
+        "full_name": full_name,
+        "name": name,
+        "default_branch": "main",
+        "html_url": f"https://github.com/{full_name}",
+        "archived": archived,
+        "fork": fork,
+    }
 
 
 def _score_for_key(
