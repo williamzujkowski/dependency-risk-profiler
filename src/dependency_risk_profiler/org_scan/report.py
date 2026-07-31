@@ -82,14 +82,11 @@ def render_html_report(report: OrgScanReport) -> str:
             "<head>",
             '<meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1">',
-            (
-                f"<title>Dependency Risk {_account_title(report)} Scan · "
-                f"{escape(report.org)}</title>"
-            ),
+            f"<title>{_html_title(report)}</title>",
             f"<style>{_css()}</style>",
             "</head>",
             "<body>",
-            '<main class="page">',
+            '<main class="wrap">',
             _header(report),
             _most_exposed_section(report),
             _riskiest_repos_section(report),
@@ -145,20 +142,68 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
 
 def _header(report: OrgScanReport) -> str:
     """Render report header."""
+    total_repos = len(report.repositories_scanned)
     return f"""
-<header class="report-header">
+<header class="mast">
   <div>
-    <p class="eyebrow">GitHub {escape(report.account_type)} dependency exposure</p>
-    <h1>{escape(report.org)}</h1>
-    <p class="headline">{escape(report.headline)}</p>
+    <p class="kicker">Dependency exposure · github {_account_kind(report)}</p>
+    <h1><span class="at">@</span>{escape(report.org)}</h1>
+    <p class="verdict">{_verdict_sentence(report)}</p>
   </div>
-  <dl class="metrics" aria-label="Scan totals">
-    <div><dt>Repos scanned</dt><dd>{len(report.repositories_scanned)}</dd></div>
-    <div><dt>Manifests</dt><dd>{len(report.manifests_scanned)}</dd></div>
-    <div><dt>Unique deps</dt><dd>{report.unique_dependency_count}</dd></div>
+  <dl class="readout" aria-label="Scan totals">
+    <div><dt>Repos</dt><dd class="num">{total_repos}</dd></div>
+    <div><dt>Manifests</dt><dd class="num">{len(report.manifests_scanned)}</dd></div>
+    <div><dt>Unique deps</dt><dd class="num">{report.unique_dependency_count}</dd></div>
+    <div><dt>High-risk</dt><dd class="num hot">
+      {report.high_risk_dependency_count}
+    </dd></div>
   </dl>
 </header>
 """
+
+
+def _html_title(report: OrgScanReport) -> str:
+    """Return the HTML report title."""
+    return f"Dependency Risk {_account_title(report)} Scan · {escape(report.org)}"
+
+
+def _account_kind(report: OrgScanReport) -> str:
+    """Return the short account source label used in the redesign."""
+    if report.account_type == "user":
+        return "user"
+    return "org"
+
+
+def _verdict_sentence(report: OrgScanReport) -> str:
+    """Render the masthead plain-language verdict."""
+    total_repos = len(report.repositories_scanned)
+    high_risk_count = report.high_risk_dependency_count
+    exposed_repos = report.high_risk_exposed_repository_count
+    count_label = _pluralize(high_risk_count, "high-risk dependency")
+    repo_label = _pluralize(exposed_repos, "repository")
+    verb = "is" if high_risk_count == 1 else "are"
+
+    if report.most_exposed_risky_dependencies:
+        widest = report.most_exposed_risky_dependencies[0]
+        reach = "every repo scanned"
+        if widest.blast_radius != total_repos or total_repos == 0:
+            reach = (
+                f"{widest.blast_radius} of {total_repos} "
+                f"{_pluralize(total_repos, 'repo')}"
+            )
+        signals = _signals_text(widest)
+        return (
+            f"<b>{high_risk_count} {count_label}</b> {verb} in play across "
+            f"{exposed_repos} {repo_label}. The widest exposure is "
+            f"<code>{escape(widest.key.name)}</code> — {signals} — "
+            f"reaching {escape(reach)}."
+        )
+
+    return (
+        f"<b>{high_risk_count} {count_label}</b> {verb} in play across "
+        f"{exposed_repos} {repo_label}. No medium, high, critical, or unknown "
+        "dependencies were found in the scanned manifests."
+    )
 
 
 def _account_title(report: OrgScanReport) -> str:
@@ -171,29 +216,19 @@ def _account_title(report: OrgScanReport) -> str:
 def _most_exposed_section(report: OrgScanReport) -> str:
     """Render the flagship dependency exposure table."""
     rows = [
-        _dependency_row(dep, len(report.repositories_scanned), inventory=False)
+        _exposure_row(dep, len(report.repositories_scanned))
         for dep in report.most_exposed_risky_dependencies
     ]
-    body = "\n".join(rows) if rows else _empty_row(5, "No risky dependencies found.")
+    body = "\n".join(rows) if rows else _empty_exposure()
     return f"""
 <section id="most-exposed-risky-dependencies" class="section">
-  <div class="section-heading">
-    <h2>Most exposed risky dependencies</h2>
-  </div>
-  <div class="table-wrap">
-    <table data-sortable>
-      <caption class="sr-only">Dependencies ranked by risk and blast radius</caption>
-      <thead>
-        <tr>
-          <th><button type="button" data-sort="text">Dependency</button></th>
-          <th><button type="button" data-sort="risk">Risk</button></th>
-          <th><button type="button" data-sort="number">Blast radius</button></th>
-          <th>Key signals</th>
-          <th>Advisories</th>
-        </tr>
-      </thead>
-      <tbody>{body}</tbody>
-    </table>
+  <h2>Most exposed risky dependencies</h2>
+  <p class="sub">
+    Fix from the top. Bar length = share of repos exposed; color = severity.
+  </p>
+  <div class="exposure"
+    aria-label="Dependencies ranked by risk and blast radius">
+{body}
   </div>
 </section>
 """
@@ -203,13 +238,14 @@ def _riskiest_repos_section(report: OrgScanReport) -> str:
     """Render repository risk ranking."""
     rows = "\n".join(
         _repository_row(repo) for repo in report.riskiest_repositories
-    ) or _empty_row(6, "No repositories contained supported dependencies.")
+    ) or _empty_row(4, "No repositories contained supported dependencies.")
     return f"""
 <section id="riskiest-repositories" class="section">
-  <div class="section-heading">
-    <h2>Riskiest repositories</h2>
-  </div>
-  <div class="table-wrap">
+  <h2>Riskiest repositories</h2>
+  <p class="sub">
+    Ranked by aggregate exposure. Bars show each repo's high-risk dependency load.
+  </p>
+  <div class="tbl-wrap">
     <table data-sortable>
       <caption class="sr-only">
         Repositories ranked by aggregate dependency risk
@@ -217,10 +253,8 @@ def _riskiest_repos_section(report: OrgScanReport) -> str:
       <thead>
         <tr>
           <th><button type="button" data-sort="text">Repository</button></th>
-          <th><button type="button" data-sort="number">Risk points</button></th>
-          <th><button type="button" data-sort="number">Critical</button></th>
-          <th><button type="button" data-sort="number">High</button></th>
-          <th><button type="button" data-sort="number">Unknown</button></th>
+          <th><button type="button" data-sort="number">Risk load</button></th>
+          <th>High-risk deps</th>
           <th>Worst deps</th>
         </tr>
       </thead>
@@ -233,31 +267,28 @@ def _riskiest_repos_section(report: OrgScanReport) -> str:
 
 def _inventory_section(report: OrgScanReport) -> str:
     """Render full dependency inventory."""
-    rows = "\n".join(
-        _dependency_row(dep, len(report.repositories_scanned), inventory=True)
-        for dep in report.inventory
-    ) or _empty_row(6, "No dependencies found.")
+    rows = "\n".join(_inventory_row(dep) for dep in report.inventory) or _empty_row(
+        5, "No dependencies found."
+    )
     return f"""
 <section id="full-dependency-inventory" class="section">
-  <div class="section-heading inventory-heading">
-    <h2>Full dependency inventory</h2>
-    <label class="search-label">
-      <span>Search</span>
-      <input id="inventory-search" type="search" autocomplete="off"
-        placeholder="dependency, repo, signal" aria-controls="inventory-table">
-    </label>
+  <h2>Full inventory</h2>
+  <div class="search">
+    <input id="inventory-search" type="search" autocomplete="off"
+      placeholder="filter · dependency, repo, signal"
+      aria-label="Filter dependency inventory"
+      aria-controls="inventory-table">
   </div>
-  <div class="table-wrap">
+  <div class="tbl-wrap">
     <table id="inventory-table" data-sortable data-filterable>
       <caption class="sr-only">Searchable inventory of every unique dependency</caption>
       <thead>
         <tr>
           <th><button type="button" data-sort="text">Dependency</button></th>
-          <th><button type="button" data-sort="text">Ecosystem</button></th>
+          <th><button type="button" data-sort="text">Eco</button></th>
           <th><button type="button" data-sort="risk">Risk</button></th>
           <th><button type="button" data-sort="number">Repos</button></th>
-          <th>Key signals</th>
-          <th>Advisories</th>
+          <th>Signals</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
@@ -283,95 +314,154 @@ def _methodology_footer(report: OrgScanReport) -> str:
             f"<ul>{failure_items}</ul>"
         )
     return f"""
-<footer class="methodology">
-  <h2>Methodology</h2>
+<footer class="foot">
   <p>
-    Risk levels are heuristic signals, not certainty. Unknown and insufficient-data
-    results are shown as their own state instead of being converted into fake low or
-    high risk. Filtered advisories are excluded from scoring.
+    <b>How to read this.</b> Risk levels are heuristic signals, not verdicts.
+    <b>Unknown</b> stays unknown — a dependency we couldn't measure is shown as
+    its own state, never rounded to low or high. Informational, withdrawn, and
+    low-confidence advisories are counted but <b>filtered out of the score</b>
+    (shown as "filtered"), so a single noisy advisory can't inflate a
+    dependency's risk. Blast radius counts direct occurrences across scanned
+    manifests.
   </p>
   {failures}
 </footer>
 """
 
 
-def _dependency_row(
-    dependency: AggregatedDependency, repo_count: int, inventory: bool
-) -> str:
-    """Render a dependency table row."""
-    key = dependency.key
-    repo_list = ", ".join(sorted(dependency.repositories))
-    signals = ", ".join(dependency.key_signals)
-    blast = f"{dependency.blast_radius} / {repo_count} repos"
-    risk_sort = risk_rank(dependency.risk_level)
-    if inventory:
-        cells = [
-            _td(key.name, key.display_name),
-            _td(key.ecosystem, key.ecosystem),
-            _risk_td(dependency.risk_level),
-            _td(str(dependency.blast_radius), str(dependency.blast_radius)),
-            _td(signals, signals),
-            _td(dependency.advisory_summary, dependency.advisory_summary),
-        ]
-    else:
-        cells = [
-            _td(key.display_name, key.display_name),
-            _risk_td(dependency.risk_level),
-            (
-                f'<td data-value="{dependency.blast_radius}" '
-                f'data-text="{escape(repo_list)}">'
-                f"<details><summary>{escape(blast)}</summary>"
-                f"<p>{escape(repo_list)}</p></details></td>"
-            ),
-            _td(signals, signals),
-            _td(dependency.advisory_summary, dependency.advisory_summary),
-        ]
+def _exposure_row(dependency: AggregatedDependency, repo_count: int) -> str:
+    """Render a dependency exposure row."""
+    width = _exposure_width(dependency.blast_radius, repo_count)
+    risk_class = _risk_class(dependency.risk_level)
+    advisory = _advisory_line(dependency)
+    signal_text = _signals_text(dependency)
+    label = (
+        f"{dependency.blast_radius} / {repo_count} repos exposed to "
+        f"{dependency.key.name}"
+    )
+    return f"""
+    <div class="exp-row" data-risk="{risk_rank(dependency.risk_level)}"
+      data-search="{escape(_dependency_search_text(dependency))}">
+      <div class="exp-dep">{escape(dependency.key.name)}
+        <span class="eco">· {escape(dependency.key.ecosystem)}</span>
+      </div>
+      <div>{_risk_badge(dependency.risk_level)}</div>
+      <div class="exp-bar" role="img" aria-label="{escape(label)}">
+        <div class="bar-track">
+          <div class="bar-fill {risk_class}" style="width:{width}%"></div>
+        </div>
+        <div class="bar-label">
+          <b>{dependency.blast_radius}</b> / {repo_count} repos
+        </div>
+      </div>
+      <div class="exp-signals">{signal_text}<span class="adv">{advisory}</span></div>
+    </div>
+""".rstrip()
 
+
+def _inventory_row(dependency: AggregatedDependency) -> str:
+    """Render a full inventory table row."""
+    key = dependency.key
     search_text = escape(_dependency_search_text(dependency))
+    signals = _signals_text(dependency)
     return (
-        f'<tr data-risk="{risk_sort}" data-search="{search_text}">'
-        + "".join(cells)
-        + "</tr>"
+        f'<tr data-risk="{risk_rank(dependency.risk_level)}" '
+        f'data-search="{search_text}">'
+        f'{_td(key.name, key.display_name, "dep")}'
+        f'{_td(key.ecosystem, key.ecosystem, "mono")}'
+        f"{_risk_td(dependency.risk_level)}"
+        f'{_td(str(dependency.blast_radius), str(dependency.blast_radius), "num")}'
+        f'<td class="exp-signals" data-value="{escape(signals)}">{signals}</td>'
+        "</tr>"
     )
 
 
 def _repository_row(repo: RepositoryRiskSummary) -> str:
     """Render a repository table row."""
-    worst = ", ".join(
-        f"{dep.key.name} ({dep.risk_level.value})" for dep in repo.worst_dependencies
-    )
-    critical = str(repo.critical_risk_dependencies)
-    high = str(repo.high_risk_dependencies)
-    unknown = str(repo.unknown_risk_dependencies)
+    worst = escape(", ".join(dep.key.name for dep in repo.worst_dependencies[:3]))
+    if not worst:
+        worst = "none"
+    if repo.unknown_risk_dependencies > 0:
+        worst = (
+            f'{worst} <span class="badge unknown tiny">'
+            f"{repo.unknown_risk_dependencies} unknown</span>"
+        )
+    high_risk_count = repo.critical_risk_dependencies + repo.high_risk_dependencies
     return (
         "<tr>"
-        f"{_td(repo.repo_full_name, repo.repo_full_name)}"
-        f"{_td(str(repo.risk_points), str(repo.risk_points))}"
-        f"{_td(critical, critical)}"
-        f"{_td(high, high)}"
-        f"{_td(unknown, unknown)}"
-        f"{_td(worst, worst)}"
+        f'{_td(repo.repo_full_name, repo.repo_full_name, "repo")}'
+        f'{_td(str(repo.risk_points), str(repo.risk_points), "num")}'
+        f'<td data-value="{high_risk_count}">'
+        f'{_mini_bars(repo)} <span class="num">{high_risk_count}</span></td>'
+        f'<td class="worst mono" data-value="{escape(worst)}">{worst}</td>'
         "</tr>"
     )
 
 
-def _td(text: str, value: str) -> str:
+def _td(text: str, value: str, class_name: str = "") -> str:
     """Render a table cell with sort data."""
-    return f'<td data-value="{escape(value)}">{escape(text)}</td>'
+    class_attr = f' class="{class_name}"' if class_name else ""
+    return f'<td{class_attr} data-value="{escape(value)}">{escape(text)}</td>'
 
 
 def _risk_td(risk_level: RiskLevel) -> str:
     """Render a risk badge table cell."""
     return (
-        f'<td data-value="{risk_rank(risk_level)}">'
-        f'<span class="risk {escape(risk_level.value.lower())}">'
-        f"{escape(risk_level.value)}</span></td>"
+        f'<td data-value="{risk_rank(risk_level)}">' f"{_risk_badge(risk_level)}</td>"
     )
+
+
+def _risk_badge(risk_level: RiskLevel) -> str:
+    """Render a severity badge."""
+    return (
+        f'<span class="badge {_risk_class(risk_level)}">'
+        f"{escape(_risk_label(risk_level))}</span>"
+    )
+
+
+def _risk_class(risk_level: RiskLevel) -> str:
+    """Return the redesign CSS class for a risk level."""
+    classes: Dict[RiskLevel, str] = {
+        RiskLevel.CRITICAL: "crit",
+        RiskLevel.HIGH: "high",
+        RiskLevel.MEDIUM: "med",
+        RiskLevel.LOW: "low",
+        RiskLevel.UNKNOWN: "unknown",
+    }
+    return classes[risk_level]
+
+
+def _risk_label(risk_level: RiskLevel) -> str:
+    """Return the redesign display label for a risk level."""
+    if risk_level == RiskLevel.CRITICAL:
+        return "CRIT"
+    if risk_level == RiskLevel.HIGH:
+        return "HIGH"
+    if risk_level == RiskLevel.MEDIUM:
+        return "MEDIUM"
+    if risk_level == RiskLevel.LOW:
+        return "LOW"
+    return "UNKNOWN"
+
+
+def _mini_bars(repo: RepositoryRiskSummary) -> str:
+    """Render compact high-risk dependency bars for a repository."""
+    classes = ["crit"] * repo.critical_risk_dependencies
+    classes.extend(["high"] * repo.high_risk_dependencies)
+    bars = "".join(
+        f'<span class="mini {class_name}"></span>' for class_name in classes[:5]
+    )
+    return f'<span class="mini-bars" aria-hidden="true">{bars}</span>'
 
 
 def _empty_row(colspan: int, text: str) -> str:
     """Render an empty-state table row."""
     return f'<tr><td colspan="{colspan}" class="empty">{escape(text)}</td></tr>'
+
+
+def _empty_exposure() -> str:
+    """Render the exposure list empty state."""
+    return '    <div class="exp-row empty">No risky dependencies found.</div>'
 
 
 def _dependency_search_text(dependency: AggregatedDependency) -> str:
@@ -384,6 +474,56 @@ def _dependency_search_text(dependency: AggregatedDependency) -> str:
         dependency.risk_level.value,
     ]
     return " ".join(parts).lower()
+
+
+def _signals_text(dependency: AggregatedDependency) -> str:
+    """Return escaped plain-language dependency signals."""
+    if not dependency.key_signals:
+        return "no leading risk signals"
+    return escape(
+        " · ".join(_sentence_case_lower(signal) for signal in dependency.key_signals)
+    )
+
+
+def _sentence_case_lower(text: str) -> str:
+    """Normalize generated signal fragments for inline prose."""
+    return text[:1].lower() + text[1:] if text else text
+
+
+def _advisory_line(dependency: AggregatedDependency) -> str:
+    """Return the redesign advisory sub-line."""
+    if dependency.risk_level == RiskLevel.UNKNOWN:
+        return "advisories: unknown"
+
+    metrics = dependency.risk_score.dependency.security_metrics
+    if metrics is None or metrics.vulnerability_count is None:
+        return "advisories: unknown"
+
+    counted = metrics.counted_vulnerability_count
+    filtered = metrics.filtered_vulnerability_count
+    if counted is None or filtered is None:
+        if metrics.vulnerability_count == 0:
+            counted = 0
+            filtered = 0
+        else:
+            return escape(f"{metrics.vulnerability_count} found")
+
+    return f"{counted} scored · {filtered} filtered"
+
+
+def _exposure_width(blast_radius: int, repo_count: int) -> int:
+    """Return the exposure bar width as an integer percentage."""
+    if repo_count <= 0:
+        return 0
+    percent = int((blast_radius / repo_count) * 100)
+    return min(100, max(0, percent))
+
+
+def _pluralize(count: int, singular: str) -> str:
+    """Return a count-aware noun phrase without the count."""
+    if count == 1:
+        return singular
+    return f"{singular}s"
 
 
 def _dependency_to_dict(
@@ -487,209 +627,159 @@ def _metadata_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
 def _css() -> str:
     """Return inline CSS."""
     return """
-:root {
-  color-scheme: light;
-  --bg: #f7f8fa;
-  --panel: #ffffff;
-  --text: #17202a;
-  --muted: #5f6b7a;
-  --line: #d9dee7;
-  --low: #16784c;
-  --medium: #936316;
-  --high: #b42318;
-  --critical: #7a271a;
-  --unknown: #667085;
-  --focus: #2563eb;
+:root{
+  --paper:#f4f6f1; --surface:#ffffff; --raise:#fbfcf9;
+  --ink:#15201a; --muted:#5b6b61; --faint:#8a978d; --hair:#dbe2da;
+  --crit:#9e1f12; --high:#b25415; --med:#8f6d12; --low:#2f7d52;
+  --unknown:#6b7570;
+  --crit-wash:#9e1f1216; --high-wash:#b2541516;
+  --med-wash:#8f6d1216; --low-wash:#2f7d5216; --unk-wash:#6b757012;
+  --accent:#1c7d51; --focus:#1c7d51;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
 }
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0d1310; --surface:#121b16; --raise:#16211b;
+  --ink:#e6ede8; --muted:#8ba295; --faint:#5f7268; --hair:#25332b;
+  --crit:#ef6a55; --high:#e08a3c; --med:#d3b24e; --low:#57c98a;
+  --unknown:#8ba295;
+  --crit-wash:#ef6a5520; --high-wash:#e08a3c20;
+  --med-wash:#d3b24e20; --low-wash:#57c98a20; --unk-wash:#8ba29518;
+  --accent:#57c98a; --focus:#57c98a; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#0d1310; --surface:#121b16; --raise:#16211b;
+  --ink:#e6ede8; --muted:#8ba295; --faint:#5f7268; --hair:#25332b;
+  --crit:#ef6a55; --high:#e08a3c; --med:#d3b24e; --low:#57c98a;
+  --unknown:#8ba295;
+  --crit-wash:#ef6a5520; --high-wash:#e08a3c20;
+  --med-wash:#d3b24e20; --low-wash:#57c98a20; --unk-wash:#8ba29518;
+  --accent:#57c98a; --focus:#57c98a; color-scheme:dark;
 }
-.page {
-  width: min(1440px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 28px 0 40px;
+:root[data-theme="light"]{
+  --paper:#f4f6f1; --surface:#ffffff; --raise:#fbfcf9;
+  --ink:#15201a; --muted:#5b6b61; --faint:#8a978d; --hair:#dbe2da;
+  --crit:#9e1f12; --high:#b25415; --med:#8f6d12; --low:#2f7d52;
+  --unknown:#6b7570;
+  --crit-wash:#9e1f1216; --high-wash:#b2541516;
+  --med-wash:#8f6d1216; --low-wash:#2f7d5216; --unk-wash:#6b757012;
+  --accent:#1c7d51; --focus:#1c7d51; color-scheme:light;
 }
-.report-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
-  align-items: end;
-  padding: 0 0 18px;
-  border-bottom: 1px solid var(--line);
-}
-.eyebrow {
-  margin: 0 0 4px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-h1, h2, p { margin-top: 0; }
-h1 {
-  margin-bottom: 6px;
-  font-size: 32px;
-  letter-spacing: 0;
-}
-h2 {
-  margin-bottom: 0;
-  font-size: 18px;
-  letter-spacing: 0;
-}
-.headline {
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 16px;
-}
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(92px, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-.metrics div {
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-}
-.metrics dt {
-  color: var(--muted);
-  font-size: 12px;
-}
-.metrics dd {
-  margin: 0;
-  font-size: 24px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-.section {
-  margin-top: 28px;
-}
-.section-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 880px;
-}
-th, td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  vertical-align: top;
-}
-th {
-  background: #eef2f6;
-  color: #344054;
-  font-size: 12px;
-  text-transform: uppercase;
-}
-th button {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-  padding: 0;
-}
-th button:focus-visible,
-input:focus-visible,
-summary:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-td {
-  font-variant-numeric: tabular-nums;
-}
-tr:last-child td {
-  border-bottom: 0;
-}
-.risk {
-  display: inline-block;
-  min-width: 72px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-}
-.risk.low { background: var(--low); }
-.risk.medium { background: var(--medium); }
-.risk.high { background: var(--high); }
-.risk.critical { background: var(--critical); }
-.risk.unknown { background: var(--unknown); }
-details summary {
-  cursor: pointer;
-  color: #1d4ed8;
-}
-details p {
-  max-width: 720px;
-  margin: 8px 0 0;
-  color: var(--muted);
-}
-.search-label {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--muted);
-}
-.search-label input {
-  width: min(360px, 42vw);
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--text);
-}
-.methodology {
-  margin-top: 28px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-}
-.methodology h2 {
-  color: var(--text);
-}
-.empty {
-  color: var(--muted);
-  text-align: center;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-@media (max-width: 760px) {
-  .page { width: min(100% - 20px, 1440px); padding-top: 18px; }
-  .report-header { grid-template-columns: 1fr; }
-  .metrics { grid-template-columns: repeat(3, 1fr); }
-  .metrics div { padding: 8px; }
-  .metrics dd { font-size: 20px; }
-  .inventory-heading { align-items: flex-start; flex-direction: column; }
-  .search-label, .search-label input { width: 100%; }
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.wrap{width:min(1180px,calc(100% - 40px));margin:0 auto;
+padding:34px 0 56px;}
+code,.mono,.dep,.num,.risk,.bar-label,th{font-family:var(--mono);}
+.num{font-variant-numeric:tabular-nums;}
+
+/* ---- masthead ---- */
+.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:28px;
+flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid var(--hair);}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+text-transform:uppercase;color:var(--faint);margin:0 0 8px;}
+.mast h1{font-family:var(--mono);font-size:30px;font-weight:600;
+letter-spacing:-.01em;margin:0 0 6px;}
+.mast h1 .at{color:var(--faint);font-weight:400;}
+.verdict{margin:0;font-size:15px;color:var(--muted);max-width:52ch;}
+.verdict b{color:var(--ink);font-weight:600;}
+.readout{display:grid;grid-template-columns:repeat(4,auto);gap:0;
+border:1px solid var(--hair);border-radius:10px;overflow:hidden;
+background:var(--surface);}
+.readout div{padding:11px 18px;border-right:1px solid var(--hair);}
+.readout div:last-child{border-right:0;}
+.readout dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+text-transform:uppercase;color:var(--faint);margin:0 0 3px;}
+.readout dd{margin:0;font-family:var(--mono);font-size:24px;font-weight:600;
+font-variant-numeric:tabular-nums;}
+.readout dd.hot{color:var(--crit);}
+
+/* ---- sections ---- */
+.section{margin-top:38px;}
+.section > h2{font-size:13px;font-family:var(--mono);letter-spacing:.06em;
+text-transform:uppercase;color:var(--muted);margin:0 0 4px;font-weight:600;}
+.section > .sub{margin:0 0 14px;color:var(--faint);font-size:13px;}
+
+/* ---- exposure list (the signature) ---- */
+.exposure{display:flex;flex-direction:column;gap:2px;}
+.exp-row{display:grid;grid-template-columns:minmax(150px,1.4fr) 78px
+minmax(210px,2fr) minmax(120px,1fr);gap:18px;align-items:center;
+padding:12px 14px;border-radius:9px;}
+.exp-row:hover{background:var(--raise);}
+.exp-dep{font-family:var(--mono);font-size:14px;font-weight:600;word-break:break-all;}
+.exp-dep .eco{color:var(--faint);font-weight:400;font-size:12px;}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
+font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px 3px 8px;
+border-radius:999px;border:1px solid transparent;}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;}
+.badge.crit{color:var(--crit);background:var(--crit-wash);border-color:var(--crit);}
+.badge.high{color:var(--high);background:var(--high-wash);border-color:var(--high);}
+.badge.med{color:var(--med);background:var(--med-wash);border-color:var(--med);}
+.badge.low{color:var(--low);background:var(--low-wash);border-color:var(--low);}
+.badge.unknown{color:var(--unknown);background:var(--unk-wash);
+border-color:var(--unknown);border-style:dashed;}
+/* the exposure bar */
+.exp-bar{display:flex;flex-direction:column;gap:4px;}
+.bar-track{position:relative;height:9px;border-radius:5px;background:var(--hair);
+overflow:hidden;}
+.bar-fill{position:absolute;inset:0 auto 0 0;border-radius:5px;}
+.bar-fill.crit{background:var(--crit);}
+.bar-fill.high{background:var(--high);}
+.bar-fill.med{background:var(--med);}
+.bar-fill.low{background:var(--low);}
+.bar-fill.unknown{background:repeating-linear-gradient(90deg,var(--unknown),
+var(--unknown) 3px,transparent 3px,transparent 6px);}
+.bar-label{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
+.bar-label b{color:var(--ink);}
+.exp-signals{font-size:12.5px;color:var(--muted);}
+.exp-signals .adv{color:var(--faint);font-family:var(--mono);font-size:11px;
+display:block;margin-top:2px;}
+
+/* ---- tables ---- */
+.tbl-wrap{border:1px solid var(--hair);border-radius:10px;overflow-x:auto;
+background:var(--surface);}
+table{width:100%;border-collapse:collapse;min-width:640px;}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--hair);
+vertical-align:middle;}
+th{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+color:var(--faint);font-weight:600;background:var(--raise);}
+th button{all:unset;cursor:pointer;font:inherit;color:inherit;}
+th button::after{content:" ↕";opacity:.4;}
+tr:last-child td{border-bottom:0;}
+td.num,td .num{font-variant-numeric:tabular-nums;}
+.repo{font-family:var(--mono);font-size:13px;}
+.mini-bars{display:inline-flex;gap:2px;vertical-align:middle;}
+.mini{width:9px;height:16px;border-radius:2px;background:var(--hair);}
+.mini.crit{background:var(--crit);}
+.mini.high{background:var(--high);}
+.mini.unknown{background:var(--unknown);opacity:.5;}
+.worst{color:var(--muted);font-size:12.5px;}
+details.repos summary{cursor:pointer;color:var(--accent);
+font-family:var(--mono);font-size:11px;list-style:none;}
+details.repos summary::-webkit-details-marker{display:none;}
+details.repos[open] summary{color:var(--muted);}
+details.repos ul{margin:6px 0 0;padding-left:16px;color:var(--muted);
+font-family:var(--mono);font-size:11.5px;}
+
+.search{display:flex;gap:8px;align-items:center;margin:0 0 12px;}
+.search input{flex:1;max-width:340px;padding:8px 11px;
+border:1px solid var(--hair);border-radius:8px;background:var(--surface);
+color:var(--ink);font:13px var(--mono);}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--hair);
+color:var(--faint);font-size:12.5px;max-width:70ch;}
+.foot b{color:var(--muted);}
+.empty{color:var(--muted);}
+.tiny{font-size:9px;padding:1px 6px;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+@media (max-width:720px){
+  .exp-row{grid-template-columns:1fr auto;gap:8px 14px;}
+  .exp-bar,.exp-signals{grid-column:1 / -1;}
+  .readout{grid-template-columns:1fr 1fr;}
+  .readout div:nth-child(2){border-right:0;}
 }
 """
 
