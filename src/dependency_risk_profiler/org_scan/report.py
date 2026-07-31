@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import json
+import re
+from datetime import datetime
 from html import escape
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import quote, urlparse
 
 from ..models import DependencyRiskScore, RiskLevel, SecurityMetrics
 from .models import (
     AggregatedDependency,
     OrgScanReport,
+    RepositoryRef,
     RepositoryRiskSummary,
     risk_rank,
 )
@@ -340,22 +344,25 @@ def _exposure_row(dependency: AggregatedDependency, repo_count: int) -> str:
         f"{dependency.key.name}"
     )
     return f"""
-    <div class="exp-row" data-risk="{risk_rank(dependency.risk_level)}"
+    <details class="exp-row drill" data-risk="{risk_rank(dependency.risk_level)}"
       data-search="{escape(_dependency_search_text(dependency))}">
-      <div class="exp-dep">{escape(dependency.key.name)}
+      <summary class="exp-summary">
+      <span class="exp-dep">{escape(dependency.key.name)}
         <span class="eco">· {escape(dependency.key.ecosystem)}</span>
-      </div>
-      <div>{_risk_badge(dependency.risk_level)}</div>
-      <div class="exp-bar" role="img" aria-label="{escape(label)}">
-        <div class="bar-track">
-          <div class="bar-fill {risk_class}" style="width:{width}%"></div>
-        </div>
-        <div class="bar-label">
+      </span>
+      <span>{_risk_badge(dependency.risk_level)}</span>
+      <span class="exp-bar" role="img" aria-label="{escape(label)}">
+        <span class="bar-track">
+          <span class="bar-fill {risk_class}" style="width:{width}%"></span>
+        </span>
+        <span class="bar-label">
           <b>{dependency.blast_radius}</b> / {repo_count} repos
-        </div>
-      </div>
-      <div class="exp-signals">{signal_text}<span class="adv">{advisory}</span></div>
-    </div>
+        </span>
+      </span>
+      <span class="exp-signals">{signal_text}<span class="adv">{advisory}</span></span>
+      </summary>
+      {_dependency_panel(dependency)}
+    </details>
 """.rstrip()
 
 
@@ -367,7 +374,7 @@ def _inventory_row(dependency: AggregatedDependency) -> str:
     return (
         f'<tr data-risk="{risk_rank(dependency.risk_level)}" '
         f'data-search="{search_text}">'
-        f'{_td(key.name, key.display_name, "dep")}'
+        f"{_linked_dependency_td(key.name, key.display_name, key.ecosystem)}"
         f'{_td(key.ecosystem, key.ecosystem, "mono")}'
         f"{_risk_td(dependency.risk_level)}"
         f'{_td(str(dependency.blast_radius), str(dependency.blast_radius), "num")}'
@@ -402,6 +409,16 @@ def _td(text: str, value: str, class_name: str = "") -> str:
     """Render a table cell with sort data."""
     class_attr = f' class="{class_name}"' if class_name else ""
     return f'<td{class_attr} data-value="{escape(value)}">{escape(text)}</td>'
+
+
+def _linked_dependency_td(name: str, value: str, ecosystem: str) -> str:
+    """Render a dependency table cell linked to deps.dev when possible."""
+    url = _deps_dev_url(ecosystem, name)
+    if url is None:
+        body = escape(name)
+    else:
+        body = _external_link(url, name)
+    return f'<td class="dep" data-value="{escape(value)}">{body}</td>'
 
 
 def _risk_td(risk_level: RiskLevel) -> str:
@@ -511,6 +528,529 @@ def _advisory_line(dependency: AggregatedDependency) -> str:
     return f"{counted} scored · {filtered} filtered"
 
 
+def _dependency_panel(dependency: AggregatedDependency) -> str:
+    """Render the expanded triage drill-down for one dependency."""
+    return f"""
+      <div class="triage-panel">
+        {_triage_group("Why it's flagged", _why_flagged(dependency))}
+        {_triage_group("Advisories", _advisories_panel(dependency))}
+        {_triage_group("Where it's used", _usage_panel(dependency))}
+        {_triage_group("Investigate upstream", _upstream_panel(dependency))}
+        {_triage_group("Metadata", _metadata_panel(dependency))}
+      </div>
+""".rstrip()
+
+
+def _triage_group(title: str, body: str) -> str:
+    """Render one labeled drill-down group."""
+    return f"""
+        <section class="triage-group">
+          <h3>{escape(title)}</h3>
+          {body}
+        </section>
+""".rstrip()
+
+
+def _why_flagged(dependency: AggregatedDependency) -> str:
+    """Render measured and unknown risk reasons for a dependency."""
+    lines = _why_lines(dependency)
+    items = "".join(f"<li>{escape(line)}</li>" for line in lines)
+    return f'<ul class="why-list">{items}</ul>'
+
+
+def _why_lines(dependency: AggregatedDependency) -> List[str]:
+    """Return plain-language reasons derived from scores and metadata."""
+    score = dependency.risk_score
+    metadata = score.dependency
+    metrics = metadata.security_metrics
+    lines: List[str] = []
+
+    if _score_fired(score.maintainer_score) or (
+        metadata.maintainer_count is not None and metadata.maintainer_count <= 1
+    ):
+        if metadata.maintainer_count is None:
+            lines.append("Bus factor: maintainer count raised risk")
+        else:
+            maintainer_label = _pluralize(metadata.maintainer_count, "maintainer")
+            lines.append(
+                f"Bus factor: {metadata.maintainer_count} primary {maintainer_label}"
+            )
+
+    if _score_fired(score.staleness_score) or _score_fired(score.maintained_score, 0.5):
+        if metadata.last_updated is None:
+            lines.append("Maintenance: last update unknown; slowed cadence")
+        else:
+            lines.append(
+                "Maintenance: last update "
+                f"{metadata.last_updated.date().isoformat()}; slowed cadence"
+            )
+
+    if _score_fired(score.signed_commits_score):
+        signed_releases = None
+        if metrics is not None:
+            signed_releases = metrics.has_signed_commits
+        if signed_releases is not True:
+            lines.append("Provenance: no signed releases")
+
+    if _score_fired(score.security_policy_score):
+        has_policy = None
+        if metrics is not None:
+            has_policy = metrics.has_security_policy
+        if has_policy is not True:
+            lines.append("Provenance: missing security policy")
+
+    if _score_fired(score.dependency_update_score):
+        lines.append("Provenance: missing dependency update automation")
+
+    if _score_fired(score.branch_protection_score):
+        lines.append("Provenance: missing branch protection")
+
+    if _score_fired(score.health_indicators_score):
+        missing_health = _missing_health_facts(metadata.has_tests, metadata.has_ci)
+        if missing_health:
+            lines.append(f"Provenance: {missing_health}")
+
+    if _score_fired(score.version_score):
+        lines.append(
+            _version_drift_line(metadata.installed_version, metadata.latest_version)
+        )
+
+    if _score_fired(score.license_score):
+        lines.append(_license_risk_line(score))
+
+    if metadata.is_deprecated or _score_fired(score.deprecation_score):
+        lines.append("Deprecation: upstream marks this dependency as deprecated")
+
+    if _score_fired(score.exploit_score):
+        counted = _counted_advisory_count(metrics)
+        advisory_label = _pluralize(counted, "advisory")
+        lines.append(f"Advisories: {counted} scored {advisory_label}")
+
+    if _score_fired(score.transitive_score):
+        transitive_count = len(metadata.transitive_dependencies)
+        dep_label = _pluralize(transitive_count, "transitive dependency")
+        lines.append(f"Transitive risk: {transitive_count} {dep_label}")
+
+    if _score_fired(score.community_score):
+        lines.append(
+            "Community health: package activity or support signals raised risk"
+        )
+
+    if score.unknown_signals:
+        lines.append(f"couldn't measure: {', '.join(score.unknown_signals)}")
+    if score.insufficient_data:
+        lines.append("insufficient data for a confident risk level")
+
+    if not lines:
+        return ["No measured risk signals fired."]
+    return lines
+
+
+def _score_fired(score: Optional[float], threshold: float = 0.0) -> bool:
+    """Return whether a component score raised risk."""
+    return score is not None and score > threshold
+
+
+def _missing_health_facts(has_tests: Optional[bool], has_ci: Optional[bool]) -> str:
+    """Return a compact health indicator explanation."""
+    if has_tests is False and has_ci is False:
+        return "no CI/tests"
+    if has_tests is False:
+        return "no tests"
+    if has_ci is False:
+        return "no CI"
+    return ""
+
+
+def _version_drift_line(installed: str, latest: Optional[str]) -> str:
+    """Return a version drift fact line."""
+    if latest is None:
+        return f"Version drift: installed {installed}; latest version unknown"
+    drift = _version_drift(installed, latest)
+    if drift:
+        return f"Version drift: {installed} → {latest} ({drift} behind)"
+    return f"Version drift: {installed} → {latest} (behind latest)"
+
+
+def _version_drift(installed: str, latest: str) -> str:
+    """Return the major/minor version distance when parseable."""
+    installed_version = _major_minor_version(installed)
+    latest_version = _major_minor_version(latest)
+    if installed_version is None or latest_version is None:
+        return ""
+
+    installed_major, installed_minor = installed_version
+    latest_major, latest_minor = latest_version
+    major_delta = latest_major - installed_major
+    minor_delta = latest_minor - installed_minor
+    parts: List[str] = []
+    if major_delta > 0:
+        parts.append(f"{major_delta} {_pluralize(major_delta, 'major')}")
+    if major_delta == 0 and minor_delta > 0:
+        parts.append(f"{minor_delta} {_pluralize(minor_delta, 'minor')}")
+    return ", ".join(parts)
+
+
+def _major_minor_version(version: str) -> Optional[Tuple[int, int]]:
+    """Parse leading major/minor integers from a version string."""
+    match = re.match(r"^\D*(\d+)(?:\.(\d+))?", version)
+    if match is None:
+        return None
+    major = int(match.group(1))
+    minor_text = match.group(2)
+    minor = int(minor_text) if minor_text is not None else 0
+    return major, minor
+
+
+def _license_risk_line(score: DependencyRiskScore) -> str:
+    """Return a license risk explanation."""
+    license_info = score.dependency.license_info
+    if license_info is None:
+        return "License: missing or unknown license"
+    if license_info.is_approved is False:
+        return f"License: {license_info.license_id} is not approved"
+    if license_info.license_id.lower() in {"", "unknown", "none"}:
+        return "License: missing or unknown license"
+    return (
+        f"License: {license_info.license_id} flagged as {license_info.category.value}"
+    )
+
+
+def _advisories_panel(dependency: AggregatedDependency) -> str:
+    """Render advisory drill-down with scored and filtered transparency."""
+    metrics = dependency.risk_score.dependency.security_metrics
+    if metrics is None or metrics.vulnerability_count is None:
+        return '<p class="muted">Advisories could not be measured.</p>'
+    if metrics.vulnerability_count == 0:
+        return '<p class="muted">No advisories were reported.</p>'
+
+    counted: List[Dict[str, object]] = []
+    filtered: List[Dict[str, object]] = []
+    for detail in metrics.vulnerability_details:
+        if _is_counted_advisory(detail):
+            counted.append(detail)
+        elif _is_filtered_advisory(detail):
+            filtered.append(detail)
+        else:
+            counted.append(detail)
+
+    sections: List[str] = []
+    sections.append(_advisory_list("Scored", counted, filtered=False))
+    sections.append(_advisory_list("Filtered out", filtered, filtered=True))
+    return "\n".join(sections)
+
+
+def _is_counted_advisory(detail: Dict[str, object]) -> bool:
+    """Return whether a vulnerability detail counted in the score."""
+    counted = detail.get("counted_in_score")
+    if isinstance(counted, bool):
+        return counted
+    return not _is_filtered_advisory(detail)
+
+
+def _is_filtered_advisory(detail: Dict[str, object]) -> bool:
+    """Return whether a vulnerability detail was filtered from the score."""
+    filtered = detail.get("filtered")
+    if isinstance(filtered, bool) and filtered:
+        return True
+    withdrawn = detail.get("withdrawn")
+    if isinstance(withdrawn, bool) and withdrawn:
+        return True
+    counted = detail.get("counted_in_score")
+    if isinstance(counted, bool):
+        return not counted
+    return bool(_filter_reasons(detail))
+
+
+def _advisory_list(
+    label: str, advisories: List[Dict[str, object]], filtered: bool
+) -> str:
+    """Render a labeled advisory list."""
+    if not advisories:
+        return f'<p class="muted mono">{escape(label)}: none</p>'
+    items = "".join(_advisory_item(detail, filtered) for detail in advisories)
+    return (
+        f'<div class="advisory-block"><p class="advisory-label mono">'
+        f"{escape(label)}</p><ul>{items}</ul></div>"
+    )
+
+
+def _advisory_item(detail: Dict[str, object], filtered: bool) -> str:
+    """Render one advisory item."""
+    advisory_id = _detail_text(detail, "id") or "unknown advisory"
+    severity = _detail_text(detail, "severity") or "UNKNOWN"
+    advisory_url = _advisory_url(advisory_id)
+    advisory_link = escape(advisory_id)
+    if advisory_url is not None:
+        advisory_link = _external_link(advisory_url, advisory_id)
+    reason = ""
+    if filtered:
+        reason = (
+            f' <span class="muted">excluded: {escape(_filter_reason(detail))}</span>'
+        )
+    return (
+        "<li>"
+        f'{advisory_link} <span class="sev mono">{escape(severity.upper())}</span>'
+        f"{reason}</li>"
+    )
+
+
+def _detail_text(detail: Dict[str, object], key: str) -> str:
+    """Return a string field from vulnerability details."""
+    value = detail.get(key)
+    if isinstance(value, str):
+        return value
+    return ""
+
+
+def _advisory_url(advisory_id: str) -> Optional[str]:
+    """Return the public advisory URL for an advisory ID."""
+    if not advisory_id or advisory_id == "unknown advisory":
+        return None
+    encoded_id = quote(advisory_id, safe="")
+    if advisory_id.upper().startswith("GHSA-"):
+        return f"https://github.com/advisories/{encoded_id}"
+    return f"https://osv.dev/vulnerability/{encoded_id}"
+
+
+def _filter_reason(detail: Dict[str, object]) -> str:
+    """Return a human-readable advisory filter reason."""
+    reasons = _filter_reasons(detail)
+    if reasons:
+        return ", ".join(reasons)
+    withdrawn = detail.get("withdrawn")
+    if isinstance(withdrawn, bool) and withdrawn:
+        return "withdrawn"
+    severity = _detail_text(detail, "severity").upper()
+    if severity in {"INFO", "INFORMATIONAL"}:
+        return "informational"
+    filtered = detail.get("filtered")
+    if isinstance(filtered, bool) and filtered:
+        return "low-confidence"
+    return "not counted in score"
+
+
+def _filter_reasons(detail: Dict[str, object]) -> List[str]:
+    """Return normalized filter reasons from advisory details."""
+    value = detail.get("filter_reasons")
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        reasons: List[str] = []
+        for item in value:
+            if isinstance(item, str):
+                reasons.append(item)
+        return reasons
+    value = detail.get("filter_reason")
+    if isinstance(value, str):
+        return [value]
+    return []
+
+
+def _usage_panel(dependency: AggregatedDependency) -> str:
+    """Render repository and manifest occurrence links."""
+    if not dependency.manifest_paths_by_repo:
+        return '<p class="muted">No manifest locations were preserved.</p>'
+
+    items: List[str] = []
+    for repo_full_name in sorted(dependency.manifest_paths_by_repo):
+        repo_ref = dependency.repo_refs.get(repo_full_name)
+        repo_label = repo_full_name
+        if repo_ref is not None:
+            repo_link = _external_link(repo_ref.html_url, repo_ref.full_name)
+        else:
+            repo_link = escape(repo_label)
+        manifest_items = "".join(
+            _manifest_link_item(repo_ref, path)
+            for path in sorted(dependency.manifest_paths_by_repo[repo_full_name])
+        )
+        items.append(f"<li>{repo_link}<ul>{manifest_items}</ul></li>")
+    return f'<ul class="usage-list">{"".join(items)}</ul>'
+
+
+def _manifest_link_item(repo_ref: Optional[RepositoryRef], path: str) -> str:
+    """Render one manifest link if repository metadata is available."""
+    if repo_ref is not None:
+        blob_url = _repo_blob_url(repo_ref.html_url, repo_ref.default_branch, path)
+        return f"<li>{_external_link(blob_url, path)}</li>"
+    return f"<li>{escape(path)}</li>"
+
+
+def _repo_blob_url(repo_html_url: str, default_branch: str, path: str) -> str:
+    """Return a GitHub blob URL for a manifest path."""
+    branch = quote(default_branch or "HEAD", safe="")
+    encoded_path = quote(path, safe="/")
+    return f"{repo_html_url.rstrip('/')}/blob/{branch}/{encoded_path}"
+
+
+def _upstream_panel(dependency: AggregatedDependency) -> str:
+    """Render investigation links for package and upstream repository."""
+    metadata = dependency.risk_score.dependency
+    links: List[Tuple[str, str]] = []
+    deps_dev_url = _deps_dev_url(dependency.key.ecosystem, dependency.key.name)
+    if deps_dev_url is not None:
+        links.append(("deps.dev", deps_dev_url))
+    registry_url = _registry_url(dependency.key.ecosystem, dependency.key.name)
+    if registry_url is not None:
+        links.append(("Registry", registry_url))
+    source_url = _source_repo_url(metadata.repository_url)
+    if source_url is not None:
+        links.append(("Source repo", source_url))
+        scorecard_uri = _github_scorecard_uri(source_url)
+        if scorecard_uri is not None:
+            scorecard_url = (
+                "https://securityscorecards.dev/viewer/?uri="
+                f"{quote(scorecard_uri, safe='')}"
+            )
+            links.append(("OpenSSF Scorecard", scorecard_url))
+
+    if not links:
+        return '<p class="muted">No upstream links available.</p>'
+
+    items = "".join(f"<li>{_external_link(url, label)}</li>" for label, url in links)
+    return f'<ul class="link-row">{items}</ul>'
+
+
+def _metadata_panel(dependency: AggregatedDependency) -> str:
+    """Render compact dependency metadata facts."""
+    metadata = dependency.risk_score.dependency
+    license_text = "unknown"
+    if metadata.license_info is not None:
+        license_text = metadata.license_info.license_id
+    facts = [
+        (
+            "installed → latest",
+            f"{metadata.installed_version} → {_optional_text(metadata.latest_version)}",
+        ),
+        ("last updated", _date_text(metadata.last_updated)),
+        ("maintainers", _optional_int(metadata.maintainer_count)),
+        ("license", license_text),
+        ("tests", _boolean_mark(metadata.has_tests)),
+        ("CI", _boolean_mark(metadata.has_ci)),
+        ("docs", _boolean_mark(metadata.has_contribution_guidelines)),
+    ]
+    entries = "".join(
+        "<div>" f"<dt>{escape(label)}</dt><dd>{escape(value)}</dd>" "</div>"
+        for label, value in facts
+    )
+    return f'<dl class="fact-grid mono">{entries}</dl>'
+
+
+def _deps_dev_url(ecosystem: str, name: str) -> Optional[str]:
+    """Return a deps.dev package URL for supported ecosystems."""
+    system = _deps_dev_system(ecosystem)
+    if system is None:
+        return None
+    return f"https://deps.dev/{system}/{quote(name, safe='')}"
+
+
+def _deps_dev_system(ecosystem: str) -> Optional[str]:
+    """Map internal ecosystem names to deps.dev systems."""
+    systems = {
+        "python": "pypi",
+        "pyproject": "pypi",
+        "nodejs": "npm",
+        "golang": "go",
+        "go": "go",
+        "toml": "cargo",
+        "cargo": "cargo",
+    }
+    return systems.get(ecosystem.lower())
+
+
+def _registry_url(ecosystem: str, name: str) -> Optional[str]:
+    """Return the ecosystem registry URL for a dependency."""
+    system = _deps_dev_system(ecosystem)
+    if system == "pypi":
+        return f"https://pypi.org/project/{quote(name, safe='')}/"
+    if system == "npm":
+        return f"https://www.npmjs.com/package/{quote(name, safe='@/')}"
+    if system == "cargo":
+        return f"https://crates.io/crates/{quote(name, safe='')}"
+    if system == "go":
+        return f"https://pkg.go.dev/{quote(name, safe='/')}"
+    return None
+
+
+def _source_repo_url(repository_url: Optional[str]) -> Optional[str]:
+    """Normalize a repository URL into an HTTP link when possible."""
+    if repository_url is None:
+        return None
+    url = repository_url.removeprefix("git+")
+    if url.startswith("git@github.com:"):
+        repo_path = url.removeprefix("git@github.com:").removesuffix(".git")
+        return f"https://github.com/{repo_path}"
+    parsed = urlparse(url)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return url
+    return None
+
+
+def _github_scorecard_uri(repository_url: str) -> Optional[str]:
+    """Return securityscorecards.dev URI input for GitHub repositories."""
+    parsed = urlparse(repository_url)
+    if parsed.netloc.lower() != "github.com":
+        return None
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) < 2:
+        return None
+    owner = parts[0]
+    repo = parts[1].removesuffix(".git")
+    return f"github.com/{owner}/{repo}"
+
+
+def _external_link(url: str, label: str) -> str:
+    """Render an escaped external link when the URL is HTTP(S)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return escape(label)
+    return (
+        f'<a href="{escape(url, quote=True)}" target="_blank" rel="noopener">'
+        f"{escape(label)}</a>"
+    )
+
+
+def _date_text(value: Optional[datetime]) -> str:
+    """Return a compact date string for metadata facts."""
+    if value is None:
+        return "unknown"
+    return value.date().isoformat()
+
+
+def _optional_text(value: Optional[str]) -> str:
+    """Return text for optional string metadata."""
+    if value is None:
+        return "unknown"
+    return value
+
+
+def _optional_int(value: Optional[int]) -> str:
+    """Return text for optional integer metadata."""
+    if value is None:
+        return "unknown"
+    return str(value)
+
+
+def _boolean_mark(value: Optional[bool]) -> str:
+    """Return compact yes/no/unknown metadata marker."""
+    if value is True:
+        return "✓"
+    if value is False:
+        return "—"
+    return "unknown"
+
+
+def _counted_advisory_count(metrics: Optional[SecurityMetrics]) -> int:
+    """Return counted advisory count with a conservative fallback."""
+    if metrics is None:
+        return 0
+    if metrics.counted_vulnerability_count is not None:
+        return metrics.counted_vulnerability_count
+    if metrics.vulnerability_count is not None:
+        return metrics.vulnerability_count
+    return 0
+
+
 def _exposure_width(blast_radius: int, repo_count: int) -> int:
     """Return the exposure bar width as an integer percentage."""
     if repo_count <= 0:
@@ -523,6 +1063,14 @@ def _pluralize(count: int, singular: str) -> str:
     """Return a count-aware noun phrase without the count."""
     if count == 1:
         return singular
+    if singular.endswith("y") and singular[-2:-1].lower() not in {
+        "a",
+        "e",
+        "i",
+        "o",
+        "u",
+    }:
+        return f"{singular[:-1]}ies"
     return f"{singular}s"
 
 
@@ -538,6 +1086,7 @@ def _dependency_to_dict(
         "display_name": dependency.key.display_name,
         "risk_level": dependency.risk_level.value,
         "risk_score": score.total_score,
+        "component_scores": _component_scores_to_dict(score),
         "insufficient_data": score.insufficient_data,
         "unknown_signals": score.unknown_signals,
         "key_signals": dependency.key_signals,
@@ -547,9 +1096,48 @@ def _dependency_to_dict(
             "repositories": sorted(dependency.repositories),
             "manifests": sorted(dependency.manifests),
         },
+        "usage": _usage_to_dict(dependency),
         "advisories": _advisory_to_dict(score),
         "risk_factors": score.factors,
         "metadata": _metadata_to_dict(score),
+    }
+
+
+def _usage_to_dict(dependency: AggregatedDependency) -> List[Dict[str, object]]:
+    """Serialize dependency repository/manifest occurrences."""
+    usage: List[Dict[str, object]] = []
+    for repo_full_name in sorted(dependency.manifest_paths_by_repo):
+        repo_ref = dependency.repo_refs.get(repo_full_name)
+        usage.append(
+            {
+                "repo": repo_full_name,
+                "html_url": repo_ref.html_url if repo_ref is not None else None,
+                "default_branch": (
+                    repo_ref.default_branch if repo_ref is not None else None
+                ),
+                "manifests": sorted(dependency.manifest_paths_by_repo[repo_full_name]),
+            }
+        )
+    return usage
+
+
+def _component_scores_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
+    """Serialize component risk scores for drill-down consumers."""
+    return {
+        "staleness": score.staleness_score,
+        "maintainer": score.maintainer_score,
+        "deprecation": score.deprecation_score,
+        "exploit": score.exploit_score,
+        "version": score.version_score,
+        "health_indicators": score.health_indicators_score,
+        "license": score.license_score,
+        "community": score.community_score,
+        "transitive": score.transitive_score,
+        "security_policy": score.security_policy_score,
+        "dependency_update": score.dependency_update_score,
+        "signed_commits": score.signed_commits_score,
+        "branch_protection": score.branch_protection_score,
+        "maintained": score.maintained_score,
     }
 
 
@@ -609,6 +1197,7 @@ def _security_metrics_to_dict(metrics: SecurityMetrics) -> Dict[str, object]:
 def _metadata_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
     """Serialize dependency metadata relevant to the org report."""
     dependency = score.dependency
+    license_info = dependency.license_info
     return {
         "latest_version": dependency.latest_version,
         "last_updated": (
@@ -617,6 +1206,13 @@ def _metadata_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
         "maintainer_count": dependency.maintainer_count,
         "is_deprecated": dependency.is_deprecated,
         "repository_url": dependency.repository_url,
+        "license": license_info.license_id if license_info is not None else None,
+        "license_category": (
+            license_info.category.value if license_info is not None else None
+        ),
+        "license_approved": (
+            license_info.is_approved if license_info is not None else None
+        ),
         "has_tests": dependency.has_tests,
         "has_ci": dependency.has_ci,
         "has_contribution_guidelines": dependency.has_contribution_guidelines,
@@ -703,10 +1299,16 @@ text-transform:uppercase;color:var(--muted);margin:0 0 4px;font-weight:600;}
 
 /* ---- exposure list (the signature) ---- */
 .exposure{display:flex;flex-direction:column;gap:2px;}
-.exp-row{display:grid;grid-template-columns:minmax(150px,1.4fr) 78px
+.exp-row{border-radius:9px;}
+.exp-row.empty{padding:12px 14px;}
+.exp-row:hover,.exp-row[open]{background:var(--raise);}
+.exp-summary{display:grid;grid-template-columns:minmax(150px,1.4fr) 78px
 minmax(210px,2fr) minmax(120px,1fr);gap:18px;align-items:center;
-padding:12px 14px;border-radius:9px;}
-.exp-row:hover{background:var(--raise);}
+padding:12px 14px;cursor:pointer;list-style:none;border-radius:9px;}
+.exp-summary::-webkit-details-marker{display:none;}
+.exp-row[open] .exp-summary{border-bottom:1px solid var(--hair);
+border-radius:9px 9px 0 0;}
+.exp-summary > span{min-width:0;}
 .exp-dep{font-family:var(--mono);font-size:14px;font-weight:600;word-break:break-all;}
 .exp-dep .eco{color:var(--faint);font-weight:400;font-size:12px;}
 .badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
@@ -721,9 +1323,9 @@ border-radius:999px;border:1px solid transparent;}
 border-color:var(--unknown);border-style:dashed;}
 /* the exposure bar */
 .exp-bar{display:flex;flex-direction:column;gap:4px;}
-.bar-track{position:relative;height:9px;border-radius:5px;background:var(--hair);
+.bar-track{display:block;position:relative;height:9px;border-radius:5px;background:var(--hair);
 overflow:hidden;}
-.bar-fill{position:absolute;inset:0 auto 0 0;border-radius:5px;}
+.bar-fill{display:block;position:absolute;inset:0 auto 0 0;border-radius:5px;}
 .bar-fill.crit{background:var(--crit);}
 .bar-fill.high{background:var(--high);}
 .bar-fill.med{background:var(--med);}
@@ -735,6 +1337,27 @@ var(--unknown) 3px,transparent 3px,transparent 6px);}
 .exp-signals{font-size:12.5px;color:var(--muted);}
 .exp-signals .adv{color:var(--faint);font-family:var(--mono);font-size:11px;
 display:block;margin-top:2px;}
+a{color:var(--accent);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.triage-panel{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+gap:18px 24px;padding:14px;border-top:0;}
+.triage-group h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+text-transform:uppercase;color:var(--faint);font-weight:600;margin:0 0 7px;}
+.triage-group p{margin:0;}
+.why-list,.usage-list,.advisory-block ul,.link-row{margin:0;padding-left:17px;}
+.why-list li,.usage-list li,.advisory-block li,.link-row li{margin:3px 0;}
+.usage-list ul{margin:4px 0 8px;padding-left:16px;font-family:var(--mono);
+font-size:12px;}
+.link-row{display:flex;flex-wrap:wrap;gap:7px 14px;padding-left:0;list-style:none;}
+.advisory-block{margin:0 0 8px;}
+.advisory-label{margin:0 0 4px;color:var(--muted);font-size:11px;}
+.sev{display:inline-block;color:var(--faint);font-size:10.5px;margin-left:5px;}
+.muted{color:var(--faint);}
+.fact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 16px;
+margin:0;}
+.fact-grid div{min-width:0;}
+.fact-grid dt{color:var(--faint);font-size:10.5px;text-transform:uppercase;}
+.fact-grid dd{margin:1px 0 0;color:var(--muted);word-break:break-word;}
 
 /* ---- tables ---- */
 .tbl-wrap{border:1px solid var(--hair);border-radius:10px;overflow-x:auto;
@@ -776,8 +1399,10 @@ color:var(--faint);font-size:12.5px;max-width:70ch;}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
 overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 @media (max-width:720px){
-  .exp-row{grid-template-columns:1fr auto;gap:8px 14px;}
+  .exp-summary{grid-template-columns:1fr auto;gap:8px 14px;}
   .exp-bar,.exp-signals{grid-column:1 / -1;}
+  .triage-panel{grid-template-columns:1fr;}
+  .fact-grid{grid-template-columns:1fr;}
   .readout{grid-template-columns:1fr 1fr;}
   .readout div:nth-child(2){border-right:0;}
 }

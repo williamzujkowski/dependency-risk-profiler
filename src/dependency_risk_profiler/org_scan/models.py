@@ -78,6 +78,8 @@ class AggregatedDependency:
     risk_score: DependencyRiskScore
     repositories: Set[str] = field(default_factory=set)
     manifests: Set[str] = field(default_factory=set)
+    repo_refs: Dict[str, RepositoryRef] = field(default_factory=dict)
+    manifest_paths_by_repo: Dict[str, Set[str]] = field(default_factory=dict)
     key_signals: List[str] = field(default_factory=list)
     advisory_summary: str = "unknown"
 

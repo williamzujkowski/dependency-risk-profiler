@@ -2,7 +2,7 @@
   "org": "pallets",
   "account": "pallets",
   "account_type": "organization",
-  "generated_at": "2026-07-30T23:45:13.652119",
+  "generated_at": "2026-07-31T11:00:39.974951",
   "repositories_scanned": [
     "pallets/flask",
     "pallets/markupsafe",
@@ -31,6 +31,22 @@
       "display_name": "pyproject:jinja2@>=3.1.2",
       "risk_level": "HIGH",
       "risk_score": 3.2961309523809517,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -51,6 +67,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 20,
         "counted_in_score": 10,
@@ -682,6 +708,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/jinja/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -695,6 +724,22 @@
       "display_name": "python:jinja2@3.1.2",
       "risk_level": "HIGH",
       "risk_score": 3.2961309523809517,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -715,6 +760,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 20,
         "counted_in_score": 10,
@@ -1346,6 +1401,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/jinja/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -1359,6 +1417,22 @@
       "display_name": "python:flask@2.3.2",
       "risk_level": "HIGH",
       "risk_score": 3.0505952380952377,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -1379,6 +1453,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 10,
         "counted_in_score": 5,
@@ -1396,7 +1480,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -1405,9 +1492,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.1"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -1419,7 +1503,10 @@
             "summary": "Flask is vulnerable to Denial of Service via incorrect encoding of JSON data",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2018-1000656",
@@ -1433,9 +1520,6 @@
               "https://security.netapp.com/advisory/ntap-20190221-0001",
               "https://usn.ubuntu.com/4378-1"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -1447,7 +1531,10 @@
             "summary": "Pallets Project Flask is vulnerable to Denial of Service via Unexpected memory usage",
             "details": "The Pallets Project Flask before 1.0 is affected by unexpected memory usage. The impact is denial of service. The attack vector is crafted encoded JSON data. The fixed version is 1. NOTE this may overlap CVE-2018-1000656.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2019-1010083",
@@ -1456,9 +1543,6 @@
               "https://github.com/pypa/advisory-database/tree/main/vulns/flask/PYSEC-2019-179.yaml",
               "https://www.palletsprojects.com/blog/flask-1-0-released"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -1470,7 +1554,10 @@
             "summary": "Flask session does not add `Vary: Cookie` header when accessed in some ways",
             "details": "When the `session` object is accessed, Flask should set the `Vary: Cookie` header. This instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python `in` operator were overlooked.\n\nThe severity depends on the application's use of the session, and the cache's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not ignore responses with cookies.\n2. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n3. The application accesses the session in a way that does not access the values, only the keys, and does not mutate the session.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
@@ -1479,9 +1566,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.3"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -1493,7 +1577,10 @@
             "summary": "Flask vulnerable to possible disclosure of permanent session cookie due to missing Vary: Cookie header",
             "details": "When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by a proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session, and the proxy's behavior regarding cookies. The risk depends on _all_ these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets [`session.permanent = True`](https://flask.palletsprojects.com/en/2.3.x/api/#flask.session.permanent).\n2. The application does not access or modify the session at any point during a request.\n4. [`SESSION_REFRESH_EACH_REQUEST`](https://flask.palletsprojects.com/en/2.3.x/config/#SESSION_REFRESH_EACH_REQUEST) is enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
@@ -1508,9 +1595,6 @@
               "https://security.netapp.com/advisory/ntap-20230818-0006",
               "https://www.debian.org/security/2023/dsa-5442"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -1522,7 +1606,10 @@
             "summary": "No summary available",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3. NOTE: this may overlap CVE-2019-1010083.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/0.12.3",
@@ -1532,9 +1619,6 @@
               "https://usn.ubuntu.com/4378-1/",
               "https://github.com/advisories/GHSA-562c-5r94-xh97"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -1548,15 +1632,15 @@
             "summary": "No summary available",
             "details": "The Pallets Project Flask before 1.0 is affected by: unexpected memory usage. The impact is: denial of service. The attack vector is: crafted encoded JSON data. The fixed version is: 1. NOTE: this may overlap CVE-2018-1000656.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://www.palletsprojects.com/blog/flask-1-0-released/",
               "https://github.com/advisories/GHSA-5wv5-4vpf-pj6m"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -1570,7 +1654,10 @@
             "summary": "No summary available",
             "details": "Flask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/commit/70f906c51ce49c485f1d355703e9cc3386b1cc2b",
@@ -1579,9 +1666,6 @@
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
               "https://github.com/pallets/flask/commit/afd63b16170b7c047f5758eb910c416511e9c965"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -1595,7 +1679,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -1606,9 +1693,6 @@
               "https://pypi.org/project/flask",
               "https://github.com/advisories/GHSA-4grg-w6v8-c28g"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -1622,16 +1706,16 @@
             "summary": "No summary available",
             "details": "Flask is a web server gateway interface (WSGI) web application framework. In versions 3.1.2 and below, when the session object is accessed, Flask should set the Vary: Cookie header., resulting in a Use of Cache Containing Sensitive Information vulnerability. The logic instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python in operator were overlooked. The severity and risk depend on the application being hosted behind a caching proxy that doesn't ignore responses with cookies, not setting a Cache-Control header to mark pages as private or non-cacheable, and accessing the session in a way that only touches keys without reading values or mutating the session. The issue has been fixed in version 3.1.3.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/3.1.3",
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
               "https://github.com/pallets/flask/commit/089cb86dd22bff589a4eafb7ab8e42dc357623b4"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -1656,6 +1740,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/flask/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -1669,6 +1756,22 @@
       "display_name": "python:werkzeug@2.3.3",
       "risk_level": "HIGH",
       "risk_score": 3.0505952380952377,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -1689,6 +1792,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 27,
         "counted_in_score": 13,
@@ -2394,6 +2507,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/werkzeug/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -2407,6 +2523,22 @@
       "display_name": "pyproject:flask@latest",
       "risk_level": "HIGH",
       "risk_score": 2.916666666666666,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -2429,6 +2561,18 @@
           "pallets/flask:examples/tutorial/pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml",
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 10,
         "counted_in_score": 5,
@@ -2446,7 +2590,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -2455,9 +2602,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.1"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -2469,7 +2613,10 @@
             "summary": "Flask is vulnerable to Denial of Service via incorrect encoding of JSON data",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2018-1000656",
@@ -2483,9 +2630,6 @@
               "https://security.netapp.com/advisory/ntap-20190221-0001",
               "https://usn.ubuntu.com/4378-1"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -2497,7 +2641,10 @@
             "summary": "Pallets Project Flask is vulnerable to Denial of Service via Unexpected memory usage",
             "details": "The Pallets Project Flask before 1.0 is affected by unexpected memory usage. The impact is denial of service. The attack vector is crafted encoded JSON data. The fixed version is 1. NOTE this may overlap CVE-2018-1000656.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2019-1010083",
@@ -2506,9 +2653,6 @@
               "https://github.com/pypa/advisory-database/tree/main/vulns/flask/PYSEC-2019-179.yaml",
               "https://www.palletsprojects.com/blog/flask-1-0-released"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -2520,7 +2664,10 @@
             "summary": "Flask session does not add `Vary: Cookie` header when accessed in some ways",
             "details": "When the `session` object is accessed, Flask should set the `Vary: Cookie` header. This instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python `in` operator were overlooked.\n\nThe severity depends on the application's use of the session, and the cache's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not ignore responses with cookies.\n2. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n3. The application accesses the session in a way that does not access the values, only the keys, and does not mutate the session.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
@@ -2529,9 +2676,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.3"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -2543,7 +2687,10 @@
             "summary": "Flask vulnerable to possible disclosure of permanent session cookie due to missing Vary: Cookie header",
             "details": "When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by a proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session, and the proxy's behavior regarding cookies. The risk depends on _all_ these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets [`session.permanent = True`](https://flask.palletsprojects.com/en/2.3.x/api/#flask.session.permanent).\n2. The application does not access or modify the session at any point during a request.\n4. [`SESSION_REFRESH_EACH_REQUEST`](https://flask.palletsprojects.com/en/2.3.x/config/#SESSION_REFRESH_EACH_REQUEST) is enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
@@ -2558,9 +2705,6 @@
               "https://security.netapp.com/advisory/ntap-20230818-0006",
               "https://www.debian.org/security/2023/dsa-5442"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -2572,7 +2716,10 @@
             "summary": "No summary available",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3. NOTE: this may overlap CVE-2019-1010083.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/0.12.3",
@@ -2582,9 +2729,6 @@
               "https://usn.ubuntu.com/4378-1/",
               "https://github.com/advisories/GHSA-562c-5r94-xh97"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -2598,15 +2742,15 @@
             "summary": "No summary available",
             "details": "The Pallets Project Flask before 1.0 is affected by: unexpected memory usage. The impact is: denial of service. The attack vector is: crafted encoded JSON data. The fixed version is: 1. NOTE: this may overlap CVE-2018-1000656.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://www.palletsprojects.com/blog/flask-1-0-released/",
               "https://github.com/advisories/GHSA-5wv5-4vpf-pj6m"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -2620,7 +2764,10 @@
             "summary": "No summary available",
             "details": "Flask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/commit/70f906c51ce49c485f1d355703e9cc3386b1cc2b",
@@ -2629,9 +2776,6 @@
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
               "https://github.com/pallets/flask/commit/afd63b16170b7c047f5758eb910c416511e9c965"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -2645,7 +2789,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -2656,9 +2803,6 @@
               "https://pypi.org/project/flask",
               "https://github.com/advisories/GHSA-4grg-w6v8-c28g"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -2672,16 +2816,16 @@
             "summary": "No summary available",
             "details": "Flask is a web server gateway interface (WSGI) web application framework. In versions 3.1.2 and below, when the session object is accessed, Flask should set the Vary: Cookie header., resulting in a Use of Cache Containing Sensitive Information vulnerability. The logic instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python in operator were overlooked. The severity and risk depend on the application being hosted behind a caching proxy that doesn't ignore responses with cookies, not setting a Cache-Control header to mark pages as private or non-cacheable, and accessing the session in a way that only touches keys without reading values or mutating the session. The issue has been fixed in version 3.1.3.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/3.1.3",
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
               "https://github.com/pallets/flask/commit/089cb86dd22bff589a4eafb7ab8e42dc357623b4"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -2705,6 +2849,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/flask/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -2718,6 +2865,22 @@
       "display_name": "python:markupsafe@2.1.2",
       "risk_level": "HIGH",
       "risk_score": 2.8943452380952377,
+      "component_scores": {
+        "staleness": 0.75,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -2738,6 +2901,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -2763,6 +2936,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -2776,6 +2952,22 @@
       "display_name": "pyproject:werkzeug@>=3.1.0",
       "risk_level": "HIGH",
       "risk_score": 2.8497023809523805,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -2796,6 +2988,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 27,
         "counted_in_score": 13,
@@ -3500,6 +3702,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/werkzeug/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3513,6 +3718,22 @@
       "display_name": "python:blinker@1.6.2",
       "risk_level": "HIGH",
       "risk_score": 2.782738095238095,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3533,6 +3754,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -3557,6 +3788,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets-eco/blinker/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3570,6 +3804,22 @@
       "display_name": "python:itsdangerous@2.1.2",
       "risk_level": "HIGH",
       "risk_score": 2.782738095238095,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3590,6 +3840,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -3614,6 +3874,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/itsdangerous/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3627,6 +3890,22 @@
       "display_name": "pyproject:blinker@>=1.9.0",
       "risk_level": "HIGH",
       "risk_score": 2.7157738095238093,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3647,6 +3926,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -3671,6 +3960,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets-eco/blinker/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3684,6 +3976,22 @@
       "display_name": "pyproject:itsdangerous@>=2.2.0",
       "risk_level": "HIGH",
       "risk_score": 2.7157738095238093,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3704,6 +4012,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -3728,6 +4046,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/itsdangerous/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3741,6 +4062,22 @@
       "display_name": "pyproject:markupsafe@>=2.1.1",
       "risk_level": "HIGH",
       "risk_score": 2.693452380952381,
+      "component_scores": {
+        "staleness": 0.75,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3761,6 +4098,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -3785,6 +4132,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3798,6 +4148,22 @@
       "display_name": "pyproject:MarkupSafe@>=3.0",
       "risk_level": "HIGH",
       "risk_score": 2.693452380952381,
+      "component_scores": {
+        "staleness": 0.75,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3818,6 +4184,16 @@
           "pallets/jinja:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -3842,6 +4218,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3855,6 +4234,22 @@
       "display_name": "pyproject:setuptools@>=77",
       "risk_level": "HIGH",
       "risk_score": 2.552083333333333,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.6666666666666667,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -3875,6 +4270,16 @@
           "pallets/markupsafe:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/markupsafe",
+          "html_url": "https://github.com/pallets/markupsafe",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 10,
         "counted_in_score": 5,
@@ -4159,6 +4564,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/setuptools",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -4172,6 +4580,22 @@
       "display_name": "python:click-didyoumean@0.3.0",
       "risk_level": "HIGH",
       "risk_score": 2.533602150537634,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -4190,6 +4614,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -4214,6 +4648,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/click-contrib/click-didyoumean",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -4227,6 +4664,22 @@
       "display_name": "pyproject:flit_core@<4",
       "risk_level": "MEDIUM",
       "risk_score": 1.4657738095238098,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -4250,6 +4703,26 @@
           "pallets/jinja:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml",
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml"
+          ]
+        },
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -4271,6 +4744,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/flit",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -4284,6 +4760,22 @@
       "display_name": "python:pytz@2023.3",
       "risk_level": "MEDIUM",
       "risk_score": 2.3924731182795695,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -4302,6 +4794,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -4326,6 +4828,9 @@
         "maintainer_count": 1,
         "is_deprecated": true,
         "repository_url": "https://github.com/stub42/pytz.git",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -4339,6 +4844,22 @@
       "display_name": "python:redis@4.5.4",
       "risk_level": "MEDIUM",
       "risk_score": 2.366071428571429,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 1.0,
+        "health_indicators": 0.0,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 0.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -4359,6 +4880,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 4,
         "counted_in_score": 2,
@@ -4491,10 +5022,13 @@
       ],
       "metadata": {
         "latest_version": "8.1.0",
-        "last_updated": "2026-07-30T11:03:13+03:00",
+        "last_updated": "2026-07-31T12:15:59+03:00",
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/redis/redis-py",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -4508,6 +5042,22 @@
       "display_name": "python:click@8.1.3",
       "risk_level": "MEDIUM",
       "risk_score": 2.2470238095238093,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -4528,6 +5078,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 1,
         "counted_in_score": 0,
@@ -4581,6 +5141,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/click/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -4594,6 +5157,22 @@
       "display_name": "pyproject:Babel@>=2.17",
       "risk_level": "MEDIUM",
       "risk_score": 2.19758064516129,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.0,
+        "license": 0.0,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -4612,6 +5191,16 @@
           "pallets/jinja:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 2,
         "counted_in_score": 1,
@@ -4691,6 +5280,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/python-babel/babel",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -4704,6 +5296,22 @@
       "display_name": "pyproject:python-dotenv@latest",
       "risk_level": "MEDIUM",
       "risk_score": 2.19758064516129,
+      "component_scores": {
+        "staleness": 0.25,
+        "maintainer": 1.0,
+        "deprecation": 1.0,
+        "exploit": 0.45,
+        "version": 0.5,
+        "health_indicators": 0.0,
+        "license": 0.0,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -4722,6 +5330,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 2,
         "counted_in_score": 1,
@@ -4795,6 +5413,9 @@
         "maintainer_count": 1,
         "is_deprecated": true,
         "repository_url": "https://github.com/theskumar/python-dotenv",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -4808,6 +5429,22 @@
       "display_name": "pyproject:click@>=8.1.3",
       "risk_level": "MEDIUM",
       "risk_score": 2.1800595238095237,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -4828,6 +5465,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 1,
         "counted_in_score": 0,
@@ -4881,6 +5528,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/click/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -4894,6 +5544,22 @@
       "display_name": "pyproject:pytest@latest",
       "risk_level": "MEDIUM",
       "risk_score": 1.9047619047619049,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.45,
+        "version": 0.5,
+        "health_indicators": 0.6666666666666667,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -4915,6 +5581,17 @@
           "pallets/flask:examples/tutorial/pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 2,
         "counted_in_score": 1,
@@ -4991,10 +5668,13 @@
       ],
       "metadata": {
         "latest_version": "9.1.1",
-        "last_updated": "2026-07-30T19:52:31+02:00",
+        "last_updated": "2026-07-31T09:56:04+02:00",
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pytest-dev/pytest",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -5008,6 +5688,22 @@
       "display_name": "pyproject:flit_core@>=3.11,<4",
       "risk_level": "MEDIUM",
       "risk_score": 1.4657738095238098,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -5027,6 +5723,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5048,6 +5754,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/flit",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -5061,6 +5770,22 @@
       "display_name": "python:kombu@5.2.4",
       "risk_level": "MEDIUM",
       "risk_score": 1.4381720430107527,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.6666666666666667,
+        "license": 0.0,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -5078,6 +5803,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5100,6 +5835,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/celery/kombu",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -5113,6 +5851,22 @@
       "display_name": "python:wcwidth@0.2.6",
       "risk_level": "UNKNOWN",
       "risk_score": 1.7045454545454544,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5139,6 +5893,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5158,6 +5922,9 @@
         "maintainer_count": null,
         "is_deprecated": true,
         "repository_url": "https://pypi.org/project/wcwidth/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5171,6 +5938,22 @@
       "display_name": "python:async-timeout@4.0.2",
       "risk_level": "UNKNOWN",
       "risk_score": 1.607142857142857,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5196,6 +5979,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5216,6 +6009,9 @@
         "maintainer_count": null,
         "is_deprecated": true,
         "repository_url": "https://github.com/aio-libs/async-timeout/actions",
+        "license": "APACHE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5229,6 +6025,22 @@
       "display_name": "python:amqp@5.1.1",
       "risk_level": "UNKNOWN",
       "risk_score": 1.3392857142857142,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5254,6 +6066,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5273,6 +6095,9 @@
         "maintainer_count": null,
         "is_deprecated": true,
         "repository_url": "https://pypi.org/project/amqp/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5286,6 +6111,22 @@
       "display_name": "python:billiard@3.6.4.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.5357142857142858,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5311,6 +6152,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5330,6 +6181,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/billiard/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5343,6 +6197,22 @@
       "display_name": "python:click-repl@0.2.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.2678571428571429,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5368,6 +6238,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5386,6 +6266,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/click-repl/",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5399,6 +6282,22 @@
       "display_name": "python:six@1.16.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.2678571428571429,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5424,6 +6323,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5442,6 +6351,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/six/",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5455,6 +6367,22 @@
       "display_name": "python:vine@5.0.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.2678571428571429,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5480,6 +6408,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5498,6 +6436,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/vine/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5511,6 +6452,22 @@
       "display_name": "python:prompt-toolkit@3.0.38",
       "risk_level": "UNKNOWN",
       "risk_score": 0.17045454545454544,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5537,6 +6494,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5555,6 +6522,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/prompt-toolkit/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5568,6 +6538,22 @@
       "display_name": "pyproject:asgiref@>=3.2",
       "risk_level": "UNKNOWN",
       "risk_score": 0.13392857142857145,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5593,6 +6579,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5611,6 +6607,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/asgiref/",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5624,6 +6623,22 @@
       "display_name": "python:click-plugins@1.1.1",
       "risk_level": "UNKNOWN",
       "risk_score": 0.053571428571428575,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.1,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5649,6 +6664,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5667,6 +6692,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/click-plugins/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5680,6 +6708,22 @@
       "display_name": "pyproject:celery[redis]@latest",
       "risk_level": "UNKNOWN",
       "risk_score": 0.0,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": null,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5707,6 +6751,16 @@
           "pallets/flask:examples/celery/pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5725,6 +6779,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/celery[redis]/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5738,6 +6795,22 @@
       "display_name": "python:celery[redis]@5.2.7",
       "risk_level": "UNKNOWN",
       "risk_score": 0.0,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": null,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -5765,6 +6838,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -5783,6 +6866,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/celery[redis]/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -5899,6 +6985,22 @@
       "display_name": "pyproject:jinja2@>=3.1.2",
       "risk_level": "HIGH",
       "risk_score": 3.2961309523809517,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -5919,6 +7021,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 20,
         "counted_in_score": 10,
@@ -6550,6 +7662,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/jinja/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -6563,6 +7678,22 @@
       "display_name": "python:jinja2@3.1.2",
       "risk_level": "HIGH",
       "risk_score": 3.2961309523809517,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -6583,6 +7714,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 20,
         "counted_in_score": 10,
@@ -7214,6 +8355,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/jinja/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -7227,6 +8371,22 @@
       "display_name": "python:flask@2.3.2",
       "risk_level": "HIGH",
       "risk_score": 3.0505952380952377,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -7247,6 +8407,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 10,
         "counted_in_score": 5,
@@ -7264,7 +8434,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -7273,9 +8446,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.1"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -7287,7 +8457,10 @@
             "summary": "Flask is vulnerable to Denial of Service via incorrect encoding of JSON data",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2018-1000656",
@@ -7301,9 +8474,6 @@
               "https://security.netapp.com/advisory/ntap-20190221-0001",
               "https://usn.ubuntu.com/4378-1"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -7315,7 +8485,10 @@
             "summary": "Pallets Project Flask is vulnerable to Denial of Service via Unexpected memory usage",
             "details": "The Pallets Project Flask before 1.0 is affected by unexpected memory usage. The impact is denial of service. The attack vector is crafted encoded JSON data. The fixed version is 1. NOTE this may overlap CVE-2018-1000656.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2019-1010083",
@@ -7324,9 +8497,6 @@
               "https://github.com/pypa/advisory-database/tree/main/vulns/flask/PYSEC-2019-179.yaml",
               "https://www.palletsprojects.com/blog/flask-1-0-released"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -7338,7 +8508,10 @@
             "summary": "Flask session does not add `Vary: Cookie` header when accessed in some ways",
             "details": "When the `session` object is accessed, Flask should set the `Vary: Cookie` header. This instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python `in` operator were overlooked.\n\nThe severity depends on the application's use of the session, and the cache's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not ignore responses with cookies.\n2. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n3. The application accesses the session in a way that does not access the values, only the keys, and does not mutate the session.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
@@ -7347,9 +8520,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.3"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -7361,7 +8531,10 @@
             "summary": "Flask vulnerable to possible disclosure of permanent session cookie due to missing Vary: Cookie header",
             "details": "When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by a proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session, and the proxy's behavior regarding cookies. The risk depends on _all_ these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets [`session.permanent = True`](https://flask.palletsprojects.com/en/2.3.x/api/#flask.session.permanent).\n2. The application does not access or modify the session at any point during a request.\n4. [`SESSION_REFRESH_EACH_REQUEST`](https://flask.palletsprojects.com/en/2.3.x/config/#SESSION_REFRESH_EACH_REQUEST) is enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
@@ -7376,9 +8549,6 @@
               "https://security.netapp.com/advisory/ntap-20230818-0006",
               "https://www.debian.org/security/2023/dsa-5442"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -7390,7 +8560,10 @@
             "summary": "No summary available",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3. NOTE: this may overlap CVE-2019-1010083.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/0.12.3",
@@ -7400,9 +8573,6 @@
               "https://usn.ubuntu.com/4378-1/",
               "https://github.com/advisories/GHSA-562c-5r94-xh97"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -7416,15 +8586,15 @@
             "summary": "No summary available",
             "details": "The Pallets Project Flask before 1.0 is affected by: unexpected memory usage. The impact is: denial of service. The attack vector is: crafted encoded JSON data. The fixed version is: 1. NOTE: this may overlap CVE-2018-1000656.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://www.palletsprojects.com/blog/flask-1-0-released/",
               "https://github.com/advisories/GHSA-5wv5-4vpf-pj6m"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -7438,7 +8608,10 @@
             "summary": "No summary available",
             "details": "Flask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/commit/70f906c51ce49c485f1d355703e9cc3386b1cc2b",
@@ -7447,9 +8620,6 @@
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
               "https://github.com/pallets/flask/commit/afd63b16170b7c047f5758eb910c416511e9c965"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -7463,7 +8633,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -7474,9 +8647,6 @@
               "https://pypi.org/project/flask",
               "https://github.com/advisories/GHSA-4grg-w6v8-c28g"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -7490,16 +8660,16 @@
             "summary": "No summary available",
             "details": "Flask is a web server gateway interface (WSGI) web application framework. In versions 3.1.2 and below, when the session object is accessed, Flask should set the Vary: Cookie header., resulting in a Use of Cache Containing Sensitive Information vulnerability. The logic instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python in operator were overlooked. The severity and risk depend on the application being hosted behind a caching proxy that doesn't ignore responses with cookies, not setting a Cache-Control header to mark pages as private or non-cacheable, and accessing the session in a way that only touches keys without reading values or mutating the session. The issue has been fixed in version 3.1.3.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/3.1.3",
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
               "https://github.com/pallets/flask/commit/089cb86dd22bff589a4eafb7ab8e42dc357623b4"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -7524,6 +8694,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/flask/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -7537,6 +8710,22 @@
       "display_name": "python:werkzeug@2.3.3",
       "risk_level": "HIGH",
       "risk_score": 3.0505952380952377,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -7557,6 +8746,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 27,
         "counted_in_score": 13,
@@ -8262,6 +9461,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/werkzeug/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -8275,6 +9477,22 @@
       "display_name": "pyproject:flask@latest",
       "risk_level": "HIGH",
       "risk_score": 2.916666666666666,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -8297,6 +9515,18 @@
           "pallets/flask:examples/tutorial/pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml",
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 10,
         "counted_in_score": 5,
@@ -8314,7 +9544,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -8323,9 +9556,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.1"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -8337,7 +9567,10 @@
             "summary": "Flask is vulnerable to Denial of Service via incorrect encoding of JSON data",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2018-1000656",
@@ -8351,9 +9584,6 @@
               "https://security.netapp.com/advisory/ntap-20190221-0001",
               "https://usn.ubuntu.com/4378-1"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -8365,7 +9595,10 @@
             "summary": "Pallets Project Flask is vulnerable to Denial of Service via Unexpected memory usage",
             "details": "The Pallets Project Flask before 1.0 is affected by unexpected memory usage. The impact is denial of service. The attack vector is crafted encoded JSON data. The fixed version is 1. NOTE this may overlap CVE-2018-1000656.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://nvd.nist.gov/vuln/detail/CVE-2019-1010083",
@@ -8374,9 +9607,6 @@
               "https://github.com/pypa/advisory-database/tree/main/vulns/flask/PYSEC-2019-179.yaml",
               "https://www.palletsprojects.com/blog/flask-1-0-released"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -8388,7 +9618,10 @@
             "summary": "Flask session does not add `Vary: Cookie` header when accessed in some ways",
             "details": "When the `session` object is accessed, Flask should set the `Vary: Cookie` header. This instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python `in` operator were overlooked.\n\nThe severity depends on the application's use of the session, and the cache's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not ignore responses with cookies.\n2. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n3. The application accesses the session in a way that does not access the values, only the keys, and does not mutate the session.",
             "severity": "LOW",
+            "normalized_severity": "LOW",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
@@ -8397,9 +9630,6 @@
               "https://github.com/pallets/flask",
               "https://github.com/pallets/flask/releases/tag/3.1.3"
             ],
-            "normalized_severity": "LOW",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -8411,7 +9641,10 @@
             "summary": "Flask vulnerable to possible disclosure of permanent session cookie due to missing Vary: Cookie header",
             "details": "When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by a proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session, and the proxy's behavior regarding cookies. The risk depends on _all_ these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets [`session.permanent = True`](https://flask.palletsprojects.com/en/2.3.x/api/#flask.session.permanent).\n2. The application does not access or modify the session at any point during a request.\n4. [`SESSION_REFRESH_EACH_REQUEST`](https://flask.palletsprojects.com/en/2.3.x/config/#SESSION_REFRESH_EACH_REQUEST) is enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified.",
             "severity": "HIGH",
+            "normalized_severity": "HIGH",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
@@ -8426,9 +9659,6 @@
               "https://security.netapp.com/advisory/ntap-20230818-0006",
               "https://www.debian.org/security/2023/dsa-5442"
             ],
-            "normalized_severity": "HIGH",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": true,
             "filtered": false,
             "filter_reasons": []
@@ -8440,7 +9670,10 @@
             "summary": "No summary available",
             "details": "The Pallets Project flask version Before 0.12.3 contains a CWE-20: Improper Input Validation vulnerability in flask that can result in Large amount of memory usage possibly leading to denial of service. This attack appear to be exploitable via Attacker provides JSON data in incorrect encoding. This vulnerability appears to have been fixed in 0.12.3. NOTE: this may overlap CVE-2019-1010083.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/0.12.3",
@@ -8450,9 +9683,6 @@
               "https://usn.ubuntu.com/4378-1/",
               "https://github.com/advisories/GHSA-562c-5r94-xh97"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -8466,15 +9696,15 @@
             "summary": "No summary available",
             "details": "The Pallets Project Flask before 1.0 is affected by: unexpected memory usage. The impact is: denial of service. The attack vector is: crafted encoded JSON data. The fixed version is: 1. NOTE: this may overlap CVE-2018-1000656.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://www.palletsprojects.com/blog/flask-1-0-released/",
               "https://github.com/advisories/GHSA-5wv5-4vpf-pj6m"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -8488,7 +9718,10 @@
             "summary": "No summary available",
             "details": "Flask is a lightweight WSGI web application framework. When all of the following conditions are met, a response containing data intended for one client may be cached and subsequently sent by the proxy to other clients. If the proxy also caches `Set-Cookie` headers, it may send one client's `session` cookie to other clients. The severity depends on the application's use of the session and the proxy's behavior regarding cookies. The risk depends on all these conditions being met.\n\n1. The application must be hosted behind a caching proxy that does not strip cookies or ignore responses with cookies.\n2. The application sets `session.permanent = True`\n3. The application does not access or modify the session at any point during a request.\n4. `SESSION_REFRESH_EACH_REQUEST` enabled (the default).\n5. The application does not set a `Cache-Control` header to indicate that a page is private or should not be cached.\n\nThis happens because vulnerable versions of Flask only set the `Vary: Cookie` header when the session is accessed or modified, not when it is refreshed (re-sent to update the expiration) without being accessed or modified. This issue has been fixed in versions 2.3.2 and 2.2.5.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/commit/70f906c51ce49c485f1d355703e9cc3386b1cc2b",
@@ -8497,9 +9730,6 @@
               "https://github.com/pallets/flask/security/advisories/GHSA-m2qf-hxjv-5gpq",
               "https://github.com/pallets/flask/commit/afd63b16170b7c047f5758eb910c416511e9c965"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -8513,7 +9743,10 @@
             "summary": "Flask uses fallback key instead of current signing key",
             "details": "In Flask 3.1.0, the way fallback key configuration was handled resulted in the last fallback key being used for signing, rather than the current signing key.\n\nSigning is provided by the `itsdangerous` library. A list of keys can be passed, and it expects the last (top) key in the list to be the most recent key, and uses that for signing. Flask was incorrectly constructing that list in reverse, passing the signing key first.\n\nSites that have opted-in to use key rotation by setting `SECRET_KEY_FALLBACKS` are likely to unexpectedly be signing their sessions with stale keys, and their transition to fresher keys will be impeded. Sessions are still signed, so this would not cause any sort of data integrity loss.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/security/advisories/GHSA-4grg-w6v8-c28g",
@@ -8524,9 +9757,6 @@
               "https://pypi.org/project/flask",
               "https://github.com/advisories/GHSA-4grg-w6v8-c28g"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -8540,16 +9770,16 @@
             "summary": "No summary available",
             "details": "Flask is a web server gateway interface (WSGI) web application framework. In versions 3.1.2 and below, when the session object is accessed, Flask should set the Vary: Cookie header., resulting in a Use of Cache Containing Sensitive Information vulnerability. The logic instructs caches not to cache the response, as it may contain information specific to a logged in user. This is handled in most cases, but some forms of access such as the Python in operator were overlooked. The severity and risk depend on the application being hosted behind a caching proxy that doesn't ignore responses with cookies, not setting a Cache-Control header to mark pages as private or non-cacheable, and accessing the session in a way that only touches keys without reading values or mutating the session. The issue has been fixed in version 3.1.3.",
             "severity": null,
+            "normalized_severity": "UNKNOWN",
             "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
             "fixed_versions": [],
             "references": [
               "https://github.com/pallets/flask/releases/tag/3.1.3",
               "https://github.com/pallets/flask/security/advisories/GHSA-68rp-wp8r-4726",
               "https://github.com/pallets/flask/commit/089cb86dd22bff589a4eafb7ab8e42dc357623b4"
             ],
-            "normalized_severity": "UNKNOWN",
-            "withdrawn": false,
-            "confidence": "HIGH",
             "counted_in_score": false,
             "filtered": true,
             "filter_reasons": [
@@ -8573,6 +9803,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/flask/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -8586,6 +9819,22 @@
       "display_name": "python:markupsafe@2.1.2",
       "risk_level": "HIGH",
       "risk_score": 2.8943452380952377,
+      "component_scores": {
+        "staleness": 0.75,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -8606,6 +9855,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -8631,6 +9890,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -8644,6 +9906,22 @@
       "display_name": "pyproject:werkzeug@>=3.1.0",
       "risk_level": "HIGH",
       "risk_score": 2.8497023809523805,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -8664,6 +9942,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 27,
         "counted_in_score": 13,
@@ -9368,6 +10656,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/werkzeug/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9381,6 +10672,22 @@
       "display_name": "python:blinker@1.6.2",
       "risk_level": "HIGH",
       "risk_score": 2.782738095238095,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9401,6 +10708,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -9425,6 +10742,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets-eco/blinker/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9438,6 +10758,22 @@
       "display_name": "python:itsdangerous@2.1.2",
       "risk_level": "HIGH",
       "risk_score": 2.782738095238095,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9458,6 +10794,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -9482,6 +10828,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/itsdangerous/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9495,6 +10844,22 @@
       "display_name": "pyproject:blinker@>=1.9.0",
       "risk_level": "HIGH",
       "risk_score": 2.7157738095238093,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9515,6 +10880,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -9539,6 +10914,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets-eco/blinker/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9552,6 +10930,22 @@
       "display_name": "pyproject:itsdangerous@>=2.2.0",
       "risk_level": "HIGH",
       "risk_score": 2.7157738095238093,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9572,6 +10966,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -9596,6 +11000,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/itsdangerous/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9609,6 +11016,22 @@
       "display_name": "pyproject:markupsafe@>=2.1.1",
       "risk_level": "HIGH",
       "risk_score": 2.693452380952381,
+      "component_scores": {
+        "staleness": 0.75,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9629,6 +11052,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -9653,6 +11086,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9666,6 +11102,22 @@
       "display_name": "pyproject:MarkupSafe@>=3.0",
       "risk_level": "HIGH",
       "risk_score": 2.693452380952381,
+      "component_scores": {
+        "staleness": 0.75,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9686,6 +11138,16 @@
           "pallets/jinja:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -9710,6 +11172,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -9723,6 +11188,22 @@
       "display_name": "pyproject:setuptools@>=77",
       "risk_level": "HIGH",
       "risk_score": 2.552083333333333,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.6666666666666667,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -9743,6 +11224,16 @@
           "pallets/markupsafe:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/markupsafe",
+          "html_url": "https://github.com/pallets/markupsafe",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 10,
         "counted_in_score": 5,
@@ -10027,6 +11518,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/setuptools",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10040,6 +11534,22 @@
       "display_name": "python:click-didyoumean@0.3.0",
       "risk_level": "HIGH",
       "risk_score": 2.533602150537634,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -10058,6 +11568,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -10082,6 +11602,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/click-contrib/click-didyoumean",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10095,6 +11618,22 @@
       "display_name": "pyproject:flit_core@<4",
       "risk_level": "MEDIUM",
       "risk_score": 1.4657738095238098,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -10118,6 +11657,26 @@
           "pallets/jinja:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml",
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml"
+          ]
+        },
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -10139,6 +11698,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/flit",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10152,6 +11714,22 @@
       "display_name": "python:pytz@2023.3",
       "risk_level": "MEDIUM",
       "risk_score": 2.3924731182795695,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -10170,6 +11748,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -10194,6 +11782,9 @@
         "maintainer_count": 1,
         "is_deprecated": true,
         "repository_url": "https://github.com/stub42/pytz.git",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10207,6 +11798,22 @@
       "display_name": "python:redis@4.5.4",
       "risk_level": "MEDIUM",
       "risk_score": 2.366071428571429,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 1.0,
+        "health_indicators": 0.0,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 0.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -10227,6 +11834,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 4,
         "counted_in_score": 2,
@@ -10359,10 +11976,13 @@
       ],
       "metadata": {
         "latest_version": "8.1.0",
-        "last_updated": "2026-07-30T11:03:13+03:00",
+        "last_updated": "2026-07-31T12:15:59+03:00",
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/redis/redis-py",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -10376,6 +11996,22 @@
       "display_name": "python:click@8.1.3",
       "risk_level": "MEDIUM",
       "risk_score": 2.2470238095238093,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -10396,6 +12032,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 1,
         "counted_in_score": 0,
@@ -10449,6 +12095,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/click/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10462,6 +12111,22 @@
       "display_name": "pyproject:Babel@>=2.17",
       "risk_level": "MEDIUM",
       "risk_score": 2.19758064516129,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.75,
+        "version": 0.25,
+        "health_indicators": 0.0,
+        "license": 0.0,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -10480,6 +12145,16 @@
           "pallets/jinja:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 2,
         "counted_in_score": 1,
@@ -10559,6 +12234,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/python-babel/babel",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -10572,6 +12250,22 @@
       "display_name": "pyproject:python-dotenv@latest",
       "risk_level": "MEDIUM",
       "risk_score": 2.19758064516129,
+      "component_scores": {
+        "staleness": 0.25,
+        "maintainer": 1.0,
+        "deprecation": 1.0,
+        "exploit": 0.45,
+        "version": 0.5,
+        "health_indicators": 0.0,
+        "license": 0.0,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -10590,6 +12284,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 2,
         "counted_in_score": 1,
@@ -10663,6 +12367,9 @@
         "maintainer_count": 1,
         "is_deprecated": true,
         "repository_url": "https://github.com/theskumar/python-dotenv",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -10676,6 +12383,22 @@
       "display_name": "pyproject:click@>=8.1.3",
       "risk_level": "MEDIUM",
       "risk_score": 2.1800595238095237,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -10696,6 +12419,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 1,
         "counted_in_score": 0,
@@ -10749,6 +12482,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/click/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10762,6 +12498,22 @@
       "display_name": "pyproject:pytest@latest",
       "risk_level": "MEDIUM",
       "risk_score": 1.9047619047619049,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.45,
+        "version": 0.5,
+        "health_indicators": 0.6666666666666667,
+        "license": null,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -10783,6 +12535,17 @@
           "pallets/flask:examples/tutorial/pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 2,
         "counted_in_score": 1,
@@ -10859,10 +12622,13 @@
       ],
       "metadata": {
         "latest_version": "9.1.1",
-        "last_updated": "2026-07-30T19:52:31+02:00",
+        "last_updated": "2026-07-31T09:56:04+02:00",
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pytest-dev/pytest",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10876,6 +12642,22 @@
       "display_name": "pyproject:flit_core@>=3.11,<4",
       "risk_level": "MEDIUM",
       "risk_score": 1.4657738095238098,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
@@ -10895,6 +12677,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -10916,6 +12708,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/flit",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10929,6 +12724,22 @@
       "display_name": "python:kombu@5.2.4",
       "risk_level": "MEDIUM",
       "risk_score": 1.4381720430107527,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 1.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": 0.6666666666666667,
+        "license": 0.0,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
@@ -10946,6 +12757,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -10968,6 +12789,9 @@
         "maintainer_count": 1,
         "is_deprecated": false,
         "repository_url": "https://github.com/celery/kombu",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -10981,6 +12805,22 @@
       "display_name": "python:wcwidth@0.2.6",
       "risk_level": "UNKNOWN",
       "risk_score": 1.7045454545454544,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11007,6 +12847,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11026,6 +12876,9 @@
         "maintainer_count": null,
         "is_deprecated": true,
         "repository_url": "https://pypi.org/project/wcwidth/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11039,6 +12892,22 @@
       "display_name": "python:async-timeout@4.0.2",
       "risk_level": "UNKNOWN",
       "risk_score": 1.607142857142857,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11064,6 +12933,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11084,6 +12963,9 @@
         "maintainer_count": null,
         "is_deprecated": true,
         "repository_url": "https://github.com/aio-libs/async-timeout/actions",
+        "license": "APACHE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11097,6 +12979,22 @@
       "display_name": "python:amqp@5.1.1",
       "risk_level": "UNKNOWN",
       "risk_score": 1.3392857142857142,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11122,6 +13020,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11141,6 +13049,9 @@
         "maintainer_count": null,
         "is_deprecated": true,
         "repository_url": "https://pypi.org/project/amqp/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11154,6 +13065,22 @@
       "display_name": "python:billiard@3.6.4.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.5357142857142858,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11179,6 +13106,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11198,6 +13135,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/billiard/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11211,6 +13151,22 @@
       "display_name": "python:click-repl@0.2.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.2678571428571429,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11236,6 +13192,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11254,6 +13220,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/click-repl/",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11267,6 +13236,22 @@
       "display_name": "python:six@1.16.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.2678571428571429,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11292,6 +13277,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11310,6 +13305,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/six/",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11323,6 +13321,22 @@
       "display_name": "python:vine@5.0.0",
       "risk_level": "UNKNOWN",
       "risk_score": 0.2678571428571429,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.5,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11348,6 +13362,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11366,6 +13390,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/vine/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11379,6 +13406,22 @@
       "display_name": "python:prompt-toolkit@3.0.38",
       "risk_level": "UNKNOWN",
       "risk_score": 0.17045454545454544,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11405,6 +13448,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11423,6 +13476,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/prompt-toolkit/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11436,6 +13492,22 @@
       "display_name": "pyproject:asgiref@>=3.2",
       "risk_level": "UNKNOWN",
       "risk_score": 0.13392857142857145,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11461,6 +13533,16 @@
           "pallets/flask:pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11479,6 +13561,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/asgiref/",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11492,6 +13577,22 @@
       "display_name": "python:click-plugins@1.1.1",
       "risk_level": "UNKNOWN",
       "risk_score": 0.053571428571428575,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.1,
+        "health_indicators": null,
+        "license": 0.0,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11517,6 +13618,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11535,6 +13646,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/click-plugins/",
+        "license": "BSD",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11548,6 +13662,22 @@
       "display_name": "pyproject:celery[redis]@latest",
       "risk_level": "UNKNOWN",
       "risk_score": 0.0,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": null,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11575,6 +13705,16 @@
           "pallets/flask:examples/celery/pyproject.toml"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11593,6 +13733,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/celery[redis]/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -11606,6 +13749,22 @@
       "display_name": "python:celery[redis]@5.2.7",
       "risk_level": "UNKNOWN",
       "risk_score": 0.0,
+      "component_scores": {
+        "staleness": null,
+        "maintainer": null,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": null,
+        "health_indicators": null,
+        "license": null,
+        "community": null,
+        "transitive": 0.0,
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
+      },
       "insufficient_data": true,
       "unknown_signals": [
         "staleness",
@@ -11633,6 +13792,16 @@
           "pallets/flask:examples/celery/requirements.txt"
         ]
       },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
       "advisories": {
         "total_found": 0,
         "counted_in_score": 0,
@@ -11651,6 +13820,9 @@
         "maintainer_count": null,
         "is_deprecated": false,
         "repository_url": "https://pypi.org/project/celery[redis]/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,

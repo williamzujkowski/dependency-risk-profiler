@@ -1,5 +1,6 @@
 """Tests for GitHub account-wide dependency risk scans."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Protocol, cast
 
@@ -10,6 +11,8 @@ from dependency_risk_profiler.cli.typer_cli import app
 from dependency_risk_profiler.models import (
     DependencyMetadata,
     DependencyRiskScore,
+    LicenseCategory,
+    LicenseInfo,
     RiskLevel,
     SecurityMetrics,
 )
@@ -255,6 +258,12 @@ def test_org_scan_aggregates_blast_radius_and_rankings() -> None:
     assert risky.risk_level == RiskLevel.HIGH
     assert risky.blast_radius == 2
     assert sorted(risky.repositories) == ["acme/api", "acme/web"]
+    assert risky.repo_refs["acme/api"].default_branch == "main"
+    assert risky.repo_refs["acme/web"].html_url == "https://github.com/acme/web"
+    assert risky.manifest_paths_by_repo == {
+        "acme/api": {"requirements.txt"},
+        "acme/web": {"requirements.txt"},
+    }
 
     assert report.most_exposed_risky_dependencies[0].key.name == "risky"
     assert [dep.key.name for dep in report.most_exposed_risky_dependencies] == [
@@ -282,11 +291,33 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert ':root[data-theme="dark"]' in html
     assert '<span class="badge high">HIGH</span>' in html
     assert '<span class="badge unknown">UNKNOWN</span>' in html
-    assert 'class="bar-fill high" style="width:100%"></div>' in html
+    assert '<details class="exp-row drill" data-risk="1"' in html
+    assert '<summary class="exp-summary">' in html
+    assert 'class="bar-fill high" style="width:100%"></span>' in html
     assert 'role="img" aria-label="2 / 2 repos exposed to risky"' in html
     assert "2 / 2 repos" in html
     assert "2 scored · 1 filtered" in html
     assert "advisories: unknown" in html
+    assert "Why it&#x27;s flagged" in html
+    assert "Bus factor: 1 primary maintainer" in html
+    assert "Version drift: 1.0 → 2.3.0 (1 major behind)" in html
+    assert (
+        'href="https://github.com/acme/api/blob/main/requirements.txt" '
+        'target="_blank" rel="noopener"'
+    ) in html
+    assert 'href="https://deps.dev/pypi/risky" target="_blank" rel="noopener"' in html
+    assert (
+        'href="https://pypi.org/project/risky/" target="_blank" rel="noopener"'
+    ) in html
+    assert (
+        'href="https://securityscorecards.dev/viewer/?uri=github.com%2Facme%2Frisky" '
+        'target="_blank" rel="noopener"'
+    ) in html
+    assert (
+        'href="https://github.com/advisories/GHSA-risky" '
+        'target="_blank" rel="noopener"'
+    ) in html
+    assert "excluded: informational" in html
     assert "<b>How to read this.</b>" in html
     assert "filtered out of the score" in html
 
@@ -296,6 +327,23 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     model = report_to_dict(report)
     assert model["unique_dependency_count"] == 4
     assert "most_exposed_risky_dependencies" in model
+    first_dependencies = cast(
+        List[Dict[str, object]], model["most_exposed_risky_dependencies"]
+    )
+    assert first_dependencies[0]["usage"] == [
+        {
+            "repo": "acme/api",
+            "html_url": "https://github.com/acme/api",
+            "default_branch": "main",
+            "manifests": ["requirements.txt"],
+        },
+        {
+            "repo": "acme/web",
+            "html_url": "https://github.com/acme/web",
+            "default_branch": "main",
+            "manifests": ["requirements.txt"],
+        },
+    ]
 
     summary = render_terminal_summary(report)
     assert "Most exposed risky dependencies:" in summary
@@ -454,14 +502,46 @@ def _score_for_key(
 ) -> DependencyRiskScore:
     """Build deterministic fixture scores."""
     if key.name == "risky":
+        dependency.latest_version = "2.3.0"
+        dependency.last_updated = datetime(2023, 5, 1)
         dependency.maintainer_count = 1
+        dependency.repository_url = "https://github.com/acme/risky"
+        dependency.has_tests = False
+        dependency.has_ci = False
+        dependency.has_contribution_guidelines = True
+        dependency.license_info = LicenseInfo(
+            license_id="GPL-3.0",
+            category=LicenseCategory.COPYLEFT,
+            is_approved=False,
+        )
         dependency.security_metrics = SecurityMetrics(
             vulnerability_count=3,
             counted_vulnerability_count=2,
             filtered_vulnerability_count=1,
             max_vulnerability_severity="HIGH",
             vulnerability_details=[
-                {"id": "GHSA-risky", "severity": "HIGH", "summary": "fixture"}
+                {
+                    "id": "GHSA-risky",
+                    "severity": "HIGH",
+                    "summary": "fixture",
+                    "counted_in_score": True,
+                    "filtered": False,
+                },
+                {
+                    "id": "OSV-2024-risky",
+                    "severity": "MEDIUM",
+                    "summary": "fixture",
+                    "counted_in_score": True,
+                    "filtered": False,
+                },
+                {
+                    "id": "GHSA-info",
+                    "severity": "INFORMATIONAL",
+                    "summary": "fixture",
+                    "counted_in_score": False,
+                    "filtered": True,
+                    "filter_reasons": ["informational"],
+                },
             ],
         )
         return DependencyRiskScore(
@@ -470,6 +550,9 @@ def _score_for_key(
             risk_level=RiskLevel.HIGH,
             maintainer_score=1.0,
             exploit_score=1.0,
+            version_score=1.0,
+            health_indicators_score=1.0,
+            license_score=1.0,
             factors=["single maintainer", "scored advisories"],
         )
     if key.name == "medium":
