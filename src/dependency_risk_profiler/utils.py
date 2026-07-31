@@ -60,6 +60,41 @@ def fetch_json(url: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
         return None
 
 
+# A shallow clone of a normal repo finishes in a few seconds; a large cap
+# only exists to bound pathological cases without letting one repo stall a
+# whole scan (git:// / auth-required URLs used to hang for minutes).
+CLONE_TIMEOUT_SECONDS = 60
+_CLONEABLE_HOSTS = ("github.com", "gitlab.com", "bitbucket.org")
+
+
+def normalize_clone_url(repo_url: str) -> Optional[str]:
+    """Return a plain https clone URL for a supported host, or None to skip.
+
+    Package metadata spells repository URLs many ways (``git+https://``,
+    ``git://``, ``git@host:owner/repo``, ``ssh://``, ``.git`` suffixes). This
+    normalizes them to https and rejects anything that would make ``git clone``
+    hang or fail — notably ``git://`` (GitHub disabled it in 2022) and
+    ssh/auth URLs — so a single bad URL can't stall a scan for minutes.
+    """
+    url = repo_url.strip()
+    if url.startswith("git+"):
+        url = url[4:]
+    scp_match = re.match(r"^[\w.-]+@([\w.-]+):(.+)$", url)
+    if scp_match:
+        url = f"https://{scp_match.group(1)}/{scp_match.group(2)}"
+    elif url.startswith("git://"):
+        url = "https://" + url[len("git://") :]
+    elif url.startswith("ssh://"):
+        url = "https://" + url[len("ssh://") :].split("@", 1)[-1]
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        return None
+    host = parsed.netloc.split("@")[-1].lower()
+    if not any(host == h or host.endswith("." + h) for h in _CLONEABLE_HOSTS):
+        return None
+    return url
+
+
 def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
     """Clone a git repository to a temporary directory.
 
@@ -67,11 +102,15 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
         repo_url: URL of the repository.
 
     Returns:
-        Tuple of (repo_dir, repo_name) or None if cloning fails.
+        Tuple of (repo_dir, repo_name) or None if cloning fails or the URL is
+        not a cloneable https URL for a supported host.
     """
+    normalized_url = normalize_clone_url(repo_url)
+    if normalized_url is None:
+        logger.debug("Skipping non-cloneable repository URL: %s", repo_url)
+        return None
     try:
-        # Extract repo name from URL
-        parsed_url = urlparse(repo_url)
+        parsed_url = urlparse(normalized_url)
         path_parts = parsed_url.path.strip("/").split("/")
         if len(path_parts) < 2:
             logger.error(f"Invalid repository URL: {repo_url}")
@@ -85,13 +124,25 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
         temp_dir = tempfile.mkdtemp(prefix="dep-profiler-")
         repo_dir = f"{temp_dir}/{repo_name}"
 
-        # Clone the repository
+        # Never let git block on a credential/host prompt — fail fast instead.
+        clone_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+        # Clone the repository (shallow, no tags, non-interactive).
         result = subprocess.run(
-            ["git", "clone", "--depth", "1", repo_url, repo_dir],  # nosec B603, B607
+            [  # nosec B603, B607
+                "git",
+                "clone",
+                "--depth",
+                "1",
+                "--no-tags",
+                normalized_url,
+                repo_dir,
+            ],
             check=True,
             capture_output=True,
             text=True,
-            timeout=300,  # 5 minutes timeout for clone
+            timeout=CLONE_TIMEOUT_SECONDS,
+            env=clone_env,
         )
 
         if result.returncode == 0:

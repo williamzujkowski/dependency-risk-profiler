@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import copy
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Dict, Mapping, Optional, Protocol
+from typing import Dict, List, Mapping, Optional, Protocol, Tuple
 from urllib.parse import urlparse
 
 from ..analyzers.base import BaseAnalyzer
@@ -16,6 +18,11 @@ from .github import RepoSignals
 from .models import DependencyKey, DependencyProfiler
 
 logger = logging.getLogger(__name__)
+
+# Profiling each dependency is I/O-bound (npm/PyPI fetch, a shallow git clone,
+# GitHub API calls, advisory lookups), so a bounded thread pool cuts wall-clock
+# roughly linearly. Capped to stay a good API citizen.
+DEFAULT_PROFILE_WORKERS = 8
 
 
 @dataclass(frozen=True)
@@ -49,25 +56,53 @@ class ExistingDependencyProfiler(DependencyProfiler):
         vulnerability_options: VulnerabilityOptions,
         timeout: int = 30,
         repository_signals_client: Optional[RepositorySignalsClient] = None,
+        max_workers: int = DEFAULT_PROFILE_WORKERS,
     ) -> None:
         """Initialize the profiler adapter."""
         self.scoring_weights = dict(scoring_weights)
         self.vulnerability_options = vulnerability_options
         self.timeout = timeout
         self.repository_signals_client = repository_signals_client
+        self.max_workers = max(1, max_workers)
         self._profile_cache: Dict[DependencyKey, DependencyRiskScore] = {}
-        self._analyzers: Dict[str, BaseAnalyzer] = {}
         self._repository_signals_cache: Dict[str, RepoSignals] = {}
+        # Each worker thread keeps its own analyzers so their per-call metadata
+        # caches never race; the shared dicts below are guarded by locks.
+        self._thread_local = threading.local()
+        self._cache_lock = threading.Lock()
+        self._signals_lock = threading.Lock()
 
     def profile(
         self, dependencies: Dict[DependencyKey, DependencyMetadata]
     ) -> Dict[DependencyKey, DependencyRiskScore]:
-        """Analyze and score each unique dependency once."""
+        """Analyze and score each unique dependency once, in parallel."""
+        pending: List[Tuple[DependencyKey, DependencyMetadata]] = [
+            (key, metadata)
+            for key, metadata in dependencies.items()
+            if key not in self._profile_cache
+        ]
+        if pending:
+            workers = min(self.max_workers, len(pending))
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {
+                    executor.submit(self._profile_one, key, metadata): key
+                    for key, metadata in pending
+                }
+                for future in as_completed(futures):
+                    key = futures[future]
+                    try:
+                        score = future.result()
+                    except Exception as exc:  # keep one bad dep from failing all
+                        logger.error("Failed to profile %s: %s", key, exc)
+                        continue
+                    with self._cache_lock:
+                        self._profile_cache[key] = score
+
         profiles: Dict[DependencyKey, DependencyRiskScore] = {}
-        for key, metadata in dependencies.items():
-            if key not in self._profile_cache:
-                self._profile_cache[key] = self._profile_one(key, metadata)
-            profiles[key] = self._profile_cache[key]
+        for key in dependencies:
+            cached = self._profile_cache.get(key)
+            if cached is not None:
+                profiles[key] = cached
         return profiles
 
     def _profile_one(
@@ -88,15 +123,25 @@ class ExistingDependencyProfiler(DependencyProfiler):
         return scorer.score_dependency(dependency)
 
     def _get_analyzer(self, ecosystem: str) -> Optional[BaseAnalyzer]:
-        """Return a cached analyzer for an ecosystem."""
-        if ecosystem not in self._analyzers:
+        """Return a per-thread analyzer for an ecosystem.
+
+        Analyzers keep a mutable per-call metadata cache, so each worker thread
+        gets its own instance rather than sharing one across the pool.
+        """
+        analyzers: Optional[Dict[str, BaseAnalyzer]] = getattr(
+            self._thread_local, "analyzers", None
+        )
+        if analyzers is None:
+            analyzers = {}
+            self._thread_local.analyzers = analyzers
+        if ecosystem not in analyzers:
             analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(ecosystem)
             if analyzer is None:
                 logger.warning("No analyzer available for ecosystem %s", ecosystem)
                 return None
             analyzer.timeout = self.timeout
-            self._analyzers[ecosystem] = analyzer
-        return self._analyzers[ecosystem]
+            analyzers[ecosystem] = analyzer
+        return analyzers[ecosystem]
 
     def _apply_enhanced_metadata(
         self, analyzer: BaseAnalyzer, dependency: DependencyMetadata
@@ -130,11 +175,13 @@ class ExistingDependencyProfiler(DependencyProfiler):
         if owner_repo is None:
             return dependency
 
-        if owner_repo not in self._repository_signals_cache:
-            self._repository_signals_cache[owner_repo] = (
-                self.repository_signals_client.get_repository_signals(owner_repo)
-            )
-        signals = self._repository_signals_cache[owner_repo]
+        with self._signals_lock:
+            signals = self._repository_signals_cache.get(owner_repo)
+        if signals is None:
+            # Fetch outside the lock so distinct repos resolve concurrently.
+            signals = self.repository_signals_client.get_repository_signals(owner_repo)
+            with self._signals_lock:
+                signals = self._repository_signals_cache.setdefault(owner_repo, signals)
         if (
             signals.star_count is None
             and signals.contributor_count is None
