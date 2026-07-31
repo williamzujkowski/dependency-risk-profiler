@@ -15,6 +15,16 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from ..analyzers.base import BaseAnalyzer
 from ..config import Config
 from ..models import DependencyMetadata, ProjectRiskProfile
+from ..org_scan import (
+    ExistingDependencyProfiler,
+    GitHubOrgClient,
+    OrgScanOptions,
+    OrgScanRunner,
+    render_html_report,
+    render_terminal_summary,
+    write_json_report,
+)
+from ..org_scan.pipeline import VulnerabilityOptions
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
 from ..scoring.risk_scorer import RiskScorer
@@ -1201,6 +1211,117 @@ def analyze(
 def list_ecosystems() -> None:
     """List all supported ecosystems and file types."""
     display_ecosystem_list()
+
+
+@app.command("scan-org")
+def scan_org(
+    org: str = typer.Argument(..., help="GitHub organization to scan"),
+    github_token: Optional[str] = typer.Option(
+        None,
+        "--github-token",
+        help="GitHub token with organization repository read access",
+    ),
+    output_html: Path = typer.Option(
+        Path("dependency-risk-org-report.html"),
+        "--output-html",
+        help="Path for the self-contained HTML report",
+        dir_okay=False,
+    ),
+    output_json: Path = typer.Option(
+        Path("dependency-risk-org-report.json"),
+        "--output-json",
+        help="Path for the aggregate JSON report",
+        dir_okay=False,
+    ),
+    max_repos: Optional[int] = typer.Option(
+        None,
+        "--max-repos",
+        help="Maximum number of repositories to scan",
+        min=1,
+    ),
+    include_archived: bool = typer.Option(
+        False,
+        "--include-archived",
+        help="Include archived repositories. Forks are still skipped.",
+    ),
+    manifest_glob: Optional[List[str]] = typer.Option(
+        None,
+        "--manifest-glob",
+        help="Manifest glob to include. May be provided multiple times.",
+    ),
+    concurrency: int = typer.Option(
+        8,
+        "--concurrency",
+        help="Bounded repository discovery concurrency",
+        min=1,
+        max=32,
+    ),
+    ctx: typer.Context = typer.Context,
+) -> None:
+    """Scan a GitHub organization and write org-wide dependency risk reports."""
+    token = github_token or os.getenv("GITHUB_TOKEN") or os.getenv("DRP_GITHUB_TOKEN")
+    if not token:
+        console.print(
+            "[bold red]Error: GitHub token required via --github-token, "
+            "GITHUB_TOKEN, or DRP_GITHUB_TOKEN.[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+    config = ctx.obj
+    vulnerability_config = config.get_vulnerability_config()
+    vulnerability_options = VulnerabilityOptions(
+        enable_osv=bool(vulnerability_config.get("enable_osv", True)),
+        enable_nvd=bool(vulnerability_config.get("enable_nvd", False)),
+        enable_github_advisory=bool(
+            vulnerability_config.get("enable_github_advisory", False)
+        ),
+        github_token=str(vulnerability_config.get("github_token") or token),
+        nvd_api_key=str(vulnerability_config.get("nvd_api_key") or ""),
+        disable_cache=bool(vulnerability_config.get("disable_cache", False)),
+        clear_cache=bool(vulnerability_config.get("clear_cache", False)),
+        minimum_severity_for_scoring=str(
+            vulnerability_config.get("minimum_severity_for_scoring", "LOW")
+        ),
+    )
+
+    manifest_globs = tuple(manifest_glob) if manifest_glob else ()
+    if not manifest_globs:
+        from ..org_scan.scanner import SUPPORTED_MANIFEST_NAMES
+
+        manifest_globs = SUPPORTED_MANIFEST_NAMES
+
+    profiler = ExistingDependencyProfiler(
+        scoring_weights=config.get_scoring_weights(),
+        vulnerability_options=vulnerability_options,
+        timeout=int(config.get("general", "timeout", 120)),
+    )
+    client = GitHubOrgClient(token=token)
+    runner = OrgScanRunner(
+        github_client=client,
+        dependency_profiler=profiler,
+        progress=lambda message: console.print(f"[dim]{message}[/dim]"),
+    )
+
+    try:
+        report = runner.run(
+            OrgScanOptions(
+                org=org,
+                include_archived=include_archived,
+                max_repos=max_repos,
+                manifest_globs=manifest_globs,
+                concurrency=concurrency,
+            )
+        )
+    except Exception as exc:
+        console.print(f"[bold red]Org scan failed: {exc}[/bold red]")
+        raise typer.Exit(code=1) from exc
+
+    output_html.parent.mkdir(parents=True, exist_ok=True)
+    output_html.write_text(render_html_report(report), encoding="utf-8")
+    write_json_report(report, output_json)
+    console.print(render_terminal_summary(report), soft_wrap=True)
+    console.print(f"\n[bold green]HTML report written to {output_html}[/bold green]")
+    console.print(f"[bold green]JSON report written to {output_json}[/bold green]")
 
 
 @app.command("generate-config")
