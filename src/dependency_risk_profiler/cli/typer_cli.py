@@ -850,7 +850,7 @@ def analyze(
                 if json_output:
                     print(output)
                 else:
-                    console.print(output)
+                    console.print(output, soft_wrap=True)
 
                 # Save the profile to our results
                 overall_results.append(profile)
@@ -1050,7 +1050,7 @@ def analyze(
 
         # Display summary if manifest files were scanned
         if len(manifest_files) > 0 and config.get("general", "output_format") != "json":
-            console.print("\n[bold]======== Overall Summary ========[/bold]")
+            console.print("\n[bold]Overall Summary[/bold]")
 
             # Calculate total dependencies and risk levels
             total_deps = sum(len(profile.dependencies) for profile in overall_results)
