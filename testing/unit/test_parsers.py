@@ -106,6 +106,30 @@ def test_python_parser(sample_python_manifest):
     assert numpy.installed_version == "1.20.0"
 
 
+def test_pipfile_lock_handles_string_and_dict_entries():
+    """REGRESSION: Pipfile.lock entries may be bare strings, not just dicts."""
+    import json
+
+    lock = {
+        "default": {
+            "requests": {"version": "==2.28.0"},  # normal dict form
+            "six": "==1.16.0",  # bare-string form (used to crash)
+            "wildcard": "*",
+        },
+        "develop": {"pytest": {"version": "==7.0.0"}},
+    }
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        path = os.path.join(tmp_dir, "Pipfile.lock")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(lock, handle)
+        dependencies = PythonParser(path).parse()
+
+    assert dependencies["requests"].installed_version == "2.28.0"
+    assert dependencies["six"].installed_version == "1.16.0"
+    assert dependencies["wildcard"].installed_version == "*"
+    assert dependencies["pytest"].installed_version == "7.0.0"
+
+
 def test_golang_parser(sample_golang_manifest):
     """Test the Go go.mod parser."""
     parser = GoParser(sample_golang_manifest)
