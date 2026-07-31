@@ -5,7 +5,7 @@ import logging
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import typer
 from rich.console import Console
@@ -24,6 +24,7 @@ from ..org_scan import (
     render_terminal_summary,
     write_json_report,
 )
+from ..org_scan.models import AccountType, RepositoryRef
 from ..org_scan.pipeline import VulnerabilityOptions
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
@@ -1259,6 +1260,93 @@ def scan_org(
     ctx: typer.Context = typer.Context,
 ) -> None:
     """Scan a GitHub organization and write org-wide dependency risk reports."""
+    _scan_github_account(
+        account=org,
+        account_type="organization",
+        github_token=github_token,
+        output_html=output_html,
+        output_json=output_json,
+        max_repos=max_repos,
+        include_archived=include_archived,
+        manifest_glob=manifest_glob,
+        concurrency=concurrency,
+        ctx=ctx,
+    )
+
+
+@app.command("scan-user")
+def scan_user(
+    username: str = typer.Argument(..., help="GitHub user to scan"),
+    github_token: Optional[str] = typer.Option(
+        None,
+        "--github-token",
+        help="GitHub token with user repository read access",
+    ),
+    output_html: Path = typer.Option(
+        Path("dependency-risk-user-report.html"),
+        "--output-html",
+        help="Path for the self-contained HTML report",
+        dir_okay=False,
+    ),
+    output_json: Path = typer.Option(
+        Path("dependency-risk-user-report.json"),
+        "--output-json",
+        help="Path for the aggregate JSON report",
+        dir_okay=False,
+    ),
+    max_repos: Optional[int] = typer.Option(
+        None,
+        "--max-repos",
+        help="Maximum number of repositories to scan",
+        min=1,
+    ),
+    include_archived: bool = typer.Option(
+        False,
+        "--include-archived",
+        help="Include archived repositories. Forks are still skipped.",
+    ),
+    manifest_glob: Optional[List[str]] = typer.Option(
+        None,
+        "--manifest-glob",
+        help="Manifest glob to include. May be provided multiple times.",
+    ),
+    concurrency: int = typer.Option(
+        8,
+        "--concurrency",
+        help="Bounded repository discovery concurrency",
+        min=1,
+        max=32,
+    ),
+    ctx: typer.Context = typer.Context,
+) -> None:
+    """Scan a GitHub user and write account-wide dependency risk reports."""
+    _scan_github_account(
+        account=username,
+        account_type="user",
+        github_token=github_token,
+        output_html=output_html,
+        output_json=output_json,
+        max_repos=max_repos,
+        include_archived=include_archived,
+        manifest_glob=manifest_glob,
+        concurrency=concurrency,
+        ctx=ctx,
+    )
+
+
+def _scan_github_account(
+    account: str,
+    account_type: AccountType,
+    github_token: Optional[str],
+    output_html: Path,
+    output_json: Path,
+    max_repos: Optional[int],
+    include_archived: bool,
+    manifest_glob: Optional[List[str]],
+    concurrency: int,
+    ctx: typer.Context,
+) -> None:
+    """Run the shared GitHub account scan implementation."""
     token = github_token or os.getenv("GITHUB_TOKEN") or os.getenv("DRP_GITHUB_TOKEN")
     if not token:
         console.print(
@@ -1268,8 +1356,50 @@ def scan_org(
         raise typer.Exit(code=1)
 
     config = ctx.obj
+    vulnerability_options = _vulnerability_options(config, token)
+    manifest_globs = _manifest_globs(manifest_glob)
+
+    profiler = ExistingDependencyProfiler(
+        scoring_weights=config.get_scoring_weights(),
+        vulnerability_options=vulnerability_options,
+        timeout=int(config.get("general", "timeout", 120)),
+    )
+    client = GitHubOrgClient(token=token)
+    runner = OrgScanRunner(
+        github_client=client,
+        dependency_profiler=profiler,
+        progress=lambda message: console.print(f"[dim]{message}[/dim]"),
+    )
+    repository_lister = _repository_lister(client, account_type)
+
+    try:
+        report = runner.run(
+            OrgScanOptions(
+                org=account,
+                account_type=account_type,
+                repository_lister=repository_lister,
+                include_archived=include_archived,
+                max_repos=max_repos,
+                manifest_globs=manifest_globs,
+                concurrency=concurrency,
+            )
+        )
+    except Exception as exc:
+        console.print(f"[bold red]GitHub account scan failed: {exc}[/bold red]")
+        raise typer.Exit(code=1) from exc
+
+    output_html.parent.mkdir(parents=True, exist_ok=True)
+    output_html.write_text(render_html_report(report), encoding="utf-8")
+    write_json_report(report, output_json)
+    console.print(render_terminal_summary(report), soft_wrap=True)
+    console.print(f"\n[bold green]HTML report written to {output_html}[/bold green]")
+    console.print(f"[bold green]JSON report written to {output_json}[/bold green]")
+
+
+def _vulnerability_options(config: Config, token: str) -> VulnerabilityOptions:
+    """Build vulnerability options for account scans from CLI config."""
     vulnerability_config = config.get_vulnerability_config()
-    vulnerability_options = VulnerabilityOptions(
+    return VulnerabilityOptions(
         enable_osv=bool(vulnerability_config.get("enable_osv", True)),
         enable_nvd=bool(vulnerability_config.get("enable_nvd", False)),
         enable_github_advisory=bool(
@@ -1284,44 +1414,25 @@ def scan_org(
         ),
     )
 
-    manifest_globs = tuple(manifest_glob) if manifest_glob else ()
-    if not manifest_globs:
-        from ..org_scan.scanner import SUPPORTED_MANIFEST_NAMES
 
-        manifest_globs = SUPPORTED_MANIFEST_NAMES
+def _manifest_globs(manifest_glob: Optional[List[str]]) -> Tuple[str, ...]:
+    """Resolve user-provided manifest globs or the built-in defaults."""
+    if manifest_glob:
+        return tuple(manifest_glob)
 
-    profiler = ExistingDependencyProfiler(
-        scoring_weights=config.get_scoring_weights(),
-        vulnerability_options=vulnerability_options,
-        timeout=int(config.get("general", "timeout", 120)),
-    )
-    client = GitHubOrgClient(token=token)
-    runner = OrgScanRunner(
-        github_client=client,
-        dependency_profiler=profiler,
-        progress=lambda message: console.print(f"[dim]{message}[/dim]"),
-    )
+    from ..org_scan.scanner import SUPPORTED_MANIFEST_NAMES
 
-    try:
-        report = runner.run(
-            OrgScanOptions(
-                org=org,
-                include_archived=include_archived,
-                max_repos=max_repos,
-                manifest_globs=manifest_globs,
-                concurrency=concurrency,
-            )
-        )
-    except Exception as exc:
-        console.print(f"[bold red]Org scan failed: {exc}[/bold red]")
-        raise typer.Exit(code=1) from exc
+    return SUPPORTED_MANIFEST_NAMES
 
-    output_html.parent.mkdir(parents=True, exist_ok=True)
-    output_html.write_text(render_html_report(report), encoding="utf-8")
-    write_json_report(report, output_json)
-    console.print(render_terminal_summary(report), soft_wrap=True)
-    console.print(f"\n[bold green]HTML report written to {output_html}[/bold green]")
-    console.print(f"[bold green]JSON report written to {output_json}[/bold green]")
+
+def _repository_lister(
+    client: GitHubOrgClient,
+    account_type: AccountType,
+) -> Callable[[str, bool, Optional[int]], List[RepositoryRef]]:
+    """Return the GitHub repository lister for an account source."""
+    if account_type == "user":
+        return client.list_user_repositories
+    return client.list_org_repositories
 
 
 @app.command("generate-config")
