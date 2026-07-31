@@ -2,11 +2,14 @@
 
 import json
 import logging
+import os
 import re
+import shutil
 import subprocess  # nosec B404
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
@@ -99,6 +102,27 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
     except Exception as e:
         logger.error(f"Error cloning {repo_url}: {e}")
         return None
+
+
+@contextmanager
+def cloned_repo(repo_url: str) -> Iterator[Optional[Tuple[str, str]]]:
+    """Clone a repository into a temp dir and always remove it afterward.
+
+    Yields the ``(repo_dir, repo_name)`` tuple from :func:`clone_repo`, or
+    ``None`` if the clone failed. The temporary clone directory is deleted on
+    exit regardless of how the ``with`` block terminates, so short-lived repo
+    inspection never leaks ``dep-profiler-*`` directories into the temp dir.
+    """
+    result = clone_repo(repo_url)
+    temp_root: Optional[str] = None
+    if result is not None:
+        repo_dir, _ = result
+        temp_root = os.path.dirname(repo_dir)
+    try:
+        yield result
+    finally:
+        if temp_root is not None and os.path.isdir(temp_root):
+            shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def get_last_commit_date(repo_dir: str) -> Optional[str]:

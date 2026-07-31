@@ -6,7 +6,7 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import check_for_vulnerabilities, clone_repo, fetch_json
+from .common import check_for_vulnerabilities, cloned_repo, fetch_json
 
 logger = logging.getLogger(__name__)
 
@@ -70,14 +70,13 @@ class NodeJSAnalyzer(BaseAnalyzer):
 
                     # Get additional info from GitHub if available
                     if dep.repository_url and ("github.com" in dep.repository_url):
-                        # Try to clone the repository
-                        clone_result = clone_repo(dep.repository_url)
+                        # Clone the repository into a self-cleaning temp dir.
+                        with cloned_repo(dep.repository_url) as clone_result:
+                            if clone_result:
+                                repo_dir, _ = clone_result
 
-                        if clone_result:
-                            repo_dir, _ = clone_result
-
-                            # Use the helper function to avoid circular imports.
-                            dep = analyze_repository(dep, repo_dir)
+                                # Helper avoids circular imports.
+                                dep = analyze_repository(dep, repo_dir)
 
             except Exception as e:
                 logger.error(f"Error analyzing {name}: {e}")
