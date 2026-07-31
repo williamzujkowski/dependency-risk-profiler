@@ -105,9 +105,13 @@ class PythonAnalyzer(BaseAnalyzer):
                     dep.has_known_exploits = check_for_vulnerabilities(name, "pypi")
 
                     # Get additional info from repository if available
-                    if dep.repository_url and any(
-                        host in dep.repository_url
-                        for host in ["github.com", "gitlab.com", "bitbucket.org"]
+                    if (
+                        self.clone_repos
+                        and dep.repository_url
+                        and any(
+                            host in dep.repository_url
+                            for host in ["github.com", "gitlab.com", "bitbucket.org"]
+                        )
                     ):
                         # Clone the repository into a self-cleaning temp dir.
                         with cloned_repo(dep.repository_url) as clone_result:

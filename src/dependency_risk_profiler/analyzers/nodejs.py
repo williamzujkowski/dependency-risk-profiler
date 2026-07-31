@@ -69,7 +69,11 @@ class NodeJSAnalyzer(BaseAnalyzer):
                     dep.has_known_exploits = check_for_vulnerabilities(name, "npm")
 
                     # Get additional info from GitHub if available
-                    if dep.repository_url and ("github.com" in dep.repository_url):
+                    if (
+                        self.clone_repos
+                        and dep.repository_url
+                        and ("github.com" in dep.repository_url)
+                    ):
                         # Clone the repository into a self-cleaning temp dir.
                         with cloned_repo(dep.repository_url) as clone_result:
                             if clone_result:

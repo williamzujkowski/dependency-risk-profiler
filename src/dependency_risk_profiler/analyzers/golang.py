@@ -59,18 +59,20 @@ class GoAnalyzer(BaseAnalyzer):
                     repo_url = f"https://github.com/{github_path}"
                     dep.repository_url = repo_url
 
-                    # Clone the repository into a self-cleaning temp dir.
-                    with cloned_repo(repo_url) as clone_result:
-                        if clone_result:
-                            repo_dir, _ = clone_result
+                    # Clone the repository into a self-cleaning temp dir
+                    # (skipped for org scans, which use API signals instead).
+                    if self.clone_repos:
+                        with cloned_repo(repo_url) as clone_result:
+                            if clone_result:
+                                repo_dir, _ = clone_result
 
-                            try:
-                                # Helper avoids circular imports.
-                                dep = analyze_repository(dep, repo_dir)
-                            except Exception as e:
-                                logger.error(
-                                    f"Error analyzing repository for {name}: {e}"
-                                )
+                                try:
+                                    # Helper avoids circular imports.
+                                    dep = analyze_repository(dep, repo_dir)
+                                except Exception as e:
+                                    logger.error(
+                                        f"Error analyzing repository for {name}: {e}"
+                                    )
 
                 # Check for known vulnerabilities
                 dep.has_known_exploits = check_for_vulnerabilities(name, "go")
