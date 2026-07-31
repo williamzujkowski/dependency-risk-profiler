@@ -1,5 +1,6 @@
 """Tests for rate-limit-aware retry in fetch_url."""
 
+from typing import Optional
 from unittest import mock
 
 import requests
@@ -7,7 +8,7 @@ import requests
 from dependency_risk_profiler import utils
 
 
-def _response(status: int, text: str = "", headers: dict | None = None) -> mock.Mock:
+def _response(status: int, text: str = "", headers: Optional[dict] = None) -> mock.Mock:
     """Build a fake requests.Response with a working raise_for_status."""
     resp = mock.Mock()
     resp.status_code = status
