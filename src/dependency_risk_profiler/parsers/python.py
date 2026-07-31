@@ -139,13 +139,9 @@ class PythonParser(BaseParser):
 
             # Process default packages
             for name, info in default_packages.items():
-                version = info.get("version", "")
-                if version.startswith("=="):
-                    version = version[2:]  # Remove == prefix
-
                 dependencies[name] = DependencyMetadata(
                     name=name,
-                    installed_version=version,
+                    installed_version=self._pipfile_version(info),
                     repository_url=f"https://pypi.org/project/{name}/",
                 )
 
@@ -155,13 +151,9 @@ class PythonParser(BaseParser):
                 if name in dependencies:
                     continue
 
-                version = info.get("version", "")
-                if version.startswith("=="):
-                    version = version[2:]  # Remove == prefix
-
                 dependencies[name] = DependencyMetadata(
                     name=name,
-                    installed_version=version,
+                    installed_version=self._pipfile_version(info),
                     repository_url=f"https://pypi.org/project/{name}/",
                     additional_info={"dev_dependency": "true"},
                 )
@@ -169,3 +161,22 @@ class PythonParser(BaseParser):
             return dependencies
         except Exception as e:
             raise ValueError(f"Error parsing Pipfile.lock: {e}") from e
+
+    @staticmethod
+    def _pipfile_version(info: object) -> str:
+        """Extract a package version from a Pipfile.lock entry.
+
+        Entries are usually ``{"version": "==1.2.3", ...}`` but can also be a
+        bare version string (e.g. ``"==1.2.3"`` or ``"*"``); handle both without
+        assuming a dict.
+        """
+        if isinstance(info, dict):
+            raw = info.get("version", "")
+        elif isinstance(info, str):
+            raw = info
+        else:
+            raw = ""
+        version = raw if isinstance(raw, str) else str(raw)
+        if version.startswith("=="):
+            version = version[2:]
+        return version

@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dependency Risk User Scan · williamzujkowski</title>
+<style>
+/* Palette ported from the Remarque design system (williamzujkowski.io):
+   warm-cream / ferric-ink light, phosphor-green dark, radar-green accent.
+   Severity ramp derived in the same oklch space as Remarque's semantic
+   error/warning/success tokens. */
+:root{
+  --paper:oklch(0.95 0.015 75); --surface:oklch(0.975 0.008 75);
+  --raise:oklch(0.93 0.015 75);
+  --ink:oklch(0.18 0.04 25); --muted:oklch(0.42 0.04 25);
+  --faint:oklch(0.52 0.03 25); --hair:oklch(0.85 0.02 75);
+  --crit:oklch(0.50 0.15 25); --high:oklch(0.55 0.13 52);
+  --med:oklch(0.60 0.10 85); --low:oklch(0.50 0.13 145);
+  --unknown:oklch(0.52 0.03 25);
+  --crit-wash:oklch(0.50 0.15 25 / 0.12); --high-wash:oklch(0.55 0.13 52 / 0.12);
+  --med-wash:oklch(0.60 0.10 85 / 0.14); --low-wash:oklch(0.50 0.13 145 / 0.12);
+  --unk-wash:oklch(0.52 0.03 25 / 0.10);
+  --accent:oklch(0.48 0.15 140); --focus:oklch(0.48 0.15 140);
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:oklch(0.14 0.015 140); --surface:oklch(0.17 0.015 140);
+  --raise:oklch(0.19 0.015 140);
+  --ink:oklch(0.92 0.03 140); --muted:oklch(0.85 0.03 140);
+  --faint:oklch(0.70 0.03 140); --hair:oklch(0.28 0.02 140);
+  --crit:oklch(0.68 0.16 25); --high:oklch(0.74 0.14 55);
+  --med:oklch(0.80 0.11 90); --low:oklch(0.78 0.16 145);
+  --unknown:oklch(0.70 0.03 140);
+  --crit-wash:oklch(0.68 0.16 25 / 0.18); --high-wash:oklch(0.74 0.14 55 / 0.18);
+  --med-wash:oklch(0.80 0.11 90 / 0.16); --low-wash:oklch(0.78 0.16 145 / 0.16);
+  --unk-wash:oklch(0.70 0.03 140 / 0.14);
+  --accent:oklch(0.82 0.17 140); --focus:oklch(0.82 0.17 140); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:oklch(0.14 0.015 140); --surface:oklch(0.17 0.015 140);
+  --raise:oklch(0.19 0.015 140);
+  --ink:oklch(0.92 0.03 140); --muted:oklch(0.85 0.03 140);
+  --faint:oklch(0.70 0.03 140); --hair:oklch(0.28 0.02 140);
+  --crit:oklch(0.68 0.16 25); --high:oklch(0.74 0.14 55);
+  --med:oklch(0.80 0.11 90); --low:oklch(0.78 0.16 145);
+  --unknown:oklch(0.70 0.03 140);
+  --crit-wash:oklch(0.68 0.16 25 / 0.18); --high-wash:oklch(0.74 0.14 55 / 0.18);
+  --med-wash:oklch(0.80 0.11 90 / 0.16); --low-wash:oklch(0.78 0.16 145 / 0.16);
+  --unk-wash:oklch(0.70 0.03 140 / 0.14);
+  --accent:oklch(0.82 0.17 140); --focus:oklch(0.82 0.17 140); color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --paper:oklch(0.95 0.015 75); --surface:oklch(0.975 0.008 75);
+  --raise:oklch(0.93 0.015 75);
+  --ink:oklch(0.18 0.04 25); --muted:oklch(0.42 0.04 25);
+  --faint:oklch(0.52 0.03 25); --hair:oklch(0.85 0.02 75);
+  --crit:oklch(0.50 0.15 25); --high:oklch(0.55 0.13 52);
+  --med:oklch(0.60 0.10 85); --low:oklch(0.50 0.13 145);
+  --unknown:oklch(0.52 0.03 25);
+  --crit-wash:oklch(0.50 0.15 25 / 0.12); --high-wash:oklch(0.55 0.13 52 / 0.12);
+  --med-wash:oklch(0.60 0.10 85 / 0.14); --low-wash:oklch(0.50 0.13 145 / 0.12);
+  --unk-wash:oklch(0.52 0.03 25 / 0.10);
+  --accent:oklch(0.48 0.15 140); --focus:oklch(0.48 0.15 140); color-scheme:light;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.wrap{width:min(1180px,calc(100% - 40px));margin:0 auto;
+padding:34px 0 56px;}
+code,.mono,.dep,.num,.risk,.bar-label,th{font-family:var(--mono);}
+.num{font-variant-numeric:tabular-nums;}
+
+/* ---- masthead ---- */
+.mast{display:flex;justify-content:space-between;align-items:flex-start;gap:28px;
+flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid var(--hair);}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+text-transform:uppercase;color:var(--faint);margin:0 0 8px;}
+.mast h1{font-family:var(--mono);font-size:30px;font-weight:600;
+letter-spacing:-.01em;margin:0 0 6px;}
+.mast h1 .at{color:var(--faint);font-weight:400;}
+.verdict{margin:0;font-size:15px;color:var(--muted);max-width:52ch;}
+.verdict b{color:var(--ink);font-weight:600;}
+.readout{display:grid;grid-template-columns:repeat(4,auto);gap:0;
+border:1px solid var(--hair);border-radius:10px;overflow:hidden;
+background:var(--surface);}
+.readout div{padding:11px 18px;border-right:1px solid var(--hair);}
+.readout div:last-child{border-right:0;}
+.readout dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+text-transform:uppercase;color:var(--faint);margin:0 0 3px;}
+.readout dd{margin:0;font-family:var(--mono);font-size:24px;font-weight:600;
+font-variant-numeric:tabular-nums;}
+.readout dd.hot{color:var(--crit);}
+
+/* ---- sections ---- */
+.section{margin-top:38px;}
+.section > h2{font-size:13px;font-family:var(--mono);letter-spacing:.06em;
+text-transform:uppercase;color:var(--muted);margin:0 0 4px;font-weight:600;}
+.section > .sub{margin:0 0 14px;color:var(--faint);font-size:13px;}
+
+/* ---- exposure list (the signature) ---- */
+.exposure{display:flex;flex-direction:column;gap:2px;}
+.exp-row{border-radius:9px;}
+.exp-row.empty{padding:12px 14px;}
+.exp-row:hover,.exp-row[open]{background:var(--raise);}
+.exp-summary{display:grid;grid-template-columns:minmax(150px,1.4fr) 78px
+minmax(210px,2fr) minmax(120px,1fr);gap:18px;align-items:center;
+padding:12px 14px;cursor:pointer;list-style:none;border-radius:9px;}
+.exp-summary::-webkit-details-marker{display:none;}
+.exp-row[open] .exp-summary{border-bottom:1px solid var(--hair);
+border-radius:9px 9px 0 0;}
+.exp-summary > span{min-width:0;}
+.exp-dep{font-family:var(--mono);font-size:14px;font-weight:600;word-break:break-all;}
+.exp-dep .eco{color:var(--faint);font-weight:400;font-size:12px;}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
+font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px 3px 8px;
+border-radius:999px;border:1px solid transparent;}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;}
+.badge.crit{color:var(--crit);background:var(--crit-wash);border-color:var(--crit);}
+.badge.high{color:var(--high);background:var(--high-wash);border-color:var(--high);}
+.badge.med{color:var(--med);background:var(--med-wash);border-color:var(--med);}
+.badge.low{color:var(--low);background:var(--low-wash);border-color:var(--low);}
+.badge.unknown{color:var(--unknown);background:var(--unk-wash);
+border-color:var(--unknown);border-style:dashed;}
+/* the exposure bar — semantic <meter>, blast radius = value / repos scanned */
+.exp-bar{display:flex;flex-direction:column;gap:4px;}
+meter.bar{-webkit-appearance:none;appearance:none;width:100%;height:9px;
+border:0;border-radius:5px;background:var(--hair);}
+meter.bar::-webkit-meter-bar{background:var(--hair);border:0;border-radius:5px;}
+meter.bar::-moz-meter-bar{border-radius:5px;}
+meter.bar.crit::-webkit-meter-optimum-value{background:var(--crit);border-radius:5px;}
+meter.bar.high::-webkit-meter-optimum-value{background:var(--high);border-radius:5px;}
+meter.bar.med::-webkit-meter-optimum-value{background:var(--med);border-radius:5px;}
+meter.bar.low::-webkit-meter-optimum-value{background:var(--low);border-radius:5px;}
+meter.bar.unknown::-webkit-meter-optimum-value{background:repeating-linear-gradient(
+90deg,var(--unknown),var(--unknown) 3px,transparent 3px,transparent 6px);}
+meter.bar.crit::-moz-meter-bar{background:var(--crit);}
+meter.bar.high::-moz-meter-bar{background:var(--high);}
+meter.bar.med::-moz-meter-bar{background:var(--med);}
+meter.bar.low::-moz-meter-bar{background:var(--low);}
+meter.bar.unknown::-moz-meter-bar{background:repeating-linear-gradient(
+90deg,var(--unknown),var(--unknown) 3px,transparent 3px,transparent 6px);}
+.bar-label{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
+.bar-label b{color:var(--ink);}
+.exp-signals{font-size:12.5px;color:var(--muted);}
+.exp-signals .adv{color:var(--faint);font-family:var(--mono);font-size:11px;
+display:block;margin-top:2px;}
+a{color:var(--accent);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.triage-panel{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+gap:18px 24px;padding:14px;border-top:0;}
+.triage-group h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+text-transform:uppercase;color:var(--faint);font-weight:600;margin:0 0 7px;}
+.triage-group p{margin:0;}
+.why-list,.usage-list,.advisory-block ul,.link-row{margin:0;padding-left:17px;}
+.why-list li,.usage-list li,.advisory-block li,.link-row li{margin:3px 0;}
+.usage-list ul{margin:4px 0 8px;padding-left:16px;font-family:var(--mono);
+font-size:12px;}
+.link-row{display:flex;flex-wrap:wrap;gap:7px 14px;padding-left:0;list-style:none;}
+.advisory-block{margin:0 0 8px;}
+.advisory-label{margin:0 0 4px;color:var(--muted);font-size:11px;}
+.sev{display:inline-block;color:var(--faint);font-size:10.5px;margin-left:5px;}
+.muted{color:var(--faint);}
+.fact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 16px;
+margin:0;}
+.fact-grid div{min-width:0;}
+.fact-grid dt{color:var(--faint);font-size:10.5px;text-transform:uppercase;}
+.fact-grid dd{margin:1px 0 0;color:var(--muted);word-break:break-word;}
+
+/* ---- tables ---- */
+.tbl-wrap{border:1px solid var(--hair);border-radius:10px;overflow-x:auto;
+background:var(--surface);}
+table{width:100%;border-collapse:collapse;min-width:640px;}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--hair);
+vertical-align:middle;}
+th{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+color:var(--faint);font-weight:600;background:var(--raise);}
+th button{all:unset;cursor:pointer;font:inherit;color:inherit;}
+th button::after{content:" ↕";opacity:.4;}
+tr:last-child td{border-bottom:0;}
+td.num,td .num{font-variant-numeric:tabular-nums;}
+.repo{font-family:var(--mono);font-size:13px;}
+.mini-bars{display:inline-flex;gap:2px;vertical-align:middle;}
+.mini{width:9px;height:16px;border-radius:2px;background:var(--hair);}
+.mini.crit{background:var(--crit);}
+.mini.high{background:var(--high);}
+.mini.unknown{background:var(--unknown);opacity:.5;}
+.worst{color:var(--muted);font-size:12.5px;}
+details.repos summary{cursor:pointer;color:var(--accent);
+font-family:var(--mono);font-size:11px;list-style:none;}
+details.repos summary::-webkit-details-marker{display:none;}
+details.repos[open] summary{color:var(--muted);}
+details.repos ul{margin:6px 0 0;padding-left:16px;color:var(--muted);
+font-family:var(--mono);font-size:11.5px;}
+
+.search{display:flex;gap:8px;align-items:center;margin:0 0 12px;}
+.search input{flex:1;max-width:340px;padding:8px 11px;
+border:1px solid var(--hair);border-radius:8px;background:var(--surface);
+color:var(--ink);font:13px var(--mono);}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+
+.foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--hair);
+color:var(--faint);font-size:12.5px;max-width:70ch;}
+.foot b{color:var(--muted);}
+.empty{color:var(--muted);}
+.tiny{font-size:9px;padding:1px 6px;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+@media (max-width:720px){
+  .exp-summary{grid-template-columns:1fr auto;gap:8px 14px;}
+  .exp-bar,.exp-signals{grid-column:1 / -1;}
+  .triage-panel{grid-template-columns:1fr;}
+  .fact-grid{grid-template-columns:1fr;}
+  .readout{grid-template-columns:1fr 1fr;}
+  .readout div:nth-child(2){border-right:0;}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+<header class="mast">
+  <div>
+    <p class="kicker">Dependency exposure · github user</p>
+    <h1><span class="at">@</span>williamzujkowski</h1>
+    <p class="verdict"><b>0 high-risk dependencies</b> are in play across 0 repositories. The widest exposure is <code>aegis-core</code> — single maintainer · behind latest — reaching 1 of 3 repos.</p>
+  </div>
+  <dl class="readout" aria-label="Scan totals">
+    <div><dt>Repos</dt><dd class="num">3</dd></div>
+    <div><dt>Manifests</dt><dd class="num">14</dd></div>
+    <div><dt>Unique deps</dt><dd class="num">33</dd></div>
+    <div><dt>High-risk</dt><dd class="num hot">
+      0
+    </dd></div>
+  </dl>
+</header>
+
+
+<section id="most-exposed-risky-dependencies" class="section">
+  <h2>Most exposed risky dependencies</h2>
+  <p class="sub">
+    Fix from the top. Bar length = share of repos exposed; color = severity.
+  </p>
+  <div class="exposure"
+    aria-label="Dependencies ranked by risk and blast radius">
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="cargo:aegis-core@0.19.3 0.19.3 aegis-boot/aegis-boot single maintainer behind latest 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">aegis-core
+        <span class="eco">· cargo</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to aegis-core"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">single maintainer · behind latest<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Bus factor: 1 primary maintainer</li><li>Maintenance: last update 2026-01-11; slowed cadence</li><li>Provenance: no tests</li><li>Version drift: 0.19.3 → 0.1.1 (behind latest)</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: license, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/rescue-tui/Cargo.toml" target="_blank" rel="noopener">crates/rescue-tui/Cargo.toml</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-core" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-core" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/aayushadhikari7/aegis" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Faayushadhikari7%2Faegis" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.19.3 → 0.1.1</dd></div><div><dt>version specs</dt><dd>0.19.3</dd></div><div><dt>last updated</dt><dd>2026-01-11</dd></div><div><dt>stars</dt><dd>2</dd></div><div><dt>contributors</dt><dd>1</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>✓</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="4"
+      data-search="cargo:aegis-catalog-data@git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
+      <summary class="exp-summary">
+      <span class="exp-dep">aegis-catalog-data
+        <span class="eco">· cargo</span>
+      </span>
+      <span><span class="badge unknown">UNKNOWN</span></span>
+      <span class="exp-bar">
+        <meter class="bar unknown" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to aegis-catalog-data"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-catalog/Cargo.toml" target="_blank" rel="noopener">crates/aegis-catalog/Cargo.toml</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-catalog-data" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-catalog-data" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-catalog-data" target="_blank" rel="noopener">Source repo</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 → unknown</dd></div><div><dt>version specs</dt><dd>git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="4"
+      data-search="cargo:aegis-catalog@path:../aegis-catalog 0.19.3, path:../aegis-catalog aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
+      <summary class="exp-summary">
+      <span class="exp-dep">aegis-catalog
+        <span class="eco">· cargo</span>
+      </span>
+      <span><span class="badge unknown">UNKNOWN</span></span>
+      <span class="exp-bar">
+        <meter class="bar unknown" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to aegis-catalog"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-fetch/Cargo.toml" target="_blank" rel="noopener">crates/aegis-fetch/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/rescue-tui/Cargo.toml" target="_blank" rel="noopener">crates/rescue-tui/Cargo.toml</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-catalog" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-catalog" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-catalog" target="_blank" rel="noopener">Source repo</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>path:../aegis-catalog → unknown</dd></div><div><dt>version specs</dt><dd>0.19.3, path:../aegis-catalog</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="4"
+      data-search="cargo:aegis-fetch@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
+      <summary class="exp-summary">
+      <span class="exp-dep">aegis-fetch
+        <span class="eco">· cargo</span>
+      </span>
+      <span><span class="badge unknown">UNKNOWN</span></span>
+      <span class="exp-bar">
+        <meter class="bar unknown" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to aegis-fetch"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/rescue-tui/Cargo.toml" target="_blank" rel="noopener">crates/rescue-tui/Cargo.toml</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-fetch" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-fetch" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-fetch" target="_blank" rel="noopener">Source repo</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.19.3 → unknown</dd></div><div><dt>version specs</dt><dd>0.19.3</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="4"
+      data-search="cargo:aegis-trust@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
+      <summary class="exp-summary">
+      <span class="exp-dep">aegis-trust
+        <span class="eco">· cargo</span>
+      </span>
+      <span><span class="badge unknown">UNKNOWN</span></span>
+      <span class="exp-bar">
+        <meter class="bar unknown" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to aegis-trust"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-trust" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-trust" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-trust" target="_blank" rel="noopener">Source repo</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.19.3 → unknown</dd></div><div><dt>version specs</dt><dd>0.19.3</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+  </div>
+</section>
+
+
+<section id="riskiest-repositories" class="section">
+  <h2>Riskiest repositories</h2>
+  <p class="sub">
+    Ranked by aggregate exposure. Bars show each repo's high-risk dependency load.
+  </p>
+  <div class="tbl-wrap">
+    <table>
+      <caption class="sr-only">
+        Repositories ranked by aggregate dependency risk
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Repository</th>
+          <th scope="col">Risk load</th>
+          <th scope="col">High-risk deps</th>
+          <th scope="col">Worst deps</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class="repo" data-value="aegis-boot/aegis-boot">aegis-boot/aegis-boot</td><td class="num" data-value="31">31</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="aegis-core, schemars, tempfile &lt;span class=&quot;badge unknown tiny&quot;&gt;4 unknown&lt;/span&gt;">aegis-core, schemars, tempfile <span class="badge unknown tiny">4 unknown</span></td></tr>
+<tr><td class="repo" data-value="aegis-boot/aegis-hwsim">aegis-boot/aegis-hwsim</td><td class="num" data-value="6">6</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="schemars, tempfile, serde">schemars, tempfile, serde</td></tr>
+<tr><td class="repo" data-value="capwall/capwall">capwall/capwall</td><td class="num" data-value="0">0</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="none">none</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+
+<section id="full-dependency-inventory" class="section">
+  <h2>Full inventory</h2>
+  <p class="sub">
+    Every unique dependency, ordered worst-first. To sort, filter, or pivot,
+    open the CSV export alongside this report.
+  </p>
+  <div class="tbl-wrap">
+    <table id="inventory-table">
+      <caption class="sr-only">Inventory of every unique dependency</caption>
+      <thead>
+        <tr>
+          <th scope="col">Dependency</th>
+          <th scope="col">Eco</th>
+          <th scope="col">Risk</th>
+          <th scope="col">Repos</th>
+          <th scope="col">Signals</th>
+        </tr>
+      </thead>
+      <tbody><tr data-risk="2" data-search="cargo:aegis-core@0.19.3 0.19.3 aegis-boot/aegis-boot single maintainer behind latest 0 scored / 0 filtered medium"><td class="dep" data-value="cargo:aegis-core@0.19.3"><a href="https://deps.dev/cargo/aegis-core" target="_blank" rel="noopener">aegis-core</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="single maintainer · behind latest">single maintainer · behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:schemars@0.8 0.8, 1 aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:schemars@0.8"><a href="https://deps.dev/cargo/schemars" target="_blank" rel="noopener">schemars</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:tempfile@3.14 3, 3.14 aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tempfile@3.14"><a href="https://deps.dev/cargo/tempfile" target="_blank" rel="noopener">tempfile</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:serde@unknown 1, 1.0, unknown aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:serde@unknown"><a href="https://deps.dev/cargo/serde" target="_blank" rel="noopener">serde</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:thiserror@unknown 2, 2.0, unknown aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:thiserror@unknown"><a href="https://deps.dev/cargo/thiserror" target="_blank" rel="noopener">thiserror</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:serde_json@1.0 1, 1.0 aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:serde_json@1.0"><a href="https://deps.dev/cargo/serde_json" target="_blank" rel="noopener">serde_json</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:minisign-verify@0.2 0.2 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:minisign-verify@0.2"><a href="https://deps.dev/cargo/minisign-verify" target="_blank" rel="noopener">minisign-verify</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:iso-parser@path:.. 0.19.3, path:.. aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:iso-parser@path:.."><a href="https://deps.dev/cargo/iso-parser" target="_blank" rel="noopener">iso-parser</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:hex@0.4 0.4 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:hex@0.4"><a href="https://deps.dev/cargo/hex" target="_blank" rel="noopener">hex</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:iso-probe@path:../iso-probe 0.19.3, path:../iso-probe aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:iso-probe@path:../iso-probe"><a href="https://deps.dev/cargo/iso-probe" target="_blank" rel="noopener">iso-probe</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:kexec-loader@path:../kexec-loader path:../kexec-loader aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:kexec-loader@path:../kexec-loader"><a href="https://deps.dev/cargo/kexec-loader" target="_blank" rel="noopener">kexec-loader</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:aegis-wire-formats@0.19.3 0.19.3 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:aegis-wire-formats@0.19.3"><a href="https://deps.dev/cargo/aegis-wire-formats" target="_blank" rel="noopener">aegis-wire-formats</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:minisign@0.9 0.9 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:minisign@0.9"><a href="https://deps.dev/cargo/minisign" target="_blank" rel="noopener">minisign</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:pollster@0.4 0.4 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:pollster@0.4"><a href="https://deps.dev/cargo/pollster" target="_blank" rel="noopener">pollster</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:libc@0.2 0.2, unknown aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:libc@0.2"><a href="https://deps.dev/cargo/libc" target="_blank" rel="noopener">libc</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:serde_yaml_ng@0.10 0.10 aegis-boot/aegis-hwsim stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="cargo:serde_yaml_ng@0.10"><a href="https://deps.dev/cargo/serde_yaml_ng" target="_blank" rel="noopener">serde_yaml_ng</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="cargo:libfuzzer-sys@0.4 0.4 aegis-boot/aegis-boot stable, low release cadence behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:libfuzzer-sys@0.4"><a href="https://deps.dev/cargo/libfuzzer-sys" target="_blank" rel="noopener">libfuzzer-sys</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · behind latest">stable, low release cadence · behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:textwrap@0.16 0.16 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:textwrap@0.16"><a href="https://deps.dev/cargo/textwrap" target="_blank" rel="noopener">textwrap</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:pgp@0.19 0.19 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:pgp@0.19"><a href="https://deps.dev/cargo/pgp" target="_blank" rel="noopener">pgp</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:rand@0.8 0.8 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:rand@0.8"><a href="https://deps.dev/cargo/rand" target="_blank" rel="noopener">rand</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:sha2@0.10 0.10, 0.11 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:sha2@0.10"><a href="https://deps.dev/cargo/sha2" target="_blank" rel="noopener">sha2</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:tracing@unknown 0.1, unknown aegis-boot/aegis-boot stable, low release cadence behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tracing@unknown"><a href="https://deps.dev/cargo/tracing" target="_blank" rel="noopener">tracing</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · behind latest">stable, low release cadence · behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:ureq@3.3 3.3 aegis-boot/aegis-boot no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="cargo:ureq@3.3"><a href="https://deps.dev/cargo/ureq" target="_blank" rel="noopener">ureq</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="cargo:toml@1.1 1.1 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:toml@1.1"><a href="https://deps.dev/cargo/toml" target="_blank" rel="noopener">toml</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:tokio@1 1 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tokio@1"><a href="https://deps.dev/cargo/tokio" target="_blank" rel="noopener">tokio</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:tracing-subscriber@0.3 0.3 aegis-boot/aegis-boot stable, low release cadence behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tracing-subscriber@0.3"><a href="https://deps.dev/cargo/tracing-subscriber" target="_blank" rel="noopener">tracing-subscriber</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · behind latest">stable, low release cadence · behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:crossterm@0.29 0.29 aegis-boot/aegis-boot no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="cargo:crossterm@0.29"><a href="https://deps.dev/cargo/crossterm" target="_blank" rel="noopener">crossterm</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="cargo:indicatif@0.18 0.18 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:indicatif@0.18"><a href="https://deps.dev/cargo/indicatif" target="_blank" rel="noopener">indicatif</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="3" data-search="cargo:ratatui@0.30 0.30 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:ratatui@0.30"><a href="https://deps.dev/cargo/ratatui" target="_blank" rel="noopener">ratatui</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
+<tr data-risk="4" data-search="cargo:aegis-catalog-data@git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-catalog-data@git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0"><a href="https://deps.dev/cargo/aegis-catalog-data" target="_blank" rel="noopener">aegis-catalog-data</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr>
+<tr data-risk="4" data-search="cargo:aegis-catalog@path:../aegis-catalog 0.19.3, path:../aegis-catalog aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-catalog@path:../aegis-catalog"><a href="https://deps.dev/cargo/aegis-catalog" target="_blank" rel="noopener">aegis-catalog</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr>
+<tr data-risk="4" data-search="cargo:aegis-fetch@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-fetch@0.19.3"><a href="https://deps.dev/cargo/aegis-fetch" target="_blank" rel="noopener">aegis-fetch</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr>
+<tr data-risk="4" data-search="cargo:aegis-trust@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-trust@0.19.3"><a href="https://deps.dev/cargo/aegis-trust" target="_blank" rel="noopener">aegis-trust</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+
+<footer class="foot">
+  <p>
+    <b>How to read this.</b> Risk levels are heuristic signals, not verdicts.
+    <b>Unknown</b> stays unknown — a dependency we couldn't measure is shown as
+    its own state, never rounded to low or high. Informational, withdrawn, and
+    low-confidence advisories are counted but <b>filtered out of the score</b>
+    (shown as "filtered"), so a single noisy advisory can't inflate a
+    dependency's risk. Blast radius counts direct occurrences across scanned
+    manifests.
+  </p>
+  
+</footer>
+
+</main>
+</body>
+</html>
