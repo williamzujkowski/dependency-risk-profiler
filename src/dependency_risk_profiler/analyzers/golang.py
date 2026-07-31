@@ -7,7 +7,7 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import check_for_vulnerabilities, clone_repo, fetch_url
+from .common import check_for_vulnerabilities, cloned_repo, fetch_url
 
 logger = logging.getLogger(__name__)
 
@@ -59,17 +59,18 @@ class GoAnalyzer(BaseAnalyzer):
                     repo_url = f"https://github.com/{github_path}"
                     dep.repository_url = repo_url
 
-                    # Try to clone the repository
-                    clone_result = clone_repo(repo_url)
+                    # Clone the repository into a self-cleaning temp dir.
+                    with cloned_repo(repo_url) as clone_result:
+                        if clone_result:
+                            repo_dir, _ = clone_result
 
-                    if clone_result:
-                        repo_dir, _ = clone_result
-
-                        try:
-                            # Use the helper function to avoid circular imports.
-                            dep = analyze_repository(dep, repo_dir)
-                        except Exception as e:
-                            logger.error(f"Error analyzing repository for {name}: {e}")
+                            try:
+                                # Helper avoids circular imports.
+                                dep = analyze_repository(dep, repo_dir)
+                            except Exception as e:
+                                logger.error(
+                                    f"Error analyzing repository for {name}: {e}"
+                                )
 
                 # Check for known vulnerabilities
                 dep.has_known_exploits = check_for_vulnerabilities(name, "go")
