@@ -26,6 +26,7 @@ from .models import (
     OrgScanReport,
     RepositoryRef,
     RepositoryRiskSummary,
+    canonical_ecosystem,
     risk_points,
     risk_rank,
 )
@@ -44,6 +45,7 @@ SUPPORTED_MANIFEST_NAMES = (
 
 ProgressCallback = Callable[[str], None]
 RepositoryLister = Callable[[str, bool, Optional[int]], List[RepositoryRef]]
+PackageIdentity = Tuple[str, str]
 
 
 class GitHubDiscoveryClient:
@@ -270,32 +272,70 @@ class OrgScanRunner:
         profiles: Dict[DependencyKey, DependencyRiskScore],
     ) -> OrgScanReport:
         """Aggregate dependency profiles into org-wide exposure views."""
-        by_key: Dict[DependencyKey, AggregatedDependency] = {}
         repo_by_name = {repo.full_name: repo for repo in parsed.repositories}
-        for key, score in profiles.items():
-            by_key[key] = AggregatedDependency(
-                key=key,
-                risk_score=score,
-                key_signals=self._key_signals(score),
-                advisory_summary=self._advisory_summary(score),
-            )
+        variant_repositories: Dict[DependencyKey, Set[str]] = {}
+        variant_manifests: Dict[DependencyKey, Set[str]] = {}
+        variant_repo_refs: Dict[DependencyKey, Dict[str, RepositoryRef]] = {}
+        variant_manifest_paths_by_repo: Dict[DependencyKey, Dict[str, Set[str]]] = {}
 
         for occurrence in parsed.occurrences:
-            aggregate = by_key.get(occurrence.key)
-            if aggregate is None:
+            if occurrence.key not in profiles:
                 continue
-            aggregate.repositories.add(occurrence.repo_full_name)
-            aggregate.manifests.add(
+            variant_repositories.setdefault(occurrence.key, set()).add(
+                occurrence.repo_full_name
+            )
+            variant_manifests.setdefault(occurrence.key, set()).add(
                 f"{occurrence.repo_full_name}:{occurrence.manifest_path}"
             )
             repo_ref = repo_by_name.get(occurrence.repo_full_name)
             if repo_ref is not None:
-                aggregate.repo_refs[occurrence.repo_full_name] = repo_ref
-            aggregate.manifest_paths_by_repo.setdefault(
+                variant_repo_refs.setdefault(occurrence.key, {})[
+                    occurrence.repo_full_name
+                ] = repo_ref
+            variant_manifest_paths_by_repo.setdefault(occurrence.key, {}).setdefault(
                 occurrence.repo_full_name, set()
             ).add(occurrence.manifest_path)
 
-        inventory = sorted(by_key.values(), key=self._dependency_sort_key)
+        variants_by_identity: Dict[PackageIdentity, List[DependencyKey]] = {}
+        for key in profiles:
+            identity = (canonical_ecosystem(key.ecosystem), key.name)
+            variants_by_identity.setdefault(identity, []).append(key)
+
+        by_identity: Dict[PackageIdentity, AggregatedDependency] = {}
+        for identity, variant_keys in variants_by_identity.items():
+            representative_key = max(
+                variant_keys,
+                key=lambda key: self._representative_variant_sort_key(
+                    key, profiles[key], variant_repositories
+                ),
+            )
+            representative_score = profiles[representative_key]
+            aggregate = AggregatedDependency(
+                key=DependencyKey(
+                    ecosystem=identity[0],
+                    name=identity[1],
+                    version=representative_key.version,
+                ),
+                risk_score=representative_score,
+                key_signals=self._key_signals(representative_score),
+                advisory_summary=self._advisory_summary(representative_score),
+                version_specs={key.version for key in variant_keys},
+            )
+            for variant_key in variant_keys:
+                aggregate.repositories.update(
+                    variant_repositories.get(variant_key, set())
+                )
+                aggregate.manifests.update(variant_manifests.get(variant_key, set()))
+                aggregate.repo_refs.update(variant_repo_refs.get(variant_key, {}))
+                for repo_full_name, paths in variant_manifest_paths_by_repo.get(
+                    variant_key, {}
+                ).items():
+                    aggregate.manifest_paths_by_repo.setdefault(
+                        repo_full_name, set()
+                    ).update(paths)
+            by_identity[identity] = aggregate
+
+        inventory = sorted(by_identity.values(), key=self._dependency_sort_key)
         most_exposed = [
             item
             for item in inventory
@@ -307,7 +347,7 @@ class OrgScanRunner:
                 RiskLevel.UNKNOWN,
             }
         ]
-        repo_summaries = self._repository_summaries(parsed, by_key)
+        repo_summaries = self._repository_summaries(parsed, by_identity)
 
         high_risk_dependencies = [
             item
@@ -343,18 +383,26 @@ class OrgScanRunner:
     def _repository_summaries(
         self,
         parsed: _ParsedInventory,
-        by_key: Dict[DependencyKey, AggregatedDependency],
+        by_identity: Dict[PackageIdentity, AggregatedDependency],
     ) -> List[RepositoryRiskSummary]:
         """Build repository aggregate risk summaries."""
-        repo_keys: Dict[str, Set[DependencyKey]] = {
+        repo_identities: Dict[str, Set[PackageIdentity]] = {
             repo.full_name: set() for repo in parsed.repositories
         }
         for occurrence in parsed.occurrences:
-            repo_keys.setdefault(occurrence.repo_full_name, set()).add(occurrence.key)
+            identity = (
+                canonical_ecosystem(occurrence.key.ecosystem),
+                occurrence.key.name,
+            )
+            repo_identities.setdefault(occurrence.repo_full_name, set()).add(identity)
 
         summaries: List[RepositoryRiskSummary] = []
-        for repo_full_name, keys in repo_keys.items():
-            dependencies = [by_key[key] for key in keys if key in by_key]
+        for repo_full_name, identities in repo_identities.items():
+            dependencies = [
+                by_identity[identity]
+                for identity in identities
+                if identity in by_identity
+            ]
             total_score = sum(dep.risk_score.total_score for dep in dependencies)
             average_score = total_score / len(dependencies) if dependencies else 0.0
             critical = sum(
@@ -404,6 +452,34 @@ class OrgScanRunner:
             -dependency.risk_score.total_score,
             dependency.key.display_name.lower(),
         )
+
+    def _representative_variant_sort_key(
+        self,
+        key: DependencyKey,
+        score: DependencyRiskScore,
+        variant_repositories: Dict[DependencyKey, Set[str]],
+    ) -> Tuple[float, int, float, int, str, str]:
+        """Sort variant candidates so the worst profile is representative."""
+        exploit_score = score.exploit_score if score.exploit_score is not None else 0.0
+        return (
+            score.total_score,
+            len(variant_repositories.get(key, set())),
+            exploit_score,
+            self._advisory_count(score),
+            key.ecosystem.lower(),
+            key.version.lower(),
+        )
+
+    def _advisory_count(self, score: DependencyRiskScore) -> int:
+        """Return advisory count for representative tie-breaking."""
+        metrics = score.dependency.security_metrics
+        if metrics is None:
+            return 0
+        if metrics.counted_vulnerability_count is not None:
+            return metrics.counted_vulnerability_count
+        if metrics.vulnerability_count is not None:
+            return metrics.vulnerability_count
+        return 0
 
     def _key_signals(self, score: DependencyRiskScore) -> List[str]:
         """Return plain-language signals for report display."""

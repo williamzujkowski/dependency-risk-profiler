@@ -137,6 +137,40 @@ class FixtureGitHubClient(GitHubDiscoveryClient):
         return self.manifests[repo.full_name][path]
 
 
+class CanonicalPackageGitHubClient(FixtureGitHubClient):
+    """Fixture with one PyPI package appearing through multiple manifest types."""
+
+    def __init__(self) -> None:
+        """Initialize canonical package grouping fixtures."""
+        self.repositories: List[RepositoryRef] = [
+            RepositoryRef(
+                full_name="acme/api",
+                name="api",
+                default_branch="main",
+                html_url="https://github.com/acme/api",
+                archived=False,
+                fork=False,
+            ),
+            RepositoryRef(
+                full_name="acme/web",
+                name="web",
+                default_branch="main",
+                html_url="https://github.com/acme/web",
+                archived=False,
+                fork=False,
+            ),
+        ]
+        self.manifests: Dict[str, Dict[str, str]] = {
+            "acme/api": {
+                "requirements.txt": "jinja2==3.1.6\n",
+                "pyproject.toml": ("[project]\n" 'dependencies = ["jinja2>=3.1.2"]\n'),
+            },
+            "acme/web": {
+                "requirements.txt": "jinja2==3.1.6\n",
+            },
+        }
+
+
 class FixtureProfiler(DependencyProfiler):
     """Offline dependency profiler with call counting for cache assertions."""
 
@@ -273,6 +307,62 @@ def test_org_scan_aggregates_blast_radius_and_rankings() -> None:
     ]
     assert report.riskiest_repositories[0].repo_full_name == "acme/web"
     assert report.headline == "1 high-risk dependencies exposed across 2 repositories"
+
+
+def test_org_scan_groups_report_by_canonical_package_identity() -> None:
+    """REGRESSION: PyPI packages from pyproject and requirements render once."""
+    profiler = FixtureProfiler()
+    report = OrgScanRunner(CanonicalPackageGitHubClient(), profiler).run(
+        OrgScanOptions(org="acme")
+    )
+
+    assert len(profiler.profiled_keys) == 2
+    assert sorted(
+        (key.ecosystem, key.name, key.version) for key in profiler.profiled_keys
+    ) == [
+        ("pyproject", "jinja2", ">=3.1.2"),
+        ("python", "jinja2", "3.1.6"),
+    ]
+    assert report.unique_dependency_count == 1
+
+    dependency = report.inventory[0]
+    assert dependency.key.ecosystem == "python"
+    assert dependency.key.name == "jinja2"
+    assert dependency.key.version == "3.1.6"
+    assert dependency.version_specs == {">=3.1.2", "3.1.6"}
+    assert dependency.versions_display == ">=3.1.2, 3.1.6"
+    assert dependency.risk_level == RiskLevel.HIGH
+    assert dependency.risk_score.total_score == 7.3
+    assert dependency.advisory_summary == "2 scored / 0 filtered"
+    assert dependency.blast_radius == 2
+    assert sorted(dependency.repositories) == ["acme/api", "acme/web"]
+    assert sorted(dependency.manifests) == [
+        "acme/api:pyproject.toml",
+        "acme/api:requirements.txt",
+        "acme/web:requirements.txt",
+    ]
+    assert dependency.manifest_paths_by_repo == {
+        "acme/api": {"pyproject.toml", "requirements.txt"},
+        "acme/web": {"requirements.txt"},
+    }
+
+    repo_counts = {
+        summary.repo_full_name: summary.dependency_count
+        for summary in report.riskiest_repositories
+    }
+    assert repo_counts == {"acme/api": 1, "acme/web": 1}
+
+    model = report_to_dict(report)
+    inventory = cast(List[Dict[str, object]], model["inventory"])
+    assert len(inventory) == 1
+    assert inventory[0]["ecosystem"] == "python"
+    assert inventory[0]["version_specs"] == [">=3.1.2", "3.1.6"]
+    assert inventory[0]["versions_display"] == ">=3.1.2, 3.1.6"
+
+    html = render_html_report(report)
+    assert '<span class="eco">· python</span>' in html
+    assert '<span class="eco">· pyproject</span>' not in html
+    assert "&gt;=3.1.2, 3.1.6" in html
 
 
 def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
@@ -501,6 +591,37 @@ def _score_for_key(
     key: DependencyKey, dependency: DependencyMetadata
 ) -> DependencyRiskScore:
     """Build deterministic fixture scores."""
+    if key.name == "jinja2":
+        dependency.latest_version = "3.1.6"
+        if key.version == "3.1.6":
+            dependency.security_metrics = SecurityMetrics(
+                vulnerability_count=2,
+                counted_vulnerability_count=2,
+                filtered_vulnerability_count=0,
+                max_vulnerability_severity="HIGH",
+            )
+            return DependencyRiskScore(
+                dependency=dependency,
+                total_score=7.3,
+                risk_level=RiskLevel.HIGH,
+                exploit_score=1.0,
+                version_score=0.0,
+                factors=["scored advisories"],
+            )
+        dependency.security_metrics = SecurityMetrics(
+            vulnerability_count=1,
+            counted_vulnerability_count=1,
+            filtered_vulnerability_count=0,
+            max_vulnerability_severity="MEDIUM",
+        )
+        return DependencyRiskScore(
+            dependency=dependency,
+            total_score=2.6,
+            risk_level=RiskLevel.MEDIUM,
+            exploit_score=0.5,
+            version_score=0.5,
+            factors=["behind latest"],
+        )
     if key.name == "risky":
         dependency.latest_version = "2.3.0"
         dependency.last_updated = datetime(2023, 5, 1)

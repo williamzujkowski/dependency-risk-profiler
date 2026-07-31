@@ -485,6 +485,7 @@ def _dependency_search_text(dependency: AggregatedDependency) -> str:
     """Return searchable text for an inventory row."""
     parts = [
         dependency.key.display_name,
+        dependency.versions_display,
         " ".join(sorted(dependency.repositories)),
         " ".join(dependency.key_signals),
         dependency.advisory_summary,
@@ -922,6 +923,7 @@ def _metadata_panel(dependency: AggregatedDependency) -> str:
             "installed → latest",
             f"{metadata.installed_version} → {_optional_text(metadata.latest_version)}",
         ),
+        ("version specs", dependency.versions_display),
         ("last updated", _date_text(metadata.last_updated)),
         ("maintainers", _optional_int(metadata.maintainer_count)),
         ("license", license_text),
@@ -1083,6 +1085,8 @@ def _dependency_to_dict(
         "ecosystem": dependency.key.ecosystem,
         "name": dependency.key.name,
         "version": dependency.key.version,
+        "version_specs": dependency.version_specs_list,
+        "versions_display": dependency.versions_display,
         "display_name": dependency.key.display_name,
         "risk_level": dependency.risk_level.value,
         "risk_score": score.total_score,
@@ -1157,6 +1161,8 @@ def _repository_to_dict(repo: RepositoryRiskSummary) -> Dict[str, object]:
                 "ecosystem": dep.key.ecosystem,
                 "name": dep.key.name,
                 "version": dep.key.version,
+                "version_specs": dep.version_specs_list,
+                "versions_display": dep.versions_display,
                 "risk_level": dep.risk_level.value,
                 "blast_radius": dep.blast_radius,
             }
