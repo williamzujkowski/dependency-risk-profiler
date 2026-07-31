@@ -7,12 +7,30 @@ import re
 import shutil
 import subprocess  # nosec B404
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
+
+# Bounded retry for transient HTTP failures (notably 429 rate limiting from
+# registry/community APIs on large org scans).
+_FETCH_MAX_RETRIES = 3
+_FETCH_MAX_BACKOFF_SECONDS = 60.0
+
+
+def _retry_after_seconds(response: requests.Response, attempt: int) -> float:
+    """Return how long to wait before retrying, honoring Retry-After if sent."""
+    header = response.headers.get("Retry-After")
+    if header:
+        try:
+            return min(float(header), _FETCH_MAX_BACKOFF_SECONDS)
+        except ValueError:
+            pass  # HTTP-date form: fall back to exponential backoff
+    return min(2.0**attempt, _FETCH_MAX_BACKOFF_SECONDS)
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +45,39 @@ def fetch_url(url: str, timeout: int = 30) -> Optional[str]:
     Returns:
         Content of the URL or None if fetching fails.
     """
-    try:
-        response = requests.get(url, timeout=timeout)
-        response.raise_for_status()
-        # Explicitly cast response.text to str to help mypy
-        return str(response.text)
-    except Exception as e:
-        logger.error(f"Error fetching {url}: {e}")
-        return None
+    for attempt in range(_FETCH_MAX_RETRIES + 1):
+        try:
+            response = requests.get(url, timeout=timeout)
+            # Back off and retry on rate limiting / transient server errors.
+            if (
+                response.status_code == 429 or response.status_code >= 500
+            ) and attempt < _FETCH_MAX_RETRIES:
+                wait = _retry_after_seconds(response, attempt)
+                logger.debug(
+                    "Transient %s from %s; retrying in %.1fs (attempt %d/%d)",
+                    response.status_code,
+                    url,
+                    wait,
+                    attempt + 1,
+                    _FETCH_MAX_RETRIES,
+                )
+                time.sleep(wait)
+                continue
+            response.raise_for_status()
+            # Explicitly cast response.text to str to help mypy
+            return str(response.text)
+        except requests.HTTPError as e:
+            # Non-transient (4xx other than 429); 429/5xx that reach here are on
+            # the final attempt. Either way, don't retry further.
+            logger.debug("HTTP error fetching %s: %s", url, e)
+            return None
+        except requests.RequestException as e:
+            # Connection/timeout errors are transient — back off and retry.
+            if attempt >= _FETCH_MAX_RETRIES:
+                logger.debug("Giving up fetching %s: %s", url, e)
+                return None
+            time.sleep(min(2.0**attempt, _FETCH_MAX_BACKOFF_SECONDS))
+    return None
 
 
 def fetch_json(url: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
