@@ -15,6 +15,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
+from ..popularity import should_soften_low_release_cadence
 from .models import (
     AccountType,
     AggregatedDependency,
@@ -492,8 +493,14 @@ class OrgScanRunner:
             signals.append("single maintainer")
         if dependency.is_deprecated:
             signals.append("deprecated")
+        if should_soften_low_release_cadence(dependency) and (
+            (score.staleness_score is not None and score.staleness_score > 0)
+            or (score.maintained_score is not None and score.maintained_score > 0)
+        ):
+            signals.append("stable, low release cadence")
         if score.maintained_score is not None and score.maintained_score > 0.5:
-            signals.append("not actively maintained")
+            if not should_soften_low_release_cadence(dependency):
+                signals.append("not actively maintained")
         if (
             score.security_policy_score is not None
             and score.security_policy_score > 0.5

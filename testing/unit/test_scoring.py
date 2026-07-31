@@ -235,6 +235,178 @@ def test_full_data_scoring_is_unchanged() -> None:
     assert score.maintained_score == 0.0
 
 
+def test_high_star_stale_dependency_scores_lower_than_obscure_stale_peer() -> None:
+    """REGRESSION: broad adoption dampens stale release cadence, not advisories."""
+    scorer = RiskScorer(
+        staleness_weight=1.0,
+        maintainer_weight=0.0,
+        deprecation_weight=0.0,
+        exploit_weight=0.0,
+        version_difference_weight=0.0,
+        health_indicators_weight=0.0,
+        license_weight=0.0,
+        community_weight=0.0,
+        transitive_weight=0.0,
+        security_policy_weight=0.0,
+        dependency_update_weight=0.0,
+        signed_commits_weight=0.0,
+        branch_protection_weight=0.0,
+    )
+    last_updated = datetime.now() - timedelta(days=500)
+    popular = DependencyMetadata(
+        name="popular-stale",
+        installed_version="1.0.0",
+        last_updated=last_updated,
+        community_metrics=CommunityMetrics(star_count=5000),
+    )
+    obscure = DependencyMetadata(
+        name="obscure-stale",
+        installed_version="1.0.0",
+        last_updated=last_updated,
+        community_metrics=CommunityMetrics(star_count=5),
+    )
+
+    popular_score = scorer.score_dependency(popular)
+    obscure_score = scorer.score_dependency(obscure)
+
+    assert popular_score.staleness_score == 0.5
+    assert obscure_score.staleness_score == 1.0
+    assert popular_score.total_score < obscure_score.total_score
+
+
+def test_high_contributor_dependency_does_not_get_single_maintainer_signal() -> None:
+    """REGRESSION: real contributor counts replace registry author guesses."""
+    scorer = RiskScorer()
+    dependency = DependencyMetadata(
+        name="team-maintained",
+        installed_version="1.0.0",
+        latest_version="1.0.0",
+        last_updated=datetime.now() - timedelta(days=15),
+        maintainer_count=25,
+        community_metrics=CommunityMetrics(contributor_count=25),
+        has_tests=True,
+        has_ci=True,
+        has_contribution_guidelines=True,
+        license_info=LicenseInfo(
+            license_id="MIT",
+            category=LicenseCategory.PERMISSIVE,
+            is_approved=True,
+            risk_level=RiskLevel.LOW,
+        ),
+        security_metrics=SecurityMetrics(
+            has_security_policy=True,
+            has_dependency_update_tools=True,
+            has_signed_commits=True,
+            has_branch_protection=True,
+            is_maintained=True,
+        ),
+    )
+
+    score = scorer.score_dependency(dependency)
+
+    assert score.maintainer_score == 0.0
+    assert "Single maintainer" not in score.factors
+    assert "single maintainer" not in TerminalFormatter()._format_leading_signals(score)
+
+
+def test_popular_single_contributor_dependency_keeps_bus_factor_signal() -> None:
+    """REGRESSION: popularity dampens abandonment risk, not bus-factor risk."""
+    scorer = RiskScorer()
+    dependency = DependencyMetadata(
+        name="popular-single",
+        installed_version="1.0.0",
+        latest_version="1.0.0",
+        last_updated=datetime.now() - timedelta(days=15),
+        maintainer_count=1,
+        community_metrics=CommunityMetrics(star_count=5000, contributor_count=1),
+        has_tests=True,
+        has_ci=True,
+        has_contribution_guidelines=True,
+        license_info=LicenseInfo(
+            license_id="MIT",
+            category=LicenseCategory.PERMISSIVE,
+            is_approved=True,
+            risk_level=RiskLevel.LOW,
+        ),
+        security_metrics=SecurityMetrics(
+            has_security_policy=True,
+            has_dependency_update_tools=True,
+            has_signed_commits=True,
+            has_branch_protection=True,
+            is_maintained=True,
+        ),
+    )
+
+    score = scorer.score_dependency(dependency)
+
+    assert score.maintainer_score == 1.0
+    assert "Single maintainer" in score.factors
+    assert "single maintainer" in TerminalFormatter()._format_leading_signals(score)
+
+
+def test_missing_popularity_data_keeps_stale_and_maintenance_signals() -> None:
+    """REGRESSION: unknown popularity does not silently mitigate abandonment risk."""
+    scorer = RiskScorer()
+    last_updated = datetime.now() - timedelta(days=500)
+    base = DependencyMetadata(
+        name="unknown-popularity",
+        installed_version="1.0.0",
+        last_updated=last_updated,
+        security_metrics=SecurityMetrics(is_maintained=False),
+    )
+    empty_metrics = DependencyMetadata(
+        name="unknown-popularity",
+        installed_version="1.0.0",
+        last_updated=last_updated,
+        community_metrics=CommunityMetrics(),
+        security_metrics=SecurityMetrics(is_maintained=False),
+    )
+
+    base_score = scorer.score_dependency(base)
+    empty_metrics_score = scorer.score_dependency(empty_metrics)
+
+    assert empty_metrics_score.staleness_score == base_score.staleness_score == 1.0
+    assert empty_metrics_score.maintained_score == base_score.maintained_score == 1.0
+    assert empty_metrics_score.total_score == base_score.total_score
+    assert empty_metrics_score.factors == base_score.factors
+    assert any("Not updated" in factor for factor in empty_metrics_score.factors)
+    assert any(
+        "Project does not appear to be actively maintained" in factor
+        for factor in empty_metrics_score.factors
+    )
+
+
+def test_high_adoption_maintenance_signal_is_softened_in_terminal_formatter() -> None:
+    """REGRESSION: quiet mature projects get a soft cadence label, not abandonment."""
+    scorer = RiskScorer()
+    dependency = DependencyMetadata(
+        name="mature-stable",
+        installed_version="1.0.0",
+        latest_version="1.0.0",
+        last_updated=datetime.now() - timedelta(days=500),
+        maintainer_count=5,
+        community_metrics=CommunityMetrics(star_count=5000),
+        has_tests=True,
+        has_ci=True,
+        has_contribution_guidelines=True,
+        license_info=LicenseInfo(
+            license_id="MIT",
+            category=LicenseCategory.PERMISSIVE,
+            is_approved=True,
+            risk_level=RiskLevel.LOW,
+        ),
+        security_metrics=SecurityMetrics(is_maintained=False),
+    )
+
+    score = scorer.score_dependency(dependency)
+    signals = TerminalFormatter()._format_leading_signals(score)
+
+    assert score.staleness_score == 0.5
+    assert score.maintained_score == 0.5
+    assert "stable, low release cadence" in signals
+    assert "not actively maintained" not in signals
+
+
 def test_aggregate_ignores_unknown_signals() -> None:
     """Unknown signals are excluded from the weighted denominator."""
     scorer = RiskScorer(

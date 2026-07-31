@@ -2,7 +2,7 @@
   "org": "pallets",
   "account": "pallets",
   "account_type": "organization",
-  "generated_at": "2026-07-31T11:19:39.720173",
+  "generated_at": "2026-07-31T11:46:03.085826",
   "repositories_scanned": [
     "pallets/flask",
     "pallets/markupsafe",
@@ -20,9 +20,9 @@
   ],
   "manifest_count": 7,
   "unique_dependency_count": 28,
-  "headline": "9 high-risk dependencies exposed across 3 repositories",
-  "high_risk_dependency_count": 9,
-  "high_risk_exposed_repository_count": 3,
+  "headline": "3 high-risk dependencies exposed across 1 repositories",
+  "high_risk_dependency_count": 3,
+  "high_risk_exposed_repository_count": 1,
   "most_exposed_risky_dependencies": [
     {
       "ecosystem": "python",
@@ -35,10 +35,10 @@
       "versions_display": ">=3.1.2, 3.1.2",
       "display_name": "python:jinja2@3.1.2",
       "risk_level": "HIGH",
-      "risk_score": 3.2961309523809517,
+      "risk_score": 2.5818452380952377,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.5,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 0.25,
@@ -50,17 +50,17 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -700,19 +700,16 @@
         ]
       },
       "risk_factors": [
-        "Not updated in 411 days",
-        "Single maintainer",
         "Known security issues (10 counted, max severity HIGH)",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "3.1.6",
         "last_updated": "2025-06-14T13:34:58-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 335,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/jinja/",
         "license": null,
@@ -735,10 +732,10 @@
       "versions_display": "2.3.2, latest",
       "display_name": "python:flask@2.3.2",
       "risk_level": "HIGH",
-      "risk_score": 3.0505952380952377,
+      "risk_score": 2.5595238095238093,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 1.0,
@@ -750,17 +747,17 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -1050,19 +1047,17 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (5 counted, max severity HIGH)",
         "Outdated (current: 2.3.2, latest: 3.1.3)",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "3.1.3",
         "last_updated": "2026-07-30T10:29:33-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 863,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/flask/",
         "license": null,
@@ -1085,10 +1080,10 @@
       "versions_display": ">=3.1.0, 2.3.3",
       "display_name": "python:werkzeug@2.3.3",
       "risk_level": "HIGH",
-      "risk_score": 3.0505952380952377,
+      "risk_score": 2.5595238095238093,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 1.0,
@@ -1100,17 +1095,17 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -1824,19 +1819,17 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (13 counted, max severity HIGH)",
         "Outdated (current: 2.3.3, latest: 3.1.8)",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "3.1.8",
         "last_updated": "2026-07-30T08:49:51-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 514,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/werkzeug/",
         "license": null,
@@ -1858,11 +1851,11 @@
       ],
       "versions_display": ">=2.1.1, 2.1.2",
       "display_name": "python:markupsafe@2.1.2",
-      "risk_level": "HIGH",
-      "risk_score": 2.8943452380952377,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.235863095238095,
       "component_scores": {
-        "staleness": 0.75,
-        "maintainer": 1.0,
+        "staleness": 0.375,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 1.0,
@@ -1874,15 +1867,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -1918,9 +1910,92 @@
         "details": []
       },
       "risk_factors": [
-        "Not updated in 306 days",
-        "Single maintainer",
         "Outdated (current: 2.1.2, latest: 3.0.3)",
+        "Missing security policy",
+        "No dependency update tools found",
+        "Does not use signed commits",
+        "Does not use branch protection"
+      ],
+      "metadata": {
+        "latest_version": "3.0.3",
+        "last_updated": "2025-09-27T11:45:34-07:00",
+        "maintainer_count": 49,
+        "is_deprecated": false,
+        "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
+        "has_tests": true,
+        "has_ci": true,
+        "has_contribution_guidelines": false,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "click-didyoumean",
+      "version": "0.3.0",
+      "version_specs": [
+        "0.3.0"
+      ],
+      "versions_display": "0.3.0",
+      "display_name": "python:click-didyoumean@0.3.0",
+      "risk_level": "MEDIUM",
+      "risk_score": 2.211021505376344,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 0.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
+      "insufficient_data": false,
+      "unknown_signals": [],
+      "key_signals": [
+        "not actively maintained",
+        "missing security policy",
+        "behind latest"
+      ],
+      "blast_radius": {
+        "repository_count": 1,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask"
+        ],
+        "manifests": [
+          "pallets/flask:examples/celery/requirements.txt"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
+      },
+      "risk_factors": [
+        "Not updated in 855 days",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
@@ -1928,14 +2003,100 @@
         "Project does not appear to be actively maintained"
       ],
       "metadata": {
-        "latest_version": "3.0.3",
-        "last_updated": "2025-09-27T11:45:34-07:00",
-        "maintainer_count": 1,
+        "latest_version": "0.3.1",
+        "last_updated": "2024-03-27T14:38:03+01:00",
+        "maintainer_count": 6,
         "is_deprecated": false,
-        "repository_url": "https://github.com/pallets/markupsafe/",
-        "license": null,
-        "license_category": null,
-        "license_approved": null,
+        "repository_url": "https://github.com/click-contrib/click-didyoumean",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
+        "has_tests": true,
+        "has_ci": true,
+        "has_contribution_guidelines": false,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "pytz",
+      "version": "2023.3",
+      "version_specs": [
+        "2023.3"
+      ],
+      "versions_display": "2023.3",
+      "display_name": "python:pytz@2023.3",
+      "risk_level": "MEDIUM",
+      "risk_score": 2.069892473118279,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 0.0,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
+      "insufficient_data": false,
+      "unknown_signals": [],
+      "key_signals": [
+        "deprecated",
+        "not actively maintained",
+        "behind latest"
+      ],
+      "blast_radius": {
+        "repository_count": 1,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask"
+        ],
+        "manifests": [
+          "pallets/flask:examples/celery/requirements.txt"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
+      },
+      "risk_factors": [
+        "Deprecated",
+        "Outdated (current: 2023.3, latest: 2026.3.post1)",
+        "No dependency update tools found",
+        "Does not use signed commits",
+        "Does not use branch protection",
+        "Project does not appear to be actively maintained"
+      ],
+      "metadata": {
+        "latest_version": "2026.3.post1",
+        "last_updated": "2026-07-26T01:08:29+10:00",
+        "maintainer_count": 27,
+        "is_deprecated": true,
+        "repository_url": "https://github.com/stub42/pytz.git",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -1952,11 +2113,11 @@
       ],
       "versions_display": ">=1.9.0, 1.6.2",
       "display_name": "python:blinker@1.6.2",
-      "risk_level": "HIGH",
-      "risk_score": 2.782738095238095,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.068452380952381,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.5,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -1968,15 +2129,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -2012,18 +2172,15 @@
         "details": []
       },
       "risk_factors": [
-        "Not updated in 411 days",
-        "Single maintainer",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "1.9.0",
         "last_updated": "2025-06-14T13:37:05-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 21,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets-eco/blinker/",
         "license": null,
@@ -2045,11 +2202,11 @@
       ],
       "versions_display": ">=2.2.0, 2.1.2",
       "display_name": "python:itsdangerous@2.1.2",
-      "risk_level": "HIGH",
-      "risk_score": 2.782738095238095,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.068452380952381,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.5,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -2061,15 +2218,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -2105,110 +2261,17 @@
         "details": []
       },
       "risk_factors": [
-        "Not updated in 411 days",
-        "Single maintainer",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "2.2.0",
         "last_updated": "2025-06-14T13:35:42-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 44,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/itsdangerous/",
-        "license": null,
-        "license_category": null,
-        "license_approved": null,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "MarkupSafe",
-      "version": ">=3.0",
-      "version_specs": [
-        ">=3.0"
-      ],
-      "versions_display": ">=3.0",
-      "display_name": "python:MarkupSafe@>=3.0",
-      "risk_level": "HIGH",
-      "risk_score": 2.693452380952381,
-      "component_scores": {
-        "staleness": 0.75,
-        "maintainer": 1.0,
-        "deprecation": 0.0,
-        "exploit": 0.0,
-        "version": 0.25,
-        "health_indicators": 0.33333333333333337,
-        "license": null,
-        "community": 0.5,
-        "transitive": 0.0,
-        "security_policy": 1.0,
-        "dependency_update": 1.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [
-        "license"
-      ],
-      "key_signals": [
-        "single maintainer",
-        "not actively maintained",
-        "missing security policy",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/jinja"
-        ],
-        "manifests": [
-          "pallets/jinja:pyproject.toml"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/jinja",
-          "html_url": "https://github.com/pallets/jinja",
-          "default_branch": "main",
-          "manifests": [
-            "pyproject.toml"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Not updated in 306 days",
-        "Single maintainer",
-        "Missing security policy",
-        "No dependency update tools found",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "3.0.3",
-        "last_updated": "2025-09-27T11:45:34-07:00",
-        "maintainer_count": 1,
-        "is_deprecated": false,
-        "repository_url": "https://github.com/pallets/markupsafe/",
         "license": null,
         "license_category": null,
         "license_approved": null,
@@ -2227,11 +2290,11 @@
       ],
       "versions_display": ">=77",
       "display_name": "python:setuptools@>=77",
-      "risk_level": "HIGH",
-      "risk_score": 2.552083333333333,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.0610119047619047,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 0.25,
@@ -2243,15 +2306,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest",
         "scored advisories"
       ],
@@ -2545,18 +2607,16 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (5 counted, max severity HIGH)",
         "Missing tests, contribution guidelines",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "83.0.0",
         "last_updated": "2026-07-12T10:22:59-04:00",
-        "maintainer_count": 1,
+        "maintainer_count": 647,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/setuptools",
         "license": null,
@@ -2570,36 +2630,37 @@
     },
     {
       "ecosystem": "python",
-      "name": "click-didyoumean",
-      "version": "0.3.0",
+      "name": "MarkupSafe",
+      "version": ">=3.0",
       "version_specs": [
-        "0.3.0"
+        ">=3.0"
       ],
-      "versions_display": "0.3.0",
-      "display_name": "python:click-didyoumean@0.3.0",
-      "risk_level": "HIGH",
-      "risk_score": 2.533602150537634,
+      "versions_display": ">=3.0",
+      "display_name": "python:MarkupSafe@>=3.0",
+      "risk_level": "MEDIUM",
+      "risk_score": 2.0349702380952377,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.375,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.25,
         "health_indicators": 0.33333333333333337,
-        "license": 0.0,
+        "license": null,
         "community": 0.5,
         "transitive": 0.0,
         "security_policy": 1.0,
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
-      "unknown_signals": [],
+      "unknown_signals": [
+        "license"
+      ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -2607,119 +2668,13 @@
         "repository_count": 1,
         "total_repositories_scanned": 3,
         "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Not updated in 855 days",
-        "Single maintainer",
-        "Missing security policy",
-        "No dependency update tools found",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "0.3.1",
-        "last_updated": "2024-03-27T14:38:03+01:00",
-        "maintainer_count": 1,
-        "is_deprecated": false,
-        "repository_url": "https://github.com/click-contrib/click-didyoumean",
-        "license": "MIT",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "flit_core",
-      "version": "<4",
-      "version_specs": [
-        "<4",
-        ">=3.11,<4"
-      ],
-      "versions_display": "<4, >=3.11,<4",
-      "display_name": "python:flit_core@<4",
-      "risk_level": "MEDIUM",
-      "risk_score": 1.4657738095238098,
-      "component_scores": {
-        "staleness": 0.0,
-        "maintainer": 1.0,
-        "deprecation": 0.0,
-        "exploit": 0.0,
-        "version": 0.25,
-        "health_indicators": 0.33333333333333337,
-        "license": null,
-        "community": 0.25,
-        "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 0.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [
-        "license"
-      ],
-      "key_signals": [
-        "single maintainer",
-        "not actively maintained",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 2,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask",
           "pallets/jinja"
         ],
         "manifests": [
-          "pallets/flask:examples/celery/pyproject.toml",
-          "pallets/flask:examples/javascript/pyproject.toml",
-          "pallets/flask:examples/tutorial/pyproject.toml",
-          "pallets/flask:pyproject.toml",
           "pallets/jinja:pyproject.toml"
         ]
       },
       "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/pyproject.toml",
-            "examples/javascript/pyproject.toml",
-            "examples/tutorial/pyproject.toml",
-            "pyproject.toml"
-          ]
-        },
         {
           "repo": "pallets/jinja",
           "html_url": "https://github.com/pallets/jinja",
@@ -2739,108 +2694,20 @@
         "details": []
       },
       "risk_factors": [
-        "Single maintainer",
+        "Missing security policy",
+        "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
-        "latest_version": "3.12.0",
-        "last_updated": "2026-07-21T00:58:26+02:00",
-        "maintainer_count": 1,
+        "latest_version": "3.0.3",
+        "last_updated": "2025-09-27T11:45:34-07:00",
+        "maintainer_count": 49,
         "is_deprecated": false,
-        "repository_url": "https://github.com/pypa/flit",
+        "repository_url": "https://github.com/pallets/markupsafe/",
         "license": null,
         "license_category": null,
         "license_approved": null,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "pytz",
-      "version": "2023.3",
-      "version_specs": [
-        "2023.3"
-      ],
-      "versions_display": "2023.3",
-      "display_name": "python:pytz@2023.3",
-      "risk_level": "MEDIUM",
-      "risk_score": 2.3924731182795695,
-      "component_scores": {
-        "staleness": 0.0,
-        "maintainer": 1.0,
-        "deprecation": 1.0,
-        "exploit": 0.0,
-        "version": 1.0,
-        "health_indicators": 0.33333333333333337,
-        "license": 0.0,
-        "community": 0.5,
-        "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 1.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [],
-      "key_signals": [
-        "single maintainer",
-        "deprecated",
-        "not actively maintained",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Single maintainer",
-        "Deprecated",
-        "Outdated (current: 2023.3, latest: 2026.3.post1)",
-        "No dependency update tools found",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "2026.3.post1",
-        "last_updated": "2026-07-26T01:08:29+10:00",
-        "maintainer_count": 1,
-        "is_deprecated": true,
-        "repository_url": "https://github.com/stub42/pytz.git",
-        "license": "MIT",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -2857,10 +2724,10 @@
       "versions_display": "4.5.4",
       "display_name": "python:redis@4.5.4",
       "risk_level": "MEDIUM",
-      "risk_score": 2.366071428571429,
+      "risk_score": 1.8750000000000002,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 1.0,
@@ -2872,17 +2739,17 @@
         "dependency_update": 0.0,
         "signed_commits": 1.0,
         "branch_protection": 0.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -3027,22 +2894,156 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (2 counted, max severity HIGH)",
         "Outdated (current: 4.5.4, latest: 8.1.0)",
         "Missing security policy",
-        "Does not use signed commits",
-        "Project does not appear to be actively maintained"
+        "Does not use signed commits"
       ],
       "metadata": {
         "latest_version": "8.1.0",
         "last_updated": "2026-07-31T12:15:59+03:00",
-        "maintainer_count": 1,
+        "maintainer_count": 558,
         "is_deprecated": false,
         "repository_url": "https://github.com/redis/redis-py",
         "license": null,
         "license_category": null,
         "license_approved": null,
+        "has_tests": true,
+        "has_ci": true,
+        "has_contribution_guidelines": true,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "python-dotenv",
+      "version": "latest",
+      "version_specs": [
+        "latest"
+      ],
+      "versions_display": "latest",
+      "display_name": "python:python-dotenv@latest",
+      "risk_level": "MEDIUM",
+      "risk_score": 1.8749999999999998,
+      "component_scores": {
+        "staleness": 0.25,
+        "maintainer": 0.0,
+        "deprecation": 1.0,
+        "exploit": 0.45,
+        "version": 0.5,
+        "health_indicators": 0.0,
+        "license": 0.0,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
+      "insufficient_data": false,
+      "unknown_signals": [],
+      "key_signals": [
+        "deprecated",
+        "not actively maintained",
+        "behind latest",
+        "scored advisories"
+      ],
+      "blast_radius": {
+        "repository_count": 1,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask"
+        ],
+        "manifests": [
+          "pallets/flask:pyproject.toml"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 2,
+        "counted_in_score": 1,
+        "filtered": 1,
+        "filtered_reasons": {
+          "unknown severity": 1
+        },
+        "max_counted_cvss_score": 5.0,
+        "max_counted_severity": "MEDIUM",
+        "details": [
+          {
+            "id": "GHSA-mf9w-mj56-hr94",
+            "source": "OSV",
+            "published": "2026-04-21T14:38:57Z",
+            "summary": "python-dotenv: Symlink following in set_key allows arbitrary file overwrite via cross-device rename fallback",
+            "details": "### Summary\n\n`set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered.\n\n\n### Details\n\nThe `rewrite()` context manager in `dotenv/main.py` is used by both `set_key()` and `unset_key()` to safely modify `.env` files. It works by writing to a temporary file (created in the system's default temp directory, typically `/tmp`) and then using `shutil.move()` to replace the original file.\n\nWhen the `.env` path is a symbolic link and the temp directory resides on a different filesystem than the target (a common configuration on Linux systems using tmpfs for `/tmp`), the following sequence occurs:\n\n1. `shutil.move()` first attempts `os.rename()`, which fails with an `OSError` because atomic renames cannot cross device boundaries.\n2. On failure, `shutil.move()` falls back to `shutil.copy2()` followed by `os.unlink()`.\n3. `shutil.copy2()` calls `shutil.copyfile()` with `follow_symlinks=True` by default.\n4. This causes the content to be written to the **symlink target** rather than replacing the symlink itself.\n\nAn attacker who has write access to the directory containing a `.env` file can pre-place a symlink pointing to any file that the application process has write access to. When the application (or a privileged process such as a deploy script, Docker entrypoint, or CI pipeline) calls `set_key()` or `unset_key()`, the symlink target is overwritten with the new `.env` content.\n\nThis vulnerability does not require a race condition and is fully deterministic once the preconditions are met.\n\n### Impact\nThe primary impacts are to **integrity** and **availability**:\n\n- **File overwrite / destruction (DoS):** An attacker can cause an application or privileged process to corrupt or destroy configuration files, database configs, or other sensitive files it would not normally have access to modify.\n- **Integrity violation:** The target file's original content is replaced with `.env`-formatted content controlled by the attacker.\n- **Potential privilege escalation:** In scenarios where a privileged process (running as root or a service account) calls `set_key()`, the attacker can leverage this to write to files beyond their own access level.\n\nThe scope of impact depends on the application using python-dotenv and the privileges under which it runs.\n\n\n### Proof of Concept\n\nThe following script demonstrates the vulnerability. It requires `/tmp` and the user's home directory to reside on different devices (common on systemd-based Linux systems with tmpfs).\n\n```python\nimport os\nimport sys\nimport tempfile\nfrom dotenv import set_key\n\n# Pre-condition: /tmp must be on a different device than the target directory.\ntmp_dev = os.stat(\"/tmp\").st_dev\nhome_dev = os.stat(os.path.expanduser(\"~\")).st_dev\nassert tmp_dev != home_dev, \"Skipped: /tmp and ~ are on the same device (no cross-device move)\"\n\nwith tempfile.TemporaryDirectory(dir=os.path.expanduser(\"~\")) as workdir:\n    # File an attacker wants to overwrite\n    target = os.path.join(workdir, \"victim_config.txt\")\n    with open(target, \"w\") as f:\n        f.write(\"DB_PASSWORD=supersecret\\n\")\n\n    # Attacker pre-places a symlink at the path the application will use as .env\n    env_symlink = os.path.join(workdir, \".env\")\n    os.symlink(target, env_symlink)\n\n    before = open(target).read()\n\n    # Application writes a new key -- triggers the cross-device fallback\n    set_key(env_symlink, \"INJECTED\", \"attacker_value\")\n\n    after = open(target).read()\n\n    print(\"Before:\", repr(before))\n    print(\"After: \", repr(after))\n    print(\"Symlink target overwritten:\", target)\n```\n\n**Expected output:**\n```\nBefore: 'DB_PASSWORD=supersecret\\n'\nAfter:  \"DB_PASSWORD=supersecret\\nINJECTED='attacker_value'\\n\"\nSymlink target overwritten: /home/user/tmp806nut2g/victim_config.txt\n```\n\n### Remediation\n\nThe fix changes the `rewrite()` context manager in the following ways:\n\n1. **Symlinks are no longer followed by default.** When the `.env` path is a symlink, `rewrite()` now resolves it to the real path before proceeding, or (by default) operates on the symlink entry itself rather than the target.\n2. **A `follow_symlinks: bool = False` parameter** is added to `set_key()` and `unset_key()` for users who explicitly need the old behavior.\n3. **Temp files are written in the same directory** as the target `.env` file (instead of the system temp directory), eliminating the cross-device rename condition entirely.\n4. **`os.replace()` is used instead of `shutil.move()`**, providing atomic replacement without symlink-following fallback behavior.\n\nUsers are advised to upgrade to the patched version as soon as it is available on PyPI.\n\n### Timeline\n\n| Date             | Event                                                                                                                                                                 |\n| ------------ | ---------------------------------------------------------------------------------------------------- |\n| 2026-01-09  | Initial report received from Giorgos Tsigourakos regarding a separate, unrelated issue also located in `rewrite()` |\n| 2026-01-10   | Co-maintainer acknowledged report, requested clarification                                                         |\n| 2026-01-11    | Initial report assessed as not exploitable and closed                                                              |\n| 2026-02-24  | Reporter identified new, distinct cross-device symlink attack vector with deterministic exploitation               |\n| 2026-02-26  | Co-maintainer confirmed vulnerability and shared draft patch                                                       |\n| 2026-02-26  | Reporter validated fix with monkeypatched PoC, proposed CVSS                                                       |\n| 2026-03-01   | Patch merged to main                                                                                               |\n| 2026-03-01   | Patched version released to PyPI                                                                                   |\n| 2026-04-20   | Advisory published                                                                                                 |\n\n### Patches\n\nUpgrade to v.1.2.2 or use the patch from https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
+            "severity": "MODERATE",
+            "normalized_severity": "MEDIUM",
+            "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
+            "fixed_versions": [],
+            "references": [
+              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94",
+              "https://nvd.nist.gov/vuln/detail/CVE-2026-28684",
+              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
+              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
+              "https://github.com/theskumar/python-dotenv",
+              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2"
+            ],
+            "counted_in_score": true,
+            "filtered": false,
+            "filter_reasons": []
+          },
+          {
+            "id": "PYSEC-2026-2270",
+            "source": "OSV",
+            "published": "2026-04-20T17:16:33.087Z",
+            "summary": "No summary available",
+            "details": "python-dotenv reads key-value pairs from a .env file and can set them as environment variables. Prior to version 1.2.2, `set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered. Users should upgrade to v.1.2.2 or, as a workaround, apply the patch manually.",
+            "severity": null,
+            "normalized_severity": "UNKNOWN",
+            "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
+            "fixed_versions": [],
+            "references": [
+              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2",
+              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
+              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94"
+            ],
+            "counted_in_score": false,
+            "filtered": true,
+            "filter_reasons": [
+              "unknown severity"
+            ]
+          }
+        ]
+      },
+      "risk_factors": [
+        "Deprecated",
+        "Known security issues (1 counted, max severity MEDIUM)",
+        "Does not use signed commits",
+        "Does not use branch protection",
+        "Project does not appear to be actively maintained"
+      ],
+      "metadata": {
+        "latest_version": "1.2.2",
+        "last_updated": "2026-06-08T19:20:20+05:30",
+        "maintainer_count": 114,
+        "is_deprecated": true,
+        "repository_url": "https://github.com/theskumar/python-dotenv",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -3060,10 +3061,10 @@
       "versions_display": ">=8.1.3, 8.1.3",
       "display_name": "python:click@8.1.3",
       "risk_level": "MEDIUM",
-      "risk_score": 2.2470238095238093,
+      "risk_score": 1.7559523809523812,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -3075,15 +3076,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -3149,17 +3149,15 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "8.4.2",
         "last_updated": "2026-07-24T13:26:39-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 451,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/click/",
         "license": null,
@@ -3181,10 +3179,10 @@
       "versions_display": ">=2.17",
       "display_name": "python:Babel@>=2.17",
       "risk_level": "MEDIUM",
-      "risk_score": 2.19758064516129,
+      "risk_score": 1.754032258064516,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 0.25,
@@ -3196,13 +3194,12 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest",
         "scored advisories"
       ],
@@ -3292,17 +3289,15 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (1 counted, max severity HIGH)",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "2.18.0",
         "last_updated": "2026-07-30T18:27:24+03:00",
-        "maintainer_count": 1,
+        "maintainer_count": 176,
         "is_deprecated": false,
         "repository_url": "https://github.com/python-babel/babel",
         "license": "BSD-3-CLAUSE",
@@ -3316,37 +3311,43 @@
     },
     {
       "ecosystem": "python",
-      "name": "python-dotenv",
-      "version": "latest",
+      "name": "async-timeout",
+      "version": "4.0.2",
       "version_specs": [
-        "latest"
+        "4.0.2"
       ],
-      "versions_display": "latest",
-      "display_name": "python:python-dotenv@latest",
+      "versions_display": "4.0.2",
+      "display_name": "python:async-timeout@4.0.2",
       "risk_level": "MEDIUM",
-      "risk_score": 2.19758064516129,
+      "risk_score": 1.5277777777777777,
       "component_scores": {
-        "staleness": 0.25,
-        "maintainer": 1.0,
+        "staleness": null,
+        "maintainer": 0.0,
         "deprecation": 1.0,
-        "exploit": 0.45,
-        "version": 0.5,
-        "health_indicators": 0.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": null,
         "license": 0.0,
-        "community": 0.0,
+        "community": 0.5,
         "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 0.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
       },
       "insufficient_data": false,
-      "unknown_signals": [],
+      "unknown_signals": [
+        "staleness",
+        "health_indicators",
+        "security_policy",
+        "dependency_update",
+        "signed_commits",
+        "branch_protection",
+        "maintained"
+      ],
       "key_signals": [
-        "single maintainer",
         "deprecated",
-        "not actively maintained",
         "behind latest"
       ],
       "blast_radius": {
@@ -3356,7 +3357,7 @@
           "pallets/flask"
         ],
         "manifests": [
-          "pallets/flask:pyproject.toml"
+          "pallets/flask:examples/celery/requirements.txt"
         ]
       },
       "usage": [
@@ -3365,89 +3366,35 @@
           "html_url": "https://github.com/pallets/flask",
           "default_branch": "main",
           "manifests": [
-            "pyproject.toml"
+            "examples/celery/requirements.txt"
           ]
         }
       ],
       "advisories": {
-        "total_found": 2,
-        "counted_in_score": 1,
-        "filtered": 1,
-        "filtered_reasons": {
-          "unknown severity": 1
-        },
-        "max_counted_cvss_score": 5.0,
-        "max_counted_severity": "MEDIUM",
-        "details": [
-          {
-            "id": "GHSA-mf9w-mj56-hr94",
-            "source": "OSV",
-            "published": "2026-04-21T14:38:57Z",
-            "summary": "python-dotenv: Symlink following in set_key allows arbitrary file overwrite via cross-device rename fallback",
-            "details": "### Summary\n\n`set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered.\n\n\n### Details\n\nThe `rewrite()` context manager in `dotenv/main.py` is used by both `set_key()` and `unset_key()` to safely modify `.env` files. It works by writing to a temporary file (created in the system's default temp directory, typically `/tmp`) and then using `shutil.move()` to replace the original file.\n\nWhen the `.env` path is a symbolic link and the temp directory resides on a different filesystem than the target (a common configuration on Linux systems using tmpfs for `/tmp`), the following sequence occurs:\n\n1. `shutil.move()` first attempts `os.rename()`, which fails with an `OSError` because atomic renames cannot cross device boundaries.\n2. On failure, `shutil.move()` falls back to `shutil.copy2()` followed by `os.unlink()`.\n3. `shutil.copy2()` calls `shutil.copyfile()` with `follow_symlinks=True` by default.\n4. This causes the content to be written to the **symlink target** rather than replacing the symlink itself.\n\nAn attacker who has write access to the directory containing a `.env` file can pre-place a symlink pointing to any file that the application process has write access to. When the application (or a privileged process such as a deploy script, Docker entrypoint, or CI pipeline) calls `set_key()` or `unset_key()`, the symlink target is overwritten with the new `.env` content.\n\nThis vulnerability does not require a race condition and is fully deterministic once the preconditions are met.\n\n### Impact\nThe primary impacts are to **integrity** and **availability**:\n\n- **File overwrite / destruction (DoS):** An attacker can cause an application or privileged process to corrupt or destroy configuration files, database configs, or other sensitive files it would not normally have access to modify.\n- **Integrity violation:** The target file's original content is replaced with `.env`-formatted content controlled by the attacker.\n- **Potential privilege escalation:** In scenarios where a privileged process (running as root or a service account) calls `set_key()`, the attacker can leverage this to write to files beyond their own access level.\n\nThe scope of impact depends on the application using python-dotenv and the privileges under which it runs.\n\n\n### Proof of Concept\n\nThe following script demonstrates the vulnerability. It requires `/tmp` and the user's home directory to reside on different devices (common on systemd-based Linux systems with tmpfs).\n\n```python\nimport os\nimport sys\nimport tempfile\nfrom dotenv import set_key\n\n# Pre-condition: /tmp must be on a different device than the target directory.\ntmp_dev = os.stat(\"/tmp\").st_dev\nhome_dev = os.stat(os.path.expanduser(\"~\")).st_dev\nassert tmp_dev != home_dev, \"Skipped: /tmp and ~ are on the same device (no cross-device move)\"\n\nwith tempfile.TemporaryDirectory(dir=os.path.expanduser(\"~\")) as workdir:\n    # File an attacker wants to overwrite\n    target = os.path.join(workdir, \"victim_config.txt\")\n    with open(target, \"w\") as f:\n        f.write(\"DB_PASSWORD=supersecret\\n\")\n\n    # Attacker pre-places a symlink at the path the application will use as .env\n    env_symlink = os.path.join(workdir, \".env\")\n    os.symlink(target, env_symlink)\n\n    before = open(target).read()\n\n    # Application writes a new key -- triggers the cross-device fallback\n    set_key(env_symlink, \"INJECTED\", \"attacker_value\")\n\n    after = open(target).read()\n\n    print(\"Before:\", repr(before))\n    print(\"After: \", repr(after))\n    print(\"Symlink target overwritten:\", target)\n```\n\n**Expected output:**\n```\nBefore: 'DB_PASSWORD=supersecret\\n'\nAfter:  \"DB_PASSWORD=supersecret\\nINJECTED='attacker_value'\\n\"\nSymlink target overwritten: /home/user/tmp806nut2g/victim_config.txt\n```\n\n### Remediation\n\nThe fix changes the `rewrite()` context manager in the following ways:\n\n1. **Symlinks are no longer followed by default.** When the `.env` path is a symlink, `rewrite()` now resolves it to the real path before proceeding, or (by default) operates on the symlink entry itself rather than the target.\n2. **A `follow_symlinks: bool = False` parameter** is added to `set_key()` and `unset_key()` for users who explicitly need the old behavior.\n3. **Temp files are written in the same directory** as the target `.env` file (instead of the system temp directory), eliminating the cross-device rename condition entirely.\n4. **`os.replace()` is used instead of `shutil.move()`**, providing atomic replacement without symlink-following fallback behavior.\n\nUsers are advised to upgrade to the patched version as soon as it is available on PyPI.\n\n### Timeline\n\n| Date             | Event                                                                                                                                                                 |\n| ------------ | ---------------------------------------------------------------------------------------------------- |\n| 2026-01-09  | Initial report received from Giorgos Tsigourakos regarding a separate, unrelated issue also located in `rewrite()` |\n| 2026-01-10   | Co-maintainer acknowledged report, requested clarification                                                         |\n| 2026-01-11    | Initial report assessed as not exploitable and closed                                                              |\n| 2026-02-24  | Reporter identified new, distinct cross-device symlink attack vector with deterministic exploitation               |\n| 2026-02-26  | Co-maintainer confirmed vulnerability and shared draft patch                                                       |\n| 2026-02-26  | Reporter validated fix with monkeypatched PoC, proposed CVSS                                                       |\n| 2026-03-01   | Patch merged to main                                                                                               |\n| 2026-03-01   | Patched version released to PyPI                                                                                   |\n| 2026-04-20   | Advisory published                                                                                                 |\n\n### Patches\n\nUpgrade to v.1.2.2 or use the patch from https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
-            "severity": "MODERATE",
-            "normalized_severity": "MEDIUM",
-            "cvss_score": null,
-            "withdrawn": false,
-            "confidence": "HIGH",
-            "fixed_versions": [],
-            "references": [
-              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94",
-              "https://nvd.nist.gov/vuln/detail/CVE-2026-28684",
-              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
-              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
-              "https://github.com/theskumar/python-dotenv",
-              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2"
-            ],
-            "counted_in_score": true,
-            "filtered": false,
-            "filter_reasons": []
-          },
-          {
-            "id": "PYSEC-2026-2270",
-            "source": "OSV",
-            "published": "2026-04-20T17:16:33.087Z",
-            "summary": "No summary available",
-            "details": "python-dotenv reads key-value pairs from a .env file and can set them as environment variables. Prior to version 1.2.2, `set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered. Users should upgrade to v.1.2.2 or, as a workaround, apply the patch manually.",
-            "severity": null,
-            "normalized_severity": "UNKNOWN",
-            "cvss_score": null,
-            "withdrawn": false,
-            "confidence": "HIGH",
-            "fixed_versions": [],
-            "references": [
-              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2",
-              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
-              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94"
-            ],
-            "counted_in_score": false,
-            "filtered": true,
-            "filter_reasons": [
-              "unknown severity"
-            ]
-          }
-        ]
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
       },
       "risk_factors": [
-        "Single maintainer",
         "Deprecated",
-        "Known security issues (1 counted, max severity MEDIUM)",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Outdated (current: 4.0.2, latest: 5.0.1)"
       ],
       "metadata": {
-        "latest_version": "1.2.2",
-        "last_updated": "2026-06-08T19:20:20+05:30",
-        "maintainer_count": 1,
+        "latest_version": "5.0.1",
+        "last_updated": null,
+        "maintainer_count": 26,
         "is_deprecated": true,
-        "repository_url": "https://github.com/theskumar/python-dotenv",
-        "license": "BSD-3-CLAUSE",
+        "repository_url": "https://github.com/aio-libs/async-timeout/actions",
+        "license": "APACHE",
         "license_category": "PERMISSIVE",
         "license_approved": true,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": true,
+        "has_tests": null,
+        "has_ci": null,
+        "has_contribution_guidelines": null,
         "transitive_dependency_count": 0
       }
     },
@@ -3461,10 +3408,10 @@
       "versions_display": "latest",
       "display_name": "python:pytest@latest",
       "risk_level": "MEDIUM",
-      "risk_score": 1.9047619047619049,
+      "risk_score": 1.4136904761904763,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.45,
         "version": 0.5,
@@ -3476,15 +3423,14 @@
         "dependency_update": 0.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest",
         "scored advisories"
       ],
@@ -3577,107 +3523,20 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (1 counted, max severity MEDIUM)",
         "Missing tests, contribution guidelines",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "9.1.1",
         "last_updated": "2026-07-31T09:56:04+02:00",
-        "maintainer_count": 1,
+        "maintainer_count": 1143,
         "is_deprecated": false,
         "repository_url": "https://github.com/pytest-dev/pytest",
         "license": null,
         "license_category": null,
         "license_approved": null,
-        "has_tests": false,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "kombu",
-      "version": "5.2.4",
-      "version_specs": [
-        "5.2.4"
-      ],
-      "versions_display": "5.2.4",
-      "display_name": "python:kombu@5.2.4",
-      "risk_level": "MEDIUM",
-      "risk_score": 1.4381720430107527,
-      "component_scores": {
-        "staleness": 0.0,
-        "maintainer": 1.0,
-        "deprecation": 0.0,
-        "exploit": 0.0,
-        "version": 0.5,
-        "health_indicators": 0.6666666666666667,
-        "license": 0.0,
-        "community": 0.25,
-        "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 0.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [],
-      "key_signals": [
-        "single maintainer",
-        "not actively maintained",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Single maintainer",
-        "Missing tests, contribution guidelines",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "5.6.2",
-        "last_updated": "2026-07-25T21:35:49+06:00",
-        "maintainer_count": 1,
-        "is_deprecated": false,
-        "repository_url": "https://github.com/celery/kombu",
-        "license": "BSD-3-CLAUSE",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
         "has_tests": false,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -3769,97 +3628,6 @@
         "license": null,
         "license_category": null,
         "license_approved": null,
-        "has_tests": null,
-        "has_ci": null,
-        "has_contribution_guidelines": null,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "async-timeout",
-      "version": "4.0.2",
-      "version_specs": [
-        "4.0.2"
-      ],
-      "versions_display": "4.0.2",
-      "display_name": "python:async-timeout@4.0.2",
-      "risk_level": "UNKNOWN",
-      "risk_score": 1.607142857142857,
-      "component_scores": {
-        "staleness": null,
-        "maintainer": null,
-        "deprecation": 1.0,
-        "exploit": 0.0,
-        "version": 1.0,
-        "health_indicators": null,
-        "license": 0.0,
-        "community": null,
-        "transitive": 0.0,
-        "security_policy": null,
-        "dependency_update": null,
-        "signed_commits": null,
-        "branch_protection": null,
-        "maintained": null
-      },
-      "insufficient_data": true,
-      "unknown_signals": [
-        "staleness",
-        "maintainer",
-        "health_indicators",
-        "community",
-        "security_policy",
-        "dependency_update",
-        "signed_commits",
-        "branch_protection",
-        "maintained"
-      ],
-      "key_signals": [
-        "Insufficient data for confident risk level"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Insufficient data for confident risk level",
-        "Deprecated",
-        "Outdated (current: 4.0.2, latest: 5.0.1)"
-      ],
-      "metadata": {
-        "latest_version": "5.0.1",
-        "last_updated": null,
-        "maintainer_count": null,
-        "is_deprecated": true,
-        "repository_url": "https://github.com/aio-libs/async-timeout/actions",
-        "license": "APACHE",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,
@@ -4681,11 +4449,11 @@
       "repo": "pallets/flask",
       "dependency_count": 25,
       "critical_risk_dependencies": 0,
-      "high_risk_dependencies": 7,
-      "medium_risk_dependencies": 7,
-      "unknown_risk_dependencies": 11,
-      "risk_points": 98,
-      "average_risk_score": 1.6300326420890934,
+      "high_risk_dependencies": 3,
+      "medium_risk_dependencies": 10,
+      "unknown_risk_dependencies": 10,
+      "risk_points": 72,
+      "average_risk_score": 1.3404957117255503,
       "worst_dependencies": [
         {
           "ecosystem": "python",
@@ -4732,19 +4500,18 @@
             "2.1.2"
           ],
           "versions_display": ">=2.1.1, 2.1.2",
-          "risk_level": "HIGH",
+          "risk_level": "MEDIUM",
           "blast_radius": 1
         },
         {
           "ecosystem": "python",
-          "name": "blinker",
-          "version": "1.6.2",
+          "name": "click-didyoumean",
+          "version": "0.3.0",
           "version_specs": [
-            ">=1.9.0",
-            "1.6.2"
+            "0.3.0"
           ],
-          "versions_display": ">=1.9.0, 1.6.2",
-          "risk_level": "HIGH",
+          "versions_display": "0.3.0",
+          "risk_level": "MEDIUM",
           "blast_radius": 1
         }
       ]
@@ -4753,11 +4520,11 @@
       "repo": "pallets/jinja",
       "dependency_count": 3,
       "critical_risk_dependencies": 0,
-      "high_risk_dependencies": 1,
+      "high_risk_dependencies": 0,
       "medium_risk_dependencies": 2,
       "unknown_risk_dependencies": 0,
-      "risk_points": 18,
-      "average_risk_score": 2.1189356118791602,
+      "risk_points": 9,
+      "average_risk_score": 1.5879016257040448,
       "worst_dependencies": [
         {
           "ecosystem": "python",
@@ -4767,20 +4534,8 @@
             ">=3.0"
           ],
           "versions_display": ">=3.0",
-          "risk_level": "HIGH",
-          "blast_radius": 1
-        },
-        {
-          "ecosystem": "python",
-          "name": "flit_core",
-          "version": "<4",
-          "version_specs": [
-            "<4",
-            ">=3.11,<4"
-          ],
-          "versions_display": "<4, >=3.11,<4",
           "risk_level": "MEDIUM",
-          "blast_radius": 2
+          "blast_radius": 1
         },
         {
           "ecosystem": "python",
@@ -4792,6 +4547,18 @@
           "versions_display": ">=2.17",
           "risk_level": "MEDIUM",
           "blast_radius": 1
+        },
+        {
+          "ecosystem": "python",
+          "name": "flit_core",
+          "version": "<4",
+          "version_specs": [
+            "<4",
+            ">=3.11,<4"
+          ],
+          "versions_display": "<4, >=3.11,<4",
+          "risk_level": "LOW",
+          "blast_radius": 2
         }
       ]
     },
@@ -4799,11 +4566,11 @@
       "repo": "pallets/markupsafe",
       "dependency_count": 1,
       "critical_risk_dependencies": 0,
-      "high_risk_dependencies": 1,
-      "medium_risk_dependencies": 0,
+      "high_risk_dependencies": 0,
+      "medium_risk_dependencies": 1,
       "unknown_risk_dependencies": 0,
-      "risk_points": 10,
-      "average_risk_score": 2.552083333333333,
+      "risk_points": 4,
+      "average_risk_score": 2.0610119047619047,
       "worst_dependencies": [
         {
           "ecosystem": "python",
@@ -4813,7 +4580,7 @@
             ">=77"
           ],
           "versions_display": ">=77",
-          "risk_level": "HIGH",
+          "risk_level": "MEDIUM",
           "blast_radius": 1
         }
       ]
@@ -4831,10 +4598,10 @@
       "versions_display": ">=3.1.2, 3.1.2",
       "display_name": "python:jinja2@3.1.2",
       "risk_level": "HIGH",
-      "risk_score": 3.2961309523809517,
+      "risk_score": 2.5818452380952377,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.5,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 0.25,
@@ -4846,17 +4613,17 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -5496,19 +5263,16 @@
         ]
       },
       "risk_factors": [
-        "Not updated in 411 days",
-        "Single maintainer",
         "Known security issues (10 counted, max severity HIGH)",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "3.1.6",
         "last_updated": "2025-06-14T13:34:58-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 335,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/jinja/",
         "license": null,
@@ -5531,10 +5295,10 @@
       "versions_display": "2.3.2, latest",
       "display_name": "python:flask@2.3.2",
       "risk_level": "HIGH",
-      "risk_score": 3.0505952380952377,
+      "risk_score": 2.5595238095238093,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 1.0,
@@ -5546,17 +5310,17 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -5846,19 +5610,17 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (5 counted, max severity HIGH)",
         "Outdated (current: 2.3.2, latest: 3.1.3)",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "3.1.3",
         "last_updated": "2026-07-30T10:29:33-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 863,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/flask/",
         "license": null,
@@ -5881,10 +5643,10 @@
       "versions_display": ">=3.1.0, 2.3.3",
       "display_name": "python:werkzeug@2.3.3",
       "risk_level": "HIGH",
-      "risk_score": 3.0505952380952377,
+      "risk_score": 2.5595238095238093,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 1.0,
@@ -5896,17 +5658,17 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -6620,19 +6382,17 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (13 counted, max severity HIGH)",
         "Outdated (current: 2.3.3, latest: 3.1.8)",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "3.1.8",
         "last_updated": "2026-07-30T08:49:51-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 514,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/werkzeug/",
         "license": null,
@@ -6654,11 +6414,11 @@
       ],
       "versions_display": ">=2.1.1, 2.1.2",
       "display_name": "python:markupsafe@2.1.2",
-      "risk_level": "HIGH",
-      "risk_score": 2.8943452380952377,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.235863095238095,
       "component_scores": {
-        "staleness": 0.75,
-        "maintainer": 1.0,
+        "staleness": 0.375,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 1.0,
@@ -6670,15 +6430,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -6714,9 +6473,92 @@
         "details": []
       },
       "risk_factors": [
-        "Not updated in 306 days",
-        "Single maintainer",
         "Outdated (current: 2.1.2, latest: 3.0.3)",
+        "Missing security policy",
+        "No dependency update tools found",
+        "Does not use signed commits",
+        "Does not use branch protection"
+      ],
+      "metadata": {
+        "latest_version": "3.0.3",
+        "last_updated": "2025-09-27T11:45:34-07:00",
+        "maintainer_count": 49,
+        "is_deprecated": false,
+        "repository_url": "https://github.com/pallets/markupsafe/",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
+        "has_tests": true,
+        "has_ci": true,
+        "has_contribution_guidelines": false,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "click-didyoumean",
+      "version": "0.3.0",
+      "version_specs": [
+        "0.3.0"
+      ],
+      "versions_display": "0.3.0",
+      "display_name": "python:click-didyoumean@0.3.0",
+      "risk_level": "MEDIUM",
+      "risk_score": 2.211021505376344,
+      "component_scores": {
+        "staleness": 1.0,
+        "maintainer": 0.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 1.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
+      "insufficient_data": false,
+      "unknown_signals": [],
+      "key_signals": [
+        "not actively maintained",
+        "missing security policy",
+        "behind latest"
+      ],
+      "blast_radius": {
+        "repository_count": 1,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask"
+        ],
+        "manifests": [
+          "pallets/flask:examples/celery/requirements.txt"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
+      },
+      "risk_factors": [
+        "Not updated in 855 days",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
@@ -6724,14 +6566,100 @@
         "Project does not appear to be actively maintained"
       ],
       "metadata": {
-        "latest_version": "3.0.3",
-        "last_updated": "2025-09-27T11:45:34-07:00",
-        "maintainer_count": 1,
+        "latest_version": "0.3.1",
+        "last_updated": "2024-03-27T14:38:03+01:00",
+        "maintainer_count": 6,
         "is_deprecated": false,
-        "repository_url": "https://github.com/pallets/markupsafe/",
-        "license": null,
-        "license_category": null,
-        "license_approved": null,
+        "repository_url": "https://github.com/click-contrib/click-didyoumean",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
+        "has_tests": true,
+        "has_ci": true,
+        "has_contribution_guidelines": false,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "pytz",
+      "version": "2023.3",
+      "version_specs": [
+        "2023.3"
+      ],
+      "versions_display": "2023.3",
+      "display_name": "python:pytz@2023.3",
+      "risk_level": "MEDIUM",
+      "risk_score": 2.069892473118279,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 0.0,
+        "deprecation": 1.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": 0.33333333333333337,
+        "license": 0.0,
+        "community": 0.5,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 1.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
+      "insufficient_data": false,
+      "unknown_signals": [],
+      "key_signals": [
+        "deprecated",
+        "not actively maintained",
+        "behind latest"
+      ],
+      "blast_radius": {
+        "repository_count": 1,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask"
+        ],
+        "manifests": [
+          "pallets/flask:examples/celery/requirements.txt"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/requirements.txt"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
+      },
+      "risk_factors": [
+        "Deprecated",
+        "Outdated (current: 2023.3, latest: 2026.3.post1)",
+        "No dependency update tools found",
+        "Does not use signed commits",
+        "Does not use branch protection",
+        "Project does not appear to be actively maintained"
+      ],
+      "metadata": {
+        "latest_version": "2026.3.post1",
+        "last_updated": "2026-07-26T01:08:29+10:00",
+        "maintainer_count": 27,
+        "is_deprecated": true,
+        "repository_url": "https://github.com/stub42/pytz.git",
+        "license": "MIT",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -6748,11 +6676,11 @@
       ],
       "versions_display": ">=1.9.0, 1.6.2",
       "display_name": "python:blinker@1.6.2",
-      "risk_level": "HIGH",
-      "risk_score": 2.782738095238095,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.068452380952381,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.5,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -6764,15 +6692,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -6808,18 +6735,15 @@
         "details": []
       },
       "risk_factors": [
-        "Not updated in 411 days",
-        "Single maintainer",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "1.9.0",
         "last_updated": "2025-06-14T13:37:05-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 21,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets-eco/blinker/",
         "license": null,
@@ -6841,11 +6765,11 @@
       ],
       "versions_display": ">=2.2.0, 2.1.2",
       "display_name": "python:itsdangerous@2.1.2",
-      "risk_level": "HIGH",
-      "risk_score": 2.782738095238095,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.068452380952381,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.5,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -6857,15 +6781,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -6901,110 +6824,17 @@
         "details": []
       },
       "risk_factors": [
-        "Not updated in 411 days",
-        "Single maintainer",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "2.2.0",
         "last_updated": "2025-06-14T13:35:42-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 44,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/itsdangerous/",
-        "license": null,
-        "license_category": null,
-        "license_approved": null,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "MarkupSafe",
-      "version": ">=3.0",
-      "version_specs": [
-        ">=3.0"
-      ],
-      "versions_display": ">=3.0",
-      "display_name": "python:MarkupSafe@>=3.0",
-      "risk_level": "HIGH",
-      "risk_score": 2.693452380952381,
-      "component_scores": {
-        "staleness": 0.75,
-        "maintainer": 1.0,
-        "deprecation": 0.0,
-        "exploit": 0.0,
-        "version": 0.25,
-        "health_indicators": 0.33333333333333337,
-        "license": null,
-        "community": 0.5,
-        "transitive": 0.0,
-        "security_policy": 1.0,
-        "dependency_update": 1.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [
-        "license"
-      ],
-      "key_signals": [
-        "single maintainer",
-        "not actively maintained",
-        "missing security policy",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/jinja"
-        ],
-        "manifests": [
-          "pallets/jinja:pyproject.toml"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/jinja",
-          "html_url": "https://github.com/pallets/jinja",
-          "default_branch": "main",
-          "manifests": [
-            "pyproject.toml"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Not updated in 306 days",
-        "Single maintainer",
-        "Missing security policy",
-        "No dependency update tools found",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "3.0.3",
-        "last_updated": "2025-09-27T11:45:34-07:00",
-        "maintainer_count": 1,
-        "is_deprecated": false,
-        "repository_url": "https://github.com/pallets/markupsafe/",
         "license": null,
         "license_category": null,
         "license_approved": null,
@@ -7023,11 +6853,11 @@
       ],
       "versions_display": ">=77",
       "display_name": "python:setuptools@>=77",
-      "risk_level": "HIGH",
-      "risk_score": 2.552083333333333,
+      "risk_level": "MEDIUM",
+      "risk_score": 2.0610119047619047,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 0.25,
@@ -7039,15 +6869,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest",
         "scored advisories"
       ],
@@ -7341,18 +7170,16 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (5 counted, max severity HIGH)",
         "Missing tests, contribution guidelines",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "83.0.0",
         "last_updated": "2026-07-12T10:22:59-04:00",
-        "maintainer_count": 1,
+        "maintainer_count": 647,
         "is_deprecated": false,
         "repository_url": "https://github.com/pypa/setuptools",
         "license": null,
@@ -7366,36 +7193,37 @@
     },
     {
       "ecosystem": "python",
-      "name": "click-didyoumean",
-      "version": "0.3.0",
+      "name": "MarkupSafe",
+      "version": ">=3.0",
       "version_specs": [
-        "0.3.0"
+        ">=3.0"
       ],
-      "versions_display": "0.3.0",
-      "display_name": "python:click-didyoumean@0.3.0",
-      "risk_level": "HIGH",
-      "risk_score": 2.533602150537634,
+      "versions_display": ">=3.0",
+      "display_name": "python:MarkupSafe@>=3.0",
+      "risk_level": "MEDIUM",
+      "risk_score": 2.0349702380952377,
       "component_scores": {
-        "staleness": 1.0,
-        "maintainer": 1.0,
+        "staleness": 0.375,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.25,
         "health_indicators": 0.33333333333333337,
-        "license": 0.0,
+        "license": null,
         "community": 0.5,
         "transitive": 0.0,
         "security_policy": 1.0,
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
-      "unknown_signals": [],
+      "unknown_signals": [
+        "license"
+      ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -7403,119 +7231,13 @@
         "repository_count": 1,
         "total_repositories_scanned": 3,
         "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Not updated in 855 days",
-        "Single maintainer",
-        "Missing security policy",
-        "No dependency update tools found",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "0.3.1",
-        "last_updated": "2024-03-27T14:38:03+01:00",
-        "maintainer_count": 1,
-        "is_deprecated": false,
-        "repository_url": "https://github.com/click-contrib/click-didyoumean",
-        "license": "MIT",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "flit_core",
-      "version": "<4",
-      "version_specs": [
-        "<4",
-        ">=3.11,<4"
-      ],
-      "versions_display": "<4, >=3.11,<4",
-      "display_name": "python:flit_core@<4",
-      "risk_level": "MEDIUM",
-      "risk_score": 1.4657738095238098,
-      "component_scores": {
-        "staleness": 0.0,
-        "maintainer": 1.0,
-        "deprecation": 0.0,
-        "exploit": 0.0,
-        "version": 0.25,
-        "health_indicators": 0.33333333333333337,
-        "license": null,
-        "community": 0.25,
-        "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 0.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [
-        "license"
-      ],
-      "key_signals": [
-        "single maintainer",
-        "not actively maintained",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 2,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask",
           "pallets/jinja"
         ],
         "manifests": [
-          "pallets/flask:examples/celery/pyproject.toml",
-          "pallets/flask:examples/javascript/pyproject.toml",
-          "pallets/flask:examples/tutorial/pyproject.toml",
-          "pallets/flask:pyproject.toml",
           "pallets/jinja:pyproject.toml"
         ]
       },
       "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/pyproject.toml",
-            "examples/javascript/pyproject.toml",
-            "examples/tutorial/pyproject.toml",
-            "pyproject.toml"
-          ]
-        },
         {
           "repo": "pallets/jinja",
           "html_url": "https://github.com/pallets/jinja",
@@ -7535,108 +7257,20 @@
         "details": []
       },
       "risk_factors": [
-        "Single maintainer",
+        "Missing security policy",
+        "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
-        "latest_version": "3.12.0",
-        "last_updated": "2026-07-21T00:58:26+02:00",
-        "maintainer_count": 1,
+        "latest_version": "3.0.3",
+        "last_updated": "2025-09-27T11:45:34-07:00",
+        "maintainer_count": 49,
         "is_deprecated": false,
-        "repository_url": "https://github.com/pypa/flit",
+        "repository_url": "https://github.com/pallets/markupsafe/",
         "license": null,
         "license_category": null,
         "license_approved": null,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": false,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "pytz",
-      "version": "2023.3",
-      "version_specs": [
-        "2023.3"
-      ],
-      "versions_display": "2023.3",
-      "display_name": "python:pytz@2023.3",
-      "risk_level": "MEDIUM",
-      "risk_score": 2.3924731182795695,
-      "component_scores": {
-        "staleness": 0.0,
-        "maintainer": 1.0,
-        "deprecation": 1.0,
-        "exploit": 0.0,
-        "version": 1.0,
-        "health_indicators": 0.33333333333333337,
-        "license": 0.0,
-        "community": 0.5,
-        "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 1.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
-      },
-      "insufficient_data": false,
-      "unknown_signals": [],
-      "key_signals": [
-        "single maintainer",
-        "deprecated",
-        "not actively maintained",
-        "behind latest"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Single maintainer",
-        "Deprecated",
-        "Outdated (current: 2023.3, latest: 2026.3.post1)",
-        "No dependency update tools found",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
-      ],
-      "metadata": {
-        "latest_version": "2026.3.post1",
-        "last_updated": "2026-07-26T01:08:29+10:00",
-        "maintainer_count": 1,
-        "is_deprecated": true,
-        "repository_url": "https://github.com/stub42/pytz.git",
-        "license": "MIT",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
@@ -7653,10 +7287,10 @@
       "versions_display": "4.5.4",
       "display_name": "python:redis@4.5.4",
       "risk_level": "MEDIUM",
-      "risk_score": 2.366071428571429,
+      "risk_score": 1.8750000000000002,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 1.0,
@@ -7668,17 +7302,17 @@
         "dependency_update": 0.0,
         "signed_commits": 1.0,
         "branch_protection": 0.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
-        "behind latest"
+        "behind latest",
+        "scored advisories"
       ],
       "blast_radius": {
         "repository_count": 1,
@@ -7823,22 +7457,156 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (2 counted, max severity HIGH)",
         "Outdated (current: 4.5.4, latest: 8.1.0)",
         "Missing security policy",
-        "Does not use signed commits",
-        "Project does not appear to be actively maintained"
+        "Does not use signed commits"
       ],
       "metadata": {
         "latest_version": "8.1.0",
         "last_updated": "2026-07-31T12:15:59+03:00",
-        "maintainer_count": 1,
+        "maintainer_count": 558,
         "is_deprecated": false,
         "repository_url": "https://github.com/redis/redis-py",
         "license": null,
         "license_category": null,
         "license_approved": null,
+        "has_tests": true,
+        "has_ci": true,
+        "has_contribution_guidelines": true,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "python-dotenv",
+      "version": "latest",
+      "version_specs": [
+        "latest"
+      ],
+      "versions_display": "latest",
+      "display_name": "python:python-dotenv@latest",
+      "risk_level": "MEDIUM",
+      "risk_score": 1.8749999999999998,
+      "component_scores": {
+        "staleness": 0.25,
+        "maintainer": 0.0,
+        "deprecation": 1.0,
+        "exploit": 0.45,
+        "version": 0.5,
+        "health_indicators": 0.0,
+        "license": 0.0,
+        "community": 0.0,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 1.0
+      },
+      "insufficient_data": false,
+      "unknown_signals": [],
+      "key_signals": [
+        "deprecated",
+        "not actively maintained",
+        "behind latest",
+        "scored advisories"
+      ],
+      "blast_radius": {
+        "repository_count": 1,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask"
+        ],
+        "manifests": [
+          "pallets/flask:pyproject.toml"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 2,
+        "counted_in_score": 1,
+        "filtered": 1,
+        "filtered_reasons": {
+          "unknown severity": 1
+        },
+        "max_counted_cvss_score": 5.0,
+        "max_counted_severity": "MEDIUM",
+        "details": [
+          {
+            "id": "GHSA-mf9w-mj56-hr94",
+            "source": "OSV",
+            "published": "2026-04-21T14:38:57Z",
+            "summary": "python-dotenv: Symlink following in set_key allows arbitrary file overwrite via cross-device rename fallback",
+            "details": "### Summary\n\n`set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered.\n\n\n### Details\n\nThe `rewrite()` context manager in `dotenv/main.py` is used by both `set_key()` and `unset_key()` to safely modify `.env` files. It works by writing to a temporary file (created in the system's default temp directory, typically `/tmp`) and then using `shutil.move()` to replace the original file.\n\nWhen the `.env` path is a symbolic link and the temp directory resides on a different filesystem than the target (a common configuration on Linux systems using tmpfs for `/tmp`), the following sequence occurs:\n\n1. `shutil.move()` first attempts `os.rename()`, which fails with an `OSError` because atomic renames cannot cross device boundaries.\n2. On failure, `shutil.move()` falls back to `shutil.copy2()` followed by `os.unlink()`.\n3. `shutil.copy2()` calls `shutil.copyfile()` with `follow_symlinks=True` by default.\n4. This causes the content to be written to the **symlink target** rather than replacing the symlink itself.\n\nAn attacker who has write access to the directory containing a `.env` file can pre-place a symlink pointing to any file that the application process has write access to. When the application (or a privileged process such as a deploy script, Docker entrypoint, or CI pipeline) calls `set_key()` or `unset_key()`, the symlink target is overwritten with the new `.env` content.\n\nThis vulnerability does not require a race condition and is fully deterministic once the preconditions are met.\n\n### Impact\nThe primary impacts are to **integrity** and **availability**:\n\n- **File overwrite / destruction (DoS):** An attacker can cause an application or privileged process to corrupt or destroy configuration files, database configs, or other sensitive files it would not normally have access to modify.\n- **Integrity violation:** The target file's original content is replaced with `.env`-formatted content controlled by the attacker.\n- **Potential privilege escalation:** In scenarios where a privileged process (running as root or a service account) calls `set_key()`, the attacker can leverage this to write to files beyond their own access level.\n\nThe scope of impact depends on the application using python-dotenv and the privileges under which it runs.\n\n\n### Proof of Concept\n\nThe following script demonstrates the vulnerability. It requires `/tmp` and the user's home directory to reside on different devices (common on systemd-based Linux systems with tmpfs).\n\n```python\nimport os\nimport sys\nimport tempfile\nfrom dotenv import set_key\n\n# Pre-condition: /tmp must be on a different device than the target directory.\ntmp_dev = os.stat(\"/tmp\").st_dev\nhome_dev = os.stat(os.path.expanduser(\"~\")).st_dev\nassert tmp_dev != home_dev, \"Skipped: /tmp and ~ are on the same device (no cross-device move)\"\n\nwith tempfile.TemporaryDirectory(dir=os.path.expanduser(\"~\")) as workdir:\n    # File an attacker wants to overwrite\n    target = os.path.join(workdir, \"victim_config.txt\")\n    with open(target, \"w\") as f:\n        f.write(\"DB_PASSWORD=supersecret\\n\")\n\n    # Attacker pre-places a symlink at the path the application will use as .env\n    env_symlink = os.path.join(workdir, \".env\")\n    os.symlink(target, env_symlink)\n\n    before = open(target).read()\n\n    # Application writes a new key -- triggers the cross-device fallback\n    set_key(env_symlink, \"INJECTED\", \"attacker_value\")\n\n    after = open(target).read()\n\n    print(\"Before:\", repr(before))\n    print(\"After: \", repr(after))\n    print(\"Symlink target overwritten:\", target)\n```\n\n**Expected output:**\n```\nBefore: 'DB_PASSWORD=supersecret\\n'\nAfter:  \"DB_PASSWORD=supersecret\\nINJECTED='attacker_value'\\n\"\nSymlink target overwritten: /home/user/tmp806nut2g/victim_config.txt\n```\n\n### Remediation\n\nThe fix changes the `rewrite()` context manager in the following ways:\n\n1. **Symlinks are no longer followed by default.** When the `.env` path is a symlink, `rewrite()` now resolves it to the real path before proceeding, or (by default) operates on the symlink entry itself rather than the target.\n2. **A `follow_symlinks: bool = False` parameter** is added to `set_key()` and `unset_key()` for users who explicitly need the old behavior.\n3. **Temp files are written in the same directory** as the target `.env` file (instead of the system temp directory), eliminating the cross-device rename condition entirely.\n4. **`os.replace()` is used instead of `shutil.move()`**, providing atomic replacement without symlink-following fallback behavior.\n\nUsers are advised to upgrade to the patched version as soon as it is available on PyPI.\n\n### Timeline\n\n| Date             | Event                                                                                                                                                                 |\n| ------------ | ---------------------------------------------------------------------------------------------------- |\n| 2026-01-09  | Initial report received from Giorgos Tsigourakos regarding a separate, unrelated issue also located in `rewrite()` |\n| 2026-01-10   | Co-maintainer acknowledged report, requested clarification                                                         |\n| 2026-01-11    | Initial report assessed as not exploitable and closed                                                              |\n| 2026-02-24  | Reporter identified new, distinct cross-device symlink attack vector with deterministic exploitation               |\n| 2026-02-26  | Co-maintainer confirmed vulnerability and shared draft patch                                                       |\n| 2026-02-26  | Reporter validated fix with monkeypatched PoC, proposed CVSS                                                       |\n| 2026-03-01   | Patch merged to main                                                                                               |\n| 2026-03-01   | Patched version released to PyPI                                                                                   |\n| 2026-04-20   | Advisory published                                                                                                 |\n\n### Patches\n\nUpgrade to v.1.2.2 or use the patch from https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
+            "severity": "MODERATE",
+            "normalized_severity": "MEDIUM",
+            "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
+            "fixed_versions": [],
+            "references": [
+              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94",
+              "https://nvd.nist.gov/vuln/detail/CVE-2026-28684",
+              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
+              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
+              "https://github.com/theskumar/python-dotenv",
+              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2"
+            ],
+            "counted_in_score": true,
+            "filtered": false,
+            "filter_reasons": []
+          },
+          {
+            "id": "PYSEC-2026-2270",
+            "source": "OSV",
+            "published": "2026-04-20T17:16:33.087Z",
+            "summary": "No summary available",
+            "details": "python-dotenv reads key-value pairs from a .env file and can set them as environment variables. Prior to version 1.2.2, `set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered. Users should upgrade to v.1.2.2 or, as a workaround, apply the patch manually.",
+            "severity": null,
+            "normalized_severity": "UNKNOWN",
+            "cvss_score": null,
+            "withdrawn": false,
+            "confidence": "HIGH",
+            "fixed_versions": [],
+            "references": [
+              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2",
+              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
+              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94"
+            ],
+            "counted_in_score": false,
+            "filtered": true,
+            "filter_reasons": [
+              "unknown severity"
+            ]
+          }
+        ]
+      },
+      "risk_factors": [
+        "Deprecated",
+        "Known security issues (1 counted, max severity MEDIUM)",
+        "Does not use signed commits",
+        "Does not use branch protection",
+        "Project does not appear to be actively maintained"
+      ],
+      "metadata": {
+        "latest_version": "1.2.2",
+        "last_updated": "2026-06-08T19:20:20+05:30",
+        "maintainer_count": 114,
+        "is_deprecated": true,
+        "repository_url": "https://github.com/theskumar/python-dotenv",
+        "license": "BSD-3-CLAUSE",
+        "license_category": "PERMISSIVE",
+        "license_approved": true,
         "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": true,
@@ -7856,10 +7624,10 @@
       "versions_display": ">=8.1.3, 8.1.3",
       "display_name": "python:click@8.1.3",
       "risk_level": "MEDIUM",
-      "risk_score": 2.2470238095238093,
+      "risk_score": 1.7559523809523812,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -7871,15 +7639,14 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "missing security policy",
         "behind latest"
       ],
@@ -7945,17 +7712,15 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Missing security policy",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "8.4.2",
         "last_updated": "2026-07-24T13:26:39-07:00",
-        "maintainer_count": 1,
+        "maintainer_count": 451,
         "is_deprecated": false,
         "repository_url": "https://github.com/pallets/click/",
         "license": null,
@@ -7977,10 +7742,10 @@
       "versions_display": ">=2.17",
       "display_name": "python:Babel@>=2.17",
       "risk_level": "MEDIUM",
-      "risk_score": 2.19758064516129,
+      "risk_score": 1.754032258064516,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.75,
         "version": 0.25,
@@ -7992,13 +7757,12 @@
         "dependency_update": 1.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest",
         "scored advisories"
       ],
@@ -8088,17 +7852,15 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (1 counted, max severity HIGH)",
         "No dependency update tools found",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "2.18.0",
         "last_updated": "2026-07-30T18:27:24+03:00",
-        "maintainer_count": 1,
+        "maintainer_count": 176,
         "is_deprecated": false,
         "repository_url": "https://github.com/python-babel/babel",
         "license": "BSD-3-CLAUSE",
@@ -8112,37 +7874,43 @@
     },
     {
       "ecosystem": "python",
-      "name": "python-dotenv",
-      "version": "latest",
+      "name": "async-timeout",
+      "version": "4.0.2",
       "version_specs": [
-        "latest"
+        "4.0.2"
       ],
-      "versions_display": "latest",
-      "display_name": "python:python-dotenv@latest",
+      "versions_display": "4.0.2",
+      "display_name": "python:async-timeout@4.0.2",
       "risk_level": "MEDIUM",
-      "risk_score": 2.19758064516129,
+      "risk_score": 1.5277777777777777,
       "component_scores": {
-        "staleness": 0.25,
-        "maintainer": 1.0,
+        "staleness": null,
+        "maintainer": 0.0,
         "deprecation": 1.0,
-        "exploit": 0.45,
-        "version": 0.5,
-        "health_indicators": 0.0,
+        "exploit": 0.0,
+        "version": 1.0,
+        "health_indicators": null,
         "license": 0.0,
-        "community": 0.0,
+        "community": 0.5,
         "transitive": 0.0,
-        "security_policy": 0.0,
-        "dependency_update": 0.0,
-        "signed_commits": 1.0,
-        "branch_protection": 1.0,
-        "maintained": 1.0
+        "security_policy": null,
+        "dependency_update": null,
+        "signed_commits": null,
+        "branch_protection": null,
+        "maintained": null
       },
       "insufficient_data": false,
-      "unknown_signals": [],
+      "unknown_signals": [
+        "staleness",
+        "health_indicators",
+        "security_policy",
+        "dependency_update",
+        "signed_commits",
+        "branch_protection",
+        "maintained"
+      ],
       "key_signals": [
-        "single maintainer",
         "deprecated",
-        "not actively maintained",
         "behind latest"
       ],
       "blast_radius": {
@@ -8152,7 +7920,7 @@
           "pallets/flask"
         ],
         "manifests": [
-          "pallets/flask:pyproject.toml"
+          "pallets/flask:examples/celery/requirements.txt"
         ]
       },
       "usage": [
@@ -8161,89 +7929,35 @@
           "html_url": "https://github.com/pallets/flask",
           "default_branch": "main",
           "manifests": [
-            "pyproject.toml"
+            "examples/celery/requirements.txt"
           ]
         }
       ],
       "advisories": {
-        "total_found": 2,
-        "counted_in_score": 1,
-        "filtered": 1,
-        "filtered_reasons": {
-          "unknown severity": 1
-        },
-        "max_counted_cvss_score": 5.0,
-        "max_counted_severity": "MEDIUM",
-        "details": [
-          {
-            "id": "GHSA-mf9w-mj56-hr94",
-            "source": "OSV",
-            "published": "2026-04-21T14:38:57Z",
-            "summary": "python-dotenv: Symlink following in set_key allows arbitrary file overwrite via cross-device rename fallback",
-            "details": "### Summary\n\n`set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered.\n\n\n### Details\n\nThe `rewrite()` context manager in `dotenv/main.py` is used by both `set_key()` and `unset_key()` to safely modify `.env` files. It works by writing to a temporary file (created in the system's default temp directory, typically `/tmp`) and then using `shutil.move()` to replace the original file.\n\nWhen the `.env` path is a symbolic link and the temp directory resides on a different filesystem than the target (a common configuration on Linux systems using tmpfs for `/tmp`), the following sequence occurs:\n\n1. `shutil.move()` first attempts `os.rename()`, which fails with an `OSError` because atomic renames cannot cross device boundaries.\n2. On failure, `shutil.move()` falls back to `shutil.copy2()` followed by `os.unlink()`.\n3. `shutil.copy2()` calls `shutil.copyfile()` with `follow_symlinks=True` by default.\n4. This causes the content to be written to the **symlink target** rather than replacing the symlink itself.\n\nAn attacker who has write access to the directory containing a `.env` file can pre-place a symlink pointing to any file that the application process has write access to. When the application (or a privileged process such as a deploy script, Docker entrypoint, or CI pipeline) calls `set_key()` or `unset_key()`, the symlink target is overwritten with the new `.env` content.\n\nThis vulnerability does not require a race condition and is fully deterministic once the preconditions are met.\n\n### Impact\nThe primary impacts are to **integrity** and **availability**:\n\n- **File overwrite / destruction (DoS):** An attacker can cause an application or privileged process to corrupt or destroy configuration files, database configs, or other sensitive files it would not normally have access to modify.\n- **Integrity violation:** The target file's original content is replaced with `.env`-formatted content controlled by the attacker.\n- **Potential privilege escalation:** In scenarios where a privileged process (running as root or a service account) calls `set_key()`, the attacker can leverage this to write to files beyond their own access level.\n\nThe scope of impact depends on the application using python-dotenv and the privileges under which it runs.\n\n\n### Proof of Concept\n\nThe following script demonstrates the vulnerability. It requires `/tmp` and the user's home directory to reside on different devices (common on systemd-based Linux systems with tmpfs).\n\n```python\nimport os\nimport sys\nimport tempfile\nfrom dotenv import set_key\n\n# Pre-condition: /tmp must be on a different device than the target directory.\ntmp_dev = os.stat(\"/tmp\").st_dev\nhome_dev = os.stat(os.path.expanduser(\"~\")).st_dev\nassert tmp_dev != home_dev, \"Skipped: /tmp and ~ are on the same device (no cross-device move)\"\n\nwith tempfile.TemporaryDirectory(dir=os.path.expanduser(\"~\")) as workdir:\n    # File an attacker wants to overwrite\n    target = os.path.join(workdir, \"victim_config.txt\")\n    with open(target, \"w\") as f:\n        f.write(\"DB_PASSWORD=supersecret\\n\")\n\n    # Attacker pre-places a symlink at the path the application will use as .env\n    env_symlink = os.path.join(workdir, \".env\")\n    os.symlink(target, env_symlink)\n\n    before = open(target).read()\n\n    # Application writes a new key -- triggers the cross-device fallback\n    set_key(env_symlink, \"INJECTED\", \"attacker_value\")\n\n    after = open(target).read()\n\n    print(\"Before:\", repr(before))\n    print(\"After: \", repr(after))\n    print(\"Symlink target overwritten:\", target)\n```\n\n**Expected output:**\n```\nBefore: 'DB_PASSWORD=supersecret\\n'\nAfter:  \"DB_PASSWORD=supersecret\\nINJECTED='attacker_value'\\n\"\nSymlink target overwritten: /home/user/tmp806nut2g/victim_config.txt\n```\n\n### Remediation\n\nThe fix changes the `rewrite()` context manager in the following ways:\n\n1. **Symlinks are no longer followed by default.** When the `.env` path is a symlink, `rewrite()` now resolves it to the real path before proceeding, or (by default) operates on the symlink entry itself rather than the target.\n2. **A `follow_symlinks: bool = False` parameter** is added to `set_key()` and `unset_key()` for users who explicitly need the old behavior.\n3. **Temp files are written in the same directory** as the target `.env` file (instead of the system temp directory), eliminating the cross-device rename condition entirely.\n4. **`os.replace()` is used instead of `shutil.move()`**, providing atomic replacement without symlink-following fallback behavior.\n\nUsers are advised to upgrade to the patched version as soon as it is available on PyPI.\n\n### Timeline\n\n| Date             | Event                                                                                                                                                                 |\n| ------------ | ---------------------------------------------------------------------------------------------------- |\n| 2026-01-09  | Initial report received from Giorgos Tsigourakos regarding a separate, unrelated issue also located in `rewrite()` |\n| 2026-01-10   | Co-maintainer acknowledged report, requested clarification                                                         |\n| 2026-01-11    | Initial report assessed as not exploitable and closed                                                              |\n| 2026-02-24  | Reporter identified new, distinct cross-device symlink attack vector with deterministic exploitation               |\n| 2026-02-26  | Co-maintainer confirmed vulnerability and shared draft patch                                                       |\n| 2026-02-26  | Reporter validated fix with monkeypatched PoC, proposed CVSS                                                       |\n| 2026-03-01   | Patch merged to main                                                                                               |\n| 2026-03-01   | Patched version released to PyPI                                                                                   |\n| 2026-04-20   | Advisory published                                                                                                 |\n\n### Patches\n\nUpgrade to v.1.2.2 or use the patch from https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
-            "severity": "MODERATE",
-            "normalized_severity": "MEDIUM",
-            "cvss_score": null,
-            "withdrawn": false,
-            "confidence": "HIGH",
-            "fixed_versions": [],
-            "references": [
-              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94",
-              "https://nvd.nist.gov/vuln/detail/CVE-2026-28684",
-              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
-              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311.patch",
-              "https://github.com/theskumar/python-dotenv",
-              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2"
-            ],
-            "counted_in_score": true,
-            "filtered": false,
-            "filter_reasons": []
-          },
-          {
-            "id": "PYSEC-2026-2270",
-            "source": "OSV",
-            "published": "2026-04-20T17:16:33.087Z",
-            "summary": "No summary available",
-            "details": "python-dotenv reads key-value pairs from a .env file and can set them as environment variables. Prior to version 1.2.2, `set_key()` and `unset_key()` in python-dotenv follow symbolic links when rewriting `.env` files, allowing a local attacker to overwrite arbitrary files via a crafted symlink when a cross-device rename fallback is triggered. Users should upgrade to v.1.2.2 or, as a workaround, apply the patch manually.",
-            "severity": null,
-            "normalized_severity": "UNKNOWN",
-            "cvss_score": null,
-            "withdrawn": false,
-            "confidence": "HIGH",
-            "fixed_versions": [],
-            "references": [
-              "https://github.com/theskumar/python-dotenv/releases/tag/v1.2.2",
-              "https://github.com/theskumar/python-dotenv/commit/790c5c02991100aa1bf41ee5330aca75edc51311",
-              "https://github.com/theskumar/python-dotenv/security/advisories/GHSA-mf9w-mj56-hr94"
-            ],
-            "counted_in_score": false,
-            "filtered": true,
-            "filter_reasons": [
-              "unknown severity"
-            ]
-          }
-        ]
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
       },
       "risk_factors": [
-        "Single maintainer",
         "Deprecated",
-        "Known security issues (1 counted, max severity MEDIUM)",
-        "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Outdated (current: 4.0.2, latest: 5.0.1)"
       ],
       "metadata": {
-        "latest_version": "1.2.2",
-        "last_updated": "2026-06-08T19:20:20+05:30",
-        "maintainer_count": 1,
+        "latest_version": "5.0.1",
+        "last_updated": null,
+        "maintainer_count": 26,
         "is_deprecated": true,
-        "repository_url": "https://github.com/theskumar/python-dotenv",
-        "license": "BSD-3-CLAUSE",
+        "repository_url": "https://github.com/aio-libs/async-timeout/actions",
+        "license": "APACHE",
         "license_category": "PERMISSIVE",
         "license_approved": true,
-        "has_tests": true,
-        "has_ci": true,
-        "has_contribution_guidelines": true,
+        "has_tests": null,
+        "has_ci": null,
+        "has_contribution_guidelines": null,
         "transitive_dependency_count": 0
       }
     },
@@ -8257,10 +7971,10 @@
       "versions_display": "latest",
       "display_name": "python:pytest@latest",
       "risk_level": "MEDIUM",
-      "risk_score": 1.9047619047619049,
+      "risk_score": 1.4136904761904763,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.45,
         "version": 0.5,
@@ -8272,15 +7986,14 @@
         "dependency_update": 0.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [
         "license"
       ],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest",
         "scored advisories"
       ],
@@ -8373,23 +8086,121 @@
         ]
       },
       "risk_factors": [
-        "Single maintainer",
         "Known security issues (1 counted, max severity MEDIUM)",
         "Missing tests, contribution guidelines",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "9.1.1",
         "last_updated": "2026-07-31T09:56:04+02:00",
-        "maintainer_count": 1,
+        "maintainer_count": 1143,
         "is_deprecated": false,
         "repository_url": "https://github.com/pytest-dev/pytest",
         "license": null,
         "license_category": null,
         "license_approved": null,
         "has_tests": false,
+        "has_ci": true,
+        "has_contribution_guidelines": false,
+        "transitive_dependency_count": 0
+      }
+    },
+    {
+      "ecosystem": "python",
+      "name": "flit_core",
+      "version": "<4",
+      "version_specs": [
+        "<4",
+        ">=3.11,<4"
+      ],
+      "versions_display": "<4, >=3.11,<4",
+      "display_name": "python:flit_core@<4",
+      "risk_level": "LOW",
+      "risk_score": 0.9747023809523809,
+      "component_scores": {
+        "staleness": 0.0,
+        "maintainer": 0.0,
+        "deprecation": 0.0,
+        "exploit": 0.0,
+        "version": 0.25,
+        "health_indicators": 0.33333333333333337,
+        "license": null,
+        "community": 0.25,
+        "transitive": 0.0,
+        "security_policy": 0.0,
+        "dependency_update": 0.0,
+        "signed_commits": 1.0,
+        "branch_protection": 1.0,
+        "maintained": 0.5
+      },
+      "insufficient_data": false,
+      "unknown_signals": [
+        "license"
+      ],
+      "key_signals": [
+        "stable, low release cadence",
+        "behind latest"
+      ],
+      "blast_radius": {
+        "repository_count": 2,
+        "total_repositories_scanned": 3,
+        "repositories": [
+          "pallets/flask",
+          "pallets/jinja"
+        ],
+        "manifests": [
+          "pallets/flask:examples/celery/pyproject.toml",
+          "pallets/flask:examples/javascript/pyproject.toml",
+          "pallets/flask:examples/tutorial/pyproject.toml",
+          "pallets/flask:pyproject.toml",
+          "pallets/jinja:pyproject.toml"
+        ]
+      },
+      "usage": [
+        {
+          "repo": "pallets/flask",
+          "html_url": "https://github.com/pallets/flask",
+          "default_branch": "main",
+          "manifests": [
+            "examples/celery/pyproject.toml",
+            "examples/javascript/pyproject.toml",
+            "examples/tutorial/pyproject.toml",
+            "pyproject.toml"
+          ]
+        },
+        {
+          "repo": "pallets/jinja",
+          "html_url": "https://github.com/pallets/jinja",
+          "default_branch": "main",
+          "manifests": [
+            "pyproject.toml"
+          ]
+        }
+      ],
+      "advisories": {
+        "total_found": 0,
+        "counted_in_score": 0,
+        "filtered": 0,
+        "filtered_reasons": {},
+        "max_counted_cvss_score": null,
+        "max_counted_severity": null,
+        "details": []
+      },
+      "risk_factors": [
+        "Does not use signed commits",
+        "Does not use branch protection"
+      ],
+      "metadata": {
+        "latest_version": "3.12.0",
+        "last_updated": "2026-07-21T00:58:26+02:00",
+        "maintainer_count": 83,
+        "is_deprecated": false,
+        "repository_url": "https://github.com/pypa/flit",
+        "license": null,
+        "license_category": null,
+        "license_approved": null,
+        "has_tests": true,
         "has_ci": true,
         "has_contribution_guidelines": false,
         "transitive_dependency_count": 0
@@ -8404,11 +8215,11 @@
       ],
       "versions_display": "5.2.4",
       "display_name": "python:kombu@5.2.4",
-      "risk_level": "MEDIUM",
-      "risk_score": 1.4381720430107527,
+      "risk_level": "LOW",
+      "risk_score": 0.9946236559139783,
       "component_scores": {
         "staleness": 0.0,
-        "maintainer": 1.0,
+        "maintainer": 0.0,
         "deprecation": 0.0,
         "exploit": 0.0,
         "version": 0.5,
@@ -8420,13 +8231,12 @@
         "dependency_update": 0.0,
         "signed_commits": 1.0,
         "branch_protection": 1.0,
-        "maintained": 1.0
+        "maintained": 0.5
       },
       "insufficient_data": false,
       "unknown_signals": [],
       "key_signals": [
-        "single maintainer",
-        "not actively maintained",
+        "stable, low release cadence",
         "behind latest"
       ],
       "blast_radius": {
@@ -8459,16 +8269,14 @@
         "details": []
       },
       "risk_factors": [
-        "Single maintainer",
         "Missing tests, contribution guidelines",
         "Does not use signed commits",
-        "Does not use branch protection",
-        "Project does not appear to be actively maintained"
+        "Does not use branch protection"
       ],
       "metadata": {
         "latest_version": "5.6.2",
         "last_updated": "2026-07-25T21:35:49+06:00",
-        "maintainer_count": 1,
+        "maintainer_count": 453,
         "is_deprecated": false,
         "repository_url": "https://github.com/celery/kombu",
         "license": "BSD-3-CLAUSE",
@@ -8565,97 +8373,6 @@
         "license": null,
         "license_category": null,
         "license_approved": null,
-        "has_tests": null,
-        "has_ci": null,
-        "has_contribution_guidelines": null,
-        "transitive_dependency_count": 0
-      }
-    },
-    {
-      "ecosystem": "python",
-      "name": "async-timeout",
-      "version": "4.0.2",
-      "version_specs": [
-        "4.0.2"
-      ],
-      "versions_display": "4.0.2",
-      "display_name": "python:async-timeout@4.0.2",
-      "risk_level": "UNKNOWN",
-      "risk_score": 1.607142857142857,
-      "component_scores": {
-        "staleness": null,
-        "maintainer": null,
-        "deprecation": 1.0,
-        "exploit": 0.0,
-        "version": 1.0,
-        "health_indicators": null,
-        "license": 0.0,
-        "community": null,
-        "transitive": 0.0,
-        "security_policy": null,
-        "dependency_update": null,
-        "signed_commits": null,
-        "branch_protection": null,
-        "maintained": null
-      },
-      "insufficient_data": true,
-      "unknown_signals": [
-        "staleness",
-        "maintainer",
-        "health_indicators",
-        "community",
-        "security_policy",
-        "dependency_update",
-        "signed_commits",
-        "branch_protection",
-        "maintained"
-      ],
-      "key_signals": [
-        "Insufficient data for confident risk level"
-      ],
-      "blast_radius": {
-        "repository_count": 1,
-        "total_repositories_scanned": 3,
-        "repositories": [
-          "pallets/flask"
-        ],
-        "manifests": [
-          "pallets/flask:examples/celery/requirements.txt"
-        ]
-      },
-      "usage": [
-        {
-          "repo": "pallets/flask",
-          "html_url": "https://github.com/pallets/flask",
-          "default_branch": "main",
-          "manifests": [
-            "examples/celery/requirements.txt"
-          ]
-        }
-      ],
-      "advisories": {
-        "total_found": 0,
-        "counted_in_score": 0,
-        "filtered": 0,
-        "filtered_reasons": {},
-        "max_counted_cvss_score": null,
-        "max_counted_severity": null,
-        "details": []
-      },
-      "risk_factors": [
-        "Insufficient data for confident risk level",
-        "Deprecated",
-        "Outdated (current: 4.0.2, latest: 5.0.1)"
-      ],
-      "metadata": {
-        "latest_version": "5.0.1",
-        "last_updated": null,
-        "maintainer_count": null,
-        "is_deprecated": true,
-        "repository_url": "https://github.com/aio-libs/async-timeout/actions",
-        "license": "APACHE",
-        "license_category": "PERMISSIVE",
-        "license_approved": true,
         "has_tests": null,
         "has_ci": null,
         "has_contribution_guidelines": null,

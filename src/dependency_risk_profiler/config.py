@@ -10,7 +10,7 @@ import os
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, Union
 
 # Import tomllib from the standard library in Python 3.11+ or use tomli as a fallback
 if sys.version_info >= (3, 11):
@@ -50,6 +50,12 @@ DEFAULT_CONFIG = {
         "license": 0.3,
         "community": 0.2,
         "transitive": 0.15,
+        # Mature, widely adopted projects often release less frequently. These
+        # calibration knobs dampen only abandonment-style staleness reads when
+        # real popularity data is available; bus-factor scoring is unchanged.
+        "popularity_high_stars": 2000,
+        "popularity_high_contributors": 25,
+        "staleness_popularity_dampening": 0.5,
     },
     "vulnerability": {
         "enable_osv": True,
@@ -203,7 +209,7 @@ class Config:
                 "DRP_MINIMUM_VULNERABILITY_SEVERITY"
             ]
 
-    def _merge_config(self, config_data: Dict[str, Any]) -> None:
+    def _merge_config(self, config_data: Dict[str, object]) -> None:
         """Merge configuration data with current config.
 
         Args:
@@ -229,7 +235,7 @@ class Config:
         if "graph" in config_data:
             self._config["graph"].update(config_data["graph"])
 
-    def update_from_args(self, args: Dict[str, Any]) -> None:
+    def update_from_args(self, args: Dict[str, object]) -> None:
         """Update configuration with command-line arguments.
 
         Args:
@@ -336,7 +342,7 @@ class Config:
         if "graph_output" in args and args["graph_output"] is not None:
             self._config["graph"]["output"] = args["graph_output"]
 
-    def get(self, section: str, key: str, default: Any = None) -> Any:
+    def get(self, section: str, key: str, default: object = None) -> object:
         """Get a configuration value.
 
         Args:
@@ -349,7 +355,7 @@ class Config:
         """
         return self._config.get(section, {}).get(key, default)
 
-    def get_section(self, section: str) -> Dict[str, Any]:
+    def get_section(self, section: str) -> Dict[str, object]:
         """Get a configuration section.
 
         Args:
@@ -360,7 +366,7 @@ class Config:
         """
         return self._config.get(section, {}).copy()
 
-    def get_all(self) -> Dict[str, Dict[str, Any]]:
+    def get_all(self) -> Dict[str, Dict[str, object]]:
         """Get the entire configuration.
 
         Returns:
@@ -391,9 +397,18 @@ class Config:
             "dependency_update_weight": weights.get("dependency_update", 0.2),
             "signed_commits_weight": weights.get("signed_commits", 0.2),
             "branch_protection_weight": weights.get("branch_protection", 0.15),
+            "popularity_high_stars": weights.get("popularity_high_stars", 2000),
+            "popularity_high_contributors": weights.get(
+                "popularity_high_contributors",
+                25,
+            ),
+            "staleness_popularity_dampening": weights.get(
+                "staleness_popularity_dampening",
+                0.5,
+            ),
         }
 
-    def get_vulnerability_config(self) -> Dict[str, Any]:
+    def get_vulnerability_config(self) -> Dict[str, object]:
         """Get vulnerability configuration.
 
         Returns:

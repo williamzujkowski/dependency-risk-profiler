@@ -5,11 +5,14 @@ from __future__ import annotations
 import copy
 import logging
 from dataclasses import dataclass
-from typing import Dict, Mapping, Optional
+from typing import Dict, Mapping, Optional, Protocol
+from urllib.parse import urlparse
 
 from ..analyzers.base import BaseAnalyzer
-from ..models import DependencyMetadata, DependencyRiskScore
+from ..models import CommunityMetrics, DependencyMetadata, DependencyRiskScore
+from ..popularity import GITHUB_REPOSITORY_ARCHIVED_KEY
 from ..scoring.risk_scorer import RiskScorer
+from .github import RepoSignals
 from .models import DependencyKey, DependencyProfiler
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,14 @@ class VulnerabilityOptions:
     minimum_severity_for_scoring: str = "LOW"
 
 
+class RepositorySignalsClient(Protocol):
+    """Protocol-like base for authenticated repository signal enrichment."""
+
+    def get_repository_signals(self, owner_repo: str) -> RepoSignals:
+        """Fetch popularity and repository state signals for owner/repo."""
+        raise NotImplementedError
+
+
 class ExistingDependencyProfiler(DependencyProfiler):
     """Profile unique dependencies by reusing existing analyzers and scorer."""
 
@@ -37,13 +48,16 @@ class ExistingDependencyProfiler(DependencyProfiler):
         scoring_weights: Mapping[str, float],
         vulnerability_options: VulnerabilityOptions,
         timeout: int = 30,
+        repository_signals_client: Optional[RepositorySignalsClient] = None,
     ) -> None:
         """Initialize the profiler adapter."""
         self.scoring_weights = dict(scoring_weights)
         self.vulnerability_options = vulnerability_options
         self.timeout = timeout
+        self.repository_signals_client = repository_signals_client
         self._profile_cache: Dict[DependencyKey, DependencyRiskScore] = {}
         self._analyzers: Dict[str, BaseAnalyzer] = {}
+        self._repository_signals_cache: Dict[str, RepoSignals] = {}
 
     def profile(
         self, dependencies: Dict[DependencyKey, DependencyMetadata]
@@ -67,6 +81,7 @@ class ExistingDependencyProfiler(DependencyProfiler):
             dependency = analyzed.get(dependency.name, dependency)
             dependency = self._apply_enhanced_metadata(analyzer, dependency)
 
+        dependency = self._apply_github_repository_signals(dependency)
         dependency = self._apply_vulnerabilities(dependency)
 
         scorer = RiskScorer(**self.scoring_weights)
@@ -104,6 +119,72 @@ class ExistingDependencyProfiler(DependencyProfiler):
             logger.error("Enhanced analysis failed for %s: %s", dependency.name, exc)
 
         return dependency
+
+    def _apply_github_repository_signals(
+        self, dependency: DependencyMetadata
+    ) -> DependencyMetadata:
+        """Apply authenticated GitHub signals when the dependency has a repo URL."""
+        if self.repository_signals_client is None:
+            return dependency
+        owner_repo = self._github_owner_repo(dependency.repository_url)
+        if owner_repo is None:
+            return dependency
+
+        if owner_repo not in self._repository_signals_cache:
+            self._repository_signals_cache[owner_repo] = (
+                self.repository_signals_client.get_repository_signals(owner_repo)
+            )
+        signals = self._repository_signals_cache[owner_repo]
+        if (
+            signals.star_count is None
+            and signals.contributor_count is None
+            and signals.archived is None
+        ):
+            return dependency
+
+        if dependency.community_metrics is None:
+            dependency.community_metrics = CommunityMetrics()
+        if signals.star_count is not None:
+            dependency.community_metrics.star_count = signals.star_count
+        if signals.contributor_count is not None:
+            dependency.community_metrics.contributor_count = signals.contributor_count
+            dependency.maintainer_count = signals.contributor_count
+        if signals.archived is not None:
+            dependency.additional_info[GITHUB_REPOSITORY_ARCHIVED_KEY] = (
+                "true" if signals.archived else "false"
+            )
+        return dependency
+
+    def _github_owner_repo(self, repository_url: Optional[str]) -> Optional[str]:
+        """Extract owner/repo from github.com repository URLs without guessing."""
+        if repository_url is None:
+            return None
+
+        normalized = repository_url.strip()
+        if not normalized:
+            return None
+
+        if normalized.startswith("git@github.com:"):
+            path = normalized.removeprefix("git@github.com:")
+        else:
+            if normalized.startswith("git+"):
+                normalized = normalized.removeprefix("git+")
+            parsed = urlparse(normalized)
+            hostname = parsed.hostname
+            if hostname is None or hostname.lower() != "github.com":
+                return None
+            path = parsed.path
+
+        parts = [part for part in path.strip("/").split("/") if part]
+        if len(parts) < 2:
+            return None
+        owner = parts[0]
+        repo = parts[1]
+        if repo.endswith(".git"):
+            repo = repo.removesuffix(".git")
+        if not owner or not repo:
+            return None
+        return f"{owner}/{repo}"
 
     def _package_metadata(
         self, analyzer: BaseAnalyzer, dependency_name: str

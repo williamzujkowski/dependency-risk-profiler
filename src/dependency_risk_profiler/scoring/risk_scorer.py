@@ -15,6 +15,12 @@ from ..models import (
     RiskLevel,
     SecurityMetrics,
 )
+from ..popularity import (
+    POPULARITY_HIGH_CONTRIBUTORS_DEFAULT,
+    POPULARITY_HIGH_STARS_DEFAULT,
+    STALENESS_POPULARITY_DAMPENING_DEFAULT,
+    should_soften_low_release_cadence,
+)
 from ..vulnerabilities.aggregator import (
     exploit_score_from_cvss,
     exploit_score_from_severity,
@@ -43,6 +49,13 @@ class RiskScorer:
         dependency_update_weight: float = 0.2,
         signed_commits_weight: float = 0.2,
         branch_protection_weight: float = 0.15,
+        popularity_high_stars: float = float(POPULARITY_HIGH_STARS_DEFAULT),
+        popularity_high_contributors: float = float(
+            POPULARITY_HIGH_CONTRIBUTORS_DEFAULT
+        ),
+        staleness_popularity_dampening: float = (
+            STALENESS_POPULARITY_DAMPENING_DEFAULT
+        ),
         max_score: float = 5.0,
     ) -> None:
         """Initialize the risk scorer with customizable weights.
@@ -59,6 +72,13 @@ class RiskScorer:
             transitive_weight: Weight for transitive dependency risk score.
             security_policy_weight: Weight for security policy risk score.
             dependency_update_weight: Weight for dependency update tools risk score.
+            popularity_high_stars: Star threshold for treating stale release cadence
+                as mature stability instead of abandonment.
+            popularity_high_contributors: Contributor threshold for the same
+                staleness dampening. This does not affect bus-factor scoring.
+            staleness_popularity_dampening: Factor applied only to abandonment-style
+                scores when high adoption is measured and no hard abandonment marker
+                is present.
             max_score: Maximum risk score.
         """
         self.staleness_weight = staleness_weight
@@ -76,6 +96,15 @@ class RiskScorer:
         self.dependency_update_weight = dependency_update_weight
         self.signed_commits_weight = signed_commits_weight
         self.branch_protection_weight = branch_protection_weight
+        self.popularity_high_stars = max(0, int(popularity_high_stars))
+        self.popularity_high_contributors = max(
+            0,
+            int(popularity_high_contributors),
+        )
+        self.staleness_popularity_dampening = min(
+            1.0,
+            max(0.0, staleness_popularity_dampening),
+        )
 
         self.max_score = max_score
 
@@ -97,6 +126,10 @@ class RiskScorer:
             Risk score for the dependency.
         """
         staleness_score = self._calculate_staleness_score(dependency.last_updated)
+        staleness_score = self._dampen_staleness_for_popularity(
+            dependency,
+            staleness_score,
+        )
         maintainer_score = self._calculate_maintainer_score(dependency.maintainer_count)
         deprecation_score = self._calculate_deprecation_score(dependency.is_deprecated)
         exploit_score = self._calculate_exploit_score(
@@ -132,6 +165,10 @@ class RiskScorer:
             dependency.security_metrics
         )
         maintained_score = self._calculate_maintained_score(dependency.security_metrics)
+        maintained_score = self._dampen_maintained_for_popularity(
+            dependency,
+            maintained_score,
+        )
 
         # Calculate weighted score
         weighted_scores = [
@@ -360,6 +397,38 @@ class RiskScorer:
             return 0.5
         else:  # Single maintainer
             return 1.0
+
+    def _dampen_staleness_for_popularity(
+        self,
+        dependency: DependencyMetadata,
+        staleness_score: Optional[float],
+    ) -> Optional[float]:
+        """Reduce stale-release risk only when adoption is actually measured high."""
+        if staleness_score is None:
+            return None
+        if not should_soften_low_release_cadence(
+            dependency,
+            popularity_high_stars=self.popularity_high_stars,
+            popularity_high_contributors=self.popularity_high_contributors,
+        ):
+            return staleness_score
+        return max(0.0, staleness_score * self.staleness_popularity_dampening)
+
+    def _dampen_maintained_for_popularity(
+        self,
+        dependency: DependencyMetadata,
+        maintained_score: Optional[float],
+    ) -> Optional[float]:
+        """Reduce abandonment-style maintained risk for mature high-adoption deps."""
+        if maintained_score is None or maintained_score <= 0.5:
+            return maintained_score
+        if not should_soften_low_release_cadence(
+            dependency,
+            popularity_high_stars=self.popularity_high_stars,
+            popularity_high_contributors=self.popularity_high_contributors,
+        ):
+            return maintained_score
+        return max(0.0, maintained_score * self.staleness_popularity_dampening)
 
     def _calculate_deprecation_score(self, is_deprecated: bool) -> float:
         """Calculate deprecation score.

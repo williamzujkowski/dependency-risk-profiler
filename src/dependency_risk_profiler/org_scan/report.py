@@ -918,6 +918,9 @@ def _metadata_panel(dependency: AggregatedDependency) -> str:
     license_text = "unknown"
     if metadata.license_info is not None:
         license_text = metadata.license_info.license_id
+    community = metadata.community_metrics
+    star_count = community.star_count if community is not None else None
+    contributor_count = community.contributor_count if community is not None else None
     facts = [
         (
             "installed → latest",
@@ -925,7 +928,17 @@ def _metadata_panel(dependency: AggregatedDependency) -> str:
         ),
         ("version specs", dependency.versions_display),
         ("last updated", _date_text(metadata.last_updated)),
-        ("maintainers", _optional_int(metadata.maintainer_count)),
+    ]
+    # Prefer the real GitHub signals (stars, contributor count) when the scan
+    # enriched them; fall back to the maintainer count otherwise. Labelling the
+    # contributor count as "maintainers" would misrepresent what it measures.
+    if star_count is not None:
+        facts.append(("stars", _optional_count(star_count)))
+    if contributor_count is not None:
+        facts.append(("contributors", _optional_count(contributor_count)))
+    else:
+        facts.append(("maintainers", _optional_int(metadata.maintainer_count)))
+    facts += [
         ("license", license_text),
         ("tests", _boolean_mark(metadata.has_tests)),
         ("CI", _boolean_mark(metadata.has_ci)),
@@ -1031,6 +1044,13 @@ def _optional_int(value: Optional[int]) -> str:
     if value is None:
         return "unknown"
     return str(value)
+
+
+def _optional_count(value: Optional[int]) -> str:
+    """Return a thousands-separated count for optional integer metadata."""
+    if value is None:
+        return "unknown"
+    return f"{value:,}"
 
 
 def _boolean_mark(value: Optional[bool]) -> str:
