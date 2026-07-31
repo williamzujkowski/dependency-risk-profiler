@@ -2,7 +2,7 @@
 
 import logging
 import subprocess  # nosec B404
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -93,6 +93,30 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
     return result
 
 
+def _parse_git_iso_date(value: str) -> Optional[datetime]:
+    """Parse a git ``creatordate:iso`` string as a tz-aware UTC datetime.
+
+    Git emits e.g. ``2025-06-14 13:34:58 -0700``; this normalizes to UTC so
+    cadence subtractions never mix offset-naive and offset-aware datetimes.
+    Returns None if the value can't be parsed.
+    """
+    for fmt in ("%Y-%m-%d %H:%M:%S %z", "%Y-%m-%d %H:%M:%S"):
+        try:
+            parsed = datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def analyze_release_cadence(
     repo_dir: str, package_data: Optional[Dict] = None
 ) -> Dict[str, float]:
@@ -126,18 +150,19 @@ def analyze_release_cadence(
                 text=True,  # nosec B603
             ).stdout.strip()
 
-            tag_dates = []
-            for line in output.split("\n"):
-                if line.strip():
-                    try:
-                        tag_date = datetime.fromisoformat(
-                            line.replace(" ", "T").replace(" -", "-")
-                        )
-                        tag_dates.append(tag_date)
-                    except ValueError:
-                        continue
+            tag_dates = [
+                parsed
+                for line in output.split("\n")
+                if line.strip()
+                for parsed in (_parse_git_iso_date(line.strip()),)
+                if parsed is not None
+            ]
 
             if tag_dates:
+                # All dates are tz-aware UTC, so subtractions never mix
+                # offset-naive and offset-aware datetimes.
+                now = datetime.now(timezone.utc)
+
                 # Calculate days between releases
                 intervals = [
                     (tag_dates[i] - tag_dates[i + 1]).days
@@ -148,18 +173,15 @@ def analyze_release_cadence(
                     result["average_days_between_releases"] = avg_interval
 
                 # Days since last release
-                if tag_dates:
-                    days_since_last = (datetime.now() - tag_dates[0]).days
-                    result["days_since_last_release"] = days_since_last
+                days_since_last = (now - tag_dates[0]).days
+                result["days_since_last_release"] = days_since_last
 
-                    # Calculate expected next release date
-                    if "average_days_between_releases" in result:
-                        expected_next = tag_dates[0] + timedelta(
-                            days=result["average_days_between_releases"]
-                        )
-                        result["release_overdue_days"] = max(
-                            0, (datetime.now() - expected_next).days
-                        )
+                # Calculate expected next release date
+                if "average_days_between_releases" in result:
+                    expected_next = tag_dates[0] + timedelta(
+                        days=result["average_days_between_releases"]
+                    )
+                    result["release_overdue_days"] = max(0, (now - expected_next).days)
 
         except subprocess.SubprocessError:
             logger.debug("Could not get tag information from git")
@@ -173,16 +195,14 @@ def analyze_release_cadence(
                 release_dates = []
                 for version, timestamp in package_data["time"].items():
                     if version not in ["created", "modified"]:
-                        try:
-                            release_date = datetime.fromisoformat(
-                                timestamp.replace("Z", "+00:00")
-                            )
-                            release_dates.append(release_date)
-                        except ValueError:
-                            continue
+                        parsed = _parse_git_iso_date(timestamp.replace("Z", "+00:00"))
+                        if parsed is not None:
+                            release_dates.append(parsed)
 
                 if release_dates:
                     release_dates.sort(reverse=True)
+                    # All release_dates are tz-aware UTC (see _parse_git_iso_date).
+                    now = datetime.now(timezone.utc)
 
                     # Calculate days between releases
                     intervals = [
@@ -194,7 +214,7 @@ def analyze_release_cadence(
                         result["average_days_between_releases"] = avg_interval
 
                     # Days since last release
-                    days_since_last = (datetime.now() - release_dates[0]).days
+                    days_since_last = (now - release_dates[0]).days
                     result["days_since_last_release"] = days_since_last
 
                     # Calculate expected next release date
@@ -203,7 +223,7 @@ def analyze_release_cadence(
                             days=result["average_days_between_releases"]
                         )
                         result["release_overdue_days"] = max(
-                            0, (datetime.now() - expected_next).days
+                            0, (now - expected_next).days
                         )
 
             elif "releases" in package_data:
