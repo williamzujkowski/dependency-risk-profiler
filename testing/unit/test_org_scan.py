@@ -797,6 +797,43 @@ def test_scan_org_cli_writes_html_and_json(
     assert "HTML report written" in result.output
 
 
+def test_scan_org_fail_on_exit_code(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatchFixture,
+) -> None:
+    """--fail-on exits non-zero when the threshold is met, zero otherwise."""
+    monkeypatch.setattr(
+        "dependency_risk_profiler.cli.typer_cli.GitHubOrgClient",
+        CliFixtureGitHubClient,
+    )
+    monkeypatch.setattr(
+        "dependency_risk_profiler.cli.typer_cli.ExistingDependencyProfiler",
+        CliFixtureProfiler,
+    )
+
+    def _invoke(level: str) -> int:
+        result = CliRunner().invoke(
+            app,
+            [
+                "scan-org",
+                "acme",
+                "--github-token",
+                "fixture-token",
+                "--output-html",
+                str(tmp_path / "org.html"),
+                "--output-json",
+                str(tmp_path / "org.json"),
+                "--fail-on",
+                level,
+            ],
+        )
+        return result.exit_code
+
+    # The fixture has a HIGH dependency: fail-on high triggers, critical does not.
+    assert _invoke("high") == 2
+    assert _invoke("critical") == 0
+
+
 def test_scan_user_cli_writes_html_and_json(
     tmp_path: Path,
     monkeypatch: MonkeyPatchFixture,

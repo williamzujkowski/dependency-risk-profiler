@@ -109,6 +109,7 @@ Use the output to prioritize review, upgrades, replacement decisions, and follow
 
 - [Getting Started](docs/getting-started.md)
 - [Basic Usage](docs/basic-usage.md)
+- [Using it from an AI agent](docs/agents.md) — the analyze → issue → fix loop, JSON fields, and `--fail-on` gating
 - [Configuration](docs/configuration.md)
 - [Scoring](docs/SCORING.md)
 - [Information Sources](docs/INFORMATION_SOURCES.md)
