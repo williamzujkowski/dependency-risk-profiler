@@ -81,8 +81,9 @@ DEPS_DEV_MAP = {
     "nodejs": "npm",
     "golang": "go",
     "go": "go",
-    "toml": "cargo",
     "cargo": "cargo",
+    # "toml" -> "cargo" was removed with the generic .toml pseudo-ecosystem (#75):
+    # an arbitrary config.toml has no dependency semantics.
 }
 
 
@@ -135,4 +136,4 @@ def test_alias_union_is_the_registry_source_of_truth() -> None:
     union = set(OSV_MAP) | set(GHA_MAP) | set(NVD_MAP) | set(DEPS_DEV_MAP)
     # Spelling variants that appear in one table but not another — each must
     # survive centralization or a source silently loses coverage (#66 class).
-    assert {"node", "py", "rust", "crates", "gems", "dotnet", "toml"} <= union
+    assert {"node", "py", "rust", "crates", "gems", "dotnet"} <= union

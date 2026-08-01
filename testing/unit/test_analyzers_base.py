@@ -56,10 +56,8 @@ class TestBaseAnalyzer:
         assert analyzer.timeout == 30
 
     def test_get_analyzer_for_ecosystem_toml(self):
-        """Test getting Python analyzer for the toml ecosystem (fallback)."""
-        analyzer = BaseAnalyzer.get_analyzer_for_ecosystem("toml")
-        assert isinstance(analyzer, PythonAnalyzer)
-        assert analyzer.timeout == 30
+        """The generic 'toml' pseudo-ecosystem was removed (#75) — no analyzer."""
+        assert BaseAnalyzer.get_analyzer_for_ecosystem("toml") is None
 
     def test_get_analyzer_for_ecosystem_unknown(self):
         """Test that None is returned for unknown ecosystems."""

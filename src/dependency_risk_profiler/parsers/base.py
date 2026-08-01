@@ -133,14 +133,9 @@ class BaseParser(ABC):
                 {"type": "filename", "pattern": "cargo.toml"},
             ],
         )
-
-        EcosystemRegistry.register_parser(
-            "toml",
-            TomlParser,
-            [
-                {"type": "extension", "pattern": ".toml"},
-            ],
-        )
+        # No generic ".toml" catch-all: an arbitrary config.toml has no
+        # dependency semantics, and profiling it as Python produced confidently
+        # wrong scores. pyproject.toml and Cargo.toml keep their explicit routes.
 
         logger.debug(
             "Initialized ecosystem registry with built-in parsers: "

@@ -56,6 +56,19 @@ def test_routing_names_are_characterized(ecosystem: str) -> None:
     assert _deps_dev_system(ecosystem) == expected["deps_dev"]
 
 
+def test_generic_toml_is_not_profiled_as_python() -> None:
+    """A bare config.toml has no dependency semantics (#75 removed the catch-all).
+
+    Only the real TOML manifests keep explicit routes; an arbitrary .toml is
+    left unscanned rather than confidently mis-scored as Python.
+    """
+    from dependency_risk_profiler.cli.typer_cli import get_ecosystem_from_manifest
+
+    assert get_ecosystem_from_manifest("some/dir/config.toml") == "unknown"
+    assert get_ecosystem_from_manifest("pyproject.toml") == "pyproject"
+    assert get_ecosystem_from_manifest("Cargo.toml") == "cargo"
+
+
 def test_canonical_set_matches_what_analyzers_emit() -> None:
     """Guard the source of truth for the routing safety net.
 

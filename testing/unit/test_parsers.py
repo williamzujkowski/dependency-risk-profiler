@@ -29,34 +29,24 @@ def test_base_parser_factory(
     parser = BaseParser.get_parser_for_file(sample_golang_manifest)
     assert isinstance(parser, GoParser)
 
-    # Test TOML parsers
+    # Test TOML parsers: only the explicit manifests match now — the generic
+    # ".toml" catch-all was removed (#75) so an arbitrary config.toml is skipped.
     from dependency_risk_profiler.parsers.toml import TomlParser
 
-    # Create temporary TOML files for testing
-    with tempfile.NamedTemporaryFile(
-        suffix=".toml", prefix="pyproject-", delete=False
-    ) as f:
-        pyproject_path = f.name
-        f.write(b"[project]\nname = 'test'\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        pyproject_path = os.path.join(tmp, "pyproject.toml")
+        with open(pyproject_path, "w", encoding="utf-8") as f:
+            f.write("[project]\nname = 'test'\n")
+        cargo_path = os.path.join(tmp, "Cargo.toml")
+        with open(cargo_path, "w", encoding="utf-8") as f:
+            f.write("[package]\nname = 'test'\n")
+        generic_path = os.path.join(tmp, "config.toml")
+        with open(generic_path, "w", encoding="utf-8") as f:
+            f.write("[settings]\nkey = 'value'\n")
 
-    with tempfile.NamedTemporaryFile(
-        suffix=".toml", prefix="cargo-", delete=False
-    ) as f:
-        cargo_path = f.name
-        f.write(b"[package]\nname = 'test'\n")
-
-    try:
-        parser = BaseParser.get_parser_for_file(pyproject_path)
-        assert isinstance(parser, TomlParser)
-
-        parser = BaseParser.get_parser_for_file(cargo_path)
-        assert isinstance(parser, TomlParser)
-    finally:
-        # Clean up
-        if os.path.exists(pyproject_path):
-            os.unlink(pyproject_path)
-        if os.path.exists(cargo_path):
-            os.unlink(cargo_path)
+        assert isinstance(BaseParser.get_parser_for_file(pyproject_path), TomlParser)
+        assert isinstance(BaseParser.get_parser_for_file(cargo_path), TomlParser)
+        assert BaseParser.get_parser_for_file(generic_path) is None
 
     # Test unsupported file type
     parser = BaseParser.get_parser_for_file("unknown.txt")
