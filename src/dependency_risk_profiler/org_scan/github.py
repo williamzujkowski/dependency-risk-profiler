@@ -53,8 +53,8 @@ class RepoSignals:
     # `pushed_at` is the server-asserted last push (more trustworthy than a
     # shallow clone's author-controlled commit date). None = unknown.
     pushed_at: Optional[datetime] = None
-    # Derived from the repo file tree; None when the tree was truncated
-    # (very large repos) so an unknown is reported honestly rather than a guess.
+    # Derived from the repo's root tree; None when the branch is unknown or the
+    # tree request fails, so an unknown is reported honestly rather than guessed.
     has_tests: Optional[bool] = None
     has_ci: Optional[bool] = None
 
