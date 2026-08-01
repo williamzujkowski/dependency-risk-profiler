@@ -1133,14 +1133,7 @@ def _deps_dev_url(ecosystem: str, name: str) -> Optional[str]:
 def _deps_dev_system(ecosystem: str) -> Optional[str]:
     """Map internal ecosystem names to deps.dev systems."""
     eco = ecosystems.lookup(ecosystem)
-    if eco is not None:
-        return eco.deps_dev
-    # Vestigial deps.dev-only alias: a generic .toml manifest was mapped to
-    # cargo here (not semantically sound; removed by #75). Preserved so the
-    # centralization stays behavior-preserving.
-    if ecosystem.strip().lower() == "toml":
-        return "cargo"
-    return None
+    return eco.deps_dev if eco is not None else None
 
 
 def _registry_url(ecosystem: str, name: str) -> Optional[str]:

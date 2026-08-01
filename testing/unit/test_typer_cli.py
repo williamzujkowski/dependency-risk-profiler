@@ -226,7 +226,8 @@ class TestEcosystemFunctions:
             assert get_ecosystem_from_manifest("/path/to/go.mod") == "golang"
             assert get_ecosystem_from_manifest("/path/to/pyproject.toml") == "pyproject"
             assert get_ecosystem_from_manifest("/path/to/cargo.toml") == "cargo"
-            assert get_ecosystem_from_manifest("/path/to/config.toml") == "toml"
+            # A generic .toml is no longer profiled as Python (#75).
+            assert get_ecosystem_from_manifest("/path/to/config.toml") == "unknown"
             assert get_ecosystem_from_manifest("/path/to/unknown.file") == "unknown"
 
 

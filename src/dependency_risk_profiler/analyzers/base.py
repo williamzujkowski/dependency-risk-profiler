@@ -68,9 +68,6 @@ class BaseAnalyzer(ABC):
                 return CratesIOAnalyzer()
             elif ecosystem == "rubygems":
                 return RubyGemsAnalyzer()
-            elif ecosystem == "toml":
-                # Backward-compatible fallback for generic TOML files.
-                return PythonAnalyzer()
             else:
                 return None
 
