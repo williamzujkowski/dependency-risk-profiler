@@ -285,8 +285,12 @@ class OSVSource(VulnerabilitySource):
             "node": "npm",
             "python": "PyPI",
             "py": "PyPI",
+            "pyproject": "PyPI",
             "golang": "Go",
             "go": "Go",
+            "cargo": "crates.io",
+            "crates": "crates.io",
+            "rust": "crates.io",
             "maven": "Maven",
             "java": "Maven",
             "nuget": "NuGet",
@@ -1088,14 +1092,18 @@ def aggregate_vulnerability_data(
         Tuple of (updated dependency metadata, vulnerability details)
     """
     package_name = dependency.name
-    ecosystem = "python"  # Default to Python
-
-    # Determine ecosystem based on repository URL or other indicators
-    if dependency.repository_url:
-        if "npm" in dependency.repository_url or "node" in dependency.repository_url:
-            ecosystem = "nodejs"
-        elif "go" in dependency.repository_url:
-            ecosystem = "golang"
+    # Prefer the dependency's real ecosystem (set by callers that know it from
+    # the manifest); the URL heuristic below mis-routes most npm/cargo deps to
+    # PyPI and finds zero advisories, so it is only a last-resort fallback.
+    ecosystem = dependency.additional_info.get("ecosystem", "").strip()
+    if not ecosystem:
+        ecosystem = "python"
+        if dependency.repository_url:
+            url = dependency.repository_url
+            if "npm" in url or "node" in url:
+                ecosystem = "nodejs"
+            elif "go" in url:
+                ecosystem = "golang"
 
     # Check cache first
     cached = get_cached_data(package_name, ecosystem)
