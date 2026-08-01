@@ -3,9 +3,39 @@
 from typing import List, Tuple
 from unittest import mock
 
+import pytest
+
+from dependency_risk_profiler.analyzers.golang import GoAnalyzer
+from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer
+from dependency_risk_profiler.analyzers.python import PythonAnalyzer
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.vulnerabilities import aggregator_async
 from dependency_risk_profiler.vulnerabilities.aggregator import OSVSource
+
+
+@pytest.mark.parametrize(
+    "analyzer_cls, fetch_method, expected_ecosystem",
+    [
+        (NodeJSAnalyzer, "_get_npm_package_info", "nodejs"),
+        (GoAnalyzer, "_get_latest_version", "golang"),
+        (PythonAnalyzer, "_get_pypi_package_info", "python"),
+    ],
+)
+def test_analyzer_declares_osv_ecosystem(
+    analyzer_cls: type, fetch_method: str, expected_ecosystem: str
+) -> None:
+    """Every analyzer stamps additional_info["ecosystem"] for OSV routing.
+
+    Deterministic routing is the fix for npm/Go deps whose repo URL lacks the
+    magic substrings and would otherwise default to PyPI and return no
+    advisories.
+    """
+    analyzer = analyzer_cls()
+    analyzer.clone_repos = False  # no network clone in a unit test
+    dep = DependencyMetadata(name="pkg", installed_version="1.0.0")
+    with mock.patch.object(analyzer, fetch_method, return_value=None):
+        result = analyzer.analyze({"pkg": dep})
+    assert result["pkg"].additional_info["ecosystem"] == expected_ecosystem
 
 
 def test_normalize_ecosystem_covers_all_supported_ecosystems() -> None:

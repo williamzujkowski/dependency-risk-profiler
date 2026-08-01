@@ -509,6 +509,11 @@ def analyze(
     # Get logger
     logger = logging.getLogger(__name__)
 
+    # When stdout carries JSON, status messages must go to stderr so the output
+    # stays machine-clean (see docs/agents.md).
+    json_output = config.get("general", "output_format") == "json"
+    status_console = _auxiliary_console(json_output)
+
     try:
         # Check if manifest argument is provided
         if not manifest:
@@ -544,7 +549,9 @@ def analyze(
                 BaseParser._initialize_registry()
 
             scan_mode = "recursively" if recursive else "directory"
-            console.print(f"[bold]Scanning {scan_mode} for manifest files...[/bold]")
+            status_console.print(
+                f"[bold]Scanning {scan_mode} for manifest files...[/bold]"
+            )
 
             for root, _, files in os.walk(manifest_path):
                 # Skip nested directories unless recursive mode is enabled.
@@ -564,13 +571,14 @@ def analyze(
                     break
 
             if not manifest_files:
-                console.print(
+                status_console.print(
                     "[bold yellow]No supported manifest files found.[/bold yellow]"
                 )
-                display_ecosystem_list()
+                if not json_output:
+                    display_ecosystem_list()
                 raise typer.Exit(code=0)
 
-            console.print(
+            status_console.print(
                 "[bold green]Found "
                 f"{len(manifest_files)} manifest files to analyze[/bold green]"
             )
@@ -1258,6 +1266,10 @@ def analyze(
                         "for slow-to-analyze files.[/italic]"
                     )
 
+    except typer.Exit:
+        # Intentional control-flow exits (e.g. "no manifests found" → code 0)
+        # must keep their own exit code, not be rewritten to 1 below.
+        raise
     except Exception as e:
         logger.error(f"Error: {e}", exc_info=True)
         console.print(f"[bold red]Error: {e}[/bold red]")

@@ -43,6 +43,10 @@ class PythonAnalyzer(BaseAnalyzer):
         """
         for name, dep in dependencies.items():
             logger.info(f"Analyzing Python package: {name}")
+            # Set the OSV ecosystem explicitly rather than leaning on the
+            # aggregator's "default to PyPI" behavior, so routing stays correct
+            # regardless of heuristic changes.
+            dep.additional_info["ecosystem"] = "python"
 
             try:
                 # Get PyPI package information

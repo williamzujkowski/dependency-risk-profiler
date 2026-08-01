@@ -42,6 +42,10 @@ class NodeJSAnalyzer(BaseAnalyzer):
         """
         for name, dep in dependencies.items():
             logger.info(f"Analyzing npm package: {name}")
+            # Route vulnerability lookups to the npm OSV ecosystem explicitly;
+            # relying on the repository-URL heuristic misroutes packages whose
+            # repo URL lacks an "npm"/"node" token (e.g. lodash) to PyPI.
+            dep.additional_info["ecosystem"] = "nodejs"
 
             try:
                 # Get npm package information
