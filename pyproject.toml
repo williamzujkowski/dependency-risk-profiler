@@ -29,8 +29,6 @@ dependencies = [
     "packaging>=23.2",
     "colorama>=0.4.6;platform_system=='Windows'",
     "pyyaml>=6.0.1",
-    "matplotlib>=3.7.0",  # For potential visualization
-    "networkx>=2.8.8",    # For dependency graph analysis
     "cryptography>=42.0.0",  # For secure code signing, Fixed CVE-2023-50782 & others
     "urllib3>=2.2.2",     # Fixed CVE-2024-37891
     "jinja2>=3.1.5",      # Fixed CVE-2024-56201
@@ -38,7 +36,6 @@ dependencies = [
     "werkzeug>=3.0.6",    # Fixed CVE-2024-49766, CVE-2024-49767
     "tomli>=2.0.1",  # TOML parsing (make available for all Python versions for testing)
     "pygments>=2.16.1",   # Fixed CVE-2023-41337
-    "pillow>=10.2.0",     # Fixed CVE-2023-50447, CVE-2024-35219, etc.
     "typer>=0.9.0",       # CLI framework for better user experience
     "rich>=13.5.0",       # For rich terminal output and progress bars
     "aiohttp>=3.8.6",     # For async HTTP requests
@@ -62,6 +59,7 @@ dev = [
     "tomli>=2.0.1",  # TOML parsing/writing in tests (make available for all Python versions)
     "tomli-w>=1.0.0",           # For TOML writing in tests
     "pre-commit>=3.5.0",        # For pre-commit hooks
+    "numpy>=1.24.0",            # test-only; was pulled transitively via matplotlib
 ]
 
 benchmark = [
@@ -71,6 +69,11 @@ benchmark = [
 visualization = [
     "graphviz>=0.20.1",        # For dependency graph visualization
     "python-igraph>=0.10.4",   # Alternative graph visualization
+    # Not imported by the package itself — only optional graph/plot rendering
+    # (examples/). Kept out of the default install to shrink the CVE surface.
+    "matplotlib>=3.7.0",
+    "networkx>=2.8.8",
+    "pillow>=10.2.0",          # matplotlib image backend; CVE-2023-50447 floor
 ]
 
 docs = [
