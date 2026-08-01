@@ -7,12 +7,7 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import (
-    check_for_vulnerabilities,
-    cloned_repo,
-    fetch_json,
-    is_cloneable_repo_url,
-)
+from .common import cloned_repo, fetch_json, is_cloneable_repo_url
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +101,6 @@ class PythonAnalyzer(BaseAnalyzer):
                         home_page = pypi_data["info"]["home_page"]
                         if is_cloneable_repo_url(home_page):
                             dep.repository_url = home_page
-
-                    # Check for known vulnerabilities
-                    dep.has_known_exploits = check_for_vulnerabilities(name, "pypi")
 
                     # Get additional info from repository if available
                     if self.clone_repos and is_cloneable_repo_url(dep.repository_url):
