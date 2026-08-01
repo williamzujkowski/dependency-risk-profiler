@@ -158,15 +158,28 @@ def run_pipdeptree(python_path: str) -> Optional[List[Dict]]:
 
 def analyze_python_transitive_dependencies(
     requirements_file: str,
+    allow_install: bool = False,
 ) -> Dict[str, Set[str]]:
     """Analyze transitive dependencies for a Python project using pipdeptree.
 
     Args:
         requirements_file: Path to requirements file
+        allow_install: Opt in to installing the manifest to resolve transitive
+            deps. This runs ``pip install`` on untrusted input, which executes
+            arbitrary package code (setup.py / build backends); off by default.
 
     Returns:
         Dictionary mapping package names to their dependencies
     """
+    if not allow_install:
+        logger.warning(
+            "Skipping transitive resolution for %s: it requires installing the "
+            "manifest, which executes arbitrary package code (setup.py / build "
+            "backends). Re-run with --install-transitive to opt in, and only "
+            "for manifests you trust.",
+            requirements_file,
+        )
+        return {}
     try:
         # Create a temporary directory for the virtual environment
         with tempfile.TemporaryDirectory(
@@ -220,7 +233,9 @@ def analyze_python_transitive_dependencies(
         return {}
 
 
-def analyze_pyproject_toml_dependencies(pyproject_file: str) -> Dict[str, Set[str]]:
+def analyze_pyproject_toml_dependencies(
+    pyproject_file: str, allow_install: bool = False
+) -> Dict[str, Set[str]]:
     """Analyze dependencies from a pyproject.toml file.
 
     Args:
@@ -272,7 +287,9 @@ def analyze_pyproject_toml_dependencies(pyproject_file: str) -> Dict[str, Set[st
 
         try:
             # Use the requirements file to analyze dependencies
-            dependency_map = analyze_python_transitive_dependencies(temp_file_path)
+            dependency_map = analyze_python_transitive_dependencies(
+                temp_file_path, allow_install=allow_install
+            )
         finally:
             # Clean up the temporary file
             os.unlink(temp_file_path)
@@ -283,7 +300,9 @@ def analyze_pyproject_toml_dependencies(pyproject_file: str) -> Dict[str, Set[st
         return {}
 
 
-def analyze_pipfile_lock_dependencies(pipfile_lock: str) -> Dict[str, Set[str]]:
+def analyze_pipfile_lock_dependencies(
+    pipfile_lock: str, allow_install: bool = False
+) -> Dict[str, Set[str]]:
     """Analyze dependencies from a Pipfile.lock file.
 
     Args:
@@ -315,7 +334,9 @@ def analyze_pipfile_lock_dependencies(pipfile_lock: str) -> Dict[str, Set[str]]:
 
         try:
             # Use the requirements file to analyze dependencies
-            dependency_map = analyze_python_transitive_dependencies(temp_file_path)
+            dependency_map = analyze_python_transitive_dependencies(
+                temp_file_path, allow_install=allow_install
+            )
         finally:
             # Clean up the temporary file
             os.unlink(temp_file_path)
@@ -326,11 +347,15 @@ def analyze_pipfile_lock_dependencies(pipfile_lock: str) -> Dict[str, Set[str]]:
         return {}
 
 
-def extract_python_dependencies_enhanced(manifest_path: str) -> Dict[str, Set[str]]:
+def extract_python_dependencies_enhanced(
+    manifest_path: str, allow_install: bool = False
+) -> Dict[str, Set[str]]:
     """Extract Python dependencies with enhanced transitive dependency analysis.
 
     Args:
         manifest_path: Path to Python manifest file
+        allow_install: Opt in to install-based transitive resolution (off by
+            default; executes untrusted package code — see the chokepoint).
 
     Returns:
         Dictionary mapping package names to their dependencies
@@ -338,11 +363,17 @@ def extract_python_dependencies_enhanced(manifest_path: str) -> Dict[str, Set[st
     logger.info(f"Extracting Python dependencies from {manifest_path}")
 
     if manifest_path.endswith("requirements.txt"):
-        return analyze_python_transitive_dependencies(manifest_path)
+        return analyze_python_transitive_dependencies(
+            manifest_path, allow_install=allow_install
+        )
     elif manifest_path.endswith("pyproject.toml"):
-        return analyze_pyproject_toml_dependencies(manifest_path)
+        return analyze_pyproject_toml_dependencies(
+            manifest_path, allow_install=allow_install
+        )
     elif manifest_path.endswith("Pipfile.lock"):
-        return analyze_pipfile_lock_dependencies(manifest_path)
+        return analyze_pipfile_lock_dependencies(
+            manifest_path, allow_install=allow_install
+        )
     else:
         logger.warning(f"Unsupported Python manifest file: {manifest_path}")
         return {}
@@ -388,13 +419,18 @@ def build_dependency_graph(
 
 
 def analyze_transitive_dependencies_enhanced(
-    dependencies: Dict[str, DependencyMetadata], manifest_path: str
+    dependencies: Dict[str, DependencyMetadata],
+    manifest_path: str,
+    allow_install: bool = False,
 ) -> Dict[str, DependencyMetadata]:
     """Analyze transitive dependencies with enhanced methods.
 
     Args:
         dependencies: Dictionary mapping dependency names to their metadata
         manifest_path: Path to the manifest file
+        allow_install: Opt in to install-based Python transitive resolution.
+            Off by default because it runs ``pip install`` on the untrusted
+            manifest, executing arbitrary package code.
 
     Returns:
         Updated dependencies with transitive dependency information
@@ -416,7 +452,9 @@ def analyze_transitive_dependencies_enhanced(
             manifest_path.endswith(ext)
             for ext in ["requirements.txt", "pyproject.toml", "Pipfile.lock"]
         ):
-            dependency_map = extract_python_dependencies_enhanced(manifest_path)
+            dependency_map = extract_python_dependencies_enhanced(
+                manifest_path, allow_install=allow_install
+            )
 
         # Skip if no dependency map could be extracted
         if not dependency_map:

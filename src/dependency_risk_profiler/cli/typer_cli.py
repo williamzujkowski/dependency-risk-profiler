@@ -297,6 +297,16 @@ def analyze(
         "-r",
         help="Recursively search for manifest files in the provided directory",
     ),
+    install_transitive: bool = typer.Option(
+        False,
+        "--install-transitive",
+        help=(
+            "Resolve Python transitive dependencies by installing the manifest "
+            "in a temp venv. This runs `pip install` on the manifest, executing "
+            "arbitrary package code (setup.py / build backends) — only enable "
+            "for manifests you trust. Off by default."
+        ),
+    ),
     timeout: int = typer.Option(
         120,
         "--timeout",
@@ -785,7 +795,7 @@ def analyze(
 
                     logger.info("Analyzing transitive dependencies")
                     dependencies = analyze_transitive_dependencies_enhanced(
-                        dependencies, manifest_path
+                        dependencies, manifest_path, allow_install=install_transitive
                     )
 
                     # Aggregate vulnerability data from multiple sources
