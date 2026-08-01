@@ -34,6 +34,7 @@ you need to act, no reconstruction required:
 | `name`, `ecosystem`, `version` | Identify the package. |
 | `risk_level` | Prioritize (critical/high/medium/low/unknown). |
 | `known_vulnerable` | A separate axis: the installed version has scored advisories. Fix these regardless of risk level. |
+| `remediation` | A one-line, ready-to-use action string when one applies (upgrade past the fix versions, upgrade to latest, or replace a deprecated package), else `null`. Put it straight in the issue/PR body. It names fix versions but does **not** resolve the exact target across version ranges — you still pick the precise pin. |
 | `metadata.latest_version` | The upgrade target for drift — but may be `null` when the registry lookup didn't resolve; treat `null` as unknown and fall back to `deps_dev` / `repository_url`. |
 | `advisories.details[].fixed_versions` | The version(s) that close each advisory — the reliable target for a known-vulnerable dep. |
 | `key_signals` / `risk_factors` | The "why", for the issue body. |
@@ -54,10 +55,12 @@ and `repository_url`.
    `risk_level` is `high`/`critical`:
    - **Open an issue** summarizing `name`, `risk_level`, `key_signals`, the
      advisories, and every repo/manifest from `usage[]`.
-   - **Determine the fix:** for a known-vulnerable dep, the smallest version that
-     is `>=` every relevant `fixed_versions` entry; otherwise `latest_version`.
-     If the package is unmaintained (`key_signals` shows it), investigate a
-     replacement via `repository_url` / deps.dev instead of a version bump.
+   - **Determine the fix:** start from `remediation` — it states the action
+     directly. When you need to pick the exact pin, use the smallest version
+     that is `>=` every relevant `fixed_versions` entry; otherwise
+     `latest_version`. If `remediation` says to replace (deprecated /
+     unmaintained, no published fix), investigate a replacement via
+     `repository_url` / deps.dev instead of a version bump.
    - **Open a PR** that edits each manifest in `usage[]` to the fix version.
 3. Leave the merge decision to a human. The tool identifies and the agent
    prepares; a person keeps the judgment call.

@@ -492,6 +492,7 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
         "license",
         "deprecated",
         "known_vulnerable",
+        "remediation",
         "advisories_scored",
         "advisories_filtered",
         "signals",
@@ -504,6 +505,9 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert first_csv["deps_dev"].startswith("https://deps.dev/")
     assert first_csv["known_vulnerable"] in {"yes", "no"}
     assert any(r["known_vulnerable"] == "yes" for r in csv_rows)
+    # A known-vulnerable dependency carries a ready-to-use remediation string.
+    vuln_row = next(r for r in csv_rows if r["known_vulnerable"] == "yes")
+    assert "advisories" in vuln_row["remediation"]
 
     model = report_to_dict(report)
     assert model["unique_dependency_count"] == 4
@@ -512,6 +516,12 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     first_dependencies = cast(
         List[Dict[str, object]], model["most_exposed_risky_dependencies"]
     )
+    # Every serialized dependency exposes a remediation key (null when no
+    # supported action); the known-vulnerable one states an action.
+    assert all("remediation" in dep for dep in first_dependencies)
+    vuln_dep = next(dep for dep in first_dependencies if dep["known_vulnerable"])
+    assert isinstance(vuln_dep["remediation"], str)
+    assert "advisories" in vuln_dep["remediation"]
     assert first_dependencies[0]["usage"] == [
         {
             "repo": "acme/api",
