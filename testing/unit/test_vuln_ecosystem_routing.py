@@ -47,6 +47,22 @@ def test_normalize_ecosystem_covers_all_supported_ecosystems() -> None:
     assert osv._normalize_ecosystem("golang") == "Go"
 
 
+def test_cargo_and_go_reach_github_advisory_and_nvd() -> None:
+    """Cargo/Go resolve in the GitHub Advisory and NVD tables (#76/#77).
+
+    The strings analyzers actually emit ("cargo", "go") must map in every source
+    table, not just OSV — a missing key silently skips that source (#66 class).
+    """
+    from dependency_risk_profiler.vulnerabilities.aggregator import (
+        GitHubAdvisorySource,
+        NVDSource,
+    )
+
+    assert GitHubAdvisorySource()._normalize_ecosystem("cargo") == "RUST"
+    assert NVDSource()._get_cpe_prefix("cargo") != ""
+    assert NVDSource()._get_cpe_prefix("go") != ""
+
+
 def test_vuln_lookup_uses_declared_ecosystem_not_url_heuristic() -> None:
     """A dep's additional_info ecosystem drives OSV, not the repo-URL guess."""
     recorded: List[Tuple[str, str]] = []
