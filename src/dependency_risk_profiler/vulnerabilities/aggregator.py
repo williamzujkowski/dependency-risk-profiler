@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import requests
 
 from ..models import DependencyMetadata
+from . import ecosystems
 from .cache import default_cache as disk_cache
 
 logger = logging.getLogger(__name__)
@@ -280,28 +281,9 @@ class OSVSource(VulnerabilitySource):
         Returns:
             OSV ecosystem name
         """
-        mapping = {
-            "nodejs": "npm",
-            "node": "npm",
-            "python": "PyPI",
-            "py": "PyPI",
-            "pyproject": "PyPI",
-            "golang": "Go",
-            "go": "Go",
-            "cargo": "crates.io",
-            "crates": "crates.io",
-            "rust": "crates.io",
-            "maven": "Maven",
-            "java": "Maven",
-            "nuget": "NuGet",
-            "dotnet": "NuGet",
-            "ruby": "RubyGems",
-            "gems": "RubyGems",
-            "composer": "Packagist",
-            "php": "Packagist",
-        }
-
-        return mapping.get(ecosystem.lower(), ecosystem)
+        eco = ecosystems.lookup(ecosystem)
+        # Unknown ecosystem is returned verbatim (historical OSV behavior).
+        return eco.osv if eco is not None else ecosystem
 
     def _normalize_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Normalize OSV vulnerability data.
@@ -430,23 +412,9 @@ class NVDSource(VulnerabilitySource):
         Returns:
             CPE prefix for the ecosystem
         """
-        mapping = {
-            "nodejs": "cpe:2.3:a:*:node:",
-            "npm": "cpe:2.3:a:*:node:",
-            "python": "cpe:2.3:a:python:",
-            "golang": "cpe:2.3:a:golang:",
-            "go": "cpe:2.3:a:golang:",
-            "maven": "cpe:2.3:a:apache:maven:",
-            "java": "cpe:2.3:a:java:",
-            "ruby": "cpe:2.3:a:ruby:",
-            "php": "cpe:2.3:a:php:",
-            # Analyzers/keys emit "cargo" for Rust; keep NVD reachable for it.
-            "cargo": "cpe:2.3:a:rust:",
-            "rust": "cpe:2.3:a:rust:",
-            "crates": "cpe:2.3:a:rust:",
-        }
-
-        return mapping.get(ecosystem.lower(), "")
+        eco = ecosystems.lookup(ecosystem)
+        # "" means "NVD does not cover this ecosystem" (historical behavior).
+        return (eco.nvd_cpe_prefix or "") if eco is not None else ""
 
     def _normalize_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Normalize NVD vulnerability data.
@@ -699,28 +667,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
         Returns:
             GitHub ecosystem name
         """
-        mapping = {
-            "nodejs": "NPM",
-            "npm": "NPM",
-            "python": "PIP",
-            "pypi": "PIP",
-            "golang": "GO",
-            "go": "GO",
-            "maven": "MAVEN",
-            "java": "MAVEN",
-            "nuget": "NUGET",
-            "dotnet": "NUGET",
-            "ruby": "RUBYGEMS",
-            "rubygems": "RUBYGEMS",
-            "php": "COMPOSER",
-            "composer": "COMPOSER",
-            "rust": "RUST",
-            # Analyzers/keys emit "cargo"; GitHub Advisory calls it RUST.
-            "cargo": "RUST",
-            "crates": "RUST",
-        }
-
-        return mapping.get(ecosystem.lower(), "")
+        eco = ecosystems.lookup(ecosystem)
+        # "" means "GitHub Advisory does not cover this ecosystem" (historical).
+        return (eco.github_advisory or "") if eco is not None else ""
 
     def _normalize_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Normalize GitHub Advisory vulnerability data.
