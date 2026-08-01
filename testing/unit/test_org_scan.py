@@ -606,11 +606,12 @@ def test_github_client_derives_pushed_at_and_health_from_tree() -> None:
             _FixtureResponse([{"login": "one"}], {}),
             _FixtureResponse(
                 {
-                    "truncated": False,
+                    # Non-recursive root tree: top-level entries only. A
+                    # ".github" dir implies CI; a "tests" dir implies tests.
                     "tree": [
-                        {"path": "src/app.py", "type": "blob"},
-                        {"path": "tests/test_app.py", "type": "blob"},
-                        {"path": ".github/workflows/ci.yml", "type": "blob"},
+                        {"path": "src", "type": "tree"},
+                        {"path": "tests", "type": "tree"},
+                        {"path": ".github", "type": "tree"},
                     ],
                 }
             ),
@@ -626,28 +627,30 @@ def test_github_client_derives_pushed_at_and_health_from_tree() -> None:
     assert signals.pushed_at.year == 2026 and signals.pushed_at.month == 1
     assert signals.has_tests is True
     assert signals.has_ci is True
+    # Non-recursive tree request (no ?recursive=1) keeps it cheap for monorepos.
     assert session.urls[2] == "https://api.github.com/repos/acme/widget/git/trees/main"
+    assert session.params[2] == {}
 
 
-def test_github_client_reports_unknown_health_on_truncated_tree() -> None:
-    """A truncated tree yields unknown tests/CI rather than a false negative."""
+def test_github_client_reports_false_health_when_no_markers() -> None:
+    """A root tree with no test/CI markers yields has_tests/has_ci False."""
     session = SignalSession(
         [
             _FixtureResponse(
                 {"stargazers_count": 5, "default_branch": "main", "archived": False}
             ),
             _FixtureResponse([{"login": "one"}], {}),
-            _FixtureResponse({"truncated": True, "tree": []}),
+            _FixtureResponse({"tree": [{"path": "src", "type": "tree"}]}),
         ]
     )
     client = GitHubOrgClient(
         token="fixture-token", session=cast(requests.Session, session)
     )
 
-    signals = client.get_repository_signals("acme/huge")
+    signals = client.get_repository_signals("acme/plain")
 
-    assert signals.has_tests is None
-    assert signals.has_ci is None
+    assert signals.has_tests is False
+    assert signals.has_ci is False
 
 
 def test_profiler_applies_pushed_at_and_health_signals() -> None:

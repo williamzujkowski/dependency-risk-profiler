@@ -376,35 +376,38 @@ class GitHubOrgClient:
             return parsed.replace(tzinfo=timezone.utc)
         return parsed
 
-    # Root-anchored markers for CI config and test layout, matched against the
-    # repository's git tree so we never have to clone the repo to detect them.
-    _CI_TREE_MARKERS = (
-        ".github/workflows/",
+    # Top-level entry names that indicate CI config or a test layout. Matched
+    # against the repo's ROOT tree only (non-recursive), which stays tiny and
+    # fast even for huge monorepos — a recursive tree of e.g. TypeScript took
+    # ~1.7s/repo and dominated large scans (#46). A ".github" dir at root
+    # implies workflows without descending into it.
+    _CI_TOP_LEVEL_MARKERS = (
+        ".github",
+        ".circleci",
         ".gitlab-ci.yml",
         ".travis.yml",
-        ".circleci/",
         "azure-pipelines.yml",
         "jenkinsfile",
         ".drone.yml",
         "appveyor.yml",
     )
-    _TEST_DIR_MARKERS = ("test/", "tests/", "spec/", "__tests__/")
+    _TEST_DIR_MARKERS = ("test", "tests", "spec", "__tests__")
+    _TEST_FILE_SUFFIXES = ("_test.go", ".test.js", ".test.ts", ".spec.js")
 
     def _repo_health_from_tree(
         self, owner_repo: str, default_branch: Optional[str]
     ) -> tuple[Optional[bool], Optional[bool]]:
-        """Detect (has_tests, has_ci) from the repo git tree without cloning.
+        """Detect (has_tests, has_ci) from the repo's root tree without cloning.
 
-        Returns ``(None, None)`` when the branch is unknown, the request fails,
-        or the tree is truncated (very large repos) — reporting an honest
-        unknown rather than guessing.
+        Uses a NON-recursive tree (top-level entries only) so the request is
+        cheap regardless of repository size. Returns ``(None, None)`` when the
+        branch is unknown or the request fails — an honest unknown, not a guess.
         """
         if not default_branch:
             return None, None
         try:
             payload = self._get_json(
-                f"/repos/{owner_repo}/git/trees/{default_branch}",
-                {"recursive": "1"},
+                f"/repos/{owner_repo}/git/trees/{default_branch}", {}
             )
         except (
             GitHubRateLimitError,
@@ -414,31 +417,22 @@ class GitHubOrgClient:
         ) as exc:
             logger.debug("Tree fetch failed for %s: %s", owner_repo, exc)
             return None, None
-        if not isinstance(payload, Mapping) or payload.get("truncated") is True:
+        if not isinstance(payload, Mapping):
             return None, None
         entries = payload.get("tree")
         if not isinstance(entries, list):
             return None, None
 
-        has_tests = False
-        has_ci = False
-        for entry in entries:
-            if not isinstance(entry, Mapping):
-                continue
-            raw_path = entry.get("path")
-            if not isinstance(raw_path, str):
-                continue
-            path = raw_path.lower()
-            if not has_ci and any(m in path for m in self._CI_TREE_MARKERS):
-                has_ci = True
-            if not has_tests and (
-                any(seg in f"/{path}/" for seg in self._TEST_DIR_MARKERS)
-                or path.endswith(("_test.go", ".test.js", ".test.ts", ".spec.js"))
-                or path.rsplit("/", 1)[-1].startswith("test_")
-            ):
-                has_tests = True
-            if has_tests and has_ci:
-                break
+        top_level = {
+            entry["path"].lower()
+            for entry in entries
+            if isinstance(entry, Mapping) and isinstance(entry.get("path"), str)
+        }
+        has_ci = any(marker in top_level for marker in self._CI_TOP_LEVEL_MARKERS)
+        has_tests = any(name in top_level for name in self._TEST_DIR_MARKERS) or any(
+            name.endswith(self._TEST_FILE_SUFFIXES) or name.startswith("test_")
+            for name in top_level
+        )
         return has_tests, has_ci
 
     def _repository_from_mapping(
