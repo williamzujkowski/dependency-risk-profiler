@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import logging
 import threading
@@ -82,6 +83,7 @@ class ExistingDependencyProfiler(DependencyProfiler):
             if key not in self._profile_cache
         ]
         if pending:
+            self._prewarm_osv_batch_cache(pending)
             workers = min(self.max_workers, len(pending))
             with ThreadPoolExecutor(max_workers=workers) as executor:
                 futures = {
@@ -104,6 +106,37 @@ class ExistingDependencyProfiler(DependencyProfiler):
             if cached is not None:
                 profiles[key] = cached
         return profiles
+
+    def _prewarm_osv_batch_cache(
+        self, pending: List[Tuple[DependencyKey, DependencyMetadata]]
+    ) -> None:
+        """Pre-warm OSV cache for pending dependencies when source-safe."""
+        options = self.vulnerability_options
+        if not (
+            options.enable_osv
+            and not options.enable_nvd
+            and not options.enable_github_advisory
+        ):
+            return
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            logger.debug("Skipping OSV querybatch pre-warm inside a running event loop")
+            return
+
+        try:
+            from ..vulnerabilities.osv_batch import prewarm_osv_querybatch_cache
+
+            asyncio.run(
+                prewarm_osv_querybatch_cache(
+                    [(metadata.name, key.ecosystem) for key, metadata in pending]
+                )
+            )
+        except Exception as exc:
+            logger.debug("OSV querybatch cache pre-warm failed: %s", exc)
 
     def _profile_one(
         self, key: DependencyKey, metadata: DependencyMetadata
