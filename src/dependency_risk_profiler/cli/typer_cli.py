@@ -1621,18 +1621,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-    # For debugging failures:
-    # import asyncio
-    # manifest_path = "/tmp/requirements.txt"
-    # timeout_seconds = 1
-    # async def parse_test():
-    #     return await asyncio.sleep(2)
-    # try:
-    #     loop = asyncio.get_event_loop()
-    #     loop.run_until_complete(
-    #         asyncio.wait_for(parse_test(), timeout=timeout_seconds)
-    #     )
-    # except asyncio.TimeoutError:
-    #     print(f"Timeout detected after {timeout_seconds} seconds")
-    #     # This works, so our async code should be working!
