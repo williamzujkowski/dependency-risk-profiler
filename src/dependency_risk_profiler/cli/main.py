@@ -394,6 +394,7 @@ def main() -> int:
             from ..community.analyzer import analyze_community_metrics
             from ..license.analyzer import analyze_license
             from ..transitive.analyzer import analyze_transitive_dependencies
+            from ..utils import resolve_github_token
 
             logger.info("Analyzing license information")
             # Apply license analysis to each dependency
@@ -407,6 +408,9 @@ def main() -> int:
                     )
 
             logger.info("Analyzing community metrics")
+            # Resolve a token once (env / gh CLI) so the real contributor count
+            # can be read from the GitHub API.
+            community_token = resolve_github_token()
             # Apply community metrics analysis to each dependency
             for name, dep in dependencies.items():
                 if (
@@ -414,10 +418,14 @@ def main() -> int:
                     and name in analyzer.metadata_cache
                 ):
                     dependencies[name] = analyze_community_metrics(
-                        dep, analyzer.metadata_cache[name]
+                        dep,
+                        analyzer.metadata_cache[name],
+                        github_token=community_token,
                     )
                 else:
-                    dependencies[name] = analyze_community_metrics(dep)
+                    dependencies[name] = analyze_community_metrics(
+                        dep, github_token=community_token
+                    )
 
             logger.info("Analyzing transitive dependencies")
             dependencies = analyze_transitive_dependencies(dependencies, manifest_path)

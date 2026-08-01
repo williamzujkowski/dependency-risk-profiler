@@ -30,6 +30,7 @@ from ..org_scan.pipeline import VulnerabilityOptions
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
 from ..scoring.risk_scorer import RiskScorer
+from ..utils import resolve_github_token
 from .formatter import JsonFormatter, TerminalFormatter
 
 # Create Typer app
@@ -755,6 +756,9 @@ def analyze(
                             )
 
                     logger.info("Analyzing community metrics")
+                    # Resolve a token once (flag / env / gh CLI) so the real
+                    # contributor count can be read from the GitHub API.
+                    community_token = resolve_github_token(github_token)
                     # Apply community metrics analysis to each dependency
                     for name, dep in dependencies.items():
                         if (
@@ -762,10 +766,14 @@ def analyze(
                             and name in analyzer.metadata_cache
                         ):
                             dependencies[name] = analyze_community_metrics(
-                                dep, analyzer.metadata_cache[name]
+                                dep,
+                                analyzer.metadata_cache[name],
+                                github_token=community_token,
                             )
                         else:
-                            dependencies[name] = analyze_community_metrics(dep)
+                            dependencies[name] = analyze_community_metrics(
+                                dep, github_token=community_token
+                            )
 
                     logger.info("Analyzing transitive dependencies")
                     dependencies = analyze_transitive_dependencies_enhanced(
@@ -1429,11 +1437,12 @@ def _scan_github_account(
     ctx: typer.Context,
 ) -> None:
     """Run the shared GitHub account scan implementation."""
-    token = github_token or os.getenv("GITHUB_TOKEN") or os.getenv("DRP_GITHUB_TOKEN")
+    token = resolve_github_token(github_token)
     if not token:
         console.print(
             "[bold red]Error: GitHub token required via --github-token, "
-            "GITHUB_TOKEN, or DRP_GITHUB_TOKEN.[/bold red]"
+            "the GITHUB_TOKEN / GH_TOKEN / DRP_GITHUB_TOKEN environment "
+            "variables, or an authenticated gh CLI (gh auth login).[/bold red]"
         )
         raise typer.Exit(code=1)
 

@@ -25,16 +25,18 @@ pip install -e .                          # from source
 $ dependency-risk-profiler analyze requirements.txt
 
 Dependency Risk · requirements.txt (python)
-3 dependencies · overall 2.2 / 5.0 · 2 signals could not be measured
+3 dependencies · overall 1.8 / 5.0 · 2 signals could not be measured
 
-RISK      DEPENDENCY    VERSION           LEADING SIGNALS                              ADVISORIES
-────────────────────────────────────────────────────────────────────────────────────────────────
-HIGH      flask         3.0.0 → 3.1.3     single maintainer · 1 minor version behind   5 scored · 5 filtered
-MEDIUM    urllib3       2.0.0 → 2.7.0      single maintainer · 7 minor versions behind  19 scored · 19 filtered
-MEDIUM    requests      2.31.0 → 2.34.2    single maintainer · 3 minor versions behind  8 scored · 8 filtered
+RISK    DEPENDENCY  VERSION          LEADING SIGNALS                                   ADVISORIES
+──────────────────────────────────────────────────────────────────────────────────────────────────
+MEDIUM  flask       3.0.0 → 3.1.3    1 minor version behind · missing security policy  5 scored · 5 filtered
+MEDIUM  urllib3     2.0.0 → 2.7.0    7 minor versions behind · unsigned commits        19 scored · 19 filtered
+MEDIUM  requests    2.31.0 → 2.34.2  3 minor versions behind · unsigned commits        8 scored · 8 filtered
 
 Worst first. "filtered" = informational / withdrawn / low-confidence advisories excluded from the score.
 ```
+
+The maintainer-concentration signal reads the true contributor count from the GitHub API — supply a token via `--github-token`, the `GITHUB_TOKEN` / `GH_TOKEN` environment variables, or just an authenticated `gh` CLI (`gh auth login`). Without one it reports the count as unknown rather than guessing.
 
 For machine-readable output:
 
