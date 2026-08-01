@@ -324,14 +324,16 @@ class OSVSource(VulnerabilitySource):
             fixed_versions = []
             if "affected" in vuln and vuln["affected"]:
                 for affected in vuln["affected"]:
-                    if "ranges" in affected:
-                        for range_obj in affected["ranges"]:
-                            if range_obj["type"] == "SEMVER" and "events" in range_obj:
-                                for event in range_obj["events"]:
-                                    if event["introduced"] == "0":
-                                        continue
-                                    if "fixed" in event:
-                                        fixed_versions.append(event["fixed"])
+                    for range_obj in affected.get("ranges", []):
+                        # OSV range events are one of introduced/fixed/
+                        # last_affected/limit; only "fixed" carries a fixed
+                        # version. Guard against events missing "introduced"
+                        # (which used to raise KeyError and silently drop the
+                        # whole advisory) and don't restrict to SEMVER ranges
+                        # (npm advisories use ECOSYSTEM ranges).
+                        for event in range_obj.get("events", []):
+                            if "fixed" in event:
+                                fixed_versions.append(event["fixed"])
 
             normalized.append(
                 {

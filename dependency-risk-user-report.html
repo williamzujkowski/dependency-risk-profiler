@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dependency Risk User Scan · williamzujkowski</title>
+<title>Dependency Risk User Scan · bkimminich</title>
 <style>
 /* Palette ported from the Remarque design system (williamzujkowski.io):
    warm-cream / ferric-ink light, phosphor-green dark, radar-green accent.
@@ -223,13 +223,13 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 <header class="mast">
   <div>
     <p class="kicker">Dependency exposure · github user</p>
-    <h1><span class="at">@</span>williamzujkowski</h1>
-    <p class="verdict"><b>0 high-risk dependencies</b> are in play across 0 repositories. The widest exposure is <code>aegis-core</code> — single maintainer · behind latest — reaching 1 of 3 repos.</p>
+    <h1><span class="at">@</span>bkimminich</h1>
+    <p class="verdict"><b>0 high-risk dependencies</b> are in play across 0 repositories. The widest exposure is <code>noms</code> — single maintainer — reaching 1 of 3 repos.</p>
   </div>
   <dl class="readout" aria-label="Scan totals">
     <div><dt>Repos</dt><dd class="num">3</dd></div>
-    <div><dt>Manifests</dt><dd class="num">14</dd></div>
-    <div><dt>Unique deps</dt><dd class="num">33</dd></div>
+    <div><dt>Manifests</dt><dd class="num">1</dd></div>
+    <div><dt>Unique deps</dt><dd class="num">68</dd></div>
     <div><dt>High-risk</dt><dd class="num hot">
       0
     </dd></div>
@@ -246,27 +246,27 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
     aria-label="Dependencies ranked by risk and blast radius">
 
     <details class="exp-row drill" data-risk="2"
-      data-search="cargo:aegis-core@0.19.3 0.19.3 aegis-boot/aegis-boot single maintainer behind latest 0 scored / 0 filtered medium">
+      data-search="nodejs:noms@0.0.0 0.0.0 bkimminich/anuglar2-qrcode single maintainer 0 scored / 0 filtered medium">
       <summary class="exp-summary">
-      <span class="exp-dep">aegis-core
-        <span class="eco">· cargo</span>
+      <span class="exp-dep">noms
+        <span class="eco">· nodejs</span>
       </span>
       <span><span class="badge med">MEDIUM</span></span>
       <span class="exp-bar">
         <meter class="bar med" min="0" max="3"
-          value="1" aria-label="1 / 3 repos exposed to aegis-core"></meter>
+          value="1" aria-label="1 / 3 repos exposed to noms"></meter>
         <span class="bar-label">
           <b>1</b> / 3 repos
         </span>
       </span>
-      <span class="exp-signals">single maintainer · behind latest<span class="adv">0 scored · 0 filtered</span></span>
+      <span class="exp-signals">single maintainer<span class="adv">0 scored · 0 filtered</span></span>
       </summary>
       
       <div class="triage-panel">
         
         <section class="triage-group">
           <h3>Why it&#x27;s flagged</h3>
-          <ul class="why-list"><li>Bus factor: 1 primary maintainer</li><li>Maintenance: last update 2026-01-11; slowed cadence</li><li>Provenance: no tests</li><li>Version drift: 0.19.3 → 0.1.1 (behind latest)</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: license, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+          <ul class="why-list"><li>Bus factor: 1 primary maintainer</li><li>Maintenance: last update 2025-10-01; slowed cadence</li><li>Provenance: no CI/tests</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
         </section>
         
         <section class="triage-group">
@@ -276,31 +276,307 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
         
         <section class="triage-group">
           <h3>Where it&#x27;s used</h3>
-          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/rescue-tui/Cargo.toml" target="_blank" rel="noopener">crates/rescue-tui/Cargo.toml</a></li></ul></li></ul>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
         </section>
         
         <section class="triage-group">
           <h3>Investigate upstream</h3>
-          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-core" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-core" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/aayushadhikari7/aegis" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Faayushadhikari7%2Faegis" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/noms" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/noms" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/calvinmetcalf/noms" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Fcalvinmetcalf%2Fnoms" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
         </section>
         
         <section class="triage-group">
           <h3>Metadata</h3>
-          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.19.3 → 0.1.1</dd></div><div><dt>version specs</dt><dd>0.19.3</dd></div><div><dt>last updated</dt><dd>2026-01-11</dd></div><div><dt>stars</dt><dd>2</dd></div><div><dt>contributors</dt><dd>1</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>✓</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.0.0 → unknown</dd></div><div><dt>version specs</dt><dd>0.0.0</dd></div><div><dt>last updated</dt><dd>2025-10-01</dd></div><div><dt>stars</dt><dd>10</dd></div><div><dt>contributors</dt><dd>1</dd></div><div><dt>license</dt><dd>ISC</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>—</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="nodejs:buffer-shims@1.0.0 1.0.0 bkimminich/anuglar2-qrcode single maintainer 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">buffer-shims
+        <span class="eco">· nodejs</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to buffer-shims"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">single maintainer<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Bus factor: 1 primary maintainer</li><li>Maintenance: last update 2016-10-26; slowed cadence</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/buffer-shims" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/buffer-shims" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/calvinmetcalf/buffer-shims" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Fcalvinmetcalf%2Fbuffer-shims" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>1.0.0 → unknown</dd></div><div><dt>version specs</dt><dd>1.0.0</dd></div><div><dt>last updated</dt><dd>2016-10-26</dd></div><div><dt>stars</dt><dd>12</dd></div><div><dt>contributors</dt><dd>1</dd></div><div><dt>license</dt><dd>MIT</dd></div><div><dt>tests</dt><dd>✓</dd></div><div><dt>CI</dt><dd>✓</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="nodejs:path-is-absolute@1.0.1 1.0.1 bkimminich/anuglar2-qrcode not updated in 2014 days low popularity (43 stars) 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">path-is-absolute
+        <span class="eco">· nodejs</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to path-is-absolute"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">not updated in 2014 days · low popularity (43 stars)<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Bus factor: 2 primary maintainers</li><li>Maintenance: last update 2021-01-24; slowed cadence</li><li>Provenance: no tests</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/path-is-absolute" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/path-is-absolute" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/sindresorhus/path-is-absolute" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Fsindresorhus%2Fpath-is-absolute" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>1.0.1 → unknown</dd></div><div><dt>version specs</dt><dd>1.0.1</dd></div><div><dt>last updated</dt><dd>2021-01-24</dd></div><div><dt>stars</dt><dd>43</dd></div><div><dt>contributors</dt><dd>2</dd></div><div><dt>license</dt><dd>MIT</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>✓</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="nodejs:util-deprecate@1.0.2 1.0.2 bkimminich/anuglar2-qrcode not updated in 2819 days missing tests, ci, contribution guidelines 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">util-deprecate
+        <span class="eco">· nodejs</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to util-deprecate"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">not updated in 2819 days · missing tests, CI, contribution guidelines<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Bus factor: 3 primary maintainers</li><li>Maintenance: last update 2018-11-11; slowed cadence</li><li>Provenance: no CI/tests</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/util-deprecate" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/util-deprecate" target="_blank" rel="noopener">Registry</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>1.0.2 → unknown</dd></div><div><dt>version specs</dt><dd>1.0.2</dd></div><div><dt>last updated</dt><dd>2018-11-11</dd></div><div><dt>stars</dt><dd>37</dd></div><div><dt>contributors</dt><dd>3</dd></div><div><dt>license</dt><dd>MIT</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>—</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="nodejs:concat-map@0.0.1 0.0.1 bkimminich/anuglar2-qrcode single maintainer 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">concat-map
+        <span class="eco">· nodejs</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to concat-map"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">single maintainer<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Bus factor: 1 primary maintainer</li><li>Maintenance: last update 2025-12-30; slowed cadence</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/concat-map" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/concat-map" target="_blank" rel="noopener">Registry</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.0.1 → unknown</dd></div><div><dt>version specs</dt><dd>0.0.1</dd></div><div><dt>last updated</dt><dd>2025-12-30</dd></div><div><dt>stars</dt><dd>3</dd></div><div><dt>contributors</dt><dd>1</dd></div><div><dt>license</dt><dd>MIT</dd></div><div><dt>tests</dt><dd>✓</dd></div><div><dt>CI</dt><dd>✓</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="nodejs:inflight@1.0.6 1.0.6 bkimminich/anuglar2-qrcode not updated in 799 days missing tests, ci, contribution guidelines 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">inflight
+        <span class="eco">· nodejs</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to inflight"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">not updated in 799 days · missing tests, CI, contribution guidelines<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Maintenance: last update 2024-05-23; slowed cadence</li><li>Provenance: no CI/tests</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/inflight" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/inflight" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/npm/inflight" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Fnpm%2Finflight" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>1.0.6 → unknown</dd></div><div><dt>version specs</dt><dd>1.0.6</dd></div><div><dt>last updated</dt><dd>2024-05-23</dd></div><div><dt>stars</dt><dd>76</dd></div><div><dt>contributors</dt><dd>9</dd></div><div><dt>license</dt><dd>ISC</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>—</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+        </section>
+      </div>
+    </details>
+
+    <details class="exp-row drill" data-risk="2"
+      data-search="nodejs:is-utf8@0.2.1 0.2.1 bkimminich/anuglar2-qrcode not updated in 997 days missing tests, ci, contribution guidelines 0 scored / 0 filtered medium">
+      <summary class="exp-summary">
+      <span class="exp-dep">is-utf8
+        <span class="eco">· nodejs</span>
+      </span>
+      <span><span class="badge med">MEDIUM</span></span>
+      <span class="exp-bar">
+        <meter class="bar med" min="0" max="3"
+          value="1" aria-label="1 / 3 repos exposed to is-utf8"></meter>
+        <span class="bar-label">
+          <b>1</b> / 3 repos
+        </span>
+      </span>
+      <span class="exp-signals">not updated in 997 days · missing tests, CI, contribution guidelines<span class="adv">0 scored · 0 filtered</span></span>
+      </summary>
+      
+      <div class="triage-panel">
+        
+        <section class="triage-group">
+          <h3>Why it&#x27;s flagged</h3>
+          <ul class="why-list"><li>Bus factor: 4 primary maintainers</li><li>Maintenance: last update 2023-11-07; slowed cadence</li><li>Provenance: no CI/tests</li><li>Community health: package activity or support signals raised risk</li><li>couldn&#x27;t measure: version, security_policy, dependency_update, signed_commits, branch_protection, maintained</li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Advisories</h3>
+          <p class="muted">No advisories were reported.</p>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Where it&#x27;s used</h3>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Investigate upstream</h3>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/is-utf8" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/is-utf8" target="_blank" rel="noopener">Registry</a></li><li><a href="https://github.com/wayfind/is-utf8" target="_blank" rel="noopener">Source repo</a></li><li><a href="https://securityscorecards.dev/viewer/?uri=github.com%2Fwayfind%2Fis-utf8" target="_blank" rel="noopener">OpenSSF Scorecard</a></li></ul>
+        </section>
+        
+        <section class="triage-group">
+          <h3>Metadata</h3>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.2.1 → unknown</dd></div><div><dt>version specs</dt><dd>0.2.1</dd></div><div><dt>last updated</dt><dd>2023-11-07</dd></div><div><dt>stars</dt><dd>106</dd></div><div><dt>contributors</dt><dd>4</dd></div><div><dt>license</dt><dd>MIT</dd></div><div><dt>tests</dt><dd>—</dd></div><div><dt>CI</dt><dd>—</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
         </section>
       </div>
     </details>
 
     <details class="exp-row drill" data-risk="4"
-      data-search="cargo:aegis-catalog-data@git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
+      data-search="nodejs:pinkie@2.0.4 2.0.4 bkimminich/anuglar2-qrcode insufficient data for confident risk level 0 scored / 0 filtered unknown">
       <summary class="exp-summary">
-      <span class="exp-dep">aegis-catalog-data
-        <span class="eco">· cargo</span>
+      <span class="exp-dep">pinkie
+        <span class="eco">· nodejs</span>
       </span>
       <span><span class="badge unknown">UNKNOWN</span></span>
       <span class="exp-bar">
         <meter class="bar unknown" min="0" max="3"
-          value="1" aria-label="1 / 3 repos exposed to aegis-catalog-data"></meter>
+          value="1" aria-label="1 / 3 repos exposed to pinkie"></meter>
         <span class="bar-label">
           <b>1</b> / 3 repos
         </span>
@@ -312,7 +588,7 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
         
         <section class="triage-group">
           <h3>Why it&#x27;s flagged</h3>
-          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
+          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
         </section>
         
         <section class="triage-group">
@@ -322,155 +598,17 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
         
         <section class="triage-group">
           <h3>Where it&#x27;s used</h3>
-          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-catalog/Cargo.toml" target="_blank" rel="noopener">crates/aegis-catalog/Cargo.toml</a></li></ul></li></ul>
+          <ul class="usage-list"><li><a href="https://github.com/bkimminich/anuglar2-qrcode" target="_blank" rel="noopener">bkimminich/anuglar2-qrcode</a><ul><li><a href="https://github.com/bkimminich/anuglar2-qrcode/blob/master/package-lock.json" target="_blank" rel="noopener">package-lock.json</a></li></ul></li></ul>
         </section>
         
         <section class="triage-group">
           <h3>Investigate upstream</h3>
-          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-catalog-data" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-catalog-data" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-catalog-data" target="_blank" rel="noopener">Source repo</a></li></ul>
+          <ul class="link-row"><li><a href="https://deps.dev/npm/pinkie" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://www.npmjs.com/package/pinkie" target="_blank" rel="noopener">Registry</a></li></ul>
         </section>
         
         <section class="triage-group">
           <h3>Metadata</h3>
-          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 → unknown</dd></div><div><dt>version specs</dt><dd>git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
-        </section>
-      </div>
-    </details>
-
-    <details class="exp-row drill" data-risk="4"
-      data-search="cargo:aegis-catalog@path:../aegis-catalog 0.19.3, path:../aegis-catalog aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
-      <summary class="exp-summary">
-      <span class="exp-dep">aegis-catalog
-        <span class="eco">· cargo</span>
-      </span>
-      <span><span class="badge unknown">UNKNOWN</span></span>
-      <span class="exp-bar">
-        <meter class="bar unknown" min="0" max="3"
-          value="1" aria-label="1 / 3 repos exposed to aegis-catalog"></meter>
-        <span class="bar-label">
-          <b>1</b> / 3 repos
-        </span>
-      </span>
-      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
-      </summary>
-      
-      <div class="triage-panel">
-        
-        <section class="triage-group">
-          <h3>Why it&#x27;s flagged</h3>
-          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Advisories</h3>
-          <p class="muted">No advisories were reported.</p>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Where it&#x27;s used</h3>
-          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-fetch/Cargo.toml" target="_blank" rel="noopener">crates/aegis-fetch/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/rescue-tui/Cargo.toml" target="_blank" rel="noopener">crates/rescue-tui/Cargo.toml</a></li></ul></li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Investigate upstream</h3>
-          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-catalog" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-catalog" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-catalog" target="_blank" rel="noopener">Source repo</a></li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Metadata</h3>
-          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>path:../aegis-catalog → unknown</dd></div><div><dt>version specs</dt><dd>0.19.3, path:../aegis-catalog</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
-        </section>
-      </div>
-    </details>
-
-    <details class="exp-row drill" data-risk="4"
-      data-search="cargo:aegis-fetch@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
-      <summary class="exp-summary">
-      <span class="exp-dep">aegis-fetch
-        <span class="eco">· cargo</span>
-      </span>
-      <span><span class="badge unknown">UNKNOWN</span></span>
-      <span class="exp-bar">
-        <meter class="bar unknown" min="0" max="3"
-          value="1" aria-label="1 / 3 repos exposed to aegis-fetch"></meter>
-        <span class="bar-label">
-          <b>1</b> / 3 repos
-        </span>
-      </span>
-      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
-      </summary>
-      
-      <div class="triage-panel">
-        
-        <section class="triage-group">
-          <h3>Why it&#x27;s flagged</h3>
-          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Advisories</h3>
-          <p class="muted">No advisories were reported.</p>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Where it&#x27;s used</h3>
-          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/rescue-tui/Cargo.toml" target="_blank" rel="noopener">crates/rescue-tui/Cargo.toml</a></li></ul></li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Investigate upstream</h3>
-          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-fetch" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-fetch" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-fetch" target="_blank" rel="noopener">Source repo</a></li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Metadata</h3>
-          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.19.3 → unknown</dd></div><div><dt>version specs</dt><dd>0.19.3</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
-        </section>
-      </div>
-    </details>
-
-    <details class="exp-row drill" data-risk="4"
-      data-search="cargo:aegis-trust@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown">
-      <summary class="exp-summary">
-      <span class="exp-dep">aegis-trust
-        <span class="eco">· cargo</span>
-      </span>
-      <span><span class="badge unknown">UNKNOWN</span></span>
-      <span class="exp-bar">
-        <meter class="bar unknown" min="0" max="3"
-          value="1" aria-label="1 / 3 repos exposed to aegis-trust"></meter>
-        <span class="bar-label">
-          <b>1</b> / 3 repos
-        </span>
-      </span>
-      <span class="exp-signals">insufficient data for confident risk level<span class="adv">advisories: unknown</span></span>
-      </summary>
-      
-      <div class="triage-panel">
-        
-        <section class="triage-group">
-          <h3>Why it&#x27;s flagged</h3>
-          <ul class="why-list"><li>couldn&#x27;t measure: staleness, maintainer, version, health_indicators, license, community, security_policy, dependency_update, signed_commits, branch_protection, maintained</li><li>insufficient data for a confident risk level</li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Advisories</h3>
-          <p class="muted">No advisories were reported.</p>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Where it&#x27;s used</h3>
-          <ul class="usage-list"><li><a href="https://github.com/aegis-boot/aegis-boot" target="_blank" rel="noopener">aegis-boot/aegis-boot</a><ul><li><a href="https://github.com/aegis-boot/aegis-boot/blob/main/crates/aegis-cli/Cargo.toml" target="_blank" rel="noopener">crates/aegis-cli/Cargo.toml</a></li></ul></li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Investigate upstream</h3>
-          <ul class="link-row"><li><a href="https://deps.dev/cargo/aegis-trust" target="_blank" rel="noopener">deps.dev</a></li><li><a href="https://crates.io/crates/aegis-trust" target="_blank" rel="noopener">Registry</a></li><li><a href="https://crates.io/crates/aegis-trust" target="_blank" rel="noopener">Source repo</a></li></ul>
-        </section>
-        
-        <section class="triage-group">
-          <h3>Metadata</h3>
-          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>0.19.3 → unknown</dd></div><div><dt>version specs</dt><dd>0.19.3</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>unknown</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
+          <dl class="fact-grid mono"><div><dt>installed → latest</dt><dd>2.0.4 → unknown</dd></div><div><dt>version specs</dt><dd>2.0.4</dd></div><div><dt>last updated</dt><dd>unknown</dd></div><div><dt>maintainers</dt><dd>unknown</dd></div><div><dt>license</dt><dd>MIT</dd></div><div><dt>tests</dt><dd>unknown</dd></div><div><dt>CI</dt><dd>unknown</dd></div><div><dt>docs</dt><dd>unknown</dd></div></dl>
         </section>
       </div>
     </details>
@@ -496,9 +634,9 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
           <th scope="col">Worst deps</th>
         </tr>
       </thead>
-      <tbody><tr><td class="repo" data-value="aegis-boot/aegis-boot">aegis-boot/aegis-boot</td><td class="num" data-value="31">31</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="aegis-core, schemars, tempfile &lt;span class=&quot;badge unknown tiny&quot;&gt;4 unknown&lt;/span&gt;">aegis-core, schemars, tempfile <span class="badge unknown tiny">4 unknown</span></td></tr>
-<tr><td class="repo" data-value="aegis-boot/aegis-hwsim">aegis-boot/aegis-hwsim</td><td class="num" data-value="6">6</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="schemars, tempfile, serde">schemars, tempfile, serde</td></tr>
-<tr><td class="repo" data-value="capwall/capwall">capwall/capwall</td><td class="num" data-value="0">0</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="none">none</td></tr></tbody>
+      <tbody><tr><td class="repo" data-value="bkimminich/anuglar2-qrcode">bkimminich/anuglar2-qrcode</td><td class="num" data-value="88">88</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="noms, buffer-shims, path-is-absolute &lt;span class=&quot;badge unknown tiny&quot;&gt;1 unknown&lt;/span&gt;">noms, buffer-shims, path-is-absolute <span class="badge unknown tiny">1 unknown</span></td></tr>
+<tr><td class="repo" data-value="bkimminich/AgileSoftwareDevelopmentInPractice">bkimminich/AgileSoftwareDevelopmentInPractice</td><td class="num" data-value="0">0</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="none">none</td></tr>
+<tr><td class="repo" data-value="bkimminich/apache-kafka-book-examples">bkimminich/apache-kafka-book-examples</td><td class="num" data-value="0">0</td><td data-value="0"><span class="mini-bars" aria-hidden="true"></span> <span class="num">0</span></td><td class="worst mono" data-value="none">none</td></tr></tbody>
     </table>
   </div>
 </section>
@@ -522,39 +660,74 @@ overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
           <th scope="col">Signals</th>
         </tr>
       </thead>
-      <tbody><tr data-risk="2" data-search="cargo:aegis-core@0.19.3 0.19.3 aegis-boot/aegis-boot single maintainer behind latest 0 scored / 0 filtered medium"><td class="dep" data-value="cargo:aegis-core@0.19.3"><a href="https://deps.dev/cargo/aegis-core" target="_blank" rel="noopener">aegis-core</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="single maintainer · behind latest">single maintainer · behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:schemars@0.8 0.8, 1 aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:schemars@0.8"><a href="https://deps.dev/cargo/schemars" target="_blank" rel="noopener">schemars</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:tempfile@3.14 3, 3.14 aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tempfile@3.14"><a href="https://deps.dev/cargo/tempfile" target="_blank" rel="noopener">tempfile</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:serde@unknown 1, 1.0, unknown aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:serde@unknown"><a href="https://deps.dev/cargo/serde" target="_blank" rel="noopener">serde</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:thiserror@unknown 2, 2.0, unknown aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:thiserror@unknown"><a href="https://deps.dev/cargo/thiserror" target="_blank" rel="noopener">thiserror</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:serde_json@1.0 1, 1.0 aegis-boot/aegis-boot aegis-boot/aegis-hwsim behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:serde_json@1.0"><a href="https://deps.dev/cargo/serde_json" target="_blank" rel="noopener">serde_json</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="2">2</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:minisign-verify@0.2 0.2 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:minisign-verify@0.2"><a href="https://deps.dev/cargo/minisign-verify" target="_blank" rel="noopener">minisign-verify</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:iso-parser@path:.. 0.19.3, path:.. aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:iso-parser@path:.."><a href="https://deps.dev/cargo/iso-parser" target="_blank" rel="noopener">iso-parser</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:hex@0.4 0.4 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:hex@0.4"><a href="https://deps.dev/cargo/hex" target="_blank" rel="noopener">hex</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:iso-probe@path:../iso-probe 0.19.3, path:../iso-probe aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:iso-probe@path:../iso-probe"><a href="https://deps.dev/cargo/iso-probe" target="_blank" rel="noopener">iso-probe</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:kexec-loader@path:../kexec-loader path:../kexec-loader aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:kexec-loader@path:../kexec-loader"><a href="https://deps.dev/cargo/kexec-loader" target="_blank" rel="noopener">kexec-loader</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:aegis-wire-formats@0.19.3 0.19.3 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:aegis-wire-formats@0.19.3"><a href="https://deps.dev/cargo/aegis-wire-formats" target="_blank" rel="noopener">aegis-wire-formats</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:minisign@0.9 0.9 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:minisign@0.9"><a href="https://deps.dev/cargo/minisign" target="_blank" rel="noopener">minisign</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:pollster@0.4 0.4 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:pollster@0.4"><a href="https://deps.dev/cargo/pollster" target="_blank" rel="noopener">pollster</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:libc@0.2 0.2, unknown aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:libc@0.2"><a href="https://deps.dev/cargo/libc" target="_blank" rel="noopener">libc</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:serde_yaml_ng@0.10 0.10 aegis-boot/aegis-hwsim stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="cargo:serde_yaml_ng@0.10"><a href="https://deps.dev/cargo/serde_yaml_ng" target="_blank" rel="noopener">serde_yaml_ng</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
-<tr data-risk="3" data-search="cargo:libfuzzer-sys@0.4 0.4 aegis-boot/aegis-boot stable, low release cadence behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:libfuzzer-sys@0.4"><a href="https://deps.dev/cargo/libfuzzer-sys" target="_blank" rel="noopener">libfuzzer-sys</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · behind latest">stable, low release cadence · behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:textwrap@0.16 0.16 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:textwrap@0.16"><a href="https://deps.dev/cargo/textwrap" target="_blank" rel="noopener">textwrap</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:pgp@0.19 0.19 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:pgp@0.19"><a href="https://deps.dev/cargo/pgp" target="_blank" rel="noopener">pgp</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:rand@0.8 0.8 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:rand@0.8"><a href="https://deps.dev/cargo/rand" target="_blank" rel="noopener">rand</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:sha2@0.10 0.10, 0.11 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:sha2@0.10"><a href="https://deps.dev/cargo/sha2" target="_blank" rel="noopener">sha2</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:tracing@unknown 0.1, unknown aegis-boot/aegis-boot stable, low release cadence behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tracing@unknown"><a href="https://deps.dev/cargo/tracing" target="_blank" rel="noopener">tracing</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · behind latest">stable, low release cadence · behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:ureq@3.3 3.3 aegis-boot/aegis-boot no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="cargo:ureq@3.3"><a href="https://deps.dev/cargo/ureq" target="_blank" rel="noopener">ureq</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
-<tr data-risk="3" data-search="cargo:toml@1.1 1.1 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:toml@1.1"><a href="https://deps.dev/cargo/toml" target="_blank" rel="noopener">toml</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:tokio@1 1 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tokio@1"><a href="https://deps.dev/cargo/tokio" target="_blank" rel="noopener">tokio</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:tracing-subscriber@0.3 0.3 aegis-boot/aegis-boot stable, low release cadence behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:tracing-subscriber@0.3"><a href="https://deps.dev/cargo/tracing-subscriber" target="_blank" rel="noopener">tracing-subscriber</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · behind latest">stable, low release cadence · behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:crossterm@0.29 0.29 aegis-boot/aegis-boot no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="cargo:crossterm@0.29"><a href="https://deps.dev/cargo/crossterm" target="_blank" rel="noopener">crossterm</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
-<tr data-risk="3" data-search="cargo:indicatif@0.18 0.18 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:indicatif@0.18"><a href="https://deps.dev/cargo/indicatif" target="_blank" rel="noopener">indicatif</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="3" data-search="cargo:ratatui@0.30 0.30 aegis-boot/aegis-boot behind latest 0 scored / 0 filtered low"><td class="dep" data-value="cargo:ratatui@0.30"><a href="https://deps.dev/cargo/ratatui" target="_blank" rel="noopener">ratatui</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="behind latest">behind latest</td></tr>
-<tr data-risk="4" data-search="cargo:aegis-catalog-data@git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-catalog-data@git:https://github.com/aegis-boot/aegis-catalog-data@v0.17.0"><a href="https://deps.dev/cargo/aegis-catalog-data" target="_blank" rel="noopener">aegis-catalog-data</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr>
-<tr data-risk="4" data-search="cargo:aegis-catalog@path:../aegis-catalog 0.19.3, path:../aegis-catalog aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-catalog@path:../aegis-catalog"><a href="https://deps.dev/cargo/aegis-catalog" target="_blank" rel="noopener">aegis-catalog</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr>
-<tr data-risk="4" data-search="cargo:aegis-fetch@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-fetch@0.19.3"><a href="https://deps.dev/cargo/aegis-fetch" target="_blank" rel="noopener">aegis-fetch</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr>
-<tr data-risk="4" data-search="cargo:aegis-trust@0.19.3 0.19.3 aegis-boot/aegis-boot insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="cargo:aegis-trust@0.19.3"><a href="https://deps.dev/cargo/aegis-trust" target="_blank" rel="noopener">aegis-trust</a></td><td class="mono" data-value="cargo">cargo</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr></tbody>
+      <tbody><tr data-risk="2" data-search="nodejs:noms@0.0.0 0.0.0 bkimminich/anuglar2-qrcode single maintainer 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:noms@0.0.0"><a href="https://deps.dev/npm/noms" target="_blank" rel="noopener">noms</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="single maintainer">single maintainer</td></tr>
+<tr data-risk="2" data-search="nodejs:buffer-shims@1.0.0 1.0.0 bkimminich/anuglar2-qrcode single maintainer 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:buffer-shims@1.0.0"><a href="https://deps.dev/npm/buffer-shims" target="_blank" rel="noopener">buffer-shims</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="single maintainer">single maintainer</td></tr>
+<tr data-risk="2" data-search="nodejs:path-is-absolute@1.0.1 1.0.1 bkimminich/anuglar2-qrcode not updated in 2014 days low popularity (43 stars) 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:path-is-absolute@1.0.1"><a href="https://deps.dev/npm/path-is-absolute" target="_blank" rel="noopener">path-is-absolute</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 2014 days · low popularity (43 stars)">not updated in 2014 days · low popularity (43 stars)</td></tr>
+<tr data-risk="2" data-search="nodejs:util-deprecate@1.0.2 1.0.2 bkimminich/anuglar2-qrcode not updated in 2819 days missing tests, ci, contribution guidelines 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:util-deprecate@1.0.2"><a href="https://deps.dev/npm/util-deprecate" target="_blank" rel="noopener">util-deprecate</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 2819 days · missing tests, CI, contribution guidelines">not updated in 2819 days · missing tests, CI, contribution guidelines</td></tr>
+<tr data-risk="2" data-search="nodejs:concat-map@0.0.1 0.0.1 bkimminich/anuglar2-qrcode single maintainer 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:concat-map@0.0.1"><a href="https://deps.dev/npm/concat-map" target="_blank" rel="noopener">concat-map</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="single maintainer">single maintainer</td></tr>
+<tr data-risk="2" data-search="nodejs:inflight@1.0.6 1.0.6 bkimminich/anuglar2-qrcode not updated in 799 days missing tests, ci, contribution guidelines 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:inflight@1.0.6"><a href="https://deps.dev/npm/inflight" target="_blank" rel="noopener">inflight</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 799 days · missing tests, CI, contribution guidelines">not updated in 799 days · missing tests, CI, contribution guidelines</td></tr>
+<tr data-risk="2" data-search="nodejs:is-utf8@0.2.1 0.2.1 bkimminich/anuglar2-qrcode not updated in 997 days missing tests, ci, contribution guidelines 0 scored / 0 filtered medium"><td class="dep" data-value="nodejs:is-utf8@0.2.1"><a href="https://deps.dev/npm/is-utf8" target="_blank" rel="noopener">is-utf8</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="2"><span class="badge med">MEDIUM</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 997 days · missing tests, CI, contribution guidelines">not updated in 997 days · missing tests, CI, contribution guidelines</td></tr>
+<tr data-risk="3" data-search="nodejs:qrious@4.0.2 4.0.2 bkimminich/anuglar2-qrcode not updated in 773 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:qrious@4.0.2"><a href="https://deps.dev/npm/qrious" target="_blank" rel="noopener">qrious</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 773 days">not updated in 773 days</td></tr>
+<tr data-risk="3" data-search="nodejs:process-nextick-args@1.0.7 1.0.7 bkimminich/anuglar2-qrcode not updated in 2599 days low popularity (33 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:process-nextick-args@1.0.7"><a href="https://deps.dev/npm/process-nextick-args" target="_blank" rel="noopener">process-nextick-args</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 2599 days · low popularity (33 stars)">not updated in 2599 days · low popularity (33 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:user-home@1.1.1 1.1.1 bkimminich/anuglar2-qrcode not updated in 1939 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:user-home@1.1.1"><a href="https://deps.dev/npm/user-home" target="_blank" rel="noopener">user-home</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1939 days">not updated in 1939 days</td></tr>
+<tr data-risk="3" data-search="nodejs:xtend@4.0.1 4.0.1 bkimminich/anuglar2-qrcode not updated in 2181 days missing tests, ci, contribution guidelines 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:xtend@4.0.1"><a href="https://deps.dev/npm/xtend" target="_blank" rel="noopener">xtend</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 2181 days · missing tests, CI, contribution guidelines">not updated in 2181 days · missing tests, CI, contribution guidelines</td></tr>
+<tr data-risk="3" data-search="nodejs:fs.realpath@1.0.0 1.0.0 bkimminich/anuglar2-qrcode not updated in 279 days low popularity (25 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:fs.realpath@1.0.0"><a href="https://deps.dev/npm/fs.realpath" target="_blank" rel="noopener">fs.realpath</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 279 days · low popularity (25 stars)">not updated in 279 days · low popularity (25 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:any-promise@1.3.0 1.3.0 bkimminich/anuglar2-qrcode not updated in 2860 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:any-promise@1.3.0"><a href="https://deps.dev/npm/any-promise" target="_blank" rel="noopener">any-promise</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 2860 days">not updated in 2860 days</td></tr>
+<tr data-risk="3" data-search="nodejs:arrify@1.0.1 1.0.1 bkimminich/anuglar2-qrcode not updated in 1725 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:arrify@1.0.1"><a href="https://deps.dev/npm/arrify" target="_blank" rel="noopener">arrify</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1725 days">not updated in 1725 days</td></tr>
+<tr data-risk="3" data-search="nodejs:escape-string-regexp@1.0.5 1.0.5 bkimminich/anuglar2-qrcode not updated in 451 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:escape-string-regexp@1.0.5"><a href="https://deps.dev/npm/escape-string-regexp" target="_blank" rel="noopener">escape-string-regexp</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 451 days">not updated in 451 days</td></tr>
+<tr data-risk="3" data-search="nodejs:make-error@1.2.3 1.2.3 bkimminich/anuglar2-qrcode not updated in 1301 days low popularity (71 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:make-error@1.2.3"><a href="https://deps.dev/npm/make-error" target="_blank" rel="noopener">make-error</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1301 days · low popularity (71 stars)">not updated in 1301 days · low popularity (71 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:parse-json@2.2.0 2.2.0 bkimminich/anuglar2-qrcode not updated in 478 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:parse-json@2.2.0"><a href="https://deps.dev/npm/parse-json" target="_blank" rel="noopener">parse-json</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 478 days">not updated in 478 days</td></tr>
+<tr data-risk="3" data-search="nodejs:v8flags@2.0.12 2.0.12 bkimminich/anuglar2-qrcode not updated in 1062 days low popularity (57 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:v8flags@2.0.12"><a href="https://deps.dev/npm/v8flags" target="_blank" rel="noopener">v8flags</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1062 days · low popularity (57 stars)">not updated in 1062 days · low popularity (57 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:wrappy@1.0.2 1.0.2 bkimminich/anuglar2-qrcode not updated in 902 days low popularity (56 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:wrappy@1.0.2"><a href="https://deps.dev/npm/wrappy" target="_blank" rel="noopener">wrappy</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 902 days · low popularity (56 stars)">not updated in 902 days · low popularity (56 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:has-ansi@2.0.0 2.0.0 bkimminich/anuglar2-qrcode not updated in 326 days low popularity (50 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:has-ansi@2.0.0"><a href="https://deps.dev/npm/has-ansi" target="_blank" rel="noopener">has-ansi</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 326 days · low popularity (50 stars)">not updated in 326 days · low popularity (50 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:is-arrayish@0.2.1 0.2.1 bkimminich/anuglar2-qrcode not updated in 321 days low popularity (17 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:is-arrayish@0.2.1"><a href="https://deps.dev/npm/is-arrayish" target="_blank" rel="noopener">is-arrayish</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 321 days · low popularity (17 stars)">not updated in 321 days · low popularity (17 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:core-util-is@1.0.2 1.0.2 bkimminich/anuglar2-qrcode not updated in 248 days missing tests, ci, contribution guidelines 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:core-util-is@1.0.2"><a href="https://deps.dev/npm/core-util-is" target="_blank" rel="noopener">core-util-is</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 248 days · missing tests, CI, contribution guidelines">not updated in 248 days · missing tests, CI, contribution guidelines</td></tr>
+<tr data-risk="3" data-search="nodejs:copyfiles@1.2.0 1.2.0 bkimminich/anuglar2-qrcode not updated in 750 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:copyfiles@1.2.0"><a href="https://deps.dev/npm/copyfiles" target="_blank" rel="noopener">copyfiles</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 750 days">not updated in 750 days</td></tr>
+<tr data-risk="3" data-search="nodejs:minimatch@3.0.3 3.0.3 bkimminich/anuglar2-qrcode license risk 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:minimatch@3.0.3"><a href="https://deps.dev/npm/minimatch" target="_blank" rel="noopener">minimatch</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="license risk">license risk</td></tr>
+<tr data-risk="3" data-search="nodejs:mkdirp@0.5.1 0.5.1 bkimminich/anuglar2-qrcode not updated in 1050 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:mkdirp@0.5.1"><a href="https://deps.dev/npm/mkdirp" target="_blank" rel="noopener">mkdirp</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1050 days">not updated in 1050 days</td></tr>
+<tr data-risk="3" data-search="nodejs:strip-bom@2.0.0 2.0.0 bkimminich/anuglar2-qrcode not updated in 1932 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:strip-bom@2.0.0"><a href="https://deps.dev/npm/strip-bom" target="_blank" rel="noopener">strip-bom</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1932 days">not updated in 1932 days</td></tr>
+<tr data-risk="3" data-search="nodejs:symbol-observable@1.0.4 1.0.4 bkimminich/anuglar2-qrcode not updated in 1367 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:symbol-observable@1.0.4"><a href="https://deps.dev/npm/symbol-observable" target="_blank" rel="noopener">symbol-observable</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 1367 days">not updated in 1367 days</td></tr>
+<tr data-risk="3" data-search="nodejs:tsconfig@5.0.3 5.0.3 bkimminich/anuglar2-qrcode not updated in 962 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:tsconfig@5.0.3"><a href="https://deps.dev/npm/tsconfig" target="_blank" rel="noopener">tsconfig</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 962 days">not updated in 962 days</td></tr>
+<tr data-risk="3" data-search="nodejs:tsickle@0.21.6 0.21.6 bkimminich/anuglar2-qrcode not updated in 809 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:tsickle@0.21.6"><a href="https://deps.dev/npm/tsickle" target="_blank" rel="noopener">tsickle</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 809 days">not updated in 809 days</td></tr>
+<tr data-risk="3" data-search="nodejs:error-ex@1.3.1 1.3.1 bkimminich/anuglar2-qrcode not updated in 319 days low popularity (66 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:error-ex@1.3.1"><a href="https://deps.dev/npm/error-ex" target="_blank" rel="noopener">error-ex</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 319 days · low popularity (66 stars)">not updated in 319 days · low popularity (66 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:strip-json-comments@2.0.1 2.0.1 bkimminich/anuglar2-qrcode not updated in 357 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:strip-json-comments@2.0.1"><a href="https://deps.dev/npm/strip-json-comments" target="_blank" rel="noopener">strip-json-comments</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 357 days">not updated in 357 days</td></tr>
+<tr data-risk="3" data-search="nodejs:yn@1.2.0 1.2.0 bkimminich/anuglar2-qrcode not updated in 343 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:yn@1.2.0"><a href="https://deps.dev/npm/yn" target="_blank" rel="noopener">yn</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 343 days">not updated in 343 days</td></tr>
+<tr data-risk="3" data-search="nodejs:glob@7.1.1 7.1.1 bkimminich/anuglar2-qrcode stable, low release cadence license risk 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:glob@7.1.1"><a href="https://deps.dev/npm/glob" target="_blank" rel="noopener">glob</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · license risk">stable, low release cadence · license risk</td></tr>
+<tr data-risk="3" data-search="nodejs:rimraf@2.6.1 2.6.1 bkimminich/anuglar2-qrcode stable, low release cadence license risk 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:rimraf@2.6.1"><a href="https://deps.dev/npm/rimraf" target="_blank" rel="noopener">rimraf</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence · license risk">stable, low release cadence · license risk</td></tr>
+<tr data-risk="3" data-search="nodejs:ltcdr@2.2.1 2.2.1 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:ltcdr@2.2.1"><a href="https://deps.dev/npm/ltcdr" target="_blank" rel="noopener">ltcdr</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:inherits@2.0.3 2.0.3 bkimminich/anuglar2-qrcode not updated in 279 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:inherits@2.0.3"><a href="https://deps.dev/npm/inherits" target="_blank" rel="noopener">inherits</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 279 days">not updated in 279 days</td></tr>
+<tr data-risk="3" data-search="nodejs:minimist@1.2.0 1.2.0 bkimminich/anuglar2-qrcode not updated in 213 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:minimist@1.2.0"><a href="https://deps.dev/npm/minimist" target="_blank" rel="noopener">minimist</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 213 days">not updated in 213 days</td></tr>
+<tr data-risk="3" data-search="nodejs:once@1.4.0 1.4.0 bkimminich/anuglar2-qrcode not updated in 279 days 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:once@1.4.0"><a href="https://deps.dev/npm/once" target="_blank" rel="noopener">once</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="not updated in 279 days">not updated in 279 days</td></tr>
+<tr data-risk="3" data-search="nodejs:ansi-regex@2.1.1 2.1.1 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:ansi-regex@2.1.1"><a href="https://deps.dev/npm/ansi-regex" target="_blank" rel="noopener">ansi-regex</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:string_decoder@0.10.31 0.10.31 bkimminich/anuglar2-qrcode low popularity (36 stars) 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:string_decoder@0.10.31"><a href="https://deps.dev/npm/string_decoder" target="_blank" rel="noopener">string_decoder</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="low popularity (36 stars)">low popularity (36 stars)</td></tr>
+<tr data-risk="3" data-search="nodejs:strip-ansi@3.0.1 3.0.1 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:strip-ansi@3.0.1"><a href="https://deps.dev/npm/strip-ansi" target="_blank" rel="noopener">strip-ansi</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:readable-stream@1.0.34 1.0.34 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:readable-stream@1.0.34"><a href="https://deps.dev/npm/readable-stream" target="_blank" rel="noopener">readable-stream</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:reflect-metadata@0.1.10 0.1.10 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:reflect-metadata@0.1.10"><a href="https://deps.dev/npm/reflect-metadata" target="_blank" rel="noopener">reflect-metadata</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:source-map-support@0.4.14 0.4.14 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:source-map-support@0.4.14"><a href="https://deps.dev/npm/source-map-support" target="_blank" rel="noopener">source-map-support</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:isarray@0.0.1 0.0.1 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:isarray@0.0.1"><a href="https://deps.dev/npm/isarray" target="_blank" rel="noopener">isarray</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:supports-color@2.0.0 2.0.0 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:supports-color@2.0.0"><a href="https://deps.dev/npm/supports-color" target="_blank" rel="noopener">supports-color</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:rxjs@5.1.0 5.1.0 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:rxjs@5.1.0"><a href="https://deps.dev/npm/rxjs" target="_blank" rel="noopener">rxjs</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:ts-node@2.0.0 2.0.0 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:ts-node@2.0.0"><a href="https://deps.dev/npm/ts-node" target="_blank" rel="noopener">ts-node</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:ansi-styles@2.2.1 2.2.1 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:ansi-styles@2.2.1"><a href="https://deps.dev/npm/ansi-styles" target="_blank" rel="noopener">ansi-styles</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:balanced-match@0.4.2 0.4.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:balanced-match@0.4.2"><a href="https://deps.dev/npm/balanced-match" target="_blank" rel="noopener">balanced-match</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:brace-expansion@1.1.7 1.1.7 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:brace-expansion@1.1.7"><a href="https://deps.dev/npm/brace-expansion" target="_blank" rel="noopener">brace-expansion</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:diff@3.2.0 3.2.0 bkimminich/anuglar2-qrcode stable, low release cadence 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:diff@3.2.0"><a href="https://deps.dev/npm/diff" target="_blank" rel="noopener">diff</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="stable, low release cadence">stable, low release cadence</td></tr>
+<tr data-risk="3" data-search="nodejs:source-map@0.5.6 0.5.6 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:source-map@0.5.6"><a href="https://deps.dev/npm/source-map" target="_blank" rel="noopener">source-map</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:through2@2.0.3 2.0.3 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:through2@2.0.3"><a href="https://deps.dev/npm/through2" target="_blank" rel="noopener">through2</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/common@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/common@4.0.2"><a href="https://deps.dev/npm/%40angular%2Fcommon" target="_blank" rel="noopener">@angular/common</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/compiler-cli@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/compiler-cli@4.0.2"><a href="https://deps.dev/npm/%40angular%2Fcompiler-cli" target="_blank" rel="noopener">@angular/compiler-cli</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/compiler@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/compiler@4.0.2"><a href="https://deps.dev/npm/%40angular%2Fcompiler" target="_blank" rel="noopener">@angular/compiler</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/core@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/core@4.0.2"><a href="https://deps.dev/npm/%40angular%2Fcore" target="_blank" rel="noopener">@angular/core</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/platform-browser-dynamic@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/platform-browser-dynamic@4.0.2"><a href="https://deps.dev/npm/%40angular%2Fplatform-browser-dynamic" target="_blank" rel="noopener">@angular/platform-browser-dynamic</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/platform-browser@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/platform-browser@4.0.2"><a href="https://deps.dev/npm/%40angular%2Fplatform-browser" target="_blank" rel="noopener">@angular/platform-browser</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@angular/tsc-wrapped@4.0.2 4.0.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@angular/tsc-wrapped@4.0.2"><a href="https://deps.dev/npm/%40angular%2Ftsc-wrapped" target="_blank" rel="noopener">@angular/tsc-wrapped</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:@types/node@6.0.68 6.0.68 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:@types/node@6.0.68"><a href="https://deps.dev/npm/%40types%2Fnode" target="_blank" rel="noopener">@types/node</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:chalk@1.1.3 1.1.3 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:chalk@1.1.3"><a href="https://deps.dev/npm/chalk" target="_blank" rel="noopener">chalk</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:core-js@2.4.1 2.4.1 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:core-js@2.4.1"><a href="https://deps.dev/npm/core-js" target="_blank" rel="noopener">core-js</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:rollup@0.41.6 0.41.6 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:rollup@0.41.6"><a href="https://deps.dev/npm/rollup" target="_blank" rel="noopener">rollup</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:typescript@2.2.2 2.2.2 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:typescript@2.2.2"><a href="https://deps.dev/npm/typescript" target="_blank" rel="noopener">typescript</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="3" data-search="nodejs:zone.js@0.8.5 0.8.5 bkimminich/anuglar2-qrcode no leading risk signals 0 scored / 0 filtered low"><td class="dep" data-value="nodejs:zone.js@0.8.5"><a href="https://deps.dev/npm/zone.js" target="_blank" rel="noopener">zone.js</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="3"><span class="badge low">LOW</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="no leading risk signals">no leading risk signals</td></tr>
+<tr data-risk="4" data-search="nodejs:pinkie@2.0.4 2.0.4 bkimminich/anuglar2-qrcode insufficient data for confident risk level 0 scored / 0 filtered unknown"><td class="dep" data-value="nodejs:pinkie@2.0.4"><a href="https://deps.dev/npm/pinkie" target="_blank" rel="noopener">pinkie</a></td><td class="mono" data-value="nodejs">nodejs</td><td data-value="4"><span class="badge unknown">UNKNOWN</span></td><td class="num" data-value="1">1</td><td class="exp-signals" data-value="insufficient data for confident risk level">insufficient data for confident risk level</td></tr></tbody>
     </table>
   </div>
 </section>
