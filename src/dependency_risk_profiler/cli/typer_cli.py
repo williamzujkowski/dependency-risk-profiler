@@ -14,7 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ..analyzers.base import BaseAnalyzer
 from ..config import Config
-from ..models import DependencyMetadata, ProjectRiskProfile
+from ..models import DependencyMetadata, ProjectRiskProfile, RiskLevel
 from ..org_scan import (
     ExistingDependencyProfiler,
     GitHubOrgClient,
@@ -25,7 +25,7 @@ from ..org_scan import (
     write_csv_report,
     write_json_report,
 )
-from ..org_scan.models import AccountType, RepositoryRef
+from ..org_scan.models import AccountType, OrgScanReport, RepositoryRef
 from ..org_scan.pipeline import VulnerabilityOptions
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
@@ -79,6 +79,53 @@ class VulnerabilitySeverity(str, Enum):
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
+
+
+class FailOn(str, Enum):
+    """Threshold that makes a scan exit non-zero (for CI / agent gating)."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+    KNOWN_VULNERABLE = "known-vulnerable"
+
+
+# Severity ranking used only by --fail-on; UNKNOWN never triggers a failure.
+_FAIL_ON_SEVERITY = {
+    RiskLevel.CRITICAL: 4,
+    RiskLevel.HIGH: 3,
+    RiskLevel.MEDIUM: 2,
+    RiskLevel.LOW: 1,
+    RiskLevel.UNKNOWN: 0,
+}
+_FAIL_ON_THRESHOLD = {
+    FailOn.CRITICAL: RiskLevel.CRITICAL,
+    FailOn.HIGH: RiskLevel.HIGH,
+    FailOn.MEDIUM: RiskLevel.MEDIUM,
+    FailOn.LOW: RiskLevel.LOW,
+}
+
+
+def _apply_fail_on(report: "OrgScanReport", fail_on: Optional[FailOn]) -> None:
+    """Exit non-zero (code 2) when the scan matches the --fail-on threshold."""
+    if fail_on is None:
+        return
+    if fail_on is FailOn.KNOWN_VULNERABLE:
+        triggered = any(dep.is_known_vulnerable for dep in report.inventory)
+        detail = "known-vulnerable dependencies"
+    else:
+        minimum = _FAIL_ON_SEVERITY[_FAIL_ON_THRESHOLD[fail_on]]
+        triggered = any(
+            _FAIL_ON_SEVERITY.get(dep.risk_level, 0) >= minimum
+            for dep in report.inventory
+        )
+        detail = f"dependencies at risk level {fail_on.value} or above"
+    if triggered:
+        console.print(
+            f"[bold red]--fail-on {fail_on.value}: found {detail}.[/bold red]"
+        )
+        raise typer.Exit(code=2)
 
 
 def setup_logging(debug: bool = False) -> None:
@@ -1241,6 +1288,14 @@ def scan_org(
         help="Optional path for a flat CSV of the dependency inventory",
         dir_okay=False,
     ),
+    fail_on: Optional[FailOn] = typer.Option(
+        None,
+        "--fail-on",
+        help=(
+            "Exit non-zero (code 2) if any dependency meets this risk level or "
+            "is known-vulnerable. For CI gates and agent workflows."
+        ),
+    ),
     max_repos: Optional[int] = typer.Option(
         None,
         "--max-repos",
@@ -1274,6 +1329,7 @@ def scan_org(
         output_html=output_html,
         output_json=output_json,
         output_csv=output_csv,
+        fail_on=fail_on,
         max_repos=max_repos,
         include_archived=include_archived,
         manifest_glob=manifest_glob,
@@ -1308,6 +1364,14 @@ def scan_user(
         help="Optional path for a flat CSV of the dependency inventory",
         dir_okay=False,
     ),
+    fail_on: Optional[FailOn] = typer.Option(
+        None,
+        "--fail-on",
+        help=(
+            "Exit non-zero (code 2) if any dependency meets this risk level or "
+            "is known-vulnerable. For CI gates and agent workflows."
+        ),
+    ),
     max_repos: Optional[int] = typer.Option(
         None,
         "--max-repos",
@@ -1341,6 +1405,7 @@ def scan_user(
         output_html=output_html,
         output_json=output_json,
         output_csv=output_csv,
+        fail_on=fail_on,
         max_repos=max_repos,
         include_archived=include_archived,
         manifest_glob=manifest_glob,
@@ -1356,6 +1421,7 @@ def _scan_github_account(
     output_html: Path,
     output_json: Path,
     output_csv: Optional[Path],
+    fail_on: Optional[FailOn],
     max_repos: Optional[int],
     include_archived: bool,
     manifest_glob: Optional[List[str]],
@@ -1414,6 +1480,7 @@ def _scan_github_account(
     if output_csv is not None:
         write_csv_report(report, output_csv)
         console.print(f"[bold green]CSV report written to {output_csv}[/bold green]")
+    _apply_fail_on(report, fail_on)
 
 
 def _vulnerability_options(config: Config, token: str) -> VulnerabilityOptions:
