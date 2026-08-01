@@ -20,6 +20,129 @@ import requests
 _FETCH_MAX_RETRIES = 3
 _FETCH_MAX_BACKOFF_SECONDS = 60.0
 
+# The gh CLI is fast when authenticated; cap it so a hung/misconfigured CLI
+# never stalls a scan.
+_GH_CLI_TIMEOUT_SECONDS = 5.0
+_GITHUB_API_BASE = "https://api.github.com"
+# Env vars checked, in order, before falling back to the gh CLI.
+_GITHUB_TOKEN_ENV_VARS = ("GITHUB_TOKEN", "GH_TOKEN", "DRP_GITHUB_TOKEN")
+
+
+def resolve_github_token(explicit: Optional[str] = None) -> Optional[str]:
+    """Resolve a GitHub token from the first source that has one.
+
+    Order: an explicit value (CLI flag / config), then the common environment
+    variables, then the authenticated gh CLI (``gh auth token``) — so a user
+    who has run ``gh auth login`` doesn't have to pass a token at all. Returns
+    ``None`` when no source yields one.
+    """
+    if explicit:
+        return explicit
+    for env_var in _GITHUB_TOKEN_ENV_VARS:
+        value = os.getenv(env_var)
+        if value:
+            return value
+    return _gh_cli_token()
+
+
+def _gh_cli_token() -> Optional[str]:
+    """Return a token from the authenticated gh CLI, or ``None`` if unavailable.
+
+    Never raises: a missing gh binary, an unauthenticated CLI, or a timeout all
+    resolve to ``None`` so token discovery degrades quietly.
+    """
+    gh_path = shutil.which("gh")
+    if gh_path is None:
+        return None
+    try:
+        result = subprocess.run(
+            [gh_path, "auth", "token"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=_GH_CLI_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        logger.debug("gh CLI token lookup failed: %s", exc)
+        return None
+    if result.returncode != 0:
+        return None
+    token = result.stdout.strip()
+    return token or None
+
+
+def github_contributor_count(
+    repository_url: Optional[str],
+    token: Optional[str],
+    timeout: int = 30,
+) -> Optional[int]:
+    """Return a repository's contributor count from the GitHub API, or ``None``.
+
+    Uses the standard pagination trick — request one contributor per page and
+    read the last-page number from the ``Link`` header — so a single request
+    yields the total without walking every page. Returns ``None`` (unknown)
+    when there is no token, the URL isn't a resolvable GitHub repo, or the API
+    call fails, so a missing signal stays honestly unknown rather than guessed.
+    """
+    if not token or not repository_url:
+        return None
+    repo_info = extract_github_repo_info(repository_url)
+    if not repo_info:
+        return None
+    owner, repo = repo_info
+    url = f"{_GITHUB_API_BASE}/repos/{owner}/{repo}/contributors"
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "dependency-risk-profiler",
+    }
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            params={"per_page": "1", "anon": "true"},
+            timeout=timeout,
+        )
+    except requests.RequestException as exc:
+        logger.debug("GitHub contributor lookup failed for %s: %s", repository_url, exc)
+        return None
+    if response.status_code != 200:
+        logger.debug(
+            "GitHub contributor lookup for %s returned HTTP %s",
+            repository_url,
+            response.status_code,
+        )
+        return None
+    last_page = _last_page_from_link_header(response.headers.get("Link"))
+    if last_page is not None:
+        return last_page
+    # No Link header means a single page: count the returned contributors.
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    if isinstance(payload, list):
+        return len(payload)
+    return None
+
+
+def _last_page_from_link_header(link_header: Optional[str]) -> Optional[int]:
+    """Return the ``rel="last"`` page number from a GitHub ``Link`` header."""
+    if not link_header:
+        return None
+    for part in link_header.split(","):
+        segments = part.split(";")
+        if len(segments) < 2:
+            continue
+        url_segment = segments[0].strip().strip("<>")
+        if not any('rel="last"' in seg for seg in segments[1:]):
+            continue
+        match = re.search(r"[?&]page=(\d+)", url_segment)
+        if match:
+            return int(match.group(1))
+    return None
+
 
 def _retry_after_seconds(response: requests.Response, attempt: int) -> float:
     """Return how long to wait before retrying, honoring Retry-After if sent."""
@@ -270,6 +393,18 @@ def count_contributors(repo_dir: str) -> Optional[int]:
         Number of contributors or None if counting fails.
     """
     try:
+        # A shallow clone (we clone --depth 1) has only one reachable commit, so
+        # `git shortlog --all` would report exactly one contributor for every
+        # repository — a false "single maintainer" signal. Report unknown (None)
+        # in that case rather than a misleading count; the real contributor count
+        # comes from the GitHub API (see github_contributor_count).
+        if _is_shallow_clone(repo_dir):
+            logger.debug(
+                "Skipping contributor count in %s: shallow clone has no history",
+                repo_dir,
+            )
+            return None
+
         # Execute git command to count contributors
         result = subprocess.run(
             [
@@ -295,6 +430,26 @@ def count_contributors(repo_dir: str) -> Optional[int]:
     except Exception as e:
         logger.error(f"Error counting contributors: {e}")
         return None
+
+
+def _is_shallow_clone(repo_dir: str) -> bool:
+    """Return whether ``repo_dir`` is a shallow git clone.
+
+    A shallow clone cannot answer history questions (contributor count, full
+    log) accurately, so callers should treat those signals as unknown.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-shallow-repository"],  # nosec B603, B607
+            cwd=repo_dir,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.debug("Could not determine shallow status for %s: %s", repo_dir, exc)
+        return False
+    return result.stdout.strip() == "true"
 
 
 def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:

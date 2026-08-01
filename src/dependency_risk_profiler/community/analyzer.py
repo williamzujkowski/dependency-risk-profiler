@@ -7,7 +7,12 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 
 from ..models import CommunityMetrics, DependencyMetadata
-from ..utils import extract_github_repo_info, fetch_json, fetch_url
+from ..utils import (
+    extract_github_repo_info,
+    fetch_json,
+    fetch_url,
+    github_contributor_count,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -135,11 +140,15 @@ def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float
 
 def analyze_github_community_metrics(
     dependency: DependencyMetadata,
+    github_token: Optional[str] = None,
 ) -> DependencyMetadata:
     """Analyze GitHub community metrics for a dependency.
 
     Args:
         dependency: Dependency metadata.
+        github_token: Optional GitHub token used to read the true contributor
+            count from the API. Without it, the count stays unknown rather than
+            being guessed from a shallow clone.
 
     Returns:
         Updated dependency metadata with community metrics.
@@ -157,8 +166,14 @@ def analyze_github_community_metrics(
     # Initialize community metrics
     community_metrics = CommunityMetrics()
 
-    # Set contributor count from already collected data
-    if dependency.maintainer_count:
+    # Prefer the real contributor count from the GitHub API. Fall back to any
+    # count already collected, but never to a shallow-clone guess (which is
+    # always ~1 and would falsely read as "single maintainer").
+    api_count = github_contributor_count(dependency.repository_url, github_token)
+    if api_count is not None:
+        dependency.maintainer_count = api_count
+        community_metrics.contributor_count = api_count
+    elif dependency.maintainer_count:
         community_metrics.contributor_count = dependency.maintainer_count
 
     # Fetch repository HTML to extract star and fork counts
@@ -285,13 +300,17 @@ def analyze_pypi_community_metrics(
 
 
 def analyze_community_metrics(
-    dependency: DependencyMetadata, metadata: Dict = None
+    dependency: DependencyMetadata,
+    metadata: Dict = None,
+    github_token: Optional[str] = None,
 ) -> DependencyMetadata:
     """Analyze community metrics for a dependency.
 
     Args:
         dependency: Dependency metadata.
         metadata: Package metadata.
+        github_token: Optional GitHub token for reading the true contributor
+            count from the API.
 
     Returns:
         Updated dependency metadata with community metrics.
@@ -305,7 +324,7 @@ def analyze_community_metrics(
 
         # Analyze GitHub metrics if repository URL is available
         if dependency.repository_url:
-            dependency = analyze_github_community_metrics(dependency)
+            dependency = analyze_github_community_metrics(dependency, github_token)
 
         # Analyze package registry specific metrics
         if metadata:
