@@ -15,6 +15,26 @@ from httpx import HTTPError, RequestError
 
 logger = logging.getLogger(__name__)
 
+# Cap how long a server-supplied Retry-After can stall one request.
+MAX_RETRY_AFTER_SECONDS = 60.0
+
+
+def _parse_retry_after(headers: Any) -> Optional[float]:
+    """Return the Retry-After delay in seconds, if the server sent a numeric one.
+
+    OSV/NVD/GitHub send Retry-After on 429; honoring it avoids retrying too soon
+    and exhausting attempts. The HTTP-date form falls back to exponential backoff.
+    """
+    if not headers:
+        return None
+    value = headers.get("Retry-After")
+    if not value:
+        return None
+    try:
+        return min(float(value), MAX_RETRY_AFTER_SECONDS)
+    except (TypeError, ValueError):
+        return None
+
 
 class AsyncHTTPClient:
     """Asynchronous HTTP client with error handling and retries."""
@@ -62,6 +82,12 @@ class AsyncHTTPClient:
             await self._session.close()
             self._session = None
 
+    def _retry_delay(self, retry: int, retry_after: Optional[float]) -> float:
+        """Delay before a retry: honor Retry-After, else exponential backoff."""
+        if retry_after is not None:
+            return retry_after
+        return float(self.backoff_factor * (2 ** (retry - 1)))
+
     async def get(
         self,
         url: str,
@@ -88,11 +114,12 @@ class AsyncHTTPClient:
         if semaphore is None:
             raise RuntimeError("Semaphore is not initialized")  # pragma: no cover
         async with semaphore:
+            retry_after: Optional[float] = None
             for retry in range(self.max_retries + 1):
                 try:
                     if retry > 0:
-                        # Calculate delay with exponential backoff
-                        delay = self.backoff_factor * (2 ** (retry - 1))
+                        delay = self._retry_delay(retry, retry_after)
+                        retry_after = None
                         logger.debug(
                             (
                                 f"Retry {retry}/{self.max_retries} for {url} "
@@ -121,6 +148,9 @@ class AsyncHTTPClient:
                             f"Client error ({e.status}) fetching data from {url}: {e}"
                         )
                         return None
+
+                    if e.status == 429:
+                        retry_after = _parse_retry_after(e.headers)
 
                     if retry == self.max_retries:
                         logger.debug(f"Max retries reached for {url}: {e}")
@@ -178,11 +208,12 @@ class AsyncHTTPClient:
         if semaphore is None:
             raise RuntimeError("Semaphore is not initialized")  # pragma: no cover
         async with semaphore:
+            retry_after: Optional[float] = None
             for retry in range(self.max_retries + 1):
                 try:
                     if retry > 0:
-                        # Calculate delay with exponential backoff
-                        delay = self.backoff_factor * (2 ** (retry - 1))
+                        delay = self._retry_delay(retry, retry_after)
+                        retry_after = None
                         logger.debug(
                             (
                                 f"Retry {retry}/{self.max_retries} for {url} "
@@ -211,6 +242,9 @@ class AsyncHTTPClient:
                             f"Client error ({e.status}) fetching data from {url}: {e}"
                         )
                         return None
+
+                    if e.status == 429:
+                        retry_after = _parse_retry_after(e.headers)
 
                     if retry == self.max_retries:
                         logger.debug(f"Max retries reached for {url}: {e}")

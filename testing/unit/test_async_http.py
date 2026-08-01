@@ -389,3 +389,25 @@ class TestAsyncPerformance:
         # Cleanup
         await client.close()
         await batch_client.close()
+
+
+def test_parse_retry_after_numeric_and_capped():
+    """Numeric Retry-After is honored and capped; date/missing fall back."""
+    from dependency_risk_profiler.async_http import (
+        MAX_RETRY_AFTER_SECONDS,
+        AsyncHTTPClient,
+        _parse_retry_after,
+    )
+
+    assert _parse_retry_after({"Retry-After": "7"}) == 7.0
+    assert _parse_retry_after({"Retry-After": "9999"}) == MAX_RETRY_AFTER_SECONDS
+    # HTTP-date form is not numeric -> fall back to exponential backoff (None).
+    assert _parse_retry_after({"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}) is None
+    assert _parse_retry_after({}) is None
+    assert _parse_retry_after(None) is None
+
+    client = AsyncHTTPClient(backoff_factor=0.5)
+    # Retry-After overrides exponential backoff.
+    assert client._retry_delay(retry=1, retry_after=5.0) == 5.0
+    # Without Retry-After, exponential backoff applies.
+    assert client._retry_delay(retry=2, retry_after=None) == 0.5 * (2**1)
