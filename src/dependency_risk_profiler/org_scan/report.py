@@ -94,6 +94,7 @@ CSV_COLUMNS: Tuple[str, ...] = (
     "license",
     "deprecated",
     "known_vulnerable",
+    "remediation",
     "advisories_scored",
     "advisories_filtered",
     "signals",
@@ -147,6 +148,7 @@ def _dependency_to_csv_row(
         "license": license_info.license_id if license_info is not None else "",
         "deprecated": "yes" if metadata.is_deprecated else "no",
         "known_vulnerable": "yes" if dependency.is_known_vulnerable else "no",
+        "remediation": _remediation_hint(dependency) or "",
         "advisories_scored": (
             metrics.counted_vulnerability_count if metrics is not None else ""
         ),
@@ -874,6 +876,63 @@ def _is_filtered_advisory(detail: Dict[str, object]) -> bool:
     return bool(_filter_reasons(detail))
 
 
+def _scored_fixed_versions(dependency: AggregatedDependency) -> List[str]:
+    """Collect fixed versions from the advisories that counted toward the score.
+
+    Order-preserving and de-duplicated, so an agent gets the fix targets in a
+    stable order. Filtered/withdrawn advisories are excluded — only the
+    advisories that actually drive ``known_vulnerable`` contribute.
+    """
+    metrics = dependency.risk_score.dependency.security_metrics
+    if metrics is None:
+        return []
+    versions: List[str] = []
+    seen: set[str] = set()
+    for detail in metrics.vulnerability_details:
+        if not _is_counted_advisory(detail):
+            continue
+        fixed = detail.get("fixed_versions")
+        if not isinstance(fixed, list):
+            continue
+        for version in fixed:
+            if isinstance(version, str) and version and version not in seen:
+                seen.add(version)
+                versions.append(version)
+    return versions
+
+
+def _remediation_hint(dependency: AggregatedDependency) -> Optional[str]:
+    """Return a one-line, action-oriented remediation string, or ``None``.
+
+    Honest by construction: it states the action the available data supports
+    and no more. It does not attempt cross-ecosystem version-range resolution
+    (that's tracked separately), so for a known-vulnerable dependency it names
+    the fix version(s) and leaves the precise pick to the caller. Precedence:
+    known-vulnerable (upgrade past the fixes, or replace if unfixed), then
+    deprecation (replace), then version drift (upgrade to latest). Returns
+    ``None`` when there is no supported action.
+    """
+    metadata = dependency.risk_score.dependency
+    installed = metadata.installed_version or "the installed version"
+    if dependency.is_known_vulnerable:
+        fixes = _scored_fixed_versions(dependency)
+        if fixes:
+            return (
+                f"{installed} has scored advisories; upgrade to a version at or "
+                f"past the fix(es): {', '.join(fixes)}"
+            )
+        return (
+            f"{installed} has scored advisories with no published fix; "
+            "evaluate a replacement"
+        )
+    if metadata.is_deprecated:
+        return "deprecated upstream; evaluate a maintained replacement"
+    latest = metadata.latest_version
+    if latest and latest != installed:
+        return f"behind latest; upgrade {installed} → {latest}"
+    return None
+
+
 def _advisory_list(
     label: str, advisories: List[Dict[str, object]], filtered: bool
 ) -> str:
@@ -1213,6 +1272,7 @@ def _dependency_to_dict(
         "display_name": dependency.key.display_name,
         "risk_level": dependency.risk_level.value,
         "known_vulnerable": dependency.is_known_vulnerable,
+        "remediation": _remediation_hint(dependency),
         "risk_score": score.total_score,
         "component_scores": _component_scores_to_dict(score),
         "insufficient_data": score.insufficient_data,
