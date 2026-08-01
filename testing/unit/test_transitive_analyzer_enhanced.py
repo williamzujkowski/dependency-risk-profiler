@@ -293,6 +293,22 @@ class TestDependencyGraphBuilding:
 class TestDependencyAnalysis:
     """Tests for dependency analysis functions."""
 
+    @patch("dependency_risk_profiler.transitive.analyzer_enhanced.install_packages")
+    @patch("dependency_risk_profiler.transitive.analyzer_enhanced.create_virtual_env")
+    def test_transitive_does_not_install_by_default(
+        self, mock_create_venv, mock_install_packages
+    ):
+        """Install-based resolution is off by default.
+
+        No venv is created and no pip install runs on the untrusted manifest;
+        the result is empty.
+        """
+        result = analyze_python_transitive_dependencies("/path/to/requirements.txt")
+
+        assert result == {}
+        mock_create_venv.assert_not_called()
+        mock_install_packages.assert_not_called()
+
     @patch("dependency_risk_profiler.transitive.analyzer_enhanced.create_virtual_env")
     @patch("dependency_risk_profiler.transitive.analyzer_enhanced.install_packages")
     @patch("dependency_risk_profiler.transitive.analyzer_enhanced.install_pipdeptree")
@@ -364,8 +380,10 @@ class TestDependencyAnalysis:
         ]
         mock_run_pipdeptree.return_value = mock_pipdeptree_output
 
-        # Act
-        dependency_map = analyze_python_transitive_dependencies(requirements_file)
+        # Act — install-based resolution is opt-in (executes untrusted code).
+        dependency_map = analyze_python_transitive_dependencies(
+            requirements_file, allow_install=True
+        )
 
         # Assert
         assert len(dependency_map) == 2
@@ -447,9 +465,11 @@ class TestDependencyAnalysis:
         assert pyproj_result == {"pkg2": {"dep2"}}
         assert pipfile_result == {"pkg3": {"dep3"}}
         assert unknown_result == {}
-        mock_requirements.assert_called_once_with("requirements.txt")
-        mock_pyproject.assert_called_once_with("pyproject.toml")
-        mock_pipfile.assert_called_once_with("Pipfile.lock")
+        mock_requirements.assert_called_once_with(
+            "requirements.txt", allow_install=False
+        )
+        mock_pyproject.assert_called_once_with("pyproject.toml", allow_install=False)
+        mock_pipfile.assert_called_once_with("Pipfile.lock", allow_install=False)
 
 
 @patch(
