@@ -201,12 +201,16 @@ class RiskScorer:
             ("maintained", maintained_score, self.branch_protection_weight),
         ]
 
+        # Cross-ecosystem score normalization (#74): an unmeasured component is
+        # excluded from BOTH the numerator and the denominator (renormalized
+        # over available weights), so a signal an ecosystem doesn't provide
+        # (e.g. Go has no maintainer concept) is treated as unavailable, never a
+        # confident zero that would make a sparsely-covered package look safer.
         total_score = 0.0
         for _, score, weight in weighted_scores:
             if score is not None:  # Only count available scores
                 total_score += score * weight
 
-        # Normalize to max_score
         available_weights = sum(
             weight for _, score, weight in weighted_scores if score is not None
         )
