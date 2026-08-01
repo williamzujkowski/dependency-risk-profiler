@@ -23,7 +23,7 @@ from dependency_risk_profiler.vulnerabilities.aggregator import (
 
 # The canonical ecosystem strings the four analyzers set on every dependency
 # (analyzers/{nodejs,python,golang,crates}.py -> additional_info["ecosystem"]).
-CANONICAL_ECOSYSTEMS = ("nodejs", "python", "golang", "cargo")
+CANONICAL_ECOSYSTEMS = ("nodejs", "python", "golang", "cargo", "rubygems")
 
 # Characterized current routing. Pin the stable names so the extraction cannot
 # silently change where a dependency's advisories/links are looked up.
@@ -32,6 +32,7 @@ EXPECTED_ROUTING = {
     "python": {"osv": "PyPI", "gha": "PIP", "deps_dev": "pypi"},
     "golang": {"osv": "Go", "gha": "GO", "deps_dev": "go"},
     "cargo": {"osv": "crates.io", "gha": "RUST", "deps_dev": "cargo"},
+    "rubygems": {"osv": "RubyGems", "gha": "RUBYGEMS", "deps_dev": "rubygems"},
 }
 
 

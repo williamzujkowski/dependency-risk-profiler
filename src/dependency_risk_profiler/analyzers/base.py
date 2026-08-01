@@ -51,6 +51,7 @@ class BaseAnalyzer(ABC):
             from .golang import GoAnalyzer
             from .nodejs import NodeJSAnalyzer
             from .python import PythonAnalyzer
+            from .ruby import RubyGemsAnalyzer
 
             if not ecosystem:
                 return None
@@ -65,6 +66,8 @@ class BaseAnalyzer(ABC):
                 return GoAnalyzer()
             elif ecosystem in ["cargo", "rust", "crates"]:
                 return CratesIOAnalyzer()
+            elif ecosystem == "rubygems":
+                return RubyGemsAnalyzer()
             elif ecosystem == "toml":
                 # Backward-compatible fallback for generic TOML files.
                 return PythonAnalyzer()

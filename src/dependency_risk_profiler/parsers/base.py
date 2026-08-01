@@ -60,6 +60,7 @@ class BaseParser(ABC):
         from .nodejs import NodeJSParser
         from .python import PythonParser
         from .registry import EcosystemRegistry
+        from .ruby import GemfileLockParser
         from .toml import TomlParser
 
         # Register Node.js parser
@@ -104,6 +105,15 @@ class BaseParser(ABC):
                     "pattern": ".mod",
                     "matcher_fn": lambda path: "go" in path.lower(),
                 },
+            ],
+        )
+
+        # Register Ruby parser
+        EcosystemRegistry.register_parser(
+            "rubygems",
+            GemfileLockParser,
+            [
+                {"type": "filename", "pattern": "Gemfile.lock"},
             ],
         )
 

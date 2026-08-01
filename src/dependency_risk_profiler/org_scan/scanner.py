@@ -41,6 +41,7 @@ SUPPORTED_MANIFEST_NAMES = (
     "package-lock.json",
     "go.mod",
     "Cargo.toml",
+    "Gemfile.lock",
 )
 
 
@@ -540,7 +541,7 @@ class OrgScanRunner:
 
     def _ensure_parser_registry(self) -> None:
         """Initialize built-in parsers before concurrent manifest discovery."""
-        required = {"python", "nodejs", "golang", "pyproject", "cargo"}
+        required = {"python", "nodejs", "golang", "pyproject", "cargo", "rubygems"}
         available = set(EcosystemRegistry.get_available_ecosystems())
         if not required.issubset(available):
             BaseParser._initialize_registry()
