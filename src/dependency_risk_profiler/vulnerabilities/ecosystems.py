@@ -51,7 +51,7 @@ _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
     Ecosystem("maven", "Maven", "MAVEN", "cpe:2.3:a:apache:maven:", None),
     Ecosystem("java", "Maven", "MAVEN", "cpe:2.3:a:java:", None),
     Ecosystem("nuget", "NuGet", "NUGET", None, None),
-    Ecosystem("ruby", "RubyGems", "RUBYGEMS", "cpe:2.3:a:ruby:", None),
+    Ecosystem("ruby", "RubyGems", "RUBYGEMS", "cpe:2.3:a:ruby:", "rubygems"),
     Ecosystem("composer", "Packagist", "COMPOSER", "cpe:2.3:a:php:", None),
 )
 
