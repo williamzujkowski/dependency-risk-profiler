@@ -18,6 +18,26 @@ from .cache import default_cache as disk_cache
 
 logger = logging.getLogger(__name__)
 
+
+def infer_ecosystem(dependency: DependencyMetadata) -> str:
+    """Return the dependency's ecosystem for vulnerability lookup.
+
+    Prefers the value callers set from the manifest (``additional_info``); only
+    falls back to a coarse repository-URL guess when it's absent. That guess
+    defaults to python and mis-routes most npm/cargo deps, so it is a last
+    resort — callers that know the ecosystem should set it explicitly.
+    """
+    ecosystem = dependency.additional_info.get("ecosystem", "").strip()
+    if ecosystem:
+        return ecosystem
+    url = dependency.repository_url or ""
+    if "npm" in url or "node" in url:
+        return "nodejs"
+    if "go" in url:
+        return "golang"
+    return "python"
+
+
 # Cache settings
 CACHE_EXPIRY = 24 * 60 * 60  # 24 hours in seconds
 VULNERABILITY_CACHE = {}  # In-memory cache (for backward compatibility)
@@ -1049,18 +1069,7 @@ def aggregate_vulnerability_data(
         Tuple of (updated dependency metadata, vulnerability details)
     """
     package_name = dependency.name
-    # Prefer the dependency's real ecosystem (set by callers that know it from
-    # the manifest); the URL heuristic below mis-routes most npm/cargo deps to
-    # PyPI and finds zero advisories, so it is only a last-resort fallback.
-    ecosystem = dependency.additional_info.get("ecosystem", "").strip()
-    if not ecosystem:
-        ecosystem = "python"
-        if dependency.repository_url:
-            url = dependency.repository_url
-            if "npm" in url or "node" in url:
-                ecosystem = "nodejs"
-            elif "go" in url:
-                ecosystem = "golang"
+    ecosystem = infer_ecosystem(dependency)
 
     # Check cache first
     cached = get_cached_data(package_name, ecosystem)

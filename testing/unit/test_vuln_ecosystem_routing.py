@@ -47,6 +47,31 @@ def test_normalize_ecosystem_covers_all_supported_ecosystems() -> None:
     assert osv._normalize_ecosystem("golang") == "Go"
 
 
+@pytest.mark.parametrize(
+    "additional_info, repo_url, expected",
+    [
+        ({"ecosystem": "cargo"}, "https://github.com/x/y", "cargo"),
+        ({}, "https://npmjs.com/package/x", "nodejs"),
+        ({}, "https://github.com/golang/go", "golang"),
+        ({}, "", "python"),
+    ],
+)
+def test_infer_ecosystem_dedup_helper(additional_info, repo_url, expected) -> None:
+    """Prefer the declared ecosystem, else a URL guess defaulting to python.
+
+    One shared implementation now backs both the sync and async aggregators.
+    """
+    from dependency_risk_profiler.vulnerabilities.aggregator import infer_ecosystem
+
+    dep = DependencyMetadata(
+        name="pkg",
+        installed_version="1.0.0",
+        repository_url=repo_url,
+        additional_info=additional_info,
+    )
+    assert infer_ecosystem(dep) == expected
+
+
 def test_cargo_and_go_reach_github_advisory_and_nvd() -> None:
     """Cargo/Go resolve in the GitHub Advisory and NVD tables (#76/#77).
 

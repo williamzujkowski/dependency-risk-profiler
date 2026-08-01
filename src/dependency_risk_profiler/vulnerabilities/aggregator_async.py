@@ -18,6 +18,7 @@ from .aggregator import (
     _update_dependency_with_vulnerabilities,
     cache_data,
     get_cached_data,
+    infer_ecosystem,
 )
 
 logger = logging.getLogger(__name__)
@@ -240,18 +241,7 @@ async def aggregate_vulnerabilities_for_package_async(
         Tuple of (updated dependency metadata, vulnerability details)
     """
     package_name = dependency.name
-    # Prefer the dependency's real ecosystem (set by callers that know it from
-    # the manifest); only fall back to the URL heuristic when it's absent, since
-    # that heuristic mis-routes most npm/cargo deps to PyPI and finds 0 vulns.
-    ecosystem = dependency.additional_info.get("ecosystem", "").strip()
-    if not ecosystem:
-        ecosystem = "python"
-        if dependency.repository_url:
-            url = dependency.repository_url
-            if "npm" in url or "node" in url:
-                ecosystem = "nodejs"
-            elif "go" in url:
-                ecosystem = "golang"
+    ecosystem = infer_ecosystem(dependency)
 
     # Check cache first
     cached = get_cached_data(package_name, ecosystem)
