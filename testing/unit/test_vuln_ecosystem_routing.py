@@ -1,0 +1,83 @@
+"""Tests that vulnerability lookups use the dependency's real ecosystem."""
+
+from typing import List, Tuple
+from unittest import mock
+
+from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.vulnerabilities import aggregator_async
+from dependency_risk_profiler.vulnerabilities.aggregator import OSVSource
+
+
+def test_normalize_ecosystem_covers_all_supported_ecosystems() -> None:
+    """OSV ecosystem mapping includes cargo (was missing) and the others."""
+    osv = OSVSource()
+    assert osv._normalize_ecosystem("cargo") == "crates.io"
+    assert osv._normalize_ecosystem("nodejs") == "npm"
+    assert osv._normalize_ecosystem("python") == "PyPI"
+    assert osv._normalize_ecosystem("golang") == "Go"
+
+
+def test_vuln_lookup_uses_declared_ecosystem_not_url_heuristic() -> None:
+    """A dep's additional_info ecosystem drives OSV, not the repo-URL guess."""
+    recorded: List[Tuple[str, str]] = []
+
+    async def _fake(self, package_name: str, ecosystem: str) -> list:
+        recorded.append((package_name, ecosystem))
+        return []
+
+    # A github.com URL with no "npm"/"node" would previously default to python.
+    dep = DependencyMetadata(
+        name="lodash",
+        installed_version="4.17.4",
+        repository_url="https://github.com/lodash/lodash",
+        additional_info={"ecosystem": "nodejs"},
+    )
+    with (
+        mock.patch.object(
+            aggregator_async.AsyncOSVSource, "get_vulnerabilities_async", _fake
+        ),
+        mock.patch.object(aggregator_async, "get_cached_data", return_value=None),
+        mock.patch.object(aggregator_async, "cache_data"),
+    ):
+        aggregator_async.aggregate_vulnerability_data_async(
+            {"lodash": dep},
+            api_keys={"github": None, "nvd": None},
+            enable_osv=True,
+            enable_nvd=False,
+            enable_github=False,
+            minimum_severity="INFO",
+        )
+
+    assert recorded == [("lodash", "nodejs")]
+
+
+def test_vuln_lookup_falls_back_to_url_heuristic_when_ecosystem_absent() -> None:
+    """Without a declared ecosystem, the URL heuristic still applies."""
+    recorded: List[Tuple[str, str]] = []
+
+    async def _fake(self, package_name: str, ecosystem: str) -> list:
+        recorded.append((package_name, ecosystem))
+        return []
+
+    dep = DependencyMetadata(
+        name="somepkg",
+        installed_version="1.0.0",
+        repository_url="https://npmjs.com/package/somepkg",
+    )
+    with (
+        mock.patch.object(
+            aggregator_async.AsyncOSVSource, "get_vulnerabilities_async", _fake
+        ),
+        mock.patch.object(aggregator_async, "get_cached_data", return_value=None),
+        mock.patch.object(aggregator_async, "cache_data"),
+    ):
+        aggregator_async.aggregate_vulnerability_data_async(
+            {"somepkg": dep},
+            api_keys={"github": None, "nvd": None},
+            enable_osv=True,
+            enable_nvd=False,
+            enable_github=False,
+            minimum_severity="INFO",
+        )
+
+    assert recorded == [("somepkg", "nodejs")]

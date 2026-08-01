@@ -110,6 +110,10 @@ class ExistingDependencyProfiler(DependencyProfiler):
     ) -> DependencyRiskScore:
         """Analyze and score one dependency key."""
         dependency = copy.deepcopy(metadata)
+        # Record the real ecosystem so vulnerability lookups query the correct
+        # OSV ecosystem instead of guessing it from the repository URL (which
+        # mis-routes most npm/cargo deps to PyPI and finds zero advisories).
+        dependency.additional_info["ecosystem"] = key.ecosystem
         analyzer = self._get_analyzer(key.ecosystem)
         if analyzer is not None:
             analyzed = analyzer.analyze({dependency.name: dependency})
