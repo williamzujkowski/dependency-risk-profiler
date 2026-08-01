@@ -38,6 +38,10 @@ class GoAnalyzer(BaseAnalyzer):
         """
         for name, dep in dependencies.items():
             logger.info(f"Analyzing Go package: {name}")
+            # Set the OSV ecosystem explicitly; the URL heuristic only matches
+            # module paths that happen to contain a "go" token, so packages
+            # like github.com/sirupsen/logrus would otherwise misroute to PyPI.
+            dep.additional_info["ecosystem"] = "golang"
 
             try:
                 # Get latest version from proxy.golang.org

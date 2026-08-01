@@ -615,3 +615,30 @@ def test_cli_startup_performance() -> None:
     pytest.skip(
         "Skipping CLI startup performance benchmark - needs real timing measurements"
     )
+
+
+def test_analyze_json_mode_keeps_status_off_stdout(tmp_path: Path) -> None:
+    """In json mode, manifest-discovery status stays off the stdout console.
+
+    It routes to a stderr console instead so stdout stays machine-clean. Uses
+    the no-manifests branch to avoid any network.
+    """
+    import dependency_risk_profiler.cli.typer_cli as cli
+
+    empty_dir = tmp_path / "proj"
+    empty_dir.mkdir()
+
+    with patch.object(cli.console, "print") as stdout_print:
+        result = runner.invoke(
+            cli.app,
+            ["analyze", str(empty_dir), "--recursive", "--output", "json"],
+        )
+
+    # "No supported manifests" is a clean outcome, not a failure (exit 0), and
+    # nothing — status or error — may reach the stdout console in json mode.
+    assert result.exit_code == 0
+    stdout_text = " ".join(str(call) for call in stdout_print.call_args_list)
+    assert "Scanning" not in stdout_text
+    assert "manifest files" not in stdout_text
+    assert "No supported manifest files" not in stdout_text
+    assert "Error" not in stdout_text
