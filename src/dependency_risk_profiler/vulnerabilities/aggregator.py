@@ -435,10 +435,15 @@ class NVDSource(VulnerabilitySource):
             "npm": "cpe:2.3:a:*:node:",
             "python": "cpe:2.3:a:python:",
             "golang": "cpe:2.3:a:golang:",
+            "go": "cpe:2.3:a:golang:",
             "maven": "cpe:2.3:a:apache:maven:",
             "java": "cpe:2.3:a:java:",
             "ruby": "cpe:2.3:a:ruby:",
             "php": "cpe:2.3:a:php:",
+            # Analyzers/keys emit "cargo" for Rust; keep NVD reachable for it.
+            "cargo": "cpe:2.3:a:rust:",
+            "rust": "cpe:2.3:a:rust:",
+            "crates": "cpe:2.3:a:rust:",
         }
 
         return mapping.get(ecosystem.lower(), "")
@@ -710,6 +715,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
             "php": "COMPOSER",
             "composer": "COMPOSER",
             "rust": "RUST",
+            # Analyzers/keys emit "cargo"; GitHub Advisory calls it RUST.
+            "cargo": "RUST",
+            "crates": "RUST",
         }
 
         return mapping.get(ecosystem.lower(), "")
