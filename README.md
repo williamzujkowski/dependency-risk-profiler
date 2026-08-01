@@ -66,7 +66,9 @@ The HTML report leads with the most-exposed risky dependencies (each expandable 
 
 Org and account scans derive maintainer, activity, and tests/CI signals from the authenticated GitHub API rather than cloning each repository, so they stay fast across hundreds of dependencies.
 
-Useful flags: `--max-repos N`, `--include-archived`, `--manifest-glob`, `--output-json`, `--concurrency N`.
+`scan-user` scans the repositories a user **owns** by default; pass `--include-collaborations` to also include repos they only contribute to in other orgs.
+
+Useful flags: `--max-repos N`, `--include-archived`, `--include-collaborations` (scan-user), `--manifest-glob`, `--output-json`, `--concurrency N`.
 
 ## What It Scores
 

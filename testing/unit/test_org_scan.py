@@ -115,6 +115,7 @@ class FixtureGitHubClient(GitHubDiscoveryClient):
         user: str,
         include_archived: bool = False,
         max_repos: Optional[int] = None,
+        include_collaborations: bool = False,
     ) -> List[RepositoryRef]:
         """Return fixture user repositories."""
         selected = [
@@ -235,6 +236,7 @@ class CliFixtureGitHubClient(FixtureGitHubClient):
         user: str,
         include_archived: bool = False,
         max_repos: Optional[int] = None,
+        include_collaborations: bool = False,
     ) -> List[RepositoryRef]:
         """Track user listing calls and reuse account-shaped fixtures."""
         self.listed_sources.append(f"user:{user}")
@@ -564,8 +566,27 @@ def test_github_client_lists_user_repositories_with_filters() -> None:
 
     assert [repo.full_name for repo in repos] == ["williamzujkowski/kept"]
     assert session.urls[0].endswith("/users/williamzujkowski/repos")
-    assert session.params[0]["type"] == "all"
+    # Default scopes to repos the user OWNS, not ones they collaborate on.
+    assert session.params[0]["type"] == "owner"
     assert session.params[0]["per_page"] == "100"
+
+
+def test_github_client_user_repos_include_collaborations_opt_in() -> None:
+    """include_collaborations=True asks GitHub for type=all (owner + member)."""
+    session = RecordingSession(
+        [
+            [_repo_payload("williamzujkowski/kept", archived=False, fork=False)],
+            [],
+        ]
+    )
+    client = GitHubOrgClient(
+        token="fixture-token",
+        session=cast(requests.Session, session),
+    )
+
+    client.list_user_repositories("williamzujkowski", include_collaborations=True)
+
+    assert session.params[0]["type"] == "all"
 
 
 def test_github_client_fetches_repository_signals_from_authenticated_api() -> None:

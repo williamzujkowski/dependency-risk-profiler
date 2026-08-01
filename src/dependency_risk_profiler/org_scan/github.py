@@ -96,11 +96,19 @@ class GitHubOrgClient:
         user: str,
         include_archived: bool = False,
         max_repos: Optional[int] = None,
+        include_collaborations: bool = False,
     ) -> List[RepositoryRef]:
-        """List user repos, skipping forks and archived repos by default."""
+        """List a user's repos, skipping forks and archived repos by default.
+
+        Defaults to repositories the user *owns* (``type=owner``). GitHub's
+        ``type=all`` also returns repos the user only collaborates on in other
+        orgs, which mis-attributes other people's dependencies to the user; set
+        ``include_collaborations`` to opt back into that broader set.
+        """
+        repo_type = "all" if include_collaborations else "owner"
         return self._list_repositories(
             f"/users/{user}/repos",
-            {"per_page": "100", "type": "all"},
+            {"per_page": "100", "type": repo_type},
             include_archived=include_archived,
             max_repos=max_repos,
         )

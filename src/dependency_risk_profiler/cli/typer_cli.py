@@ -1403,6 +1403,15 @@ def scan_user(
         "--include-archived",
         help="Include archived repositories. Forks are still skipped.",
     ),
+    include_collaborations: bool = typer.Option(
+        False,
+        "--include-collaborations",
+        help=(
+            "Also scan repositories the user only collaborates on in other "
+            "orgs (GitHub type=all). By default only repositories the user "
+            "owns are scanned."
+        ),
+    ),
     manifest_glob: Optional[List[str]] = typer.Option(
         None,
         "--manifest-glob",
@@ -1431,6 +1440,7 @@ def scan_user(
         manifest_glob=manifest_glob,
         concurrency=concurrency,
         ctx=ctx,
+        include_collaborations=include_collaborations,
     )
 
 
@@ -1447,6 +1457,7 @@ def _scan_github_account(
     manifest_glob: Optional[List[str]],
     concurrency: int,
     ctx: typer.Context,
+    include_collaborations: bool = False,
 ) -> None:
     """Run the shared GitHub account scan implementation."""
     token = resolve_github_token(github_token)
@@ -1474,7 +1485,7 @@ def _scan_github_account(
         dependency_profiler=profiler,
         progress=lambda message: console.print(f"[dim]{message}[/dim]"),
     )
-    repository_lister = _repository_lister(client, account_type)
+    repository_lister = _repository_lister(client, account_type, include_collaborations)
 
     try:
         report = runner.run(
@@ -1536,10 +1547,28 @@ def _manifest_globs(manifest_glob: Optional[List[str]]) -> Tuple[str, ...]:
 def _repository_lister(
     client: GitHubOrgClient,
     account_type: AccountType,
+    include_collaborations: bool = False,
 ) -> Callable[[str, bool, Optional[int]], List[RepositoryRef]]:
-    """Return the GitHub repository lister for an account source."""
+    """Return the GitHub repository lister for an account source.
+
+    For a user, the ``include_collaborations`` choice is bound here so the
+    lister keeps the shared three-argument signature the runner expects.
+    """
     if account_type == "user":
-        return client.list_user_repositories
+
+        def _list_user(
+            user: str,
+            include_archived: bool,
+            max_repos: Optional[int],
+        ) -> List[RepositoryRef]:
+            return client.list_user_repositories(
+                user,
+                include_archived,
+                max_repos,
+                include_collaborations=include_collaborations,
+            )
+
+        return _list_user
     return client.list_org_repositories
 
 
