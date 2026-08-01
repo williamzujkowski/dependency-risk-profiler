@@ -105,6 +105,20 @@ class AggregatedDependency:
         return self.risk_score.risk_level
 
     @property
+    def is_known_vulnerable(self) -> bool:
+        """Whether the installed version has scored (counted) advisories.
+
+        This is deliberately ORTHOGONAL to ``risk_level``: the risk level is
+        maintenance/leading-indicator driven, while this flags concrete known
+        exposure in the shipped version, so a well-maintained dependency pinned
+        to a vulnerable version reads as "MEDIUM risk, but known-vulnerable".
+        """
+        metrics = self.risk_score.dependency.security_metrics
+        if metrics is None:
+            return False
+        return bool(metrics.counted_vulnerability_count)
+
+    @property
     def versions_display(self) -> str:
         """Return a deterministic compact display of all seen version specs."""
         return ", ".join(self.version_specs_list)

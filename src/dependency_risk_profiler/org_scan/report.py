@@ -93,6 +93,7 @@ CSV_COLUMNS: Tuple[str, ...] = (
     "last_updated",
     "license",
     "deprecated",
+    "known_vulnerable",
     "advisories_scored",
     "advisories_filtered",
     "signals",
@@ -145,6 +146,7 @@ def _dependency_to_csv_row(
         ),
         "license": license_info.license_id if license_info is not None else "",
         "deprecated": "yes" if metadata.is_deprecated else "no",
+        "known_vulnerable": "yes" if dependency.is_known_vulnerable else "no",
         "advisories_scored": (
             metrics.counted_vulnerability_count if metrics is not None else ""
         ),
@@ -197,6 +199,7 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
         "manifests_scanned": report.manifests_scanned,
         "manifest_count": len(report.manifests_scanned),
         "unique_dependency_count": report.unique_dependency_count,
+        "known_vulnerable_dependency_count": _known_vulnerable_count(report),
         "headline": report.headline,
         "high_risk_dependency_count": report.high_risk_dependency_count,
         "high_risk_exposed_repository_count": (
@@ -225,6 +228,11 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
     }
 
 
+def _known_vulnerable_count(report: OrgScanReport) -> int:
+    """Count unique dependencies whose installed version has scored advisories."""
+    return sum(1 for dep in report.inventory if dep.is_known_vulnerable)
+
+
 def _header(report: OrgScanReport) -> str:
     """Render report header."""
     total_repos = len(report.repositories_scanned)
@@ -237,10 +245,12 @@ def _header(report: OrgScanReport) -> str:
   </div>
   <dl class="readout" aria-label="Scan totals">
     <div><dt>Repos</dt><dd class="num">{total_repos}</dd></div>
-    <div><dt>Manifests</dt><dd class="num">{len(report.manifests_scanned)}</dd></div>
     <div><dt>Unique deps</dt><dd class="num">{report.unique_dependency_count}</dd></div>
     <div><dt>High-risk</dt><dd class="num hot">
       {report.high_risk_dependency_count}
+    </dd></div>
+    <div><dt>Known-vuln</dt><dd class="num vuln">
+      {_known_vulnerable_count(report)}
     </dd></div>
   </dl>
 </header>
@@ -407,6 +417,14 @@ def _methodology_footer(report: OrgScanReport) -> str:
     dependency's risk. Blast radius counts direct occurrences across scanned
     manifests.
   </p>
+  <p>
+    <b>Known-vulnerable</b> is a separate axis from the risk level. The risk
+    level reflects maintenance and other leading indicators; the
+    <span class="vuln-tag">known-vuln</span> tag flags that the installed
+    version has scored advisories — a concrete, present exposure. A
+    well-maintained dependency pinned to a vulnerable version can therefore be
+    medium risk yet known-vulnerable; update the pin.
+  </p>
   {failures}
 </footer>
 """
@@ -428,7 +446,7 @@ def _exposure_row(dependency: AggregatedDependency, repo_count: int) -> str:
       <span class="exp-dep">{escape(dependency.key.name)}
         <span class="eco">· {escape(dependency.key.ecosystem)}</span>
       </span>
-      <span>{_risk_badge(dependency.risk_level)}</span>
+      <span>{_risk_badge(dependency.risk_level)}{_vuln_tag(dependency)}</span>
       <span class="exp-bar">
         <meter class="bar {risk_class}" min="0" max="{max(repo_count, 1)}"
           value="{dependency.blast_radius}" aria-label="{escape(label)}"></meter>
@@ -443,6 +461,21 @@ def _exposure_row(dependency: AggregatedDependency, repo_count: int) -> str:
 """.rstrip()
 
 
+def _vuln_tag(dependency: AggregatedDependency) -> str:
+    """Return a 'known-vulnerable' chip for deps with scored advisories.
+
+    This axis is orthogonal to the risk badge: it flags a concrete known
+    exposure in the installed version, independent of the maintenance-driven
+    risk level.
+    """
+    if not dependency.is_known_vulnerable:
+        return ""
+    return (
+        '<span class="vuln-tag" '
+        'title="Installed version has known advisories">known-vuln</span>'
+    )
+
+
 def _inventory_row(dependency: AggregatedDependency) -> str:
     """Render a full inventory table row."""
     key = dependency.key
@@ -455,7 +488,8 @@ def _inventory_row(dependency: AggregatedDependency) -> str:
         f'{_td(key.ecosystem, key.ecosystem, "mono")}'
         f"{_risk_td(dependency.risk_level)}"
         f'{_td(str(dependency.blast_radius), str(dependency.blast_radius), "num")}'
-        f'<td class="exp-signals" data-value="{escape(signals)}">{signals}</td>'
+        f'<td class="exp-signals" data-value="{escape(signals)}">'
+        f"{_vuln_tag(dependency)}{signals}</td>"
         "</tr>"
     )
 
@@ -1178,6 +1212,7 @@ def _dependency_to_dict(
         "versions_display": dependency.versions_display,
         "display_name": dependency.key.display_name,
         "risk_level": dependency.risk_level.value,
+        "known_vulnerable": dependency.is_known_vulnerable,
         "risk_score": score.total_score,
         "component_scores": _component_scores_to_dict(score),
         "insufficient_data": score.insufficient_data,
@@ -1410,6 +1445,17 @@ text-transform:uppercase;color:var(--faint);margin:0 0 3px;}
 .readout dd{margin:0;font-family:var(--mono);font-size:24px;font-weight:600;
 font-variant-numeric:tabular-nums;}
 .readout dd.hot{color:var(--crit);}
+.readout dd.vuln{color:var(--high);}
+/* known-vulnerable: an axis orthogonal to the risk badge, so a distinct
+   underlined/dotted chip rather than a filled severity pill */
+.vuln-tag{display:inline-flex;align-items:center;gap:5px;margin-left:7px;
+font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.03em;
+white-space:nowrap;text-transform:uppercase;color:var(--crit);padding:2px 7px;
+border-radius:4px;border:1px dashed var(--crit);background:var(--crit-wash);
+vertical-align:middle;}
+.vuln-tag::before{content:"";width:6px;height:6px;border-radius:1px;
+background:var(--crit);transform:rotate(45deg);}
+td .vuln-tag{margin-left:0;margin-right:8px;}
 
 /* ---- sections ---- */
 .section{margin-top:38px;}
