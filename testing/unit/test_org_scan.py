@@ -427,6 +427,10 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert "Full inventory" in html
     assert '<dl class="readout" aria-label="Scan totals">' in html
     assert "<dt>High-risk</dt>" in html
+    # Known-vulnerable is an orthogonal axis: a readout cell + a chip on deps
+    # whose installed version has scored advisories.
+    assert "<dt>Known-vuln</dt>" in html
+    assert 'class="vuln-tag"' in html
     assert ":root{" in html
     assert ':root[data-theme="dark"]' in html
     assert '<span class="badge high">HIGH</span>' in html
@@ -487,6 +491,7 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
         "last_updated",
         "license",
         "deprecated",
+        "known_vulnerable",
         "advisories_scored",
         "advisories_filtered",
         "signals",
@@ -497,9 +502,12 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     }
     assert first_csv["risk_level"] in {"CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"}
     assert first_csv["deps_dev"].startswith("https://deps.dev/")
+    assert first_csv["known_vulnerable"] in {"yes", "no"}
+    assert any(r["known_vulnerable"] == "yes" for r in csv_rows)
 
     model = report_to_dict(report)
     assert model["unique_dependency_count"] == 4
+    assert model["known_vulnerable_dependency_count"] >= 1
     assert "most_exposed_risky_dependencies" in model
     first_dependencies = cast(
         List[Dict[str, object]], model["most_exposed_risky_dependencies"]
