@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
 from ..models import DependencyRiskScore, RiskLevel, SecurityMetrics
+from ..vulnerabilities import ecosystems
 from .models import (
     AggregatedDependency,
     OrgScanReport,
@@ -1131,16 +1132,15 @@ def _deps_dev_url(ecosystem: str, name: str) -> Optional[str]:
 
 def _deps_dev_system(ecosystem: str) -> Optional[str]:
     """Map internal ecosystem names to deps.dev systems."""
-    systems = {
-        "python": "pypi",
-        "pyproject": "pypi",
-        "nodejs": "npm",
-        "golang": "go",
-        "go": "go",
-        "toml": "cargo",
-        "cargo": "cargo",
-    }
-    return systems.get(ecosystem.lower())
+    eco = ecosystems.lookup(ecosystem)
+    if eco is not None:
+        return eco.deps_dev
+    # Vestigial deps.dev-only alias: a generic .toml manifest was mapped to
+    # cargo here (not semantically sound; removed by #75). Preserved so the
+    # centralization stays behavior-preserving.
+    if ecosystem.strip().lower() == "toml":
+        return "cargo"
+    return None
 
 
 def _registry_url(ecosystem: str, name: str) -> Optional[str]:
