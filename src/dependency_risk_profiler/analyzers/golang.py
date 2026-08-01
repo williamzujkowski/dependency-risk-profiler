@@ -7,7 +7,7 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import cloned_repo, fetch_url
+from .common import cloned_repo, fetch_json
 
 logger = logging.getLogger(__name__)
 
@@ -92,29 +92,15 @@ class GoAnalyzer(BaseAnalyzer):
         Returns:
             The latest version string, or None if fetching failed.
         """
-        # Check package on pkg.go.dev
-        html = fetch_url(f"https://pkg.go.dev/{package_name}", self.timeout)
-        if not html:
-            return None
-
-        # Parse the latest version from the HTML
-        latest_version_match = re.search(r"Latest version: <[^>]*>([^<]+)<", html)
-        if latest_version_match:
-            return latest_version_match.group(1)
-
-        # If GitHub repo, try to get latest tag
-        if "github.com" in package_name:
-            github_path = re.sub(r"^github\.com/", "", package_name)
-            tags_html = fetch_url(
-                f"https://github.com/{github_path}/tags", self.timeout
-            )
-
-            if tags_html:
-                # Find the latest tag (simplified)
-                latest_tag_match = re.search(
-                    r'href="/[^/]+/[^/]+/releases/tag/([^"]+)"', tags_html
-                )
-                if latest_tag_match:
-                    return latest_tag_match.group(1)
-
+        # Query the Go module proxy's JSON endpoint instead of scraping HTML —
+        # it is stable and version-correct (pseudo-versions, +incompatible).
+        # The proxy escapes uppercase letters in the module path as "!<lower>".
+        escaped = re.sub(
+            r"[A-Z]", lambda match: "!" + match.group(0).lower(), package_name
+        )
+        data = fetch_json(f"https://proxy.golang.org/{escaped}/@latest", self.timeout)
+        if isinstance(data, dict):
+            version = data.get("Version")
+            if isinstance(version, str) and version:
+                return version
         return None
