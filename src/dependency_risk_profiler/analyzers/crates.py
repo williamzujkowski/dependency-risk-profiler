@@ -9,7 +9,6 @@ import requests
 
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import check_for_vulnerabilities
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +66,6 @@ class CratesIOAnalyzer(BaseAnalyzer):
                 description = self._string_value(crate_summary, "description")
                 if description:
                     dep.additional_info["description"] = description
-
-                dep.has_known_exploits = check_for_vulnerabilities(name, "cargo")
             except Exception as e:
                 logger.error(f"Error analyzing Rust crate {name}: {e}")
                 dep.additional_info["analysis_status"] = "unknown"

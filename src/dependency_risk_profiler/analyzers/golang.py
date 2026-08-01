@@ -7,7 +7,7 @@ from typing import Dict, Optional
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import check_for_vulnerabilities, cloned_repo, fetch_url
+from .common import cloned_repo, fetch_url
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +77,6 @@ class GoAnalyzer(BaseAnalyzer):
                                     logger.error(
                                         f"Error analyzing repository for {name}: {e}"
                                     )
-
-                # Check for known vulnerabilities
-                dep.has_known_exploits = check_for_vulnerabilities(name, "go")
 
             except Exception as e:
                 logger.error(f"Error analyzing {name}: {e}")

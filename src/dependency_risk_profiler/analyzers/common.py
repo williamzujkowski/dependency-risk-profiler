@@ -3,7 +3,6 @@
 import logging
 
 from ..utils import (
-    check_for_vulnerabilities,
     check_health_indicators,
     clone_repo,
     cloned_repo,
@@ -26,5 +25,4 @@ __all__ = [
     "get_last_commit_date",
     "count_contributors",
     "check_health_indicators",
-    "check_for_vulnerabilities",
 ]

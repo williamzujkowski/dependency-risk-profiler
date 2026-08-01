@@ -520,30 +520,6 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
     return has_tests, has_ci, has_contribution_guidelines
 
 
-def check_for_vulnerabilities(package_name: str, ecosystem: str) -> bool:
-    """Check if a package has known vulnerabilities.
-
-    This is a simple placeholder that should be replaced with actual
-    vulnerability checking.
-    In a real implementation, this would query vulnerability databases.
-
-    Args:
-        package_name: Name of the package.
-        ecosystem: Package ecosystem (e.g., npm, pypi).
-
-    Returns:
-        True if vulnerabilities are found, False otherwise.
-    """
-    # This is a placeholder implementation
-    # In a real implementation, this would query vulnerability databases
-    # like OSV, GitHub Advisory, etc.
-
-    # For demonstration purposes, just check if the package name contains
-    # known vulnerable library patterns
-    vulnerable_patterns = ["log4j", "shelljs", "prototype", "lodash"]
-    return any(pattern in package_name.lower() for pattern in vulnerable_patterns)
-
-
 def extract_github_repo_info(repo_url: str) -> Optional[Tuple[str, str]]:
     """Extract owner and repo name from a GitHub URL.
 
