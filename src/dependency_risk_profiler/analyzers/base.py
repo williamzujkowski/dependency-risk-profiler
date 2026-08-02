@@ -50,6 +50,7 @@ class BaseAnalyzer(ABC):
             from .composer import ComposerAnalyzer
             from .crates import CratesIOAnalyzer
             from .golang import GoAnalyzer
+            from .maven import MavenAnalyzer
             from .nodejs import NodeJSAnalyzer
             from .nuget import NuGetAnalyzer
             from .python import PythonAnalyzer
@@ -74,6 +75,8 @@ class BaseAnalyzer(ABC):
                 return ComposerAnalyzer()
             elif ecosystem == "nuget":
                 return NuGetAnalyzer()
+            elif ecosystem == "maven":
+                return MavenAnalyzer()
             else:
                 return None
 

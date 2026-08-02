@@ -44,6 +44,7 @@ SUPPORTED_MANIFEST_NAMES = (
     "Gemfile.lock",
     "composer.lock",
     "packages.lock.json",
+    "pom.xml",
 )
 
 
@@ -552,6 +553,7 @@ class OrgScanRunner:
             "rubygems",
             "composer",
             "nuget",
+            "maven",
         }
         available = set(EcosystemRegistry.get_available_ecosystems())
         if not required.issubset(available):
