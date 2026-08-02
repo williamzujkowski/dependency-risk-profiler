@@ -68,12 +68,33 @@ Example API response structure:
 
 ### Go Packages
 
-For Go packages, information is extracted from pkg.go.dev:
+- **Method**: JSON request to the Go module proxy, `https://proxy.golang.org/{module}/@latest`
+- **Information Retrieved**: latest version (pseudo-versions and `+incompatible` handled correctly); repository URL inferred from the import path
 
-- **Method**: HTML scraping of `https://pkg.go.dev/{import-path}`
-- **Information Retrieved**:
-  - Latest version (from version indicator)
-  - Repository URL (inferred from import path)
+### Rust (crates.io)
+
+- **Method**: JSON request to `https://crates.io/api/v1/crates/{crate}`
+- **Information Retrieved**: latest version, repository URL, description
+
+### Ruby (RubyGems)
+
+- **Method**: JSON request to `https://rubygems.org/api/v1/gems/{gem}.json`
+- **Information Retrieved**: latest version, source/homepage URL
+
+### PHP (Composer / Packagist)
+
+- **Method**: JSON request to `https://repo.packagist.org/p2/{vendor}/{package}.json`
+- **Information Retrieved**: latest stable version (dev branches skipped)
+
+### .NET (NuGet)
+
+- **Method**: JSON request to the flat-container index, `https://api.nuget.org/v3-flatcontainer/{id-lower}/index.json`
+- **Information Retrieved**: newest stable version (pre-releases deprioritized)
+
+### Java (Maven)
+
+- **Method**: `maven-metadata.xml` from Maven Central, `https://repo1.maven.org/maven2/{group-path}/{artifact}/maven-metadata.xml`
+- **Information Retrieved**: `<release>` (preferred) or `<latest>` version
 
 ## Repository Analysis
 
