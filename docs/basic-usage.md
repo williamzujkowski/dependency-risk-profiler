@@ -119,9 +119,13 @@ dependency-risk-profiler list-ecosystems
 ```
 
 - Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
-- Node.js: `package-lock.json`
+- JavaScript / TypeScript (npm): `package-lock.json`
 - Go: `go.mod`
 - Rust: `Cargo.toml`
+- Ruby: `Gemfile.lock`
+- PHP (Composer): `composer.lock`
+- .NET / C# (NuGet): `packages.lock.json`, `*.csproj`
+- Java (Maven): `pom.xml`
 
 ## Next Steps
 
