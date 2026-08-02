@@ -16,7 +16,17 @@ The tool collects information from various sources to evaluate dependency health
 
 - **Python (PyPI)**: The PyPI JSON API (`https://pypi.org/pypi/[package-name]/json`) provides package metadata including latest version, project URLs, and description text that might indicate deprecation.
 
-- **Go**: For Go packages, we use the Go package site (`https://pkg.go.dev/[package]`) to extract latest version information.
+- **Go**: The Go module proxy (`https://proxy.golang.org/[module]/@latest`) provides the latest version.
+
+- **Rust (crates.io)**: The crates.io API (`https://crates.io/api/v1/crates/[crate]`) provides the latest version, repository URL, and description.
+
+- **Ruby (RubyGems)**: The RubyGems API (`https://rubygems.org/api/v1/gems/[gem].json`) provides the latest version and source/homepage URL.
+
+- **PHP (Composer)**: The Packagist metadata API (`https://repo.packagist.org/p2/[vendor]/[package].json`) provides the latest stable version.
+
+- **.NET (NuGet)**: The NuGet flat-container index (`https://api.nuget.org/v3-flatcontainer/[id]/index.json`) provides the version list; the newest stable is preferred.
+
+- **Java (Maven)**: Maven Central's `maven-metadata.xml` provides the release/latest version.
 
 ### 2. Source Code Repositories
 
