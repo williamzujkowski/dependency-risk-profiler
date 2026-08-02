@@ -40,6 +40,52 @@ def test_packages_lock_json_parser(tmp_path: Path) -> None:
     assert deps["Newtonsoft.Json"].installed_version == "13.0.1"
 
 
+MULTI_TFM_PACKAGES_LOCK = {
+    "version": 1,
+    "dependencies": {
+        "net6.0": {
+            "Newtonsoft.Json": {"type": "Direct", "resolved": "1.0.0"},
+        },
+        "net8.0": {
+            "Newtonsoft.Json": {"type": "Direct", "resolved": "2.0.0"},
+        },
+    },
+}
+
+
+def test_packages_lock_json_keeps_highest_version_across_frameworks(
+    tmp_path: Path,
+) -> None:
+    """A package resolving to different versions per TFM records the highest."""
+    lock = tmp_path / "packages.lock.json"
+    lock.write_text(json.dumps(MULTI_TFM_PACKAGES_LOCK), encoding="utf-8")
+
+    deps = NuGetParser(str(lock)).parse()
+
+    assert set(deps) == {"Newtonsoft.Json"}
+    # net8.0 resolves 2.0.0, which wins over net6.0's 1.0.0 regardless of order.
+    assert deps["Newtonsoft.Json"].installed_version == "2.0.0"
+
+
+def test_packages_lock_json_highest_wins_when_lower_enumerated_last(
+    tmp_path: Path,
+) -> None:
+    """Highest resolved version wins even when it is enumerated first."""
+    payload = {
+        "version": 1,
+        "dependencies": {
+            "net8.0": {"Newtonsoft.Json": {"type": "Direct", "resolved": "2.0.0"}},
+            "net6.0": {"Newtonsoft.Json": {"type": "Direct", "resolved": "1.0.0"}},
+        },
+    }
+    lock = tmp_path / "packages.lock.json"
+    lock.write_text(json.dumps(payload), encoding="utf-8")
+
+    deps = NuGetParser(str(lock)).parse()
+
+    assert deps["Newtonsoft.Json"].installed_version == "2.0.0"
+
+
 def test_csproj_parser_reads_package_references(tmp_path: Path) -> None:
     """<PackageReference> entries are read (Version attribute or child element)."""
     proj = tmp_path / "App.csproj"

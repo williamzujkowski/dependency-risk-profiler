@@ -4,11 +4,25 @@ import json
 import logging
 from typing import Dict
 
+from packaging.version import InvalidVersion, Version
+
 from ..models import DependencyMetadata
 from .base import BaseParser
 from .xml_utils import local_name, read_xml_root
 
 logger = logging.getLogger(__name__)
+
+
+def _is_higher_version(candidate: str, current: str) -> bool:
+    """Return True if ``candidate`` is a higher resolved version than ``current``.
+
+    Compares with :mod:`packaging` semantics; if either string is not a valid
+    version, falls back to a plain string comparison (last-seen/string-max).
+    """
+    try:
+        return Version(candidate) > Version(current)
+    except InvalidVersion:
+        return candidate > current
 
 
 class NuGetParser(BaseParser):
@@ -43,12 +57,20 @@ class NuGetParser(BaseParser):
             if not isinstance(packages, dict):
                 continue
             for pkg_name, info in packages.items():
-                if not isinstance(pkg_name, str) or pkg_name in dependencies:
+                if not isinstance(pkg_name, str):
                     continue
                 resolved = info.get("resolved") if isinstance(info, dict) else None
+                version = resolved if isinstance(resolved, str) else ""
+                existing = dependencies.get(pkg_name)
+                # A package can resolve to different versions across target
+                # frameworks; keep the highest resolved version seen.
+                if existing is not None and not _is_higher_version(
+                    version, existing.installed_version
+                ):
+                    continue
                 dependencies[pkg_name] = DependencyMetadata(
                     name=pkg_name,
-                    installed_version=resolved if isinstance(resolved, str) else "",
+                    installed_version=version,
                 )
         return dependencies
 
