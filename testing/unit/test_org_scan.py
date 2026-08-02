@@ -278,6 +278,7 @@ class RecordingSession:
         headers: Dict[str, str],
         params: Dict[str, str],
         timeout: int,
+        stream: bool = False,
     ) -> _FixtureResponse:
         """Record request details and return the next page."""
         self.urls.append(url)
@@ -303,6 +304,7 @@ class SignalSession:
         headers: Dict[str, str],
         params: Dict[str, str],
         timeout: int,
+        stream: bool = False,
     ) -> _FixtureResponse:
         """Record request details and return the next response."""
         self.urls.append(url)

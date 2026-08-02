@@ -16,6 +16,7 @@ from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
 from ..popularity import should_soften_low_release_cadence
+from .github import ManifestTooLargeError
 from .models import (
     AccountType,
     AggregatedDependency,
@@ -197,7 +198,16 @@ class OrgScanRunner:
         ]
         manifests: List[ManifestRef] = []
         for path in selected_paths:
-            content = self.github_client.fetch_manifest_content(repo, path)
+            try:
+                content = self.github_client.fetch_manifest_content(repo, path)
+            except ManifestTooLargeError as exc:
+                logger.warning(
+                    "Skipping oversized manifest %s:%s: %s",
+                    repo.full_name,
+                    path,
+                    exc,
+                )
+                continue
             ecosystem = self._detect_ecosystem(path)
             if ecosystem is None:
                 continue
@@ -571,9 +581,29 @@ class OrgScanRunner:
         return False
 
     def _write_temp_manifest(self, temp_root: Path, manifest: ManifestRef) -> Path:
-        """Write a fetched manifest to a parser-friendly temp path."""
+        """Write a fetched manifest to a parser-friendly temp path.
+
+        ``manifest.path`` comes from the GitHub API, so a hostile ``..`` segment
+        could otherwise escape the temp directory and clobber a file elsewhere.
+        Refuse to write anything that resolves outside the per-repo temp root.
+        """
         repo_dir = temp_root / manifest.repo_full_name.replace("/", "__")
         manifest_path = repo_dir / manifest.path
+        resolved_root = repo_dir.resolve()
+        resolved_path = manifest_path.resolve()
+        if (
+            resolved_root != resolved_path
+            and resolved_root not in resolved_path.parents
+        ):
+            logger.warning(
+                "Skipping manifest with path escaping temp root: %s:%s",
+                manifest.repo_full_name,
+                manifest.path,
+            )
+            raise ValueError(
+                f"Manifest path escapes temp root: {manifest.path!r} in "
+                f"{manifest.repo_full_name}"
+            )
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
         manifest_path.write_text(manifest.content, encoding="utf-8")
         return manifest_path
