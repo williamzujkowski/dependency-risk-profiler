@@ -213,6 +213,8 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "rubygems"
     elif file_name == "composer.lock":
         return "composer"
+    elif file_name == "packages.lock.json" or file_name.endswith(".csproj"):
+        return "nuget"
     else:
         return "unknown"
 
