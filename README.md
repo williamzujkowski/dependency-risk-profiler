@@ -6,7 +6,7 @@
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages Python, Node, Go, and Rust dependencies on leading signals — release cadence, maintainer concentration, provenance, version drift, and license risk — while reporting unknown signals as unknown and filtering advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure.
+CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages dependencies across eight ecosystems — Python, JavaScript/TypeScript (npm), Go, Rust, Ruby, PHP, .NET, and Java — on leading signals — release cadence, maintainer concentration, provenance, version drift, and license risk — while reporting unknown signals as unknown and filtering advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure.
 
 It works on a single manifest (`analyze`) or across every repository in a GitHub organization or user account (`scan-org` / `scan-user`), so you can see which risky dependencies you are most exposed to — and where — before an advisory forces the issue.
 
@@ -96,10 +96,16 @@ Two behaviors are intentionally conservative:
 
 ## Supported Ecosystems
 
+Eight ecosystems, routed to OSV (and, where available, deps.dev) for advisories:
+
 - Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
-- Node.js: `package-lock.json`
+- JavaScript / TypeScript (npm): `package-lock.json`
 - Go: `go.mod`
 - Rust: `Cargo.toml` (via crates.io)
+- Ruby: `Gemfile.lock`
+- PHP (Composer): `composer.lock`
+- .NET / C# (NuGet): `packages.lock.json`, `*.csproj`
+- Java (Maven): `pom.xml`
 
 ## Honest Limits
 

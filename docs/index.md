@@ -45,6 +45,10 @@ dependency-risk-profiler analyze requirements.txt --output json
 ## Supported Ecosystems
 
 - Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
-- Node.js: `package-lock.json`
+- JavaScript / TypeScript (npm): `package-lock.json`
 - Go: `go.mod`
 - Rust: `Cargo.toml` via crates.io
+- Ruby: `Gemfile.lock`
+- PHP (Composer): `composer.lock`
+- .NET / C# (NuGet): `packages.lock.json`, `*.csproj`
+- Java (Maven): `pom.xml`
