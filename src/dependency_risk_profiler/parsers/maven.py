@@ -80,10 +80,23 @@ class MavenPomParser(BaseParser):
 
     @staticmethod
     def _resolve(version: Optional[str], properties: Dict[str, str]) -> Optional[str]:
-        """Resolve a single ${property} reference; leave others as-is."""
+        """Resolve ``${property}`` references, including chained and embedded ones.
+
+        Substitution runs iteratively (bounded to guard against circular refs)
+        so both chained values (``${a}`` -> ``${b}`` -> ``1.2.3``) and embedded
+        references (``${lib.version}-RELEASE``) resolve. Unknown properties are
+        left as literal ``${...}`` placeholders.
+        """
         if not version:
             return None
-        match = _PROPERTY_REF.fullmatch(version.strip())
-        if match:
-            return properties.get(match.group(1), version)
-        return version
+
+        def _substitute(match: "re.Match[str]") -> str:
+            return properties.get(match.group(1), match.group(0))
+
+        resolved = version.strip()
+        for _ in range(10):
+            expanded = _PROPERTY_REF.sub(_substitute, resolved)
+            if expanded == resolved:
+                break
+            resolved = expanded
+        return resolved

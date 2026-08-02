@@ -70,6 +70,45 @@ def test_pom_parser_reads_direct_deps_and_resolves_properties(tmp_path: Path) ->
     assert deps["junit:junit"].installed_version == "4.13.2"  # ${junit.version}
 
 
+CHAINED_EMBEDDED_POM = """<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <groupId>com.example</groupId>
+  <artifactId>demo</artifactId>
+  <version>1.0.0</version>
+  <properties>
+    <a>${b}</a>
+    <b>1.2.3</b>
+    <lib.version>4.5.6</lib.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>com.chain</groupId>
+      <artifactId>chained</artifactId>
+      <version>${a}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.embed</groupId>
+      <artifactId>embedded</artifactId>
+      <version>${lib.version}-RELEASE</version>
+    </dependency>
+  </dependencies>
+</project>
+"""
+
+
+def test_pom_resolves_chained_and_embedded_properties(tmp_path: Path) -> None:
+    """Chained (${a}->${b}->value) and embedded (${x}-suffix) refs resolve."""
+    pom = tmp_path / "pom.xml"
+    pom.write_text(CHAINED_EMBEDDED_POM, encoding="utf-8")
+
+    deps = MavenPomParser(str(pom)).parse()
+
+    # ${a} -> ${b} -> 1.2.3 (chained, multi-level).
+    assert deps["com.chain:chained"].installed_version == "1.2.3"
+    # ${lib.version}-RELEASE -> 4.5.6-RELEASE (embedded reference).
+    assert deps["com.embed:embedded"].installed_version == "4.5.6-RELEASE"
+
+
 def test_pom_dispatches_to_maven_analyzer() -> None:
     """pom.xml routes to the maven ecosystem and analyzer."""
     from dependency_risk_profiler.cli.typer_cli import get_ecosystem_from_manifest
