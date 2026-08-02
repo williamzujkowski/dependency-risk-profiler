@@ -58,6 +58,7 @@ class BaseParser(ABC):
         """Initialize the ecosystem registry with built-in parsers."""
         from .composer import ComposerLockParser
         from .golang import GoParser
+        from .maven import MavenPomParser
         from .nodejs import NodeJSParser
         from .nuget import NuGetParser
         from .python import PythonParser
@@ -135,6 +136,15 @@ class BaseParser(ABC):
             [
                 {"type": "filename", "pattern": "packages.lock.json"},
                 {"type": "extension", "pattern": ".csproj"},
+            ],
+        )
+
+        # Register Java parser
+        EcosystemRegistry.register_parser(
+            "maven",
+            MavenPomParser,
+            [
+                {"type": "filename", "pattern": "pom.xml"},
             ],
         )
 

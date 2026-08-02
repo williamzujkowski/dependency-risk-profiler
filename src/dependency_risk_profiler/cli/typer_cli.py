@@ -215,6 +215,8 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "composer"
     elif file_name == "packages.lock.json" or file_name.endswith(".csproj"):
         return "nuget"
+    elif file_name == "pom.xml":
+        return "maven"
     else:
         return "unknown"
 
