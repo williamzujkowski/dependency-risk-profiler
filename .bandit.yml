@@ -14,8 +14,12 @@
 # B404: Import of subprocess module - required for functionality
 # B603: subprocess call - our calls use arrays and don't use shell=True, which mitigates risks
 # B607: Partial path - we only use well-known commands like git, not user input
+# B405/B314: xml.etree is used ONLY in parsers/xml_utils.py to read NuGet .csproj /
+#       Maven pom.xml manifests. ElementTree does not resolve external entities (no
+#       XXE), and read_xml_root() caps input size to bound entity-expansion cost, so
+#       parsing these manifests is safe without adding a defusedxml dependency.
 
-skips: ['B105', 'B110', 'B112', 'B404', 'B603', 'B607']
+skips: ['B105', 'B110', 'B112', 'B314', 'B404', 'B405', 'B603', 'B607']
 
 # Configure test directory exclusion
 exclude_dirs: ['testing']

@@ -43,6 +43,7 @@ SUPPORTED_MANIFEST_NAMES = (
     "Cargo.toml",
     "Gemfile.lock",
     "composer.lock",
+    "packages.lock.json",
 )
 
 
@@ -550,6 +551,7 @@ class OrgScanRunner:
             "cargo",
             "rubygems",
             "composer",
+            "nuget",
         }
         available = set(EcosystemRegistry.get_available_ecosystems())
         if not required.issubset(available):

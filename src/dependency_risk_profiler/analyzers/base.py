@@ -51,6 +51,7 @@ class BaseAnalyzer(ABC):
             from .crates import CratesIOAnalyzer
             from .golang import GoAnalyzer
             from .nodejs import NodeJSAnalyzer
+            from .nuget import NuGetAnalyzer
             from .python import PythonAnalyzer
             from .ruby import RubyGemsAnalyzer
 
@@ -71,6 +72,8 @@ class BaseAnalyzer(ABC):
                 return RubyGemsAnalyzer()
             elif ecosystem == "composer":
                 return ComposerAnalyzer()
+            elif ecosystem == "nuget":
+                return NuGetAnalyzer()
             else:
                 return None
 

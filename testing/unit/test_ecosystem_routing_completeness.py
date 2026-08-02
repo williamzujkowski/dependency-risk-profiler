@@ -29,6 +29,7 @@ CANONICAL_ECOSYSTEMS = (
     "cargo",
     "rubygems",
     "composer",
+    "nuget",
 )
 
 # Characterized current routing. Pin the stable names so a change cannot
@@ -42,6 +43,7 @@ EXPECTED_ROUTING = {
     "cargo": {"osv": "crates.io", "gha": "RUST", "deps_dev": "cargo"},
     "rubygems": {"osv": "RubyGems", "gha": "RUBYGEMS", "deps_dev": "rubygems"},
     "composer": {"osv": "Packagist", "gha": "COMPOSER", "deps_dev": None},
+    "nuget": {"osv": "NuGet", "gha": "NUGET", "deps_dev": "nuget"},
 }
 
 

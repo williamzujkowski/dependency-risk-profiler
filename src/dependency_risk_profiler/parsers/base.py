@@ -59,6 +59,7 @@ class BaseParser(ABC):
         from .composer import ComposerLockParser
         from .golang import GoParser
         from .nodejs import NodeJSParser
+        from .nuget import NuGetParser
         from .python import PythonParser
         from .registry import EcosystemRegistry
         from .ruby import GemfileLockParser
@@ -124,6 +125,16 @@ class BaseParser(ABC):
             ComposerLockParser,
             [
                 {"type": "filename", "pattern": "composer.lock"},
+            ],
+        )
+
+        # Register .NET parser
+        EcosystemRegistry.register_parser(
+            "nuget",
+            NuGetParser,
+            [
+                {"type": "filename", "pattern": "packages.lock.json"},
+                {"type": "extension", "pattern": ".csproj"},
             ],
         )
 
