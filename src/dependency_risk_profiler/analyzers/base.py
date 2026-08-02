@@ -47,6 +47,7 @@ class BaseAnalyzer(ABC):
             An instance of the appropriate analyzer, or None if no analyzer matches.
         """
         try:
+            from .composer import ComposerAnalyzer
             from .crates import CratesIOAnalyzer
             from .golang import GoAnalyzer
             from .nodejs import NodeJSAnalyzer
@@ -68,6 +69,8 @@ class BaseAnalyzer(ABC):
                 return CratesIOAnalyzer()
             elif ecosystem == "rubygems":
                 return RubyGemsAnalyzer()
+            elif ecosystem == "composer":
+                return ComposerAnalyzer()
             else:
                 return None
 

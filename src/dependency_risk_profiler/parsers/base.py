@@ -56,6 +56,7 @@ class BaseParser(ABC):
     @staticmethod
     def _initialize_registry() -> None:
         """Initialize the ecosystem registry with built-in parsers."""
+        from .composer import ComposerLockParser
         from .golang import GoParser
         from .nodejs import NodeJSParser
         from .python import PythonParser
@@ -114,6 +115,15 @@ class BaseParser(ABC):
             GemfileLockParser,
             [
                 {"type": "filename", "pattern": "Gemfile.lock"},
+            ],
+        )
+
+        # Register PHP parser
+        EcosystemRegistry.register_parser(
+            "composer",
+            ComposerLockParser,
+            [
+                {"type": "filename", "pattern": "composer.lock"},
             ],
         )
 

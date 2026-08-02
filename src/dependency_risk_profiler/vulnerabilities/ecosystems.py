@@ -48,9 +48,9 @@ _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
     Ecosystem("python", "PyPI", "PIP", "cpe:2.3:a:python:", "pypi"),
     Ecosystem("golang", "Go", "GO", "cpe:2.3:a:golang:", "go"),
     Ecosystem("cargo", "crates.io", "RUST", "cpe:2.3:a:rust:", "cargo"),
-    Ecosystem("maven", "Maven", "MAVEN", "cpe:2.3:a:apache:maven:", None),
-    Ecosystem("java", "Maven", "MAVEN", "cpe:2.3:a:java:", None),
-    Ecosystem("nuget", "NuGet", "NUGET", None, None),
+    Ecosystem("maven", "Maven", "MAVEN", "cpe:2.3:a:apache:maven:", "maven"),
+    Ecosystem("java", "Maven", "MAVEN", "cpe:2.3:a:java:", "maven"),
+    Ecosystem("nuget", "NuGet", "NUGET", None, "nuget"),
     Ecosystem("ruby", "RubyGems", "RUBYGEMS", "cpe:2.3:a:ruby:", "rubygems"),
     Ecosystem("composer", "Packagist", "COMPOSER", "cpe:2.3:a:php:", None),
 )
