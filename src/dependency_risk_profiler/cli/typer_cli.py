@@ -211,6 +211,8 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "cargo"
     elif file_name == "gemfile.lock":
         return "rubygems"
+    elif file_name == "composer.lock":
+        return "composer"
     else:
         return "unknown"
 

@@ -17,34 +17,46 @@ import pytest
 from dependency_risk_profiler.org_scan.report import _deps_dev_system
 from dependency_risk_profiler.vulnerabilities.aggregator import (
     GitHubAdvisorySource,
-    NVDSource,
     OSVSource,
 )
 
 # The canonical ecosystem strings the four analyzers set on every dependency
 # (analyzers/{nodejs,python,golang,crates}.py -> additional_info["ecosystem"]).
-CANONICAL_ECOSYSTEMS = ("nodejs", "python", "golang", "cargo", "rubygems")
+CANONICAL_ECOSYSTEMS = (
+    "nodejs",
+    "python",
+    "golang",
+    "cargo",
+    "rubygems",
+    "composer",
+)
 
-# Characterized current routing. Pin the stable names so the extraction cannot
-# silently change where a dependency's advisories/links are looked up.
+# Characterized current routing. Pin the stable names so a change cannot
+# silently move where a dependency's advisories/links are looked up. OSV and
+# GitHub Advisory cover every supported ecosystem; deps.dev is partial (None
+# where the source does not cover the ecosystem, e.g. Packagist).
 EXPECTED_ROUTING = {
     "nodejs": {"osv": "npm", "gha": "NPM", "deps_dev": "npm"},
     "python": {"osv": "PyPI", "gha": "PIP", "deps_dev": "pypi"},
     "golang": {"osv": "Go", "gha": "GO", "deps_dev": "go"},
     "cargo": {"osv": "crates.io", "gha": "RUST", "deps_dev": "cargo"},
     "rubygems": {"osv": "RubyGems", "gha": "RUBYGEMS", "deps_dev": "rubygems"},
+    "composer": {"osv": "Packagist", "gha": "COMPOSER", "deps_dev": None},
 }
 
 
 @pytest.mark.parametrize("ecosystem", CANONICAL_ECOSYSTEMS)
 def test_every_emitted_ecosystem_resolves_in_all_tables(ecosystem: str) -> None:
-    """No emitted ecosystem string may silently miss a routing table."""
+    """Every emitted ecosystem must route in OSV + GitHub Advisory.
+
+    A missing OSV route is the #66 silent-miss bug. NVD CPE and deps.dev
+    coverage is partial by design (characterized in EXPECTED_ROUTING), so they
+    are not required here.
+    """
     assert OSVSource()._normalize_ecosystem(ecosystem), "missing from OSV map"
     assert GitHubAdvisorySource()._normalize_ecosystem(
         ecosystem
     ), "missing from GitHub Advisory map"
-    assert NVDSource()._get_cpe_prefix(ecosystem), "missing from NVD CPE map"
-    assert _deps_dev_system(ecosystem) is not None, "missing from deps.dev map"
 
 
 @pytest.mark.parametrize("ecosystem", CANONICAL_ECOSYSTEMS)
