@@ -1,6 +1,6 @@
 """Tests for the risk scoring system."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 from dependency_risk_profiler.cli.formatter import JsonFormatter, TerminalFormatter
@@ -482,6 +482,221 @@ def test_info_and_withdrawn_vulnerabilities_do_not_raise_exploit_score() -> None
         advisory["filtered"] is True
         for advisory in updated.security_metrics.vulnerability_details
     )
+
+
+def _zero_weight_scorer(**overrides: float) -> RiskScorer:
+    """Build a scorer with every weight zeroed except the ones passed in.
+
+    Lets a test isolate a single signal's contribution so the renormalized
+    (#74) total reflects only the weights under test.
+    """
+    weights: Dict[str, float] = {
+        "staleness_weight": 0.0,
+        "maintainer_weight": 0.0,
+        "deprecation_weight": 0.0,
+        "exploit_weight": 0.0,
+        "version_difference_weight": 0.0,
+        "health_indicators_weight": 0.0,
+        "license_weight": 0.0,
+        "community_weight": 0.0,
+        "transitive_weight": 0.0,
+        "security_policy_weight": 0.0,
+        "dependency_update_weight": 0.0,
+        "signed_commits_weight": 0.0,
+        "branch_protection_weight": 0.0,
+        "maintained_weight": 0.0,
+    }
+    weights.update(overrides)
+    return RiskScorer(**weights)
+
+
+def test_maintained_weight_defaults_to_020_and_is_independent() -> None:
+    """#104: the maintained signal owns a dedicated, separately tunable weight."""
+    scorer = RiskScorer()
+
+    assert scorer.maintained_weight == 0.20
+    # It must not be an alias of branch_protection_weight.
+    assert scorer.maintained_weight is not scorer.branch_protection_weight
+    assert scorer.branch_protection_weight == 0.15
+
+
+def test_each_weighted_score_maps_to_its_own_weight_attribute() -> None:
+    """#116 (score drift): every signal contributes at its OWN weight attribute.
+
+    For each signal we build a scorer whose only non-zero weight is that
+    signal's dedicated attribute and a dependency that measures only that one
+    signal (risk 1.0). Under #74 renormalization the total then collapses to
+    ``max_score`` iff the signal is wired to the weight we set. This locks the
+    shipped bug where ``maintained`` reused ``branch_protection_weight``: with
+    ``branch_protection_weight=0`` the buggy wiring would zero maintained out.
+    """
+    # signal name -> (weight kwarg, SecurityMetrics field that makes it risky)
+    security_signals = {
+        "security_policy": ("security_policy_weight", "has_security_policy"),
+        "dependency_update": (
+            "dependency_update_weight",
+            "has_dependency_update_tools",
+        ),
+        "signed_commits": ("signed_commits_weight", "has_signed_commits"),
+        "branch_protection": ("branch_protection_weight", "has_branch_protection"),
+        "maintained": ("maintained_weight", "is_maintained"),
+    }
+
+    for name, (weight_kwarg, metric_field) in security_signals.items():
+        scorer = _zero_weight_scorer(**{weight_kwarg: 1.0})
+        dep = DependencyMetadata(
+            name=f"only-{name}",
+            installed_version="1.0.0",
+            # A risky reading (False) for exactly one security signal; all other
+            # signals stay None (unmeasured) and drop out of the denominator.
+            security_metrics=SecurityMetrics(**{metric_field: False}),
+        )
+
+        score = scorer.score_dependency(dep)
+
+        # The only non-zero-weight signal is the one under test, and it reads
+        # 1.0, so the renormalized total collapses to max_score iff that signal
+        # is wired to the weight we set (deprecation/exploit/transitive are
+        # always measured but carry weight 0, so they cannot shift the ratio).
+        assert name not in score.unknown_signals
+        assert (
+            score.total_score == scorer.max_score
+        ), f"signal '{name}' is not wired to '{weight_kwarg}'"
+
+
+def test_branch_protection_and_maintained_contribute_at_independent_weights() -> None:
+    """#116: both OpenSSF signals present -> each adds at its own weight."""
+    scorer = _zero_weight_scorer(
+        branch_protection_weight=0.15,
+        maintained_weight=0.20,
+    )
+    # Only maintained is risky; branch_protection is measured but clean.
+    dep = DependencyMetadata(
+        name="both-signals",
+        installed_version="1.0.0",
+        security_metrics=SecurityMetrics(
+            has_branch_protection=True,  # clean -> 0.0
+            is_maintained=False,  # risky -> 1.0
+        ),
+    )
+
+    score = scorer.score_dependency(dep)
+
+    # Renormalized over the two measured weights: 0.20 / (0.15 + 0.20) * max.
+    expected = (0.20 / (0.15 + 0.20)) * scorer.max_score
+    assert score.total_score == expected
+    # Under the shipped bug maintained would reuse 0.15, giving 0.15/0.30*max.
+    assert score.total_score != (0.15 / (0.15 + 0.15)) * scorer.max_score
+
+
+def test_missing_maintained_signal_leaves_other_packages_unchanged() -> None:
+    """#116: #74 renormalization is missing-signal invariant for maintained."""
+    scorer = RiskScorer()
+    common = dict(
+        installed_version="1.0.0",
+        latest_version="1.0.0",
+        last_updated=datetime.now(timezone.utc) - timedelta(days=15),
+        maintainer_count=5,
+        has_tests=True,
+        has_ci=True,
+        has_contribution_guidelines=True,
+        license_info=LicenseInfo(
+            license_id="MIT",
+            category=LicenseCategory.PERMISSIVE,
+            is_approved=True,
+            risk_level=RiskLevel.LOW,
+        ),
+    )
+    with_maintained = DependencyMetadata(
+        name="has-maintained",
+        security_metrics=SecurityMetrics(
+            has_security_policy=True,
+            has_dependency_update_tools=True,
+            has_signed_commits=True,
+            has_branch_protection=True,
+            is_maintained=True,
+        ),
+        **common,
+    )
+    without_maintained = DependencyMetadata(
+        name="no-maintained",
+        security_metrics=SecurityMetrics(
+            has_security_policy=True,
+            has_dependency_update_tools=True,
+            has_signed_commits=True,
+            has_branch_protection=True,
+            # is_maintained left None -> signal absent
+        ),
+        **common,
+    )
+
+    with_score = scorer.score_dependency(with_maintained)
+    without_score = scorer.score_dependency(without_maintained)
+
+    # The maintained reading here is 0.0 (clean), so dropping it changes neither
+    # the numerator nor the outcome for the other, fully-measured signals.
+    assert "maintained" not in with_score.unknown_signals
+    assert "maintained" in without_score.unknown_signals
+    assert without_score.total_score == with_score.total_score
+
+
+def test_hyphenated_prerelease_scored_by_real_version_distance() -> None:
+    """#106: a hyphenated prerelease is not flattened to the 0.25 range default."""
+    scorer = RiskScorer()
+    # 2.0.0-beta is two majors behind 4.0.0 -> should read as major-version risk.
+    dep = DependencyMetadata(
+        name="prerelease-behind",
+        installed_version="2.0.0-beta",
+        latest_version="4.0.0",
+    )
+
+    score = scorer.score_dependency(dep)
+
+    assert score.version_score is not None
+    assert score.version_score > 0.25
+    assert score.version_score == 1.0
+
+    # Go-style pseudo-versions also carry a hyphen. They are not PEP 440 so they
+    # no longer short-circuit to the 0.25 range default; they now fall through to
+    # the parser's moderate-distance handling (0.5) instead of being flattened.
+    go_dep = DependencyMetadata(
+        name="go-pseudo",
+        installed_version="1.0.0-20230101000000-abcdefabcdef",
+        latest_version="3.0.0",
+    )
+    go_score = scorer.score_dependency(go_dep)
+    assert go_score.version_score is not None
+    assert go_score.version_score > 0.25
+
+
+def test_staleness_is_computed_in_utc_regardless_of_timestamp_tz() -> None:
+    """#111: the same instant scores identically no matter its tz representation."""
+    scorer = RiskScorer()
+    # One fixed instant, 200 days ago, expressed in two different time zones.
+    instant_utc = datetime.now(timezone.utc) - timedelta(days=200)
+    instant_offset = instant_utc.astimezone(timezone(timedelta(hours=9)))
+
+    utc_dep = DependencyMetadata(
+        name="utc-stamp", installed_version="1.0.0", last_updated=instant_utc
+    )
+    offset_dep = DependencyMetadata(
+        name="offset-stamp", installed_version="1.0.0", last_updated=instant_offset
+    )
+
+    utc_score = scorer.score_dependency(utc_dep)
+    offset_score = scorer.score_dependency(offset_dep)
+
+    assert utc_score.staleness_score == offset_score.staleness_score
+    # 200 days -> the 180-365 day band.
+    assert utc_score.staleness_score == 0.75
+
+    # A naive timestamp is treated as UTC rather than crashing on the diff.
+    naive_dep = DependencyMetadata(
+        name="naive-stamp",
+        installed_version="1.0.0",
+        last_updated=instant_utc.replace(tzinfo=None),
+    )
+    assert scorer.score_dependency(naive_dep).staleness_score == 0.75
 
 
 def test_critical_vulnerability_scores_higher_than_low() -> None:

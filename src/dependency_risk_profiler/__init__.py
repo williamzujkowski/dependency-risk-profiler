@@ -1,6 +1,6 @@
 """Dependency Risk Profiler - Tool for analyzing the health of project dependencies."""
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"
 
 # Convenience imports for key functionality
 from .models import (

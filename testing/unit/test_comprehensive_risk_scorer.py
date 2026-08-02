@@ -582,19 +582,21 @@ def test_legacy_version_handling() -> None:
 
 
 def test_version_range_handling() -> None:
-    """Test handling of version ranges, especially with dash notation.
+    """Test handling of version ranges with dash notation.
 
-    This test specifically checks our fix for handling version ranges
-    with dash notation like "1.0.0 - 2.0.0".
+    #106: the dash is no longer treated as a version-range operator (it was
+    short-circuiting hyphenated prereleases like ``1.2.3-rc1`` to a flat 0.25).
+    Genuinely unparseable dash strings now fall through to the parser's
+    moderate-distance fallback (0.5) instead of the old range default.
     """
     # Arrange
     scorer = RiskScorer()
 
     range_test_cases = [
-        ("1.0.0 - 2.0.0", "3.0.0", 0.25),  # Range with dash
-        ("1.0.0-2.0.0", "3.0.0", 0.25),  # Range with dash, no spaces
-        ("1.0.0 - ", "3.0.0", 0.25),  # Incomplete range
-        ("1.0.0-", "3.0.0", 0.25),  # Incomplete range, no space
+        ("1.0.0 - 2.0.0", "3.0.0", 0.5),  # Unparseable -> moderate distance
+        ("1.0.0-2.0.0", "3.0.0", 0.5),  # Unparseable, no spaces
+        ("1.0.0 - ", "3.0.0", 0.5),  # Incomplete range
+        ("1.0.0-", "3.0.0", 0.5),  # Incomplete range, no space
     ]
 
     # Act & Assert
