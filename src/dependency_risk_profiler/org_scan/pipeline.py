@@ -16,7 +16,7 @@ from ..models import CommunityMetrics, DependencyMetadata, DependencyRiskScore
 from ..popularity import GITHUB_REPOSITORY_ARCHIVED_KEY
 from ..scoring.risk_scorer import RiskScorer
 from .github import RepoSignals
-from .models import DependencyKey, DependencyProfiler
+from .models import DependencyKey, DependencyProfiler, canonical_ecosystem
 
 logger = logging.getLogger(__name__)
 
@@ -130,9 +130,16 @@ class ExistingDependencyProfiler(DependencyProfiler):
         try:
             from ..vulnerabilities.osv_batch import prewarm_osv_querybatch_cache
 
+            # Key the prewarm on the post-analysis ecosystem the read path uses:
+            # analyzers overwrite a dependency's ecosystem (e.g. pyproject deps
+            # become "python"), and the cache is keyed on that value. Writing the
+            # raw manifest ecosystem here would miss on read and re-query OSV.
             asyncio.run(
                 prewarm_osv_querybatch_cache(
-                    [(metadata.name, key.ecosystem) for key, metadata in pending]
+                    [
+                        (metadata.name, canonical_ecosystem(key.ecosystem))
+                        for key, metadata in pending
+                    ]
                 )
             )
         except Exception as exc:

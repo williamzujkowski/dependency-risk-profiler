@@ -15,9 +15,23 @@ from .models import RepositoryRef
 
 logger = logging.getLogger(__name__)
 
+# Real dependency manifests are small; cap the fetched body so a malicious
+# public repo in a scanned org cannot serve a multi-gigabyte lock file that
+# would OOM the scanner before it is ever parsed. Mirrors the XML parser's
+# ``_MAX_XML_BYTES`` guard (parsers/xml_utils.py).
+_MAX_MANIFEST_BYTES = 5 * 1024 * 1024
+
+# Read the streamed body in bounded chunks so an oversized response is rejected
+# without materializing the whole thing in memory.
+_MANIFEST_CHUNK_BYTES = 64 * 1024
+
 
 class GitHubRateLimitError(RuntimeError):
     """Raised when GitHub rate limiting prevents scan progress."""
+
+
+class ManifestTooLargeError(RuntimeError):
+    """Raised when a fetched manifest exceeds ``_MAX_MANIFEST_BYTES``."""
 
 
 @dataclass(frozen=True)
@@ -192,13 +206,43 @@ class GitHubOrgClient:
         return sorted(paths)
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
-        """Fetch a manifest file as raw text."""
+        """Fetch a manifest file as raw text, bounded to ``_MAX_MANIFEST_BYTES``.
+
+        The body is streamed and rejected once it exceeds the cap so a malicious
+        repo serving an enormous lock file cannot exhaust memory before the
+        content reaches a parser.
+        """
         response = self._request(
             f"/repos/{repo.full_name}/contents/{path}",
             {},
             accept="application/vnd.github.raw",
+            stream=True,
         )
-        return str(response.text)
+        try:
+            declared = self._optional_int(response.headers.get("Content-Length"))
+            if declared is not None and declared > _MAX_MANIFEST_BYTES:
+                raise ManifestTooLargeError(
+                    f"{repo.full_name}/{path} reports {declared} bytes, "
+                    f"exceeding the {_MAX_MANIFEST_BYTES}-byte manifest cap"
+                )
+
+            chunks: List[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=_MANIFEST_CHUNK_BYTES):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > _MAX_MANIFEST_BYTES:
+                    raise ManifestTooLargeError(
+                        f"{repo.full_name}/{path} exceeds the "
+                        f"{_MAX_MANIFEST_BYTES}-byte manifest cap"
+                    )
+                chunks.append(chunk)
+        finally:
+            response.close()
+
+        encoding = response.encoding or "utf-8"
+        return b"".join(chunks).decode(encoding, errors="replace")
 
     def get_repository_signals(self, owner_repo: str) -> RepoSignals:
         """Fetch cheap authenticated popularity signals for a GitHub repository."""
@@ -266,9 +310,18 @@ class GitHubOrgClient:
         return parsed
 
     def _request(
-        self, path: str, params: Mapping[str, str], accept: str
+        self,
+        path: str,
+        params: Mapping[str, str],
+        accept: str,
+        stream: bool = False,
     ) -> requests.Response:
-        """GET a GitHub endpoint with bounded retry/backoff."""
+        """GET a GitHub endpoint with bounded retry/backoff.
+
+        When ``stream`` is set the response body is left unread so the caller can
+        bound how much it consumes; unreturned streamed responses are closed here
+        to avoid leaking the connection.
+        """
         url = f"{self.api_base_url}{path}"
         headers = {
             "Accept": accept,
@@ -283,8 +336,10 @@ class GitHubOrgClient:
                 headers=headers,
                 params=dict(params),
                 timeout=self.timeout,
+                stream=stream,
             )
             if response.status_code in {403, 429} and self._should_backoff(response):
+                response.close()
                 if attempt >= self.max_retries:
                     raise GitHubRateLimitError(
                         "GitHub rate limit prevented progress; retry after reset or "
@@ -295,7 +350,11 @@ class GitHubOrgClient:
                 time.sleep(delay)
                 continue
 
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except requests.HTTPError:
+                response.close()
+                raise
             return response
 
         raise GitHubRateLimitError("GitHub request retry loop exhausted")
