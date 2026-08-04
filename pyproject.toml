@@ -59,11 +59,14 @@ dev = [
     "tomli>=2.0.1",  # TOML parsing/writing in tests (make available for all Python versions)
     "tomli-w>=1.0.0",           # For TOML writing in tests
     "pre-commit>=3.5.0",        # For pre-commit hooks
-    "numpy>=1.24.0",            # test-only; was pulled transitively via matplotlib
+    # test-only percentile helper. Capped below 2.5 because numpy 2.5 ships
+    # PEP 695 `type` statements in its stubs, which are a hard parse failure
+    # under `[tool.mypy] python_version = "3.10"`; raise both together.
+    "numpy>=1.24.0,<2.5",
 ]
 
 benchmark = [
-    "numpy>=1.24.0",           # For benchmark tests and percentile calculations
+    "numpy>=1.24.0,<2.5",      # Percentile calculations; capped, see the dev extra
 ]
 
 visualization = [
@@ -152,6 +155,15 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "typer.*"
 ignore_missing_imports = true
+
+# numpy ships `py.typed`, so mypy reads its stubs. Nothing here depends on
+# their contents — the test suite calls `percentile` and nothing else — and
+# following them costs a full stub parse, so skip it. (The version cap in the
+# dev extra is the separate half of this: `follow_imports` cannot rescue a
+# stub whose *syntax* postdates our `python_version`.)
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
 
 # Modules still awaiting type cleanup. Every entry here is a debt, not a policy:
 # testing/unit/test_mypy_config.py ratchets the per-module error counts down and
