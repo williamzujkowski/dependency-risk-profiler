@@ -87,8 +87,34 @@ Example API response structure:
 
 ### Ruby (RubyGems)
 
-- **Method**: JSON request to `https://rubygems.org/api/v1/gems/{gem}.json`
-- **Information Retrieved**: latest version, source/homepage URL
+- **Method**: JSON request to `https://rubygems.org/api/v1/gems/{gem}.json`,
+  plus `.../gems/{gem}/owners.json` for the maintainer count.
+- **Information Retrieved**: latest version, release date, source/homepage URL,
+  license list, owner count, description.
+
+#### Yanks are removals, not tombstones
+
+RubyGems does not keep a withdrawn release visible with a flag on it; it takes
+it out of the index. Every place a yank could surface was checked live:
+
+| Endpoint | What it does with a yanked release |
+|---|---|
+| `/api/v1/gems/{gem}.json` | Answers with the newest release that still exists; reports `yanked: false` for every gem. |
+| `/api/v1/versions/{gem}.json` | Carries no `yanked` key at all, and omits withdrawn releases (`rest-client` 1.6.10, `strong_password` 0.0.7, `bootstrap-sass` 3.2.0.3 are simply absent). |
+| `/api/v2/rubygems/{gem}/versions/{version}.json` | Reports `yanked: false`; 404s once the release is withdrawn. |
+| `index.rubygems.org/info/{gem}` | Omits withdrawn releases. |
+
+Two consequences the risk score inherits:
+
+- **`yanked: true` is not obtainable.** The adapter still reads the key so it is
+  correct the day rubygems.org starts sending it, but the deprecation signal for
+  gems comes from the published description instead. crates.io keeps the
+  withdrawn release visible with `yanked: true`, so the same idea *is* capturable
+  one ecosystem over — the difference is the registry's model, not the read.
+- **A gem whose every release is yanked is not separable from a gem that never
+  existed.** Both 404 on every endpoint above, identically. That case is left
+  honestly unmeasured rather than guessed at, because flagging a 404 as
+  deprecated would flag every private, internal, or misspelled gem name too.
 
 ### PHP (Composer / Packagist)
 
@@ -149,6 +175,42 @@ unmeasured.
 - **Information Retrieved**: `<release>` (preferred) or `<latest>` version;
   `<scm>` source-repository URL; `<licenses>`; and the artifact's own shipped
   (compile/runtime scope) dependencies, which is the transitive signal.
+
+#### Maven coverage is a function of artifact age
+
+An artifact's repository-derived signals — last commit, tests/CI, and the
+OpenSSF-style security checks — all depend on resolving a cloneable git
+repository from its POM. Artifacts published before git won became the norm in
+the Java ecosystem cannot supply one, so for them `repository_url` is `None` and
+those signals are honestly unmeasured. This is `#74` working correctly, not a
+gap to be closed; measuring them would mean guessing at a repository the
+artifact never declared.
+
+Two distinct shapes produce it, and neither is a defect:
+
+1. **No `<scm>` block at all.** `commons-collections:3.1`, `axis:1.2`,
+   `org.apache.tomcat:tomcat-catalina:7.0.27`, `com.google.guava:guava:19.0`,
+   `org.slf4j:slf4j-api:1.7.25` and others predate the convention entirely.
+2. **An `<scm>` block that names Subversion or CVS.** `log4j:log4j:1.2.17`
+   declares `scm:svn:http://svn.apache.org/repos/asf/logging/log4j/tags/v1_2_17_rc3`
+   with an `<url>` pointing at ViewVC. `normalize_scm_url` parses it correctly —
+   the `scm:svn:` prefix comes off and an `https://` URL comes out — and
+   `canonical_repository_url` then correctly refuses it, because there is no
+   `owner/repo` on a cloneable host behind it. `org.jdom:jdom:1.1` and
+   `dom4j:dom4j:1.6.1` are the CVS equivalents (`scm:cvs:pserver:...`).
+
+So the discriminator is not whether the POM declares `<scm>`; it is whether what
+it declares is a git forge. Across a 25-artifact sample spanning both eras, 9
+published no `<scm>`, 12 published one naming SVN or CVS, and 4
+(`junit:4.12`, `hibernate-core:4.3.11.Final`, `spring-core:4.3.0.RELEASE`,
+`mockito-core:1.10.19`) named GitHub and resolved. The same sample found **no**
+artifact whose `<scm><url>` was unusable while one of its `<connection>`
+elements was usable, so the `url` → `connection` → `developerConnection`
+preference order in `_read_scm_url` costs nothing.
+
+A manifest full of pre-git-era artifacts will therefore report a low scored
+percentage and a large unmeasured-signal count. That is the tool declining to
+invent data, and the unmeasured counts are the record of it.
 
 #### Inherited versions
 

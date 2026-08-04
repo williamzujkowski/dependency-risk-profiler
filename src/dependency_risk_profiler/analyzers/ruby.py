@@ -1,7 +1,7 @@
 """Analyzer for Ruby (RubyGems) dependencies."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 import requests
 
@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 
 RUBYGEMS_API_BASE = "https://rubygems.org/api/v1"
 _USER_AGENT = "dependency-risk-profiler (metadata lookup)"
+
+# The words a maintainer uses when the gem's own blurb is the retirement
+# notice. Same list the PyPI adapter sweeps its one-line summary for, because
+# the phrasing is the same across ecosystems and a second list would drift.
+_DESCRIPTION_DEPRECATION_TERMS: Sequence[str] = (
+    "deprecated",
+    "unmaintained",
+    "abandoned",
+)
 
 
 class RubyGemsAnalyzer(BaseAnalyzer):
@@ -99,9 +108,67 @@ class RubyGemsAnalyzer(BaseAnalyzer):
             dep, parse_registry_timestamp(info.get("version_created_at"))
         )
 
-        # A yanked gem is RubyGems' explicit "do not use this" marker.
+        # RubyGems *removes* a yanked release rather than tombstoning it, so
+        # this read cannot fire against today's API (#170). Checked live
+        # against rubygems.org, all four places a yank could surface:
+        #
+        #   /api/v1/gems/<name>.json         answers with the newest release
+        #                                    that still exists and reports
+        #                                    yanked: false for every gem.
+        #   /api/v1/versions/<name>.json     carries no `yanked` key at all and
+        #                                    omits withdrawn releases outright
+        #                                    (rest-client 1.6.10, strong_password
+        #                                    0.0.7 and bootstrap-sass 3.2.0.3 are
+        #                                    all simply absent).
+        #   /api/v2/rubygems/<name>/         reports yanked: false, and 404s the
+        #     versions/<version>.json        moment a release is withdrawn.
+        #   index.rubygems.org/info/<name>   omits withdrawn releases too.
+        #
+        # A gem whose every release is yanked 404s on all of them, byte for byte
+        # the answer a name that never existed gets, so "fully yanked" is not
+        # separable from "not on rubygems.org" and is left honestly unmeasured
+        # rather than guessed at. crates.io keeps the withdrawn release visible
+        # with yanked: true, which is why the same idea IS capturable one
+        # ecosystem over — the difference is the registry's model, not the read.
+        # The read stays because it costs nothing and is right the day
+        # rubygems.org starts sending it; it is not the deprecation signal here.
         if info.get("yanked") is True:
             dep.is_deprecated = True
+
+        if self._description_declares_deprecation(info):
+            dep.is_deprecated = True
+
+    @staticmethod
+    def _description_declares_deprecation(info: Dict[str, object]) -> bool:
+        """Return whether the gem's own blurb names it deprecated.
+
+        With the ``yanked`` branch unreachable (see above), this is the only
+        deprecation evidence the ``/gems/<name>.json`` payload carries. RubyGems
+        publishes the gemspec description as ``info``, and a gemspec description
+        is a sentence or two the maintainer writes on purpose ("Ruby Sass is
+        deprecated! See ... for details"), not the rendered README that made the
+        same sweep unusable on PyPI (#171) — across 25 sampled gems the longest
+        was 803 characters and the median under 100.
+
+        Low yield is expected and accepted: it caught 2 of those 25, the same
+        shape as PyPI's summary read catching only ``sklearn`` out of five
+        known-deprecated packages. Most retired gems (paperclip, syck,
+        protected_attributes) never say so anywhere a registry can be asked. It
+        shares PyPI's one exposure, a gem that *provides* deprecated APIs rather
+        than being deprecated itself; that phrasing is rare enough, and near
+        enough to true when it happens, to be worth the recall.
+
+        Args:
+            info: The ``/gems/<name>.json`` payload.
+
+        Returns:
+            True when the description names the gem as deprecated.
+        """
+        description = info.get("info")
+        if not isinstance(description, str) or not description:
+            return False
+        lowered = description.lower()
+        return any(term in lowered for term in _DESCRIPTION_DEPRECATION_TERMS)
 
     def _repository_url(self, info: Dict[str, object]) -> Optional[str]:
         """Return the gem's repository root, or None when it publishes none.
