@@ -234,6 +234,69 @@ reported as `unmanaged` and its version-drift signal is excluded from both the
 numerator and the denominator of the risk score rather than scored as zero
 drift.
 
+### Java / Kotlin / Android (Gradle)
+
+- **Method**: none of its own. Gradle publishes and consumes Maven coordinates,
+  so every dependency read out of a `build.gradle` or `build.gradle.kts` is
+  scored through the Maven Central reads described above and routed to OSV's
+  **Maven** ecosystem. `gradle` is an alias onto the `maven` entry in
+  `vulnerabilities/ecosystems.py` rather than a tenth ecosystem: an advisory
+  against `com.squareup.okio:okio` is the same advisory whichever build tool
+  declared it.
+- **Information Retrieved**: the `groupId:artifactId` coordinate and, where it
+  can be established statically, the installed version. Everything downstream —
+  latest version, licence, source repository, shipped dependencies — comes from
+  Maven Central.
+
+#### What "statically" means here, and what it costs
+
+`build.gradle` and `build.gradle.kts` are Groovy and Kotlin programs. A
+coordinate in one can be computed from an environment variable, a `git describe`,
+or a function defined in another file, and the only way to evaluate a Gradle
+build is to run Gradle — which a scanner reading untrusted repositories must not
+do. So the parser reads the declarative shapes and refuses the rest:
+
+- **Read**: string notation in either DSL (`implementation 'g:a:1.2'`,
+  `implementation("g:a:1.2")`), map notation (`group:`/`name:`/`version:` and the
+  Kotlin `group = …` spelling), version-catalog aliases and bundles resolved
+  against `gradle/libs.versions.toml`, `platform(...)` /
+  `enforcedPlatform(...)` / `testFixtures(...)` wrappers, `kotlin("reflect")`
+  sugar, and `$name` / `${name}` interpolation expanded from an `ext { }` block,
+  a top-level literal binding, or any `gradle.properties` at or above the
+  project directory. Declarations are read at any nesting depth, because Kotlin
+  Multiplatform keeps every one of them inside a source-set block.
+- **Not read**: anything computed at configuration time; dynamic versions
+  (`1.+`, `[1.0,2.0)`, `latest.release`); `buildscript { }` and
+  `pluginManagement` blocks (the build's own tooling classpath, which is Maven's
+  `<build><plugins>` and is skipped there too); `constraints { }` blocks, which
+  state a version for a dependency somebody else declares; `project(":x")` and
+  `files(...)` dependencies, which have no registry; catalogs under a
+  non-default name or declared inline in `settings.gradle`; and `gradle.lockfile`.
+
+Where a coordinate is recoverable and its version is not, the dependency is
+reported with the version marked `unmanaged` — the same state Maven's inherited
+versions and NuGet's centrally managed ones use, from the same shared
+vocabulary in `parsers/version_sources.py`. Version drift is then dropped from
+both the numerator and the denominator of the score rather than recorded as
+zero drift. Where the *coordinate* itself is computed, the declaration is
+counted and logged as unread, because inventing a package name would be worse
+than an honest gap.
+
+Two consequences worth knowing before you read a report:
+
+1. In `scan-org` / `scan-user`, manifests are fetched one file at a time, so a
+   build script's version catalog is out of reach and catalog-declared versions
+   come back unmanaged. The dependency set, the advisories and every registry
+   signal are still measured; only version drift is not.
+2. Only Maven Central is read. Android projects routinely depend on `androidx.*`
+   and `com.google.android.*` artifacts, which are published to Google's Maven
+   repository and not to Maven Central, so their POM lookup finds nothing and
+   they score UNKNOWN with every registry signal unmeasured — the version is
+   resolved, and there is no registry behind it to ask. Profiling okhttp's
+   `okhttp/build.gradle.kts` is a fair illustration: 28 dependencies named, 25
+   scored, and the 3 UNKNOWNs are exactly the three `androidx` artifacts. That
+   is the tool declining to invent data rather than a parse failure.
+
 ## Repository Analysis
 
 When a repository URL is available (typically from GitHub, GitLab, or Bitbucket), the tool performs additional analysis:

@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n  <!-- This module was also published with a richer model, Gradle metadata,  -->\n  <!-- which should be used instead. Do not delete the following line which  -->\n  <!-- is to indicate to Gradle or any Gradle module metadata file consumer  -->\n  <!-- that they should prefer consuming it instead. -->\n  <!-- do_not_remove: published-with-gradle-metadata -->\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>com.squareup.okio</groupId>\n  <artifactId>okio</artifactId>\n  <version>3.17.0</version>\n  <name>okio</name>\n  <description>A modern I/O library for Android, Java, and Kotlin Multiplatform.</description>\n  <url>https://github.com/square/okio/</url>\n  <licenses>\n    <license>\n      <name>The Apache Software License, Version 2.0</name>\n      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>\n      <distribution>repo</distribution>\n    </license>\n  </licenses>\n  <developers>\n    <developer>\n      <id>square</id>\n      <name>Square, Inc.</name>\n    </developer>\n  </developers>\n  <scm>\n    <connection>scm:git:git://github.com/square/okio.git</connection>\n    <developerConnection>scm:git:ssh://git@github.com/square/okio.git</developerConnection>\n    <url>https://github.com/square/okio/</url>\n  </scm>\n  <dependencies>\n    <dependency>\n      <groupId>com.squareup.okio</groupId>\n      <artifactId>okio-jvm</artifactId>\n      <version>3.17.0</version>\n      <scope>compile</scope>\n    </dependency>\n  </dependencies>\n</project>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/com/squareup/okio/okio/3.17.0/okio-3.17.0.pom",
+    "trimming": []
+  }
+}

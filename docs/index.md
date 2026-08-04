@@ -52,3 +52,4 @@ dependency-risk-profiler analyze requirements.txt --output json
 - PHP (Composer): `composer.lock`
 - .NET / C# (NuGet): `packages.lock.json`, `*.csproj`
 - Java (Maven): `pom.xml`
+- Java / Kotlin / Android (Gradle): `build.gradle`, `build.gradle.kts` (versions from `gradle/libs.versions.toml`)

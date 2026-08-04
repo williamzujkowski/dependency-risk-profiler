@@ -32,7 +32,7 @@ one inside ``versions["2.88.2"]``.
 
 Converted ecosystems
 --------------------
-See :data:`CONVERSION_STATUS`. All eight are converted. That is not the same as
+See :data:`CONVERSION_STATUS`. All nine are converted. That is not the same as
 "every branch is proven": :func:`unproven_branches` names each polarized branch
 no captured payload can reach, with the reason it cannot, and the conformance
 report prints every one. maven's deprecation branch is the sharpest of them —
@@ -44,8 +44,10 @@ Fixtures come from :mod:`registry_fixtures` — captured from the live registry,
 provenance-dated, replayed offline. This module never touches the network.
 """
 
+import tempfile
 from copy import deepcopy
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, FrozenSet, List, Mapping, Optional, Sequence, Tuple
 from unittest import mock
 
@@ -73,6 +75,8 @@ from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.parsers import maven_central as maven_central_module
 from dependency_risk_profiler.parsers import nuget_registry as nuget_registry_module
+from dependency_risk_profiler.parsers.gradle import GradleParser
+from dependency_risk_profiler.parsers.gradle_dsl import BUILD_FILE_NAMES
 from dependency_risk_profiler.parsers.maven_central import pom_url
 from dependency_risk_profiler.parsers.nuget_registry import (
     FLAT_CONTAINER_BASE,
@@ -80,6 +84,7 @@ from dependency_risk_profiler.parsers.nuget_registry import (
     parse_nuspec,
 )
 from dependency_risk_profiler.parsers.pom_model import PomCoordinate, read_pom
+from dependency_risk_profiler.parsers.version_sources import VERSION_SOURCE_KEY
 from dependency_risk_profiler.parsers.xml_utils import parse_xml_bytes
 from dependency_risk_profiler.scoring.risk_scorer import (
     SOURCE_REPOSITORY_UNUSABLE_SCORE,
@@ -94,6 +99,13 @@ GITHUB_REPO_HTML = (
     '<a href="/owner/repo/stargazers" '
     'aria-label="1,234 users starred this repository">1.2k</a>'
 )
+
+# Where the captured *project* files come from, as opposed to the captured
+# registry documents. Gradle is the one ecosystem whose manifest is itself a
+# capture — a build script is a source file in somebody's repository, not a
+# document a registry serves — and the driver partitions its fixtures on this
+# prefix rather than on a hand-kept list of which fixture is which.
+_PROJECT_FILE_BASE = "https://raw.githubusercontent.com/"
 
 
 # --- The assertion vocabulary ----------------------------------------------
@@ -189,6 +201,13 @@ class FixtureCase:
     expected_repository_url: Optional[str] = None
     expected_license_id: Optional[str] = None
     expected_deprecated: Optional[bool] = None
+    # How the manifest-reading ecosystems must have established the installed
+    # version — one of the ``version_sources`` constants. Only gradle asserts
+    # it today, because it is the only case whose *manifest* is captured: the
+    # difference between reading 3.17.0 off the declaration and resolving it
+    # through a version catalog is invisible in the score and is the whole of
+    # what #101 added.
+    expected_version_source: Optional[str] = None
     meets_signal_floor: bool = False
     ground_truth: Sequence[str] = field(default_factory=tuple)
 
@@ -580,6 +599,124 @@ def _maven_coordinate(fixture: RegistryFixture) -> PomCoordinate:
     return PomCoordinate(group_id, artifact_id, version)
 
 
+def _score_gradle(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one dependency a captured Gradle project declares, offline.
+
+    The only driver here that starts at a *manifest* rather than at a registry
+    document, and it is that shape on purpose. Gradle adds no registry: it
+    publishes Maven coordinates, resolves against Maven Central and routes to
+    OSV's Maven ecosystem, so scoring it through ``MavenAnalyzer`` against
+    captured Maven Central documents would restate maven's cases with extra
+    steps. What is actually new — and what can actually break — is the *route*:
+    a build script this parser reads produces a key, and that key has to be
+    exactly the ``groupId:artifactId`` Maven Central is addressed by. Get the
+    parse subtly wrong and every Gradle dependency 404s into all-UNKNOWN while
+    every count stays green, which is #127's shape with a new cause.
+
+    So the case is end-to-end. The captured build script and version catalog are
+    materialised in the layout their source URLs describe, the real parser runs
+    over them, the version it resolved is asserted against the case, and the
+    coordinate it produced is handed to the Maven analyzer replaying captured
+    Maven Central bytes.
+
+    Args:
+        case: The conformance case. ``fixture`` names the artifact POM, exactly
+            as in ``_score_maven``; ``extra_fixtures`` carries the metadata
+            document plus the project files.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    served = {case.fixture: fixtures[case.fixture]}
+    for extra in case.extra_fixtures:
+        served[extra] = fixtures[extra]
+
+    project = {
+        name: fixture
+        for name, fixture in served.items()
+        if fixture.source_url.startswith(_PROJECT_FILE_BASE)
+    }
+    registry = {
+        name: fixture for name, fixture in served.items() if name not in project
+    }
+
+    coordinate = _maven_coordinate(served[case.fixture])
+    name = coordinate.key
+    version, source = _parse_gradle_project(project, name)
+    assert version == case.installed_version, (
+        f"{case.slug}: the Gradle parser resolved {name} to "
+        f"{version!r}, but the case expects {case.installed_version!r}. The "
+        f"parse is the thing under test here; a mismatch means the build "
+        f"script, the catalog, or the reader changed."
+    )
+    assert source == case.expected_version_source, (
+        f"{case.slug}: {name}'s version was established via {source!r}, "
+        f"expected {case.expected_version_source!r}"
+    )
+
+    analyzer = MavenAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=name, installed_version=version)
+
+    get = replay_requests_get(registry, absent=list(case.absent_urls))
+    with (
+        mock.patch.object(maven_module.requests, "get", side_effect=get),
+        mock.patch.object(maven_central_module.requests, "get", side_effect=get),
+    ):
+        dep = analyzer.analyze({name: dep})[name]
+    return _finish(dep, analyzer.metadata_cache.get(name, {"name": name}))
+
+
+def _parse_gradle_project(
+    project: Mapping[str, RegistryFixture], name: str
+) -> Tuple[str, str]:
+    """Materialise a captured Gradle project and parse it for one coordinate.
+
+    Each project file is written to the path its source URL describes relative
+    to the repository root, so ``gradle/libs.versions.toml`` lands where the
+    catalog walk expects to find it rather than where a test author decided to
+    put it. The layout is therefore the project's, not the harness's.
+
+    Args:
+        project: The captured build scripts and catalogs.
+        name: The ``groupId:artifactId`` the caller is asking about.
+
+    Returns:
+        The ``(installed_version, version_source)`` pair the parser produced.
+
+    Raises:
+        AssertionError: If the parse never names the coordinate at all, which
+            is the failure this driver exists to catch.
+    """
+    scripts: List[Path] = []
+    with tempfile.TemporaryDirectory(prefix="gradle-conformance-") as directory:
+        root = Path(directory)
+        for fixture in project.values():
+            relative = fixture.source_url[len(_PROJECT_FILE_BASE) :]
+            # owner/repo/ref/<path within the repository>
+            path = root / "/".join(relative.split("/")[3:])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(fixture.body)
+            if path.name in BUILD_FILE_NAMES:
+                scripts.append(path)
+
+        assert len(scripts) == 1, (
+            f"expected exactly one build script among {sorted(project)}, "
+            f"found {[str(script) for script in scripts]}"
+        )
+        dependencies = GradleParser(str(scripts[0])).parse()
+
+    assert name in dependencies, (
+        f"the Gradle parser did not name {name} at all. It read "
+        f"{len(dependencies)} dependencies: {sorted(dependencies)[:10]}"
+    )
+    parsed = dependencies[name]
+    return parsed.installed_version, parsed.additional_info[VERSION_SOURCE_KEY]
+
+
 def _score_nuget(
     case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
 ) -> DependencyRiskScore:
@@ -643,6 +780,7 @@ DRIVERS = {
     "cargo": _score_cargo,
     "composer": _score_composer,
     "golang": _score_golang,
+    "gradle": _score_gradle,
     "maven": _score_maven,
     "nodejs": _score_nodejs,
     "nuget": _score_nuget,
@@ -826,6 +964,40 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "the ones that do not resolve leave eight signals quiet. Until "
                 "#73 the adapter recorded neither answer, so the signal was "
                 "absent from the score rather than measured either way."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Same aggregator, "
+                "same coverage, same gap."
+            ),
+        ),
+    },
+    "gradle": {
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "Same read as maven's, reached through the Gradle parser. It is "
+                "listed separately rather than deferred to maven because the "
+                "route is what can break: a coordinate the parser assembled "
+                "wrongly fetches no POM at all, and a POM that was never "
+                "fetched records nothing — which is UNDECLARED-shaped silence "
+                "arriving from a third direction (#182, #178)."
+            ),
+        ),
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="is_deprecated defaults to False, as it does for any Maven artifact.",
+            proven_elsewhere=(
+                "UNPROVEN for the same structural reason as maven's, and it is "
+                "the same fact rather than a second instance of it: Gradle "
+                "publishes to Maven Central, which has no retirement marker at "
+                "all. See POLARIZED_SIGNALS['maven']['deprecation'] and #179."
             ),
         ),
         "exploit": Polarity(
@@ -2634,6 +2806,210 @@ NUGET_CASES: Tuple[FixtureCase, ...] = (
     ),
 )
 
+GRADLE_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="gradle",
+        fixture="okio.pom",
+        extra_fixtures=(
+            "okio.metadata",
+            "okhttp.build.gradle.kts",
+            "okhttp.libs.versions.toml",
+        ),
+        installed_version="3.17.0",
+        expected_version_source="version-catalog",
+        purpose=(
+            "The version-catalog case, and the reason #101 waited. okhttp's "
+            "module script says `api(libs.square.okio)` and nothing else — no "
+            "version anywhere in the file — so the whole of the installed "
+            "version comes from gradle/libs.versions.toml, two directories up, "
+            "through a version.ref into [versions]. That is the same fact "
+            "maven's <dependencyManagement> (#141) and NuGet's "
+            "Directory.Packages.props (#129) state in their own syntax, which "
+            "is why the source recorded here is a constant in the shared "
+            "version_sources vocabulary rather than a fourth spelling. It is "
+            "also a real Kotlin Multiplatform build: the declaration is inside "
+            "`kotlin { sourceSets { commonJvmAndroid { dependencies { … } } } }`, "
+            "so a reader that only looks at a top-level dependencies block "
+            "finds nothing in it at all."
+        ),
+        expected_latest_version="3.18.1",
+        expected_repository_url="https://github.com/square/okio",
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "okhttp/build.gradle.kts at tag parent-5.4.0 declares "
+            "api(libs.square.okio) with no version; the catalog's [libraries] "
+            "entry is { module = 'com.squareup.okio:okio', version.ref = "
+            "'square-okio' } and [versions] square-okio = '3.17.0'.",
+            "the two captures are pinned to the same tag on purpose: a build "
+            "script and the artifact version it names are one fact, and "
+            "capturing them from a moving branch would let them drift apart "
+            "between runs.",
+            "the coordinate the parser assembles is com.squareup.okio:okio, "
+            "which is what addresses Maven Central — the assertion the whole "
+            "driver exists for, since a wrong key 404s into all-UNKNOWN with "
+            "every count still green.",
+            "okio 3.17.0's own POM declares <scm>, <licenses> and one "
+            "<dependencies> entry, so the Maven half needs no parent walk here.",
+        ),
+        signals=(
+            SignalValue(
+                "version",
+                equals=0.5,
+                because=(
+                    "THE assertion for gradle: 3.17.0 against a 3.18.1 latest "
+                    "scores a minor-version gap, and it can only score at all "
+                    "because the catalog answered. Break the catalog lookup and "
+                    "the version is unmanaged, this drops out of the score "
+                    "entirely (#74), and the floor below fails"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "the POM declares an <scm> pointing at GitHub — the "
+                    "non-default branch, and unreachable if the coordinate were "
+                    "wrong, because no POM would have been fetched at all"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache 2.0, read from okio's own <licenses>",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.1,
+                because=(
+                    "okio's POM declares one shipped dependency, okio-jvm: a "
+                    "measured 1-4 bucket rather than an assumed-empty set (#199)"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off maven-metadata.xml's <lastUpdated>; the step "
+                    "moves with the calendar so the range is the assertion"
+                ),
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because=(
+                    "the default branch, and the only one Maven Central can "
+                    "reach — see the gradle deprecation waiver"
+                ),
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because=(
+                    "Maven Central publishes no owner list, and a Gradle build "
+                    "script publishes nothing about the artifacts it consumes"
+                ),
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="gradle",
+        fixture="reactive-streams.pom",
+        extra_fixtures=("reactive-streams.metadata", "rxjava.build.gradle"),
+        installed_version="1.0.4",
+        expected_version_source="declared",
+        purpose=(
+            "The other DSL and the other half of the version story. RxJava's "
+            "build.gradle is Groovy, states its versions in an `ext { }` block "
+            "and interpolates them into the coordinate — "
+            '`api "org.reactivestreams:reactive-streams:$reactiveStreamsVersion"` '
+            "— so the version is in the file and still not in the declaration. "
+            "It is captured beside the catalog case because the two failure "
+            "modes are opposite: a catalog miss loses the version, and a "
+            "botched interpolation invents one. The same file also carries the "
+            "`@signature` artifact-type suffix and a custom `signature` "
+            "configuration, both of which a fixed list of configuration names "
+            "would silently drop."
+        ),
+        expected_latest_version="1.0.4",
+        expected_repository_url="https://github.com/reactive-streams/reactive-streams",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "build.gradle at tag v3.1.12 sets reactiveStreamsVersion = '1.0.4' "
+            "in ext { } and never repeats the number on the declaration.",
+            "reactive-streams 1.0.4 is the newest release in "
+            "maven-metadata.xml, so the version signal is a real measured zero "
+            "rather than an absent one — the case that separates 'up to date' "
+            "from 'never resolved'.",
+            "its POM's <scm><url> is the scp-style git@github.com:owner/repo "
+            "spelling, which canonicalizes to the https forge URL; SVN and CVS "
+            "spellings do not, which is the distinction #176 exists for.",
+            "the POM declares no <dependencies> at all, and the analyzer still "
+            "records the transitive set positively — an empty resolved set, not "
+            "silence read as zero (#199, #203).",
+        ),
+        signals=(
+            SignalValue(
+                "version",
+                equals=0.0,
+                because=(
+                    "1.0.4 is the newest release: a measured zero. Lose the "
+                    "$reactiveStreamsVersion expansion and the version is "
+                    "unmanaged and this signal disappears instead"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because=(
+                    "1.0.4 shipped in 2022 and reactive-streams has not "
+                    "released since; the score is saturated, so it cannot drift "
+                    "with the calendar"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="the scp-style <scm><url> still resolves to a git forge",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT-0, read from the POM's own <licenses>",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because=(
+                    "a POM with no <dependencies> is a resolved empty set, and "
+                    "the adapter says so rather than staying silent — silence "
+                    "would read as unmeasured (#203) and drop the floor by one"
+                ),
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="the default branch; see the gradle deprecation waiver",
+            ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because="Maven Central publishes no owner list",
+            ),
+        ),
+    ),
+)
+
 CASES: Tuple[FixtureCase, ...] = (
     NODEJS_CASES
     + RUBYGEMS_CASES
@@ -2643,6 +3019,7 @@ CASES: Tuple[FixtureCase, ...] = (
     + GOLANG_CASES
     + MAVEN_CASES
     + NUGET_CASES
+    + GRADLE_CASES
 )
 
 
@@ -2827,6 +3204,45 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
             "POLARIZED_SIGNALS['maven']."
         ),
     ),
+    "gradle": ConversionStatus(
+        converted=True,
+        note=(
+            "Seven captured documents, and the only entry here whose fixtures "
+            "are not all registry documents: two real Gradle projects — "
+            "okhttp's Kotlin Multiplatform module script plus its "
+            "gradle/libs.versions.toml at tag parent-5.4.0, and RxJava's Groovy "
+            "build.gradle at v3.1.12 — beside the Maven Central POM and "
+            "maven-metadata.xml for one artifact each. The driver materialises "
+            "the projects in the layout their source URLs describe and runs the "
+            "real parser, because the thing #101 added is a *route*, not a "
+            "registry: Gradle publishes Maven coordinates, resolves against "
+            "Maven Central and routes to OSV's Maven ecosystem, so 'gradle' is "
+            "an alias in vulnerabilities.ecosystems rather than a tenth entry "
+            "there. What can break is the parse producing a key Maven Central "
+            "is not addressed by, which looks exactly like #127 from the "
+            "outside: every dependency UNKNOWN, every count green. Floored at "
+            "8, identical to maven's floor and maven's signal set, "
+            "deliberately — a lower number would mean the route lost something "
+            "on the way through. Also asserted per case is which of the "
+            "version_sources constants established the version, since 'read "
+            "3.17.0 off the declaration' and 'resolved it through a version "
+            "catalog' produce the same score and are the whole of what this "
+            "adapter does. Known limits, all of them properties of Gradle "
+            "rather than of the capture: build scripts are Groovy and Kotlin "
+            "programs and are never evaluated, so a computed coordinate is "
+            "counted as unread and a computed version is reported unmanaged "
+            "(parsers/gradle_dsl.py enumerates every shape that is and is not "
+            "read); the deprecation branch is unprovable for the same "
+            "structural reason as maven's, see POLARIZED_SIGNALS['gradle']; "
+            "and both project captures are pinned to a tag rather than a "
+            "branch, because a build script and the artifact version it names "
+            "are one fact and a moving branch would let the two drift apart "
+            "between runs. The cost of that pin is real and worth stating: "
+            "these two fixtures cannot surface a new DSL shape on their own, "
+            "so the refresh cadence has to be spent bumping the tag and reading "
+            "the diff rather than just re-running the capture."
+        ),
+    ),
     "golang": ConversionStatus(
         converted=True,
         note=(
@@ -2886,7 +3302,7 @@ def unproven_branches() -> List[str]:
 
 
 #: The ecosystems whose adapter positively records a measured transitive set,
-#: from an audit of all eight (#199). nuget reads the ``.nuspec``
+#: from an audit of all eight registry adapters (#199). nuget reads the ``.nuspec``
 #: ``<dependencies>`` (#129), maven the POM's scope-filtered ``<dependencies>``,
 #: composer the p2 entry's ``require`` block minus platform constraints (#180).
 #:
@@ -2901,8 +3317,14 @@ def unproven_branches() -> List[str]:
 #: rubygems' ``dependencies`` object and a module's ``go.mod`` all *carry* a
 #: dependency list none of those five adapters reads. Reading them is an
 #: enhancement with its own floor changes, not part of closing the default.)
+#: gradle is here because it *is* maven on this axis: the same analyzer reads
+#: the same POM's scope-filtered ``<dependencies>``. Listing it explicitly
+#: rather than aliasing it to maven is the point — if the Gradle route ever
+#: stopped reaching the Maven analyzer, the transitive signal would go silent
+#: and this set is where that shows up as a failure instead of as a plausible
+#: None.
 TRANSITIVE_RECORDING_ECOSYSTEMS: FrozenSet[str] = frozenset(
-    {"composer", "maven", "nuget"}
+    {"composer", "gradle", "maven", "nuget"}
 )
 
 
