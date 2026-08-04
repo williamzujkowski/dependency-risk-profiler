@@ -42,10 +42,41 @@ you need to act, no reconstruction required:
 | `blast_radius.repository_count` | How many repos this reaches — fix the widest first. |
 | `metadata.repository_url`, `deps_dev` (CSV) | Where to investigate a replacement. |
 
+The headline (`headline`, and the lead line of the terminal and HTML reports)
+carries both risk axes plus the coverage caveat, in the order they demand
+action: `198 known-vulnerable · 2 high-risk · 812 could not be scored · 1135
+dependencies across 25 repos`. Read all of it. `high_risk_dependency_count` is
+depressed whenever coverage is poor — a dependency that could not be scored
+cannot score high — so `unscored_dependency_count` is what tells you whether a
+low high-risk count means "clean" or "we measured almost nothing".
+
 For a single-project `analyze --output json`, the shape is flatter: a top-level
 `dependencies` array with `name`, `installed_version`, `latest_version`,
 `risk_level`, `vulnerabilities` (each with `fixed_versions`), `risk_factors`,
 and `repository_url`.
+
+### The `analyze --output json` contract
+
+**If the process exits 0 in JSON mode, stdout is parseable JSON.** There is no
+case — no manifests found, unsupported file, parse failure, nothing declared —
+where a successful run writes nothing, so `json.load(stdout)` never needs a
+guard. Every run emits exactly one document with the same top-level keys:
+
+| Field | Always present |
+|-------|----------------|
+| `dependency_count`, `dependencies` | Yes; `0` and `[]` when there was nothing to report. |
+| `overall_risk_score` | Yes, but `null` when nothing was measured — never `0.0`, which would read as "safe". |
+| `manifests[]` | Every manifest that was successfully analyzed, with its own path, ecosystem, and count. Empty when none were. |
+| `warnings[]` | Why anything was skipped or refused, in plain language. Empty on a clean run. |
+| `ecosystem` | `null` for a mixed-ecosystem directory scan or an empty run. |
+
+A directory containing several manifests emits one merged document, not one per
+manifest.
+
+`analyze` exit codes: `0` = the run completed, including "nothing to do";
+`1` = the run failed, or every manifest you named was refused and nothing was
+scored. A refused manifest also explains itself — pointing `analyze` at
+`package.json` names `package-lock.json` and says whether it is there.
 
 ## A worked loop
 

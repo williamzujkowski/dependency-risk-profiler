@@ -180,6 +180,36 @@ class CanonicalPackageGitHubClient(FixtureGitHubClient):
         }
 
 
+class QuietHeadlineGitHubClient(FixtureGitHubClient):
+    """An account with zero high-risk dependencies and plenty of live advisories.
+
+    This is the shape #133 is about: the leading-indicator axis is quiet — partly
+    because a third of the inventory cannot be scored at all — while the advisory
+    path keeps working. A headline that reports only the high-risk count reads as
+    "clean" here, which is exactly wrong.
+    """
+
+    def __init__(self) -> None:
+        """Initialize a single-repo account with no high-risk dependencies."""
+        self.repositories: List[RepositoryRef] = [
+            RepositoryRef(
+                full_name="acme/api",
+                name="api",
+                default_branch="main",
+                html_url="https://github.com/acme/api",
+                archived=False,
+                fork=False,
+            ),
+        ]
+        self.manifests: Dict[str, Dict[str, str]] = {
+            "acme/api": {
+                "requirements.txt": (
+                    "medium==3.1\njinja2==3.1.5\nmystery==0.1\nsafe==2.0\n"
+                ),
+            },
+        }
+
+
 class FixtureProfiler(DependencyProfiler):
     """Offline dependency profiler with call counting for cache assertions."""
 
@@ -360,7 +390,13 @@ def test_org_scan_aggregates_blast_radius_and_rankings() -> None:
         "mystery",
     ]
     assert report.riskiest_repositories[0].repo_full_name == "acme/web"
-    assert report.headline == "1 high-risk dependencies exposed across 2 repositories"
+    # Both axes plus the coverage caveat, known-vulnerable first (#133).
+    assert report.headline == (
+        "2 known-vulnerable · 1 high-risk · 1 could not be scored · "
+        "4 dependencies across 2 repos"
+    )
+    assert report.known_vulnerable_dependency_count == 2
+    assert report.unscored_dependency_count == 1
 
 
 def test_org_scan_groups_report_by_canonical_package_identity() -> None:
@@ -545,6 +581,52 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert "Most exposed risky dependencies:" in summary
     assert "python:risky@1.0 · HIGH · 2 / 2 repos" in summary
     assert "Riskiest repositories:" in summary
+
+
+def test_zero_high_risk_headline_still_reports_advisories_and_coverage() -> None:
+    """REGRESSION (#133): a quiet high-risk count must not read as reassuring.
+
+    With no high-risk dependencies, the old headline said "0 high-risk
+    dependencies exposed across 0 repositories" while two dependencies carried
+    live advisories and a third could not be scored at all. Every surface —
+    terminal, JSON, HTML — has to carry all three numbers.
+    """
+    report = OrgScanRunner(QuietHeadlineGitHubClient(), FixtureProfiler()).run(
+        OrgScanOptions(org="acme")
+    )
+
+    assert report.high_risk_dependency_count == 0
+    assert report.known_vulnerable_dependency_count == 2
+    assert report.unscored_dependency_count == 1
+    assert report.unique_dependency_count == 4
+
+    # Known-vulnerable leads: there is a fix and a version to move to.
+    assert report.headline == (
+        "2 known-vulnerable · 0 high-risk · 1 could not be scored · "
+        "4 dependencies across 1 repo"
+    )
+    assert report.headline.index("known-vulnerable") < report.headline.index(
+        "high-risk"
+    )
+
+    # The terminal summary leads with the headline, so it inherits all of it.
+    summary = render_terminal_summary(report)
+    assert report.headline in summary
+
+    model = report_to_dict(report)
+    assert model["known_vulnerable_dependency_count"] == 2
+    assert model["unscored_dependency_count"] == 1
+    assert model["high_risk_dependency_count"] == 0
+    assert model["headline"] == report.headline
+
+    html = render_html_report(report)
+    assert "<dt>Known-vuln</dt>" in html
+    assert "<dt>Unscored</dt>" in html
+    assert "<b>2 known-vulnerable</b>" in html
+    assert "<b>0 high-risk</b>" in html
+    # The caveat that stops the high-risk count reading as a total.
+    assert "1 of 4 could not be scored" in html
+    assert "the high-risk count is a floor, not a total" in html
 
 
 def test_github_client_lists_user_repositories_with_filters() -> None:

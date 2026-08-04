@@ -119,6 +119,18 @@ class AggregatedDependency:
         return bool(metrics.counted_vulnerability_count)
 
     @property
+    def is_unscored(self) -> bool:
+        """Whether the scan could not produce a confident risk level.
+
+        Counting these matters for honest reporting: the high-risk count is
+        systematically depressed when coverage is poor, because a dependency
+        that cannot be scored at all cannot score HIGH. Reporting the unscored
+        population alongside the risk counts is what lets a reader tell "clean"
+        apart from "we measured almost nothing" (#133).
+        """
+        return self.risk_level == RiskLevel.UNKNOWN or self.risk_score.insufficient_data
+
+    @property
     def versions_display(self) -> str:
         """Return a deterministic compact display of all seen version specs."""
         return ", ".join(self.version_specs_list)
@@ -171,6 +183,45 @@ class OrgScanReport:
     high_risk_exposed_repository_count: int
     headline: str
     warnings: List[str] = field(default_factory=list)
+    # Reported alongside the high-risk count so neither number can be read
+    # alone. See `AggregatedDependency.is_unscored` and #133.
+    known_vulnerable_dependency_count: int = 0
+    unscored_dependency_count: int = 0
+
+
+def build_headline(
+    known_vulnerable_count: int,
+    high_risk_count: int,
+    unscored_count: int,
+    dependency_count: int,
+    repository_count: int,
+) -> str:
+    """Compose the org-scan headline from both risk axes plus coverage.
+
+    Ordered by what demands action: known-vulnerable first (there is a fix and
+    a version to move to), then high-risk leading indicators, then the coverage
+    caveat, then the totals that give all three a denominator.
+    """
+    parts = [
+        f"{known_vulnerable_count} known-vulnerable",
+        f"{high_risk_count} high-risk",
+    ]
+    if unscored_count:
+        parts.append(f"{unscored_count} could not be scored")
+    parts.append(
+        f"{dependency_count} {_plural(dependency_count, 'dependency')} across "
+        f"{repository_count} {_plural(repository_count, 'repo')}"
+    )
+    return " · ".join(parts)
+
+
+def _plural(count: int, singular: str) -> str:
+    """Return a count-aware noun without the count."""
+    if count == 1:
+        return singular
+    if singular.endswith("y"):
+        return f"{singular[:-1]}ies"
+    return f"{singular}s"
 
 
 class DependencyProfiler:

@@ -9,6 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The org-scan headline no longer reports the reassuring number on its own.**
+  A scan of a 25-repo org led with "2 high-risk dependencies exposed across 1
+  repositories" while 198 of its 1135 dependencies carried live advisories and
+  812 could not be scored at all. Neither number means anything without the
+  other, and the high-risk count is systematically depressed exactly when
+  coverage is poor — a dependency that cannot be scored cannot score HIGH, while
+  the advisory path keeps working — so the old headline got quieter as the tool
+  measured less. The headline now reads
+  `198 known-vulnerable · 2 high-risk · 812 could not be scored · 1135
+  dependencies across 25 repos`, ordered by what demands action: known-vulnerable
+  first (there is a fix and a version to move to), then the leading-indicator
+  count, then the coverage caveat. Terminal, HTML, and JSON all carry all three;
+  the JSON report gains `unscored_dependency_count`, and the HTML masthead gains
+  an Unscored readout plus a sentence stating that the high-risk count is a
+  floor, not a total. (#133)
+
+- **A successful `analyze --output json` run can no longer emit zero bytes.**
+  Pointing the tool at a directory with no manifests exited 0 and wrote nothing,
+  so a consumer doing the obvious `run → json.load(stdout) → act` crashed on a
+  run that succeeded — and walking an org means hitting manifest-free
+  repositories constantly. Every path that can end a run early now emits the
+  documented shape with empty collections and a `warnings` entry saying what
+  happened: no manifests found, unsupported manifest, parse failure, and a
+  manifest that declares no dependencies. A directory of several manifests emits
+  one merged document rather than several concatenated ones, which `json.load()`
+  rejected. The invariant is now enforced by a test that sweeps every one of
+  those paths: **if the process exits 0 in JSON mode, stdout is parseable
+  JSON.** (#147)
+
+- **`Unsupported manifest file` now names the next step, and refusing everything
+  is no longer a success.** Pointing `analyze` at `package.json` printed a bare
+  error, then `Successfully analyzed: 0`, then exited 0. Requiring resolved
+  versions is the right design — a range like `^4.13.4` has no version to score
+  drift against — but the message said nothing about what to run instead. A
+  small companion table now redirects `package.json` → `package-lock.json`,
+  `Gemfile` → `Gemfile.lock`, `composer.json` → `composer.lock`, `Pipfile` →
+  `Pipfile.lock`, and says whether that companion actually exists next to the
+  input; `build.gradle` is told that Gradle lock file support is not implemented
+  yet (#101) rather than pointed at nothing. Separately, because the parser
+  registry matches manifest filenames exactly, a valid manifest saved under
+  another name (`railsgoat-Gemfile.lock`) was rejected identically to an
+  unsupported ecosystem — the message now names the parser that would have
+  accepted the same bytes and what to rename the file to. No parser was added
+  and no dispatch changed. A run that scored nothing because it refused every
+  input exits 1; a directory with no manifests, and a manifest that parsed fine
+  and declares nothing, both still exit 0. (#125)
+
 - **NuGet projects using Central Package Management now resolve their versions.**
   Modern .NET solutions declare each version once in a
   `Directory.Packages.props` and leave the `PackageReference` bare — it is
