@@ -209,6 +209,7 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
         "manifest_count": len(report.manifests_scanned),
         "unique_dependency_count": report.unique_dependency_count,
         "known_vulnerable_dependency_count": _known_vulnerable_count(report),
+        "unscored_dependency_count": _unscored_count(report),
         "headline": report.headline,
         "high_risk_dependency_count": report.high_risk_dependency_count,
         "high_risk_exposed_repository_count": (
@@ -242,6 +243,11 @@ def _known_vulnerable_count(report: OrgScanReport) -> int:
     return sum(1 for dep in report.inventory if dep.is_known_vulnerable)
 
 
+def _unscored_count(report: OrgScanReport) -> int:
+    """Count unique dependencies the scan could not score (#133)."""
+    return sum(1 for dep in report.inventory if dep.is_unscored)
+
+
 def _header(report: OrgScanReport) -> str:
     """Render report header."""
     total_repos = len(report.repositories_scanned)
@@ -255,11 +261,14 @@ def _header(report: OrgScanReport) -> str:
   <dl class="readout" aria-label="Scan totals">
     <div><dt>Repos</dt><dd class="num">{total_repos}</dd></div>
     <div><dt>Unique deps</dt><dd class="num">{report.unique_dependency_count}</dd></div>
+    <div><dt>Known-vuln</dt><dd class="num vuln">
+      {_known_vulnerable_count(report)}
+    </dd></div>
     <div><dt>High-risk</dt><dd class="num hot">
       {report.high_risk_dependency_count}
     </dd></div>
-    <div><dt>Known-vuln</dt><dd class="num vuln">
-      {_known_vulnerable_count(report)}
+    <div><dt>Unscored</dt><dd class="num unknown">
+      {_unscored_count(report)}
     </dd></div>
   </dl>
 </header>
@@ -279,13 +288,27 @@ def _account_kind(report: OrgScanReport) -> str:
 
 
 def _verdict_sentence(report: OrgScanReport) -> str:
-    """Render the masthead plain-language verdict."""
+    """Render the masthead plain-language verdict.
+
+    Leads with both risk axes and the coverage caveat, in that order, so the
+    reassuring number can never appear on its own (#133).
+    """
     total_repos = len(report.repositories_scanned)
     high_risk_count = report.high_risk_dependency_count
+    vulnerable_count = _known_vulnerable_count(report)
     exposed_repos = report.high_risk_exposed_repository_count
-    count_label = _pluralize(high_risk_count, "high-risk dependency")
+    vuln_label = _pluralize(vulnerable_count, "dependency")
+    high_label = _pluralize(high_risk_count, "dependency")
     repo_label = _pluralize(exposed_repos, "repository")
-    verb = "is" if high_risk_count == 1 else "are"
+
+    lead = (
+        f"<b>{vulnerable_count} known-vulnerable</b> {vuln_label} and "
+        f"<b>{high_risk_count} high-risk</b> {high_label}, out of "
+        f"{report.unique_dependency_count} scanned across "
+        f"{total_repos} {_pluralize(total_repos, 'repo')}; the high-risk ones "
+        f"reach {exposed_repos} {repo_label}."
+    )
+    coverage = _coverage_caveat(report)
 
     if report.most_exposed_risky_dependencies:
         widest = report.most_exposed_risky_dependencies[0]
@@ -296,17 +319,27 @@ def _verdict_sentence(report: OrgScanReport) -> str:
                 f"{_pluralize(total_repos, 'repo')}"
             )
         signals = _signals_text(widest)
-        return (
-            f"<b>{high_risk_count} {count_label}</b> {verb} in play across "
-            f"{exposed_repos} {repo_label}. The widest exposure is "
-            f"<code>{escape(widest.key.name)}</code> — {signals} — "
-            f"reaching {escape(reach)}."
+        tail = (
+            f" The widest exposure is <code>{escape(widest.key.name)}</code> — "
+            f"{signals} — reaching {escape(reach)}."
+        )
+    else:
+        tail = (
+            " No medium, high, critical, or unknown dependencies were found in "
+            "the scanned manifests."
         )
 
+    return f"{lead}{coverage}{tail}"
+
+
+def _coverage_caveat(report: OrgScanReport) -> str:
+    """Return the sentence that keeps the high-risk count from reading as a total."""
+    unscored = _unscored_count(report)
+    if not unscored:
+        return ""
     return (
-        f"<b>{high_risk_count} {count_label}</b> {verb} in play across "
-        f"{exposed_repos} {repo_label}. No medium, high, critical, or unknown "
-        "dependencies were found in the scanned manifests."
+        f" {unscored} of {report.unique_dependency_count} could not be scored, "
+        "so the high-risk count is a floor, not a total."
     )
 
 
@@ -1517,6 +1550,7 @@ text-transform:uppercase;color:var(--faint);margin:0 0 3px;}
 font-variant-numeric:tabular-nums;}
 .readout dd.hot{color:var(--crit);}
 .readout dd.vuln{color:var(--high);}
+.readout dd.unknown{color:var(--unknown);}
 /* known-vulnerable: an axis orthogonal to the risk badge, so a distinct
    underlined/dotted chip rather than a filled severity pill */
 .vuln-tag{display:inline-flex;align-items:center;gap:5px;margin-left:7px;

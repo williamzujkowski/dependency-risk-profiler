@@ -14,6 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ..analyzers.base import BaseAnalyzer
 from ..config import Config
+from ..manifest_guidance import unsupported_manifest_guidance
 from ..models import DependencyMetadata, ProjectRiskProfile, RiskLevel
 from ..org_scan import (
     ExistingDependencyProfiler,
@@ -247,6 +248,44 @@ def _write_graph_file(
 def _auxiliary_console(json_output: bool) -> Console:
     """Use stderr for side-effect status messages when stdout is JSON."""
     return Console(stderr=True) if json_output else console
+
+
+def _note(status_console: Console, message: str, style: str) -> None:
+    """Print a diagnostic without letting a file path be read as rich markup."""
+    status_console.print(message, style=style, markup=False, highlight=False)
+
+
+def _skip_reason(manifest_path: str, reason: str) -> str:
+    """Build the human-readable note for a manifest that produced no profile.
+
+    For an unsupported file this is where #125 is answered: instead of a bare
+    "Unsupported manifest file", say which resolved-version companion to point
+    at, or which parser would have accepted the same bytes under a supported
+    name. Files outside that table keep the original message.
+    """
+    if reason == "unsupported":
+        message = f"Unsupported manifest file: {manifest_path}"
+        guidance = unsupported_manifest_guidance(manifest_path)
+        return message if guidance is None else f"{message}. {guidance}"
+    if reason == "empty":
+        return f"No dependencies found in {manifest_path}"
+    return f"Could not analyze {manifest_path} ({reason})"
+
+
+def _emit_json_report(
+    profiles: List[ProjectRiskProfile], manifest_path: str, warnings: List[str]
+) -> None:
+    """Write the one JSON document a JSON-mode run always owes its caller."""
+    print(JsonFormatter().format_report(profiles, manifest_path, warnings))
+
+
+# A manifest that parsed but declared nothing is "nothing to do", not a refusal.
+_REFUSAL_REASONS = frozenset({"unsupported", "no-analyzer", "timeout", "error"})
+
+
+def _refused_manifests(failed_files: List[Dict[str, object]]) -> bool:
+    """Whether any manifest was actively refused rather than merely empty."""
+    return any(failed.get("reason") in _REFUSAL_REASONS for failed in failed_files)
 
 
 @app.callback()
@@ -553,6 +592,10 @@ def analyze(
 
         # Handle directory scanning
         manifest_path = os.path.abspath(manifest)
+        # `manifest_path` is rebound per file in the loop below; the path the
+        # user actually named is what the JSON report reports on.
+        input_path = manifest_path
+        warnings: List[str] = []
         manifest_files = []
 
         if os.path.isdir(manifest_path):
@@ -590,7 +633,14 @@ def analyze(
                 status_console.print(
                     "[bold yellow]No supported manifest files found.[/bold yellow]"
                 )
-                if not json_output:
+                # An empty directory is a legitimate, successful outcome (#20,
+                # #68) — but a successful JSON run still owes stdout a document
+                # (#147).
+                if json_output:
+                    _emit_json_report(
+                        [], input_path, ["No supported manifest files found"]
+                    )
+                else:
                     display_ecosystem_list()
                 raise typer.Exit(code=0)
 
@@ -664,16 +714,16 @@ def analyze(
                                 )
                             )
 
-                            if error == "unsupported":
-                                console.print(
-                                    "[bold yellow]Skipping unsupported file: "
-                                    f"{manifest_path}[/bold yellow]"
-                                )
-                                continue
-                            elif error == "empty":
-                                console.print(
-                                    "[bold yellow]No dependencies found in "
-                                    f"{manifest_path}[/bold yellow]"
+                            if error in ("unsupported", "empty"):
+                                note = _skip_reason(manifest_path, error)
+                                warnings.append(note)
+                                # stderr in JSON mode: stdout is the report.
+                                _note(status_console, note, "bold yellow")
+                                failed_files.append(
+                                    {
+                                        "manifest_path": manifest_path,
+                                        "reason": error,
+                                    }
                                 )
                                 continue
 
@@ -695,6 +745,10 @@ def analyze(
                                 "timeout": timeout_seconds,
                             }
                             failed_files.append(failed_file)
+                            warnings.append(
+                                f"Analysis timed out after {timeout_seconds}s "
+                                f"for {manifest_path}"
+                            )
 
                             # Log the error for debug
                             logger.debug(
@@ -711,11 +765,10 @@ def analyze(
 
                     parser = BaseParser.get_parser_for_file(manifest_path)
                     if not parser:
-                        logger.error(f"Unsupported manifest file: {manifest_path}")
-                        console.print(
-                            "[bold yellow]Skipping unsupported file: "
-                            f"{manifest_path}[/bold yellow]"
-                        )
+                        note = _skip_reason(manifest_path, "unsupported")
+                        logger.error(note)
+                        warnings.append(note)
+                        _note(status_console, note, "bold yellow")
                         # Add unsupported file to failed list
                         failed_file = {
                             "manifest_path": manifest_path,
@@ -726,11 +779,10 @@ def analyze(
 
                     dependencies = parser.parse()
                     if not dependencies:
-                        logger.warning(f"No dependencies found in {manifest_path}")
-                        console.print(
-                            "[bold yellow]No dependencies found in "
-                            f"{manifest_path}[/bold yellow]"
-                        )
+                        note = _skip_reason(manifest_path, "empty")
+                        logger.warning(note)
+                        warnings.append(note)
+                        _note(status_console, note, "bold yellow")
                         # Add empty file to failed list
                         failed_file = {
                             "manifest_path": manifest_path,
@@ -745,14 +797,23 @@ def analyze(
                 ecosystem = get_ecosystem_from_manifest(manifest_path)
                 analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(ecosystem)
                 if not analyzer:
-                    logger.error(f"Unsupported ecosystem: {ecosystem}")
-                    console.print(
-                        "[bold red]The ecosystem "
-                        f"'{ecosystem}' was detected for {manifest_path}, "
-                        "but no analyzer is available for it.[/bold red]"
+                    note = (
+                        f"The ecosystem '{ecosystem}' was detected for "
+                        f"{manifest_path}, but no analyzer is available for it."
                     )
-                    console.print(
-                        "Please check if you have all required analyzers installed."
+                    logger.error(f"Unsupported ecosystem: {ecosystem}")
+                    warnings.append(note)
+                    _note(status_console, note, "bold red")
+                    _note(
+                        status_console,
+                        "Please check if you have all required analyzers installed.",
+                        "",
+                    )
+                    failed_files.append(
+                        {
+                            "manifest_path": manifest_path,
+                            "reason": "no-analyzer",
+                        }
                     )
                     continue
 
@@ -921,27 +982,20 @@ def analyze(
                     manifest_path, ecosystem, dependencies
                 )
 
-                # Format output
+                # Format output. JSON is emitted once, after every manifest has
+                # been processed: printing one document per manifest produced a
+                # concatenation that json.load() rejects (#147).
                 use_color = config.get("general", "use_color", True)
-                json_output = config.get("general", "output_format") == "json"
-                if json_output:
-                    formatter = JsonFormatter()
-                else:
-                    formatter = TerminalFormatter(color=use_color)
-
-                output = formatter.format_profile(profile)
-
-                # In multi-file mode, prefix with the manifest path
-                if not json_output and len(manifest_files) > 1:
+                if not json_output:
+                    if len(manifest_files) > 1:
+                        console.print(
+                            "\n[bold blue]===== Results for "
+                            f"{manifest_path} =====[/bold blue]"
+                        )
                     console.print(
-                        "\n[bold blue]===== Results for "
-                        f"{manifest_path} =====[/bold blue]"
+                        TerminalFormatter(color=use_color).format_profile(profile),
+                        soft_wrap=True,
                     )
-
-                if json_output:
-                    print(output)
-                else:
-                    console.print(output, soft_wrap=True)
 
                 # Save the profile to our results
                 overall_results.append(profile)
@@ -1128,9 +1182,9 @@ def analyze(
 
             except Exception as e:
                 logger.error(f"Error processing {manifest_path}: {e}", exc_info=True)
-                console.print(
-                    f"[bold red]Error processing {manifest_path}: {e}[/bold red]"
-                )
+                note = f"Error processing {manifest_path}: {e}"
+                warnings.append(note)
+                _note(status_console, note, "bold red")
                 # Add error file to failed list
                 failed_file = {
                     "manifest_path": manifest_path,
@@ -1139,8 +1193,11 @@ def analyze(
                 }
                 failed_files.append(failed_file)
 
+        if json_output:
+            _emit_json_report(overall_results, input_path, warnings)
+
         # Display summary if manifest files were scanned
-        if len(manifest_files) > 0 and config.get("general", "output_format") != "json":
+        if len(manifest_files) > 0 and not json_output:
             console.print("\n[bold]Overall Summary[/bold]")
 
             # Calculate total dependencies and risk levels
@@ -1281,6 +1338,19 @@ def analyze(
                         "\n[italic]Tip: Use --timeout option to increase timeout "
                         "for slow-to-analyze files.[/italic]"
                     )
+
+        # "I refused every file you gave me" is not success (#125). Two cases
+        # stay at exit 0 because they are genuinely "nothing to do", not a
+        # refusal (#20, #68): a directory with no manifests (handled above),
+        # and a manifest that parsed fine and simply declares no dependencies.
+        if not overall_results and _refused_manifests(failed_files):
+            _note(
+                status_console,
+                f"Analyzed 0 of {len(manifest_files)} manifest file(s); "
+                "nothing was scored.",
+                "bold red",
+            )
+            raise typer.Exit(code=1)
 
     except typer.Exit:
         # Intentional control-flow exits (e.g. "no manifests found" → code 0)

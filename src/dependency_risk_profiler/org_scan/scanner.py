@@ -28,6 +28,7 @@ from .models import (
     OrgScanReport,
     RepositoryRef,
     RepositoryRiskSummary,
+    build_headline,
     canonical_ecosystem,
     risk_points,
     risk_rank,
@@ -379,9 +380,16 @@ class OrgScanRunner:
         for item in high_risk_dependencies:
             high_risk_repos.update(item.repositories)
 
-        headline = (
-            f"{len(high_risk_dependencies)} high-risk dependencies exposed across "
-            f"{len(high_risk_repos)} repositories"
+        known_vulnerable_count = sum(
+            1 for item in inventory if item.is_known_vulnerable
+        )
+        unscored_count = sum(1 for item in inventory if item.is_unscored)
+        headline = build_headline(
+            known_vulnerable_count=known_vulnerable_count,
+            high_risk_count=len(high_risk_dependencies),
+            unscored_count=unscored_count,
+            dependency_count=len(inventory),
+            repository_count=len(parsed.repositories),
         )
 
         return OrgScanReport(
@@ -399,6 +407,8 @@ class OrgScanRunner:
             high_risk_exposed_repository_count=len(high_risk_repos),
             headline=headline,
             warnings=parsed.warnings,
+            known_vulnerable_dependency_count=known_vulnerable_count,
+            unscored_dependency_count=unscored_count,
         )
 
     def _repository_summaries(

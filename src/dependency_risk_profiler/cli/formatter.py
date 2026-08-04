@@ -6,7 +6,7 @@ from enum import Enum
 from io import StringIO
 from pathlib import Path
 from textwrap import wrap
-from typing import Dict
+from typing import Dict, List, Optional
 
 from packaging.version import InvalidVersion, Version, parse
 from rich.cells import cell_len, set_cell_size
@@ -447,8 +447,118 @@ class JsonFormatter(BaseFormatter):
         Returns:
             JSON formatted profile.
         """
-        # Convert profile to dict
-        profile_dict = {
+        return json.dumps(
+            self._profile_dict(profile), indent=2, default=self._json_serializer
+        )
+
+    def format_report(
+        self,
+        profiles: List[ProjectRiskProfile],
+        manifest_path: str,
+        warnings: List[str],
+    ) -> str:
+        """Format a whole analyze run as exactly one JSON document.
+
+        The contract this upholds (#147): a run that exits 0 in JSON mode
+        writes parseable JSON to stdout. Zero manifests, one manifest, and a
+        directory of manifests all produce the same top-level shape, so a
+        consumer that reads ``dependency_count`` and ``dependencies`` never
+        needs a special case for "nothing to report". Anything the run refused
+        or skipped is stated in ``warnings`` rather than left as silence.
+
+        Args:
+            profiles: Successfully analyzed manifest profiles, possibly empty.
+            manifest_path: The path the user actually pointed the tool at.
+            warnings: Human-readable notes about skipped or refused inputs.
+
+        Returns:
+            A single JSON document.
+        """
+        report = self._report_dict(profiles, manifest_path)
+        report["manifests"] = [
+            {
+                "manifest_path": profile.manifest_path,
+                "ecosystem": profile.ecosystem,
+                "dependency_count": len(profile.dependencies),
+                "overall_risk_score": profile.overall_risk_score,
+            }
+            for profile in profiles
+        ]
+        report["warnings"] = list(warnings)
+        return json.dumps(report, indent=2, default=self._json_serializer)
+
+    def _report_dict(
+        self, profiles: List[ProjectRiskProfile], manifest_path: str
+    ) -> Dict[str, object]:
+        """Build the top-level report body for zero, one, or many profiles."""
+        if len(profiles) == 1:
+            return self._profile_dict(profiles[0])
+        if not profiles:
+            return {
+                "manifest_path": manifest_path,
+                "ecosystem": None,
+                "scan_time": datetime.now().isoformat(),
+                "dependency_count": 0,
+                "high_risk_dependencies": 0,
+                "medium_risk_dependencies": 0,
+                "low_risk_dependencies": 0,
+                "unknown_risk_dependencies": 0,
+                "insufficient_data_dependencies": 0,
+                "unknown_signal_count": 0,
+                # None, not 0.0: nothing was measured, and a 0.0 here would read
+                # as "perfectly safe" (#74, #147).
+                "overall_risk_score": None,
+                "dependencies": [],
+            }
+        return self._merged_dict(profiles, manifest_path)
+
+    def _merged_dict(
+        self, profiles: List[ProjectRiskProfile], manifest_path: str
+    ) -> Dict[str, object]:
+        """Merge several manifest profiles into one document."""
+        dependencies = [dep for profile in profiles for dep in profile.dependencies]
+        ecosystems = {profile.ecosystem for profile in profiles}
+        total = len(dependencies)
+        if total:
+            weighted = sum(
+                profile.overall_risk_score * len(profile.dependencies)
+                for profile in profiles
+            )
+            overall: Optional[float] = weighted / total
+        else:
+            overall = None
+        return {
+            "manifest_path": manifest_path,
+            # A mixed-ecosystem run has no single ecosystem; say so rather than
+            # picking one of them.
+            "ecosystem": ecosystems.pop() if len(ecosystems) == 1 else None,
+            "scan_time": max(profile.scan_time for profile in profiles).isoformat(),
+            "dependency_count": total,
+            "high_risk_dependencies": sum(
+                profile.high_risk_dependencies for profile in profiles
+            ),
+            "medium_risk_dependencies": sum(
+                profile.medium_risk_dependencies for profile in profiles
+            ),
+            "low_risk_dependencies": sum(
+                profile.low_risk_dependencies for profile in profiles
+            ),
+            "unknown_risk_dependencies": sum(
+                profile.unknown_risk_dependencies for profile in profiles
+            ),
+            "insufficient_data_dependencies": sum(
+                profile.insufficient_data_dependencies for profile in profiles
+            ),
+            "unknown_signal_count": sum(
+                profile.unknown_signal_count for profile in profiles
+            ),
+            "overall_risk_score": overall,
+            "dependencies": [self._format_dependency(dep) for dep in dependencies],
+        }
+
+    def _profile_dict(self, profile: ProjectRiskProfile) -> Dict[str, object]:
+        """Serialize one manifest profile."""
+        return {
             "manifest_path": profile.manifest_path,
             "ecosystem": profile.ecosystem,
             "scan_time": profile.scan_time.isoformat(),
@@ -464,9 +574,6 @@ class JsonFormatter(BaseFormatter):
                 self._format_dependency(dep) for dep in profile.dependencies
             ],
         }
-
-        # Convert to JSON with datetime handling
-        return json.dumps(profile_dict, indent=2, default=self._json_serializer)
 
     def _json_serializer(self, obj: object) -> object:
         """Serialize objects not serializable by default.
