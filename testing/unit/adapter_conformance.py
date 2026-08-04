@@ -90,6 +90,10 @@ from dependency_risk_profiler.scoring.risk_scorer import (
     SOURCE_REPOSITORY_UNUSABLE_SCORE,
     RiskScorer,
 )
+from dependency_risk_profiler.signals import AdvisoryLookupState, UnmeasuredReason
+from dependency_risk_profiler.vulnerabilities.aggregator import (
+    _update_dependency_with_vulnerabilities,
+)
 
 # The community signal is scraped off a GitHub repository page, not off a
 # registry document, so it is out of scope for a *registry* fixture and is
@@ -3730,4 +3734,163 @@ def assert_polarized_signals_are_registered(ecosystem: str) -> None:
     assert not stray, (
         f"{ecosystem} declares polarity for {stray}, which it does not measure "
         f"from registry metadata; one of the two tables is stale"
+    )
+
+
+# --- Advisory-lookup outcomes, asserted by value ---------------------------
+#
+# The exploit signal is the one polarized signal no registry fixture can reach:
+# it is written by the vulnerability aggregator, not by an adapter, so every
+# ecosystem's POLARIZED_SIGNALS entry above waives it to ``proven_elsewhere``.
+# This is that elsewhere, brought into the harness's own vocabulary.
+#
+# What it pins is the distinction #219 was filed for. ``exploit`` had exactly
+# one way to say "nothing" and used it for a clean package *and* for an outage,
+# so an assertion of 0.0 could not tell the two apart. The clean package now
+# asserts 0.0 and the outage asserts unmeasured, by value, with the reason
+# named — which is the only shape of assertion that fails when they collapse
+# back together.
+
+
+@dataclass(frozen=True)
+class AdvisoryLookupCase:
+    """One advisory-lookup outcome and the exploit-signal value it must produce."""
+
+    slug: str
+    purpose: str
+    state: AdvisoryLookupState
+    sources_unavailable: Tuple[str, ...]
+    signal: SignalValue
+    #: The reason the measurement must carry, or None when it must be measured.
+    reason: Optional[UnmeasuredReason] = None
+    #: Advisories the sources that did answer returned, if any.
+    advisories: Tuple[Mapping[str, object], ...] = ()
+
+
+_CRITICAL_ADVISORY: Mapping[str, object] = {
+    "id": "OSV-2026-0001",
+    "source": "OSV",
+    "severity": "CRITICAL",
+    "normalized_severity": "CRITICAL",
+    "cvss_score": 9.8,
+    "withdrawn": False,
+    "confidence": "HIGH",
+    "fixed_versions": ["2.0.0"],
+    "affected_versions": None,
+    "references": [],
+}
+
+
+ADVISORY_LOOKUP_CASES: Tuple[AdvisoryLookupCase, ...] = (
+    AdvisoryLookupCase(
+        slug="advisory/clean",
+        purpose="Every source answered and none of them had anything.",
+        state=AdvisoryLookupState.COMPLETE,
+        sources_unavailable=(),
+        signal=SignalValue(
+            signal="exploit",
+            because="a measured absence of advisories is a real 0.0",
+            equals=0.0,
+        ),
+    ),
+    AdvisoryLookupCase(
+        slug="advisory/outage",
+        purpose="OSV did not answer and nothing was found. The #219 case.",
+        state=AdvisoryLookupState.FAILED,
+        sources_unavailable=("OSV",),
+        signal=SignalValue(
+            signal="exploit",
+            because=(
+                "an outage produces no measurement; scoring it 0.0 is "
+                "indistinguishable from the clean case above"
+            ),
+            unmeasured=True,
+        ),
+        reason=UnmeasuredReason.SOURCE_LOOKUP_FAILED,
+    ),
+    AdvisoryLookupCase(
+        slug="advisory/not-attempted",
+        purpose="No source could be asked at all.",
+        state=AdvisoryLookupState.NOT_ATTEMPTED,
+        sources_unavailable=(),
+        signal=SignalValue(
+            signal="exploit",
+            because="nobody looked, so there is nothing to report either way",
+            unmeasured=True,
+        ),
+        reason=UnmeasuredReason.LOOKUP_NOT_ATTEMPTED,
+    ),
+    AdvisoryLookupCase(
+        slug="advisory/partial-with-finding",
+        purpose="A source failed, but an advisory was found anyway.",
+        state=AdvisoryLookupState.PARTIAL,
+        sources_unavailable=("NVD",),
+        advisories=(_CRITICAL_ADVISORY,),
+        signal=SignalValue(
+            signal="exploit",
+            because=(
+                "a found advisory is not un-found by an outage elsewhere, so "
+                "the finding is reported rather than suppressed"
+            ),
+            minimum=0.9,
+        ),
+    ),
+    AdvisoryLookupCase(
+        slug="advisory/partial-supplementary-only",
+        purpose="Only NVD failed, and NVD cannot establish absence.",
+        state=AdvisoryLookupState.PARTIAL,
+        sources_unavailable=("NVD",),
+        signal=SignalValue(
+            signal="exploit",
+            because=(
+                "OSV answered, so absence is still established; a slow NVD "
+                "degrades completeness, not measuredness"
+            ),
+            equals=0.0,
+        ),
+    ),
+)
+
+ADVISORY_LOOKUP_CASE_IDS: Tuple[str, ...] = tuple(
+    case.slug for case in ADVISORY_LOOKUP_CASES
+)
+
+
+def assert_advisory_lookup_case_conforms(case: AdvisoryLookupCase) -> None:
+    """Score one advisory-lookup outcome and assert the exploit signal by value.
+
+    Args:
+        case: The outcome to reproduce.
+
+    Raises:
+        AssertionError: If the signal's value, or the reason behind its
+            absence, is not what the case declares.
+    """
+    dependency = DependencyMetadata(
+        name="conformance-package",
+        installed_version="1.0.0",
+        additional_info={"ecosystem": "python"},
+    )
+    _update_dependency_with_vulnerabilities(
+        dependency,
+        [dict(advisory) for advisory in case.advisories],
+        "LOW",
+        lookup_state=case.state,
+        sources_unavailable=case.sources_unavailable,
+    )
+
+    score = RiskScorer().score_dependency(dependency)
+    case.signal.check(score, case.slug)
+
+    measurement = score.measurements["exploit"]
+    if case.reason is None:
+        assert (
+            measurement.is_measured
+        ), f"{case.slug}: expected a measured exploit signal, got {measurement!r}"
+        return
+
+    assert measurement.reason is case.reason, (
+        f"{case.slug}: expected reason {case.reason}, got {measurement.reason}. "
+        f"An unmeasured signal with the wrong reason is still an unmeasured "
+        f"signal, which is why the count cannot catch this."
     )

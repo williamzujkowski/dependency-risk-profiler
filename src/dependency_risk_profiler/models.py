@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 from .signals import (
     SIGNAL_SOURCE_REPOSITORY,
     SOURCE_REPOSITORY_UNREADABLE,
+    AdvisoryLookupState,
     FieldSource,
     Measurement,
     ProvenancedField,
@@ -130,6 +131,16 @@ class DependencyMetadata:
     # means nobody resolved this tree, not that someone resolved it and found
     # nothing (#199).
     transitive_source: Optional[str] = None
+    # What the advisory sources established, so the scorer can tell "they
+    # answered and found nothing" from "they did not answer". Written only by
+    # ``record_advisory_lookup`` below, from the vulnerability aggregator, and
+    # read only through ``signals.advisory_lookup_is_measured``. None means no
+    # lookup ran at all; see that function for why that is not a failure (#219).
+    advisory_lookup_state: Optional[AdvisoryLookupState] = None
+    # Which advisory sources were asked and did not answer. Names only — the
+    # source's own ``name``, never a URL or a token-bearing request — because
+    # this is rendered into reports.
+    advisory_sources_unavailable: Tuple[str, ...] = ()
 
     # Which acquisition path last wrote each of the seven fields that have more
     # than one (#164 step 7). Written only through ``record_field_source``,
@@ -180,6 +191,55 @@ class DependencyMetadata:
                 "vocabulary of sanitized logical locators, never free text"
             )
         self.field_sources[field_name] = source
+
+    def record_advisory_lookup(
+        self,
+        state: AdvisoryLookupState,
+        *,
+        sources_unavailable: Sequence[str],
+    ) -> None:
+        """Record what the advisory lookup established, and what it could not.
+
+        The only writer of :attr:`advisory_lookup_state`, and it takes the
+        evidence as a required keyword-only argument for the same reason
+        ``record_source_repository`` does: a state that can be set by omission
+        is a state nobody has to justify. Here that matters twice over, because
+        the state being justified is the one that stops a package from reading
+        as advisory-clean.
+
+        Args:
+            state: What the sources established.
+            sources_unavailable: Names of the sources that were asked and did
+                not answer. Required to be non-empty exactly when the state
+                says something failed, and empty otherwise.
+
+        Raises:
+            TypeError: If ``state`` is not an :class:`AdvisoryLookupState`.
+            ValueError: If the names disagree with the state — a failure that
+                cannot say what failed is not a report, and a complete lookup
+                that names a casualty is a contradiction.
+        """
+        if not isinstance(state, AdvisoryLookupState):
+            raise TypeError(
+                "state must be an AdvisoryLookupState member, not "
+                f"{type(state).__name__}"
+            )
+        names = tuple(sources_unavailable)
+        degraded = state in (AdvisoryLookupState.PARTIAL, AdvisoryLookupState.FAILED)
+        if degraded and not names:
+            raise ValueError(
+                f"advisory lookup state {state.value!r} must name the sources "
+                "that did not answer: an unexplained failure is the empty list "
+                "wearing a different hat (#219)"
+            )
+        if not degraded and names:
+            raise ValueError(
+                f"advisory lookup state {state.value!r} means every source "
+                f"that was asked answered, so it cannot also report {names!r} "
+                "as unavailable"
+            )
+        self.advisory_lookup_state = state
+        self.advisory_sources_unavailable = names
 
 
 @dataclass
@@ -255,6 +315,7 @@ class DependencyRiskScore:
                 unmeasured_reason_for(
                     SIGNAL_SOURCE_REPOSITORY,
                     source_repository_unreadable=unreadable,
+                    advisory_lookup=self.dependency.advisory_lookup_state,
                 )
             )
         return measurements

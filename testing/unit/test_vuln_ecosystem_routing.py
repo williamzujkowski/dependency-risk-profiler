@@ -10,7 +10,7 @@ from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer
 from dependency_risk_profiler.analyzers.python import PythonAnalyzer
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.vulnerabilities import aggregator_async
-from dependency_risk_profiler.vulnerabilities.aggregator import OSVSource
+from dependency_risk_profiler.vulnerabilities.aggregator import OSVSource, SourceLookup
 
 
 @pytest.mark.parametrize(
@@ -95,9 +95,9 @@ def test_vuln_lookup_uses_declared_ecosystem_not_url_heuristic() -> None:
     """A dep's additional_info ecosystem drives OSV, not the repo-URL guess."""
     recorded: List[Tuple[str, str]] = []
 
-    async def _fake(self: object, package_name: str, ecosystem: str) -> list:
+    async def _fake(self: object, package_name: str, ecosystem: str) -> SourceLookup:
         recorded.append((package_name, ecosystem))
-        return []
+        return SourceLookup.answered([])
 
     # A github.com URL with no "npm"/"node" would previously default to python.
     dep = DependencyMetadata(
@@ -107,9 +107,7 @@ def test_vuln_lookup_uses_declared_ecosystem_not_url_heuristic() -> None:
         additional_info={"ecosystem": "nodejs"},
     )
     with (
-        mock.patch.object(
-            aggregator_async.AsyncOSVSource, "get_vulnerabilities_async", _fake
-        ),
+        mock.patch.object(aggregator_async.AsyncOSVSource, "lookup_async", _fake),
         mock.patch.object(aggregator_async, "get_cached_data", return_value=None),
         mock.patch.object(aggregator_async, "cache_data"),
     ):
@@ -129,9 +127,9 @@ def test_vuln_lookup_falls_back_to_url_heuristic_when_ecosystem_absent() -> None
     """Without a declared ecosystem, the URL heuristic still applies."""
     recorded: List[Tuple[str, str]] = []
 
-    async def _fake(self: object, package_name: str, ecosystem: str) -> list:
+    async def _fake(self: object, package_name: str, ecosystem: str) -> SourceLookup:
         recorded.append((package_name, ecosystem))
-        return []
+        return SourceLookup.answered([])
 
     dep = DependencyMetadata(
         name="somepkg",
@@ -139,9 +137,7 @@ def test_vuln_lookup_falls_back_to_url_heuristic_when_ecosystem_absent() -> None
         repository_url="https://npmjs.com/package/somepkg",
     )
     with (
-        mock.patch.object(
-            aggregator_async.AsyncOSVSource, "get_vulnerabilities_async", _fake
-        ),
+        mock.patch.object(aggregator_async.AsyncOSVSource, "lookup_async", _fake),
         mock.patch.object(aggregator_async, "get_cached_data", return_value=None),
         mock.patch.object(aggregator_async, "cache_data"),
     ):

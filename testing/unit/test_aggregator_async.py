@@ -7,6 +7,8 @@ import pytest
 from aioresponses import aioresponses
 
 from dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
+from dependency_risk_profiler.signals import AdvisoryLookupState
+from dependency_risk_profiler.vulnerabilities.aggregator import SourceLookup
 from dependency_risk_profiler.vulnerabilities.aggregator_async import (
     AsyncGitHubAdvisorySource,
     AsyncNVDSource,
@@ -240,7 +242,7 @@ class TestAsyncVulnerabilityAggregation:
 
     @async_test
     @patch(
-        "dependency_risk_profiler.vulnerabilities.aggregator_async.AsyncOSVSource.get_vulnerabilities_async"
+        "dependency_risk_profiler.vulnerabilities.aggregator_async.AsyncOSVSource.lookup_async"
     )
     @patch("dependency_risk_profiler.vulnerabilities.aggregator_async.get_cached_data")
     @patch("dependency_risk_profiler.vulnerabilities.aggregator_async.cache_data")
@@ -264,7 +266,7 @@ class TestAsyncVulnerabilityAggregation:
                 "fixed_versions": ["1.0.1"],
             }
         ]
-        mock_get_vulns.return_value = mock_vulns
+        mock_get_vulns.return_value = SourceLookup.answered(mock_vulns)
 
         # Act
         updated_dep, vulnerabilities = (
@@ -279,6 +281,7 @@ class TestAsyncVulnerabilityAggregation:
 
         # Assert
         assert vulnerabilities == mock_vulns
+        assert updated_dep.advisory_lookup_state is AdvisoryLookupState.COMPLETE
         assert updated_dep.security_metrics is not None
         assert updated_dep.security_metrics.vulnerability_count == 1
         mock_cache_data.assert_called_once()

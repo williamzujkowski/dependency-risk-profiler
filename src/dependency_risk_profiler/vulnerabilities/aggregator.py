@@ -2,16 +2,28 @@
 
 This module aggregates vulnerability data from OSV, NVD, and GitHub Advisory Database,
 and caches the results to disk to reduce the number of API calls.
+
+Every source answers with a :class:`SourceLookup`, not with a bare list. The
+list had exactly one way to say "nothing" and used it for a connection failure,
+a 4xx, a GraphQL error block, an unreadable body, an ecosystem the source does
+not cover, and a genuinely clean package — and the aggregate was cached either
+way, so an outage wrote "advisory-clean" to disk for every package in the scan
+and the verdict outlived the outage (#219). The three outcomes that have to be
+distinguishable are: advisories found, measured and none found, and lookup
+failed. Only the first two are cacheable.
 """
 
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import requests
 
 from ..models import DependencyMetadata
+from ..signals import ADVISORY_LOOKUP_UNMEASURED, AdvisoryLookupState
 from ..versioning import VersionScheme
 from . import affected_ranges, ecosystems
 from .cache import advisory_cache_key
@@ -94,8 +106,86 @@ DISK_CACHE_EXPIRY = int(
 )
 
 
+class SourceState(Enum):
+    """What one advisory source did when it was asked about a package."""
+
+    #: It replied and the reply was readable. The advisory list it carries is
+    #: the answer, and an empty one means "measured, none found".
+    ANSWERED = "answered"
+
+    #: It was asked and did not answer: unreachable after the retries, an error
+    #: status, a GraphQL ``errors`` block, or a body this code cannot read.
+    FAILED = "failed"
+
+    #: It was never asked: switched off, missing the credential it needs, or it
+    #: does not cover this ecosystem. Not a failure, and not an answer either.
+    ABSTAINED = "abstained"
+
+
+@dataclass(frozen=True)
+class SourceLookup:
+    """One source's answer, or the fact that there wasn't one.
+
+    ``vulnerabilities`` is only meaningful for :attr:`SourceState.ANSWERED`,
+    and the constructors below are the reason it cannot be anything else: a
+    failed lookup carries no list at all, so there is no empty list to mistake
+    for a clean package.
+    """
+
+    state: SourceState
+    vulnerabilities: Tuple[Dict[str, Any], ...] = ()
+    detail: str = ""
+
+    @classmethod
+    def answered(cls, vulnerabilities: Sequence[Dict[str, Any]]) -> "SourceLookup":
+        """Record a readable reply.
+
+        Args:
+            vulnerabilities: The source's normalized advisories, possibly none.
+
+        Returns:
+            An ``ANSWERED`` lookup.
+        """
+        return cls(SourceState.ANSWERED, tuple(vulnerabilities), "")
+
+    @classmethod
+    def failed(cls, detail: str) -> "SourceLookup":
+        """Record that the source was asked and did not answer.
+
+        Args:
+            detail: Why, in a few words, for the log and the report.
+
+        Returns:
+            A ``FAILED`` lookup carrying no advisories.
+        """
+        return cls(SourceState.FAILED, (), detail)
+
+    @classmethod
+    def abstained(cls, detail: str) -> "SourceLookup":
+        """Record that the source was never asked.
+
+        Args:
+            detail: Why it was not asked.
+
+        Returns:
+            An ``ABSTAINED`` lookup carrying no advisories.
+        """
+        return cls(SourceState.ABSTAINED, (), detail)
+
+
 class VulnerabilitySource:
     """Base class for vulnerability data sources."""
+
+    #: Whether an empty answer from this source is evidence that a package has
+    #: no advisories. True for the ecosystem-scoped advisory databases (OSV,
+    #: GitHub Advisory), which are asked "what do you have on this package in
+    #: this ecosystem" and whose silence is an answer. False for NVD, which is
+    #: reached here by keyword search over CPE strings: it can add a CVE nobody
+    #: else listed, but "the keyword matched nothing" is not a statement about
+    #: the package. The distinction is what keeps a slow NVD from making a
+    #: whole scan unmeasured while still refusing to call a package clean
+    #: because OSV was down (#219).
+    establishes_absence: bool = True
 
     def __init__(
         self, name: str, base_url: str, enabled: bool = True, timeout: int = 10
@@ -113,19 +203,37 @@ class VulnerabilitySource:
         self.enabled = enabled
         self.timeout = timeout
 
-    def get_vulnerabilities(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities for a package.
+    def lookup(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask this source about a package and say what happened.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            The source's answer, or the reason there isn't one.
         """
-        raise NotImplementedError("Subclasses must implement get_vulnerabilities")
+        raise NotImplementedError("Subclasses must implement lookup")
+
+    def get_vulnerabilities(
+        self, package_name: str, ecosystem: str
+    ) -> List[Dict[str, Any]]:
+        """Get vulnerabilities for a package, discarding why there are none.
+
+        Kept for callers that only want the advisories and have no way to act
+        on the difference between "none" and "no answer". The aggregator is not
+        one of them and calls :meth:`lookup` directly — routing it through here
+        is how the empty list came to mean six different things (#219).
+
+        Args:
+            package_name: Name of the package
+            ecosystem: Package ecosystem (e.g., npm, pypi, golang)
+
+        Returns:
+            List of vulnerability dictionaries, empty if the source found none
+            *or* did not answer.
+        """
+        return list(self.lookup(package_name, ecosystem).vulnerabilities)
 
     def _normalize_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Normalize vulnerability data to a standard format.
@@ -244,20 +352,18 @@ class OSVSource(VulnerabilitySource):
         """Initialize the OSV vulnerability source."""
         super().__init__(name="OSV", base_url="https://api.osv.dev/v1", enabled=enabled)
 
-    def get_vulnerabilities(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities from OSV for a package.
+    def lookup(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask OSV about a package.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            OSV's answer, or the reason there isn't one.
         """
         if not self.enabled:
-            return []
+            return SourceLookup.abstained("OSV source is disabled")
 
         # Normalize ecosystem names to OSV format
         osv_ecosystem = self._normalize_ecosystem(ecosystem)
@@ -311,11 +417,11 @@ class OSVSource(VulnerabilitySource):
                         f"Client error ({status_code}) fetching OSV "
                         f"data for {package_name}: {e}"
                     )
-                    return []
+                    return SourceLookup.failed(f"HTTP {status_code}")
 
                 if retry == max_retries:
                     logger.debug(f"Max retries reached for OSV query: {e}")
-                    return []
+                    return SourceLookup.failed("retries exhausted after HTTP error")
 
                 logger.debug(
                     f"HTTP error fetching OSV data for {package_name} "
@@ -325,7 +431,7 @@ class OSVSource(VulnerabilitySource):
             except (requests.ConnectionError, requests.Timeout) as e:
                 if retry == max_retries:
                     logger.debug(f"Max retries reached for OSV query: {e}")
-                    return []
+                    return SourceLookup.failed("unreachable")
 
                 logger.debug(
                     f"Connection error fetching OSV data for {package_name} "
@@ -336,13 +442,25 @@ class OSVSource(VulnerabilitySource):
                 logger.debug(
                     f"Unexpected error fetching OSV data for {package_name}: {e}"
                 )
-                return []
+                return SourceLookup.failed(f"unexpected error: {type(e).__name__}")
 
         if not answered:
-            return []
+            return SourceLookup.failed("retries exhausted")
 
-        vulns = _payload_sequence(_payload_mapping(payload).get("vulns"))
-        return self._normalize_results(vulns, package_name, osv_ecosystem)
+        # A body that is not a JSON object is not an answer this code can read.
+        # It used to fall through ``_payload_mapping`` to ``{}`` and out as a
+        # clean package, which is the junk-body member of #219's six.
+        if not isinstance(payload, dict):
+            logger.debug(
+                f"Ignoring non-object OSV response for {package_name}: "
+                f"{type(payload).__name__}"
+            )
+            return SourceLookup.failed("unreadable response body")
+
+        vulns = _payload_sequence(payload.get("vulns"))
+        return SourceLookup.answered(
+            self._normalize_results(vulns, package_name, osv_ecosystem)
+        )
 
     def _normalize_ecosystem(self, ecosystem: str) -> str:
         """Normalize ecosystem names to OSV format.
@@ -445,6 +563,11 @@ class OSVSource(VulnerabilitySource):
 class NVDSource(VulnerabilitySource):
     """National Vulnerability Database (NVD) vulnerability data source."""
 
+    # Reached by keyword search over CPE strings rather than by package
+    # identity, so a miss is a statement about the keyword, not the package.
+    # See ``VulnerabilitySource.establishes_absence``.
+    establishes_absence = False
+
     def __init__(self, api_key: Optional[str] = None, enabled: bool = True):
         """Initialize the NVD vulnerability source.
 
@@ -459,26 +582,26 @@ class NVDSource(VulnerabilitySource):
         )
         self.api_key = api_key
 
-    def get_vulnerabilities(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities from NVD for a package.
+    def lookup(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask NVD about a package.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            NVD's answer, or the reason there isn't one.
         """
         if not self.enabled:
-            return []
+            return SourceLookup.abstained("NVD source is disabled")
 
         # Map ecosystem to CPE prefix
         cpe_prefix = self._get_cpe_prefix(ecosystem)
         if not cpe_prefix:
-            # Skip search for unrecognized ecosystems
-            return []
+            # NVD has no CPE naming for this ecosystem, so there is no keyword
+            # to search on. An abstention rather than a failure: nothing broke,
+            # and nothing was asked (#219).
+            return SourceLookup.abstained(f"no CPE prefix for ecosystem {ecosystem!r}")
 
         # Search by keyword first
         params = {"keywordSearch": f"{cpe_prefix}{package_name}", "resultsPerPage": 100}
@@ -486,10 +609,12 @@ class NVDSource(VulnerabilitySource):
         if self.api_key:
             params["apiKey"] = self.api_key
 
-        # Make the request
+        # Make the request. ``is None`` rather than falsiness: an empty JSON
+        # object is a reply NVD sent, and reading it as a failure would put the
+        # #219 conflation back in from the other direction.
         response_data = self._make_request(self.base_url, params)
-        if not response_data:
-            return []
+        if response_data is None:
+            return SourceLookup.failed("no readable response")
 
         # Extract vulnerability data
         vulns = response_data.get("vulnerabilities", [])
@@ -498,7 +623,7 @@ class NVDSource(VulnerabilitySource):
         # Add a small delay to avoid rate limiting
         time.sleep(0.1)
 
-        return normalized
+        return SourceLookup.answered(normalized)
 
     def _get_cpe_prefix(self, ecosystem: str) -> str:
         """Get the CPE prefix for an ecosystem.
@@ -630,30 +755,32 @@ class GitHubAdvisorySource(VulnerabilitySource):
         )
         self.api_token = api_token
 
-    def get_vulnerabilities(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities from GitHub Advisory for a package.
+    def lookup(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask the GitHub Advisory Database about a package.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            GitHub's answer, or the reason there isn't one.
         """
         if not self.enabled:
-            return []
+            return SourceLookup.abstained("GitHub Advisory source is disabled")
 
         # GraphQL requires auth, so skip if no token
         if not self.api_token:
             logger.debug("Skipping GitHub Advisory search: No API token provided")
-            return []
+            return SourceLookup.abstained("no GitHub API token")
 
         # Normalize ecosystem name
         gh_ecosystem = self._normalize_ecosystem(ecosystem)
         if not gh_ecosystem:
-            return []
+            # GitHub's ``SecurityAdvisoryEcosystem`` enum has no member for
+            # this ecosystem, so there is no query to send. An abstention.
+            return SourceLookup.abstained(
+                f"ecosystem {ecosystem!r} is not a GitHub advisory ecosystem"
+            )
 
         # GraphQL query
         query = """
@@ -725,9 +852,15 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 response.raise_for_status()
                 data = response.json()
 
-                body = _payload_mapping(data)
-                if "errors" in body:
-                    error_message = str(body.get("errors", []))
+                if not isinstance(data, dict):
+                    logger.debug(
+                        f"Ignoring non-object GitHub Advisory response for "
+                        f"{package_name}: {type(data).__name__}"
+                    )
+                    return SourceLookup.failed("unreadable response body")
+
+                if "errors" in data:
+                    error_message = str(data.get("errors", []))
                     logger.debug(f"GraphQL errors: {error_message}")
 
                     # Check for rate limiting errors
@@ -735,7 +868,10 @@ class GitHubAdvisorySource(VulnerabilitySource):
                         # This is a rate limit error, retry with backoff
                         continue
 
-                    return []
+                    # A GraphQL error block is a refusal, not an answer. It used
+                    # to leave here as the empty list and be counted as a clean
+                    # package (#219).
+                    return SourceLookup.failed("GraphQL error response")
 
                 payload = data
                 answered = True
@@ -751,11 +887,11 @@ class GitHubAdvisorySource(VulnerabilitySource):
                         f"Client error ({status_code}) fetching "
                         f"GitHub Advisory data for {package_name}: {e}"
                     )
-                    return []
+                    return SourceLookup.failed(f"HTTP {status_code}")
 
                 if retry == max_retries:
                     logger.debug(f"Max retries reached for GitHub Advisory query: {e}")
-                    return []
+                    return SourceLookup.failed("retries exhausted after HTTP error")
 
                 logger.debug(
                     f"HTTP error fetching GitHub Advisory data for {package_name} "
@@ -765,7 +901,7 @@ class GitHubAdvisorySource(VulnerabilitySource):
             except (requests.ConnectionError, requests.Timeout) as e:
                 if retry == max_retries:
                     logger.debug(f"Max retries reached for GitHub Advisory query: {e}")
-                    return []
+                    return SourceLookup.failed("unreachable")
 
                 logger.debug(
                     f"Connection error fetching GitHub Advisory data for "
@@ -777,10 +913,10 @@ class GitHubAdvisorySource(VulnerabilitySource):
                     f"Unexpected error fetching GitHub Advisory data for "
                     f"{package_name}: {e}"
                 )
-                return []
+                return SourceLookup.failed(f"unexpected error: {type(e).__name__}")
 
         if not answered:
-            return []
+            return SourceLookup.failed("retries exhausted")
 
         vulnerabilities = _payload_sequence(
             _payload_mapping(
@@ -789,7 +925,7 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 )
             ).get("nodes")
         )
-        return self._normalize_results(vulnerabilities)
+        return SourceLookup.answered(self._normalize_results(vulnerabilities))
 
     def _normalize_ecosystem(self, ecosystem: str) -> str:
         """Normalize ecosystem names to GitHub's format.
@@ -1315,6 +1451,136 @@ def cache_data(package_name: str, ecosystem: str, data: List[Dict[str, Any]]) ->
     VULNERABILITY_CACHE[key] = (data, time.time())
 
 
+@dataclass(frozen=True)
+class AggregateOutcome:
+    """What a whole package's advisory lookup established, across all sources."""
+
+    #: Advisories from every source that answered, deduplicated by id. A floor
+    #: rather than a total whenever ``state`` is ``PARTIAL``.
+    vulnerabilities: List[Dict[str, Any]]
+    #: The measurement state to record on the dependency.
+    state: AdvisoryLookupState
+    #: Names of the sources that were asked and did not answer.
+    sources_unavailable: Tuple[str, ...]
+
+    @property
+    def cacheable(self) -> bool:
+        """Whether this result may be written to the advisory cache.
+
+        Only a ``COMPLETE`` lookup may. Caching anything weaker is what turned
+        a transient OSV outage into a wrong answer that survived the outage:
+        the empty list went to disk and was served back, as a measurement,
+        until the TTL expired (#219).
+
+        Returns:
+            True only for a complete lookup.
+        """
+        return self.state is AdvisoryLookupState.COMPLETE
+
+
+def combine_source_lookups(
+    lookups: Sequence[Tuple[VulnerabilitySource, SourceLookup]],
+) -> AggregateOutcome:
+    """Fold every source's answer into one outcome, and say how good it is.
+
+    **The partial-failure rule, stated once.** A source that failed is not the
+    same as a source that answered "none", and the aggregate has to say which
+    of those it is built from. What it does *not* do is treat every failure
+    identically, because the sources are not identical:
+
+    * A failure in a source that ``establishes_absence`` (OSV, GitHub Advisory)
+      destroys the claim "this package has no advisories". Those sources are
+      asked about a package by identity, in an ecosystem, and their silence is
+      an answer — so their absence is the absence of an answer.
+    * A failure in NVD does not, because NVD is reached here by keyword search
+      over CPE strings. It can add a CVE nobody else listed; it cannot
+      establish that there is nothing to list. A slow NVD therefore degrades
+      completeness, not measuredness.
+    * A *finding* survives any failure. Once an advisory has been found, no
+      outage elsewhere un-finds it, so a lookup that found something is
+      reported rather than suppressed — as a floor, marked ``PARTIAL``.
+
+    The result: a package is never called clean because two sources of three
+    answered, and a scan is never made unmeasured because NVD was slow.
+    Anything short of ``COMPLETE`` is excluded from the cache regardless, since
+    an incomplete advisory set read back later is indistinguishable from a
+    complete one.
+
+    Args:
+        lookups: Each source paired with what it answered, in query order.
+
+    Returns:
+        The combined outcome.
+    """
+    seen_ids = set()
+    unique_vulnerabilities: List[Dict[str, Any]] = []
+    answered = False
+    unavailable: List[str] = []
+    absence_broken = False
+
+    for source, lookup in lookups:
+        if lookup.state is SourceState.ABSTAINED:
+            logger.debug(f"{source.name} abstained: {lookup.detail}")
+            continue
+        if lookup.state is SourceState.FAILED:
+            logger.warning(
+                f"{source.name} did not answer ({lookup.detail}); its silence "
+                "is not evidence that the package is clean"
+            )
+            unavailable.append(source.name)
+            absence_broken = absence_broken or source.establishes_absence
+            continue
+
+        answered = True
+        for vuln in lookup.vulnerabilities:
+            vuln_id = vuln.get("id", "")
+            if vuln_id and vuln_id not in seen_ids:
+                seen_ids.add(vuln_id)
+                unique_vulnerabilities.append(vuln)
+
+    if not unavailable:
+        state = (
+            AdvisoryLookupState.COMPLETE
+            if answered
+            else AdvisoryLookupState.NOT_ATTEMPTED
+        )
+    elif unique_vulnerabilities or not absence_broken:
+        state = AdvisoryLookupState.PARTIAL
+    else:
+        state = AdvisoryLookupState.FAILED
+
+    return AggregateOutcome(
+        vulnerabilities=unique_vulnerabilities,
+        state=state,
+        sources_unavailable=tuple(unavailable),
+    )
+
+
+def _lookup_one_source(
+    source: VulnerabilitySource, package_name: str, ecosystem: str
+) -> SourceLookup:
+    """Ask one source, converting an escaping exception into a failure.
+
+    The aggregator used to wrap this call in ``except Exception: pass``, so a
+    source that raised contributed nothing — exactly like a source that
+    answered "clean". Same shape, opposite meaning (#219).
+
+    Args:
+        source: The source to ask.
+        package_name: Name of the package.
+        ecosystem: Package ecosystem.
+
+    Returns:
+        The source's answer, or a failure naming what went wrong.
+    """
+    try:
+        logger.info(f"Checking {source.name} for vulnerabilities in {package_name}")
+        return source.lookup(package_name, ecosystem)
+    except Exception as e:
+        logger.error(f"Error fetching vulnerabilities from {source.name}: {e}")
+        return SourceLookup.failed(f"raised {type(e).__name__}")
+
+
 def aggregate_vulnerability_data(
     dependency: DependencyMetadata,
     api_keys: Optional[Dict[str, str]] = None,
@@ -1339,15 +1605,22 @@ def aggregate_vulnerability_data(
             f"Skipping vulnerability lookup for {package_name}: "
             "ecosystem could not be determined"
         )
+        dependency.record_advisory_lookup(
+            AdvisoryLookupState.NOT_ATTEMPTED, sources_unavailable=()
+        )
         return dependency, []
 
-    # Check cache first
+    # Check cache first. Since #219 only a COMPLETE lookup is ever written, so
+    # a cache hit is a complete measurement by construction.
     cached = get_cached_data(package_name, ecosystem)
     if cached:
         vulnerabilities, _ = cached
         return (
             _update_dependency_with_vulnerabilities(
-                dependency, vulnerabilities, minimum_severity
+                dependency,
+                vulnerabilities,
+                minimum_severity,
+                lookup_state=AdvisoryLookupState.COMPLETE,
             ),
             vulnerabilities,
         )
@@ -1358,50 +1631,49 @@ def aggregate_vulnerability_data(
     nvd_api_key = api_keys.get("nvd", None)
 
     # Initialize vulnerability sources
-    sources = [
+    sources: List[VulnerabilitySource] = [
         OSVSource(enabled=True),
         GitHubAdvisorySource(api_token=github_token, enabled=github_token is not None),
         NVDSource(api_key=nvd_api_key, enabled=True),
     ]
 
-    # Collect vulnerabilities from all sources
-    all_vulnerabilities = []
-    for source in sources:
-        if source.enabled:
-            try:
-                logger.info(
-                    f"Checking {source.name} for vulnerabilities in {package_name}"
-                )
-                vulnerabilities = source.get_vulnerabilities(package_name, ecosystem)
-                all_vulnerabilities.extend(vulnerabilities)
-            except Exception as e:
-                logger.error(f"Error fetching vulnerabilities from {source.name}: {e}")
+    outcome = combine_source_lookups(
+        [
+            (source, _lookup_one_source(source, package_name, ecosystem))
+            for source in sources
+        ]
+    )
 
-    # Deduplicate vulnerabilities based on ID
-    seen_ids = set()
-    unique_vulnerabilities = []
-
-    for vuln in all_vulnerabilities:
-        vuln_id = vuln.get("id", "")
-        if vuln_id and vuln_id not in seen_ids:
-            seen_ids.add(vuln_id)
-            unique_vulnerabilities.append(vuln)
-
-    # Cache the results
-    cache_data(package_name, ecosystem, unique_vulnerabilities)
+    # Cache only a complete answer. An incomplete one read back tomorrow is
+    # indistinguishable from a complete one, which is how the outage outlived
+    # itself (#219).
+    if outcome.cacheable:
+        cache_data(package_name, ecosystem, outcome.vulnerabilities)
+    else:
+        logger.info(
+            f"Not caching advisory data for {package_name} ({ecosystem}): "
+            f"lookup was {outcome.state.value}"
+        )
 
     # Update dependency metadata
     updated_dependency = _update_dependency_with_vulnerabilities(
-        dependency, unique_vulnerabilities, minimum_severity
+        dependency,
+        outcome.vulnerabilities,
+        minimum_severity,
+        lookup_state=outcome.state,
+        sources_unavailable=outcome.sources_unavailable,
     )
 
-    return updated_dependency, unique_vulnerabilities
+    return updated_dependency, outcome.vulnerabilities
 
 
 def _update_dependency_with_vulnerabilities(
     dependency: DependencyMetadata,
     vulnerabilities: List[Dict[str, object]],
     minimum_severity: str = DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
+    *,
+    lookup_state: AdvisoryLookupState = AdvisoryLookupState.COMPLETE,
+    sources_unavailable: Sequence[str] = (),
 ) -> DependencyMetadata:
     """Update dependency metadata with vulnerability information.
 
@@ -1409,15 +1681,32 @@ def _update_dependency_with_vulnerabilities(
         dependency: Dependency metadata
         vulnerabilities: List of vulnerability data
         minimum_severity: Minimum severity that counts toward scoring
+        lookup_state: What the sources established. A lookup that established
+            nothing writes no counts at all — a ``0`` here presents as measured
+            and is the whole of #219 — and only records why.
+        sources_unavailable: Names of the sources that did not answer. Required
+            to be non-empty for the degraded states; see
+            ``DependencyMetadata.record_advisory_lookup``.
 
     Returns:
         Updated dependency metadata
     """
+    dependency.record_advisory_lookup(
+        lookup_state, sources_unavailable=sources_unavailable
+    )
+
     # Initialize security metrics if not present
     if not dependency.security_metrics:
         from ..models import SecurityMetrics
 
         dependency.security_metrics = SecurityMetrics()
+
+    if lookup_state in ADVISORY_LOOKUP_UNMEASURED:
+        # Nothing was established, so nothing is written. Leaving the counts at
+        # None is the difference between "we looked and found none" and "we
+        # could not look", and it is what keeps the exploit signal out of the
+        # measured set instead of publishing a zero nobody measured.
+        return dependency
 
     annotated_vulnerabilities = annotate_vulnerabilities_for_scoring(
         vulnerabilities,

@@ -29,8 +29,16 @@ DEFAULT_CACHE_EXPIRY = 24 * 60 * 60
 # addressed (see ``advisory_cache_key``) and normalizes ``cvss_score`` before
 # it is written, so a version-2 record read through a version-3 key would be
 # claiming a shape it does not have; the discard-on-read guard below rejects
-# any that survive a shared cache directory (#212, #213).
-CACHE_SCHEMA_VERSION = 3
+# any that survive a shared cache directory (#212, #213). Version 4 does not
+# change a field: it changes what an entry *means*. Up to version 3 an entry
+# was written for every lookup, including the ones where no source answered, so
+# an empty record could mean "no advisories" or "OSV was down" and the reader
+# had no way to tell. From version 4 an entry is only ever written for a
+# complete lookup, so an empty record means measured-and-clean and nothing
+# else. Discarding the version-3 entries is the point rather than a side
+# effect: without the bump, every fabricated-clean verdict already on disk
+# would go on being served past the fix, for the rest of its TTL (#219).
+CACHE_SCHEMA_VERSION = 4
 
 
 def advisory_cache_key(package_name: str, ecosystem: str) -> str:

@@ -2,6 +2,14 @@
 
 This module provides asynchronous implementations of the vulnerability aggregation
 functions to improve performance when processing multiple dependencies.
+
+The async sources answer with a :class:`~.aggregator.SourceLookup` for the same
+reason the synchronous ones do: an empty list cannot say whether the source
+found nothing or never answered, and the aggregate was cached either way
+(#219). ``AsyncHTTPClient`` already returns ``None`` for a request that failed
+and a mapping for one that succeeded, so the distinction was there to be read —
+``if not response_data`` threw it away, and threw an empty JSON object in with
+it for good measure.
 """
 
 import asyncio
@@ -10,18 +18,28 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..async_http import AsyncHTTPClient, batch_client
 from ..models import DependencyMetadata
+from ..signals import AdvisoryLookupState
 from .aggregator import (
     DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
     GitHubAdvisorySource,
     NVDSource,
     OSVSource,
+    SourceLookup,
+    VulnerabilitySource,
     _update_dependency_with_vulnerabilities,
     cache_data,
+    combine_source_lookups,
     get_cached_data,
     infer_ecosystem,
 )
 
 logger = logging.getLogger(__name__)
+
+#: What to name as unavailable when the failure is upstream of the individual
+#: sources — the per-package coroutine raised, or the event loop never got far
+#: enough to ask anybody. Nothing answered, and no source is more to blame than
+#: any other.
+ALL_ADVISORY_SOURCES: Tuple[str, ...] = ("all advisory sources",)
 
 
 class AsyncOSVSource(OSVSource):
@@ -32,20 +50,18 @@ class AsyncOSVSource(OSVSource):
         super().__init__(enabled=enabled)
         self.http_client = AsyncHTTPClient()
 
-    async def get_vulnerabilities_async(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities from OSV for a package asynchronously.
+    async def lookup_async(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask OSV about a package asynchronously.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            OSV's answer, or the reason there isn't one.
         """
         if not self.enabled:
-            return []
+            return SourceLookup.abstained("OSV source is disabled")
 
         # Normalize ecosystem names to OSV format
         osv_ecosystem = self._normalize_ecosystem(ecosystem)
@@ -61,14 +77,32 @@ class AsyncOSVSource(OSVSource):
             "User-Agent": "dependency-risk-profiler/0.2.0",
         }
 
-        # Make the request
+        # Make the request. ``is None`` is the failure test; ``{}`` is a reply.
         response_data = await self.http_client.post(query_url, query_data, headers)
-        if not response_data:
-            return []
+        if response_data is None:
+            return SourceLookup.failed("no readable response")
 
         # Extract vulnerability data
         vulns = response_data.get("vulns", [])
-        return self._normalize_results(vulns, package_name, osv_ecosystem)
+        return SourceLookup.answered(
+            self._normalize_results(vulns, package_name, osv_ecosystem)
+        )
+
+    async def get_vulnerabilities_async(
+        self, package_name: str, ecosystem: str
+    ) -> List[Dict[str, Any]]:
+        """Get vulnerabilities from OSV, discarding why there are none.
+
+        Args:
+            package_name: Name of the package
+            ecosystem: Package ecosystem (e.g., npm, pypi, golang)
+
+        Returns:
+            List of vulnerability dictionaries, empty if OSV found none *or*
+            did not answer. Prefer :meth:`lookup_async`, which says which.
+        """
+        lookup = await self.lookup_async(package_name, ecosystem)
+        return list(lookup.vulnerabilities)
 
 
 class AsyncNVDSource(NVDSource):
@@ -79,26 +113,25 @@ class AsyncNVDSource(NVDSource):
         super().__init__(api_key=api_key, enabled=enabled)
         self.http_client = AsyncHTTPClient()
 
-    async def get_vulnerabilities_async(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities from NVD for a package asynchronously.
+    async def lookup_async(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask NVD about a package asynchronously.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            NVD's answer, or the reason there isn't one.
         """
         if not self.enabled:
-            return []
+            return SourceLookup.abstained("NVD source is disabled")
 
         # Map ecosystem to CPE prefix
         cpe_prefix = self._get_cpe_prefix(ecosystem)
         if not cpe_prefix:
-            # Skip search for unrecognized ecosystems
-            return []
+            # No CPE naming for this ecosystem, so there is nothing to search
+            # on. An abstention rather than a failure.
+            return SourceLookup.abstained(f"no CPE prefix for ecosystem {ecosystem!r}")
 
         # Search by keyword first
         params = {"keywordSearch": f"{cpe_prefix}{package_name}", "resultsPerPage": 100}
@@ -108,8 +141,8 @@ class AsyncNVDSource(NVDSource):
 
         # Make the request
         response_data = await self.http_client.get(self.base_url, params)
-        if not response_data:
-            return []
+        if response_data is None:
+            return SourceLookup.failed("no readable response")
 
         # Extract vulnerability data
         vulns = response_data.get("vulnerabilities", [])
@@ -118,7 +151,23 @@ class AsyncNVDSource(NVDSource):
         # Add a small delay to avoid rate limiting
         await asyncio.sleep(0.1)
 
-        return normalized
+        return SourceLookup.answered(normalized)
+
+    async def get_vulnerabilities_async(
+        self, package_name: str, ecosystem: str
+    ) -> List[Dict[str, Any]]:
+        """Get vulnerabilities from NVD, discarding why there are none.
+
+        Args:
+            package_name: Name of the package
+            ecosystem: Package ecosystem (e.g., npm, pypi, golang)
+
+        Returns:
+            List of vulnerability dictionaries, empty if NVD found none *or*
+            did not answer. Prefer :meth:`lookup_async`, which says which.
+        """
+        lookup = await self.lookup_async(package_name, ecosystem)
+        return list(lookup.vulnerabilities)
 
 
 class AsyncGitHubAdvisorySource(GitHubAdvisorySource):
@@ -129,30 +178,30 @@ class AsyncGitHubAdvisorySource(GitHubAdvisorySource):
         super().__init__(api_token=api_token, enabled=enabled)
         self.http_client = AsyncHTTPClient()
 
-    async def get_vulnerabilities_async(
-        self, package_name: str, ecosystem: str
-    ) -> List[Dict[str, Any]]:
-        """Get vulnerabilities from GitHub Advisory for a package asynchronously.
+    async def lookup_async(self, package_name: str, ecosystem: str) -> SourceLookup:
+        """Ask the GitHub Advisory Database about a package asynchronously.
 
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem (e.g., npm, pypi, golang)
 
         Returns:
-            List of vulnerability dictionaries
+            GitHub's answer, or the reason there isn't one.
         """
         if not self.enabled:
-            return []
+            return SourceLookup.abstained("GitHub Advisory source is disabled")
 
         # GraphQL requires auth, so skip if no token
         if not self.api_token:
             logger.debug("Skipping GitHub Advisory search: No API token provided")
-            return []
+            return SourceLookup.abstained("no GitHub API token")
 
         # Normalize ecosystem name
         gh_ecosystem = self._normalize_ecosystem(ecosystem)
         if not gh_ecosystem:
-            return []
+            return SourceLookup.abstained(
+                f"ecosystem {ecosystem!r} is not a GitHub advisory ecosystem"
+            )
 
         # GraphQL query
         query = """
@@ -202,13 +251,13 @@ class AsyncGitHubAdvisorySource(GitHubAdvisorySource):
             self.base_url, {"query": query, "variables": variables}, headers
         )
 
-        if not response_data:
-            return []
+        if response_data is None:
+            return SourceLookup.failed("no readable response")
 
         if "errors" in response_data:
             error_message = str(response_data.get("errors", []))
             logger.debug(f"GraphQL errors: {error_message}")
-            return []
+            return SourceLookup.failed("GraphQL error response")
 
         # Extract vulnerability data
         vulnerabilities = (
@@ -216,7 +265,23 @@ class AsyncGitHubAdvisorySource(GitHubAdvisorySource):
             .get("securityVulnerabilities", {})
             .get("nodes", [])
         )
-        return self._normalize_results(vulnerabilities)
+        return SourceLookup.answered(self._normalize_results(vulnerabilities))
+
+    async def get_vulnerabilities_async(
+        self, package_name: str, ecosystem: str
+    ) -> List[Dict[str, Any]]:
+        """Get GitHub advisories, discarding why there are none.
+
+        Args:
+            package_name: Name of the package
+            ecosystem: Package ecosystem (e.g., npm, pypi, golang)
+
+        Returns:
+            List of vulnerability dictionaries, empty if GitHub found none *or*
+            did not answer. Prefer :meth:`lookup_async`, which says which.
+        """
+        lookup = await self.lookup_async(package_name, ecosystem)
+        return list(lookup.vulnerabilities)
 
 
 async def aggregate_vulnerabilities_for_package_async(
@@ -249,15 +314,22 @@ async def aggregate_vulnerabilities_for_package_async(
             f"Skipping vulnerability lookup for {package_name}: "
             "ecosystem could not be determined"
         )
+        dependency.record_advisory_lookup(
+            AdvisoryLookupState.NOT_ATTEMPTED, sources_unavailable=()
+        )
         return dependency, []
 
-    # Check cache first
+    # Check cache first. Only a COMPLETE lookup is ever written (#219), so a
+    # cache hit is a complete measurement by construction.
     cached = get_cached_data(package_name, ecosystem)
     if cached:
         vulnerabilities, _ = cached
         return (
             _update_dependency_with_vulnerabilities(
-                dependency, vulnerabilities, minimum_severity
+                dependency,
+                vulnerabilities,
+                minimum_severity,
+                lookup_state=AdvisoryLookupState.COMPLETE,
             ),
             vulnerabilities,
         )
@@ -276,53 +348,67 @@ async def aggregate_vulnerabilities_for_package_async(
     if enable_nvd:
         sources.append(AsyncNVDSource(api_key=nvd_api_key, enabled=True))
 
-    # Collect vulnerabilities from all sources concurrently
-    all_vulnerabilities = []
+    # Collect vulnerabilities from all sources concurrently. ``gather`` keeps
+    # the results in task order, which is what lets a raised exception be
+    # attributed back to the source that raised it — the old loop discarded
+    # that and every failure became an anonymous nothing (#219).
+    queried: List[VulnerabilitySource] = []
     tasks = []
 
     for source in sources:
         if source.enabled:
-            try:
-                logger.info(
-                    f"Checking {source.name} for vulnerabilities in {package_name}"
-                )
-                tasks.append(source.get_vulnerabilities_async(package_name, ecosystem))
-            except Exception as e:
-                logger.error(f"Error creating task for {source.name}: {e}")
+            logger.info(f"Checking {source.name} for vulnerabilities in {package_name}")
+            queried.append(source)
+            tasks.append(source.lookup_async(package_name, ecosystem))
 
     try:
+        lookups: List[Tuple[VulnerabilitySource, SourceLookup]] = []
         if tasks:
-            results_raw = await asyncio.gather(*tasks, return_exceptions=True)
-            # Type check for mypy - ensure we handle all possible result types
-            results: List[Union[List[Dict[str, Any]], BaseException]] = results_raw
+            results: List[Union[SourceLookup, BaseException]] = await asyncio.gather(
+                *tasks, return_exceptions=True
+            )
 
-            for result in results:
-                if isinstance(result, Exception):
-                    logger.error(f"Error fetching vulnerabilities: {result}")
-                elif isinstance(result, list):
-                    all_vulnerabilities.extend(result)
+            for queried_source, result in zip(queried, results):
+                if isinstance(result, SourceLookup):
+                    lookups.append((queried_source, result))
+                elif isinstance(result, BaseException):
+                    logger.error(
+                        "Error fetching vulnerabilities from "
+                        f"{queried_source.name}: {result}"
+                    )
+                    lookups.append(
+                        (
+                            queried_source,
+                            SourceLookup.failed(f"raised {type(result).__name__}"),
+                        )
+                    )
                 else:
                     logger.error(f"Unexpected result type: {type(result)}")
+                    lookups.append(
+                        (queried_source, SourceLookup.failed("unexpected result type"))
+                    )
 
-        # Deduplicate vulnerabilities based on ID
-        seen_ids = set()
-        unique_vulnerabilities = []
+        outcome = combine_source_lookups(lookups)
 
-        for vuln in all_vulnerabilities:
-            vuln_id = vuln.get("id", "")
-            if vuln_id and vuln_id not in seen_ids:
-                seen_ids.add(vuln_id)
-                unique_vulnerabilities.append(vuln)
-
-        # Cache the results
-        cache_data(package_name, ecosystem, unique_vulnerabilities)
+        # Cache only a complete answer (#219).
+        if outcome.cacheable:
+            cache_data(package_name, ecosystem, outcome.vulnerabilities)
+        else:
+            logger.info(
+                f"Not caching advisory data for {package_name} ({ecosystem}): "
+                f"lookup was {outcome.state.value}"
+            )
 
         # Update dependency metadata
         updated_dependency = _update_dependency_with_vulnerabilities(
-            dependency, unique_vulnerabilities, minimum_severity
+            dependency,
+            outcome.vulnerabilities,
+            minimum_severity,
+            lookup_state=outcome.state,
+            sources_unavailable=outcome.sources_unavailable,
         )
 
-        return updated_dependency, unique_vulnerabilities
+        return updated_dependency, outcome.vulnerabilities
     finally:
         # Properly close all HTTP client sessions
         for source in sources:
@@ -394,6 +480,14 @@ async def aggregate_vulnerability_data_async_impl(
             result = results[j]
             if isinstance(result, BaseException):
                 logger.error(f"Error aggregating vulnerabilities for {name}: {result}")
+                # The whole per-package lookup blew up, so nothing was
+                # established about this package. Recording that is the
+                # difference between a scan that reports a gap and one that
+                # reports a clean tree (#219).
+                dependencies[name].record_advisory_lookup(
+                    AdvisoryLookupState.FAILED,
+                    sources_unavailable=ALL_ADVISORY_SOURCES,
+                )
                 updated_deps[name] = dependencies[name]
             else:
                 # We know this is a tuple if it's not an exception
@@ -455,5 +549,12 @@ def aggregate_vulnerability_data_async(
         logger.error(
             f"Error in asynchronous vulnerability aggregation: {e}", exc_info=True
         )
-        # Return dependencies unchanged in case of error
+        # Nothing was measured for anything. Returning the dependencies
+        # untouched used to leave every one of them presenting as advisory-
+        # clean, which is the failure mode #219 is about, at the scale of the
+        # whole scan.
+        for dependency in dependencies.values():
+            dependency.record_advisory_lookup(
+                AdvisoryLookupState.FAILED, sources_unavailable=ALL_ADVISORY_SOURCES
+            )
         return dependencies, {}

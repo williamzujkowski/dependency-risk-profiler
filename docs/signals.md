@@ -144,19 +144,53 @@ a signal ought to apply to a package.
 | `source_repository_unreadable` | The registry answered and no readable source repository came out of it, so the repository-derived signals had nothing to read. One measured fact standing behind several silent signals (#146). |
 | `no_data_from_source` | The input this signal reads was absent — the registry published no such field, or the lookup returned nothing. The default. |
 | `lookup_not_attempted` | The pipeline step that answers this signal never ran for this manifest. Distinct from "it ran and found nothing", which is a measured zero. |
+| `source_lookup_failed` | The lookup ran and the source did not answer: unreachable after the retries, an error status, a GraphQL error block, or a body this code cannot read. Distinct from `no_data_from_source`, which is a source that *answered* and had nothing to say (#219). |
+
+### The advisory lookup has three outcomes, not one
+
+`exploit` is the signal this distinction was hardest-won on. Every advisory
+source used to return the empty list for a connection failure, a 4xx, a GraphQL
+error, an unreadable body, an ecosystem it does not cover, **and a genuinely
+clean package** — and the aggregate was written to the cache either way, so an
+OSV outage reported every package in the scan as advisory-clean and the verdict
+outlived the outage until the TTL expired (#219).
+
+| Outcome | `exploit` | Cached |
+|---|---|---|
+| Advisories found | measured, severity-weighted | yes |
+| Measured, none found | measured `0.0` | yes |
+| Lookup failed | **unmeasured**, `source_lookup_failed` | **no** |
+| No source could be asked | **unmeasured**, `lookup_not_attempted` | no |
+
+**Partial failures.** Sources are not interchangeable, so a failure in one is
+not a failure in another's clothing. OSV and the GitHub Advisory Database are
+asked about a package by identity within an ecosystem, so their silence is an
+answer and their absence is the absence of one: if either fails and nothing was
+found, "no advisories" is unmeasured. NVD is reached by keyword search over CPE
+strings — it can add a CVE nobody else listed, but a keyword miss is not a
+statement about the package — so an NVD failure degrades completeness, not
+measuredness. And a *finding* survives any failure: once an advisory is found
+no outage elsewhere un-finds it, so the result is reported as a floor. Anything
+short of "every source that was asked answered" is excluded from the cache.
+
+An ecosystem a source does not cover is an **abstention**, not a failure and
+not a clean answer. No `NOT_APPLICABLE` is invented for it: the source records
+that it was never asked, and the aggregate decides what that means from whether
+anybody else answered.
 
 ### Classification is centralized
 
 `signals.unmeasured_reason_for()` is the only place that decides why a signal
-came back unmeasured. It takes the signal name and one keyword-only fact the
+came back unmeasured. It takes the signal name and the keyword-only facts the
 scorer observed, and it reads the catalog. Eight adapters making that judgment
 independently is how a table of eight right answers becomes a table of eight
 opinions, and the design made centralization a binding condition for exactly
 that reason.
 
-The `source_repository_unreadable` argument is keyword-only with no default, so
-the fallback cannot be reached by forgetting to pass it. That is the shape
-`record_source_repository` established in #189, generalized.
+The `source_repository_unreadable` and `advisory_lookup` arguments are both
+keyword-only with no default, so the fallback cannot be reached by forgetting to
+pass one. That is the shape `record_source_repository` established in #189,
+generalized.
 
 ---
 

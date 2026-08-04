@@ -272,13 +272,17 @@ def test_repository_derived_signals_get_the_repository_reason() -> None:
     """One measured fact explains several silent signals, not several gaps (#146)."""
     for name in REPOSITORY_DERIVED_SIGNALS:
         assert (
-            unmeasured_reason_for(name, source_repository_unreadable=True)
+            unmeasured_reason_for(
+                name, source_repository_unreadable=True, advisory_lookup=None
+            )
             is UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
         )
 
     for name in set(SIGNAL_CATALOG) - REPOSITORY_DERIVED_SIGNALS:
         assert (
-            unmeasured_reason_for(name, source_repository_unreadable=True)
+            unmeasured_reason_for(
+                name, source_repository_unreadable=True, advisory_lookup=None
+            )
             is not UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
         )
 
@@ -286,4 +290,8 @@ def test_repository_derived_signals_get_the_repository_reason() -> None:
 def test_an_unnamed_signal_raises_rather_than_defaulting() -> None:
     """Drift between the scorer and the catalog is a bug, not a fallback."""
     with pytest.raises(KeyError):
-        unmeasured_reason_for("not_a_signal", source_repository_unreadable=False)
+        unmeasured_reason_for(
+            "not_a_signal",
+            source_repository_unreadable=False,
+            advisory_lookup=None,
+        )

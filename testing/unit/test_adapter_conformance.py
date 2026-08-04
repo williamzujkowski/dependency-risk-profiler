@@ -25,11 +25,15 @@ from typing import Mapping, Tuple
 
 import pytest
 from adapter_conformance import (
+    ADVISORY_LOOKUP_CASE_IDS,
+    ADVISORY_LOOKUP_CASES,
     CASES,
     CONVERSION_STATUS,
     DRIVERS,
     POLARIZED_SIGNALS,
+    AdvisoryLookupCase,
     FixtureCase,
+    assert_advisory_lookup_case_conforms,
     assert_case_conforms,
     assert_non_default_branches_are_proven,
     assert_polarized_signals_are_registered,
@@ -71,6 +75,16 @@ def test_captured_payload_produces_the_signal_values_it_should(
 ) -> None:
     """Each captured payload scores to the values its ground truth demands."""
     assert_case_conforms(case)
+
+
+@pytest.mark.parametrize(
+    "case", ADVISORY_LOOKUP_CASES, ids=list(ADVISORY_LOOKUP_CASE_IDS)
+)
+def test_advisory_lookup_outcome_produces_the_exploit_value_it_should(
+    case: AdvisoryLookupCase,
+) -> None:
+    """The exploit signal distinguishes a clean package from an outage (#219)."""
+    assert_advisory_lookup_case_conforms(case)
 
 
 def test_the_deprecated_npm_package_is_flagged_deprecated() -> None:
