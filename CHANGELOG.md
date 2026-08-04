@@ -39,6 +39,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `git log -- testing/projects` if it is ever wanted back. Cloning upstream at a
   pinned tag would be the better way to want it.
 
+- **`Analyze (go)` was a required merge gate reporting SUCCESS while analysing
+  zero lines of Go.** Removed from the CodeQL matrix and from `gate.sh`.
+
+  Every `.go` file this repository has ever contained lived under
+  `testing/projects/gin/`, and `paths-ignore: **/testing/**` in
+  `.github/codeql/codeql-config.yml` excluded all of them. So the job built a
+  database from nothing, found nothing, and passed — for months, as one of the
+  seven checks `gate.sh` asserts must be present and green before a merge.
+
+  Deleting the vendored checkout is what surfaced it. With no `.go` file left,
+  autobuild reached for the only `go.mod` remaining and found
+  `testing/manifests/gin/go.mod`, a two-line parser input:
+
+  ```
+  go: error reading go.mod: missing module declaration
+  CodeQL could not process any code written in Go
+  ```
+
+  That is the same fatal error that got `javascript-typescript` removed from
+  this matrix earlier, and the same underlying condition — no first-party source
+  in that language — was already true for Go. The difference is only that Go had
+  something to trip over and JavaScript did not.
+
+  Predicted before the push and confirmed by the run rather than asserted:
+  [actions/runs/30941393388](https://github.com/williamzujkowski/dependency-risk-profiler/actions/runs/30941393388/job/92100361643).
+  Add a language back when the repository contains one, and confirm the job
+  reports a nonzero line count rather than merely passing.
+
 ### Changed
 
 - **`examples/manifests/package-lock.json` declared four versions and hashed
