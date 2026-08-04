@@ -272,7 +272,8 @@ class GitHubOrgClient:
             repo: The repository to list.
 
         Returns:
-            The supported and recognized-but-unreadable paths, each sorted.
+            The supported and recognized-but-unreadable paths, each sorted,
+            and whether GitHub truncated the tree they came from.
         """
         tree = self._get_json(
             f"/repos/{repo.full_name}/git/trees/{repo.default_branch}",
@@ -281,16 +282,23 @@ class GitHubOrgClient:
         if not isinstance(tree, Mapping):
             raise RuntimeError(f"Git tree for {repo.full_name} returned invalid JSON")
 
-        truncated = tree.get("truncated")
-        if truncated is True:
+        # GitHub caps the recursive tree response and says so here. This used to
+        # be a log line and nothing else, so the partial listing below went on
+        # to be reported as `coverage: read` — "every recognized manifest was
+        # fetched and parsed, so a zero here is a real zero" — about a
+        # repository the scan saw a prefix of (#266).
+        truncated = tree.get("truncated") is True
+        if truncated:
             logger.warning(
-                "Git tree for %s is truncated; scanning returned manifests only",
+                "Git tree for %s is truncated; the manifest list is a prefix",
                 repo.full_name,
             )
 
         raw_items = tree.get("tree")
         if not isinstance(raw_items, list):
-            return RepositoryManifestListing(supported=[], unreadable=[])
+            return RepositoryManifestListing(
+                supported=[], unreadable=[], truncated=truncated
+            )
 
         supported: List[str] = []
         unreadable: List[str] = []
@@ -315,7 +323,9 @@ class GitHubOrgClient:
                 unreadable.append(path)
 
         return RepositoryManifestListing(
-            supported=sorted(supported), unreadable=sorted(unreadable)
+            supported=sorted(supported),
+            unreadable=sorted(unreadable),
+            truncated=truncated,
         )
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:

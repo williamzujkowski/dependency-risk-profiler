@@ -125,7 +125,24 @@ class _Discovery:
     # Repositories whose tree listing raised. Nothing is known about their
     # contents, which is not the same as knowing they are empty (#262).
     undiscovered: Set[str]
+    # Repositories whose tree GitHub truncated, so everything above about them
+    # describes a prefix. Carried rather than logged (#266).
+    truncated: Set[str]
     warnings: List[str]
+
+
+@dataclass(frozen=True)
+class _RepoDiscovery:
+    """What one repository's tree listing produced.
+
+    A named triple rather than a bare tuple: the third field is the one that
+    used to exist only as a log line, and a positional bool is exactly how it
+    would go back to being ignored.
+    """
+
+    manifests: List[ManifestRef]
+    unreadable: List[UnreadableManifestRef]
+    truncated: bool
 
 
 @dataclass
@@ -141,6 +158,7 @@ class _ParsedInventory:
     read_manifests: Set[Tuple[str, str]] = field(default_factory=set)
     unreadable_manifests: List[UnreadableManifestRef] = field(default_factory=list)
     undiscovered_repositories: Set[str] = field(default_factory=set)
+    truncated_repositories: Set[str] = field(default_factory=set)
     parse_failures: List[ManifestParseFailure] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 
@@ -211,12 +229,14 @@ class OrgScanRunner:
             options: Scan options, including discovery concurrency.
 
         Returns:
-            The fetched manifests, the recognized-but-unreadable ones, and the
-            repositories whose trees never listed.
+            The fetched manifests, the recognized-but-unreadable ones, the
+            repositories whose trees never listed, and the repositories whose
+            trees listed only in part.
         """
         manifests: List[ManifestRef] = []
         unreadable: List[UnreadableManifestRef] = []
         undiscovered: Set[str] = set()
+        truncated: Set[str] = set()
         warnings: List[str] = []
         max_workers = max(1, options.concurrency)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -229,9 +249,19 @@ class OrgScanRunner:
                 repo = futures[future]
                 completed += 1
                 try:
-                    repo_manifests, repo_unreadable = future.result()
-                    manifests.extend(repo_manifests)
-                    unreadable.extend(repo_unreadable)
+                    discovered = future.result()
+                    manifests.extend(discovered.manifests)
+                    unreadable.extend(discovered.unreadable)
+                    if discovered.truncated:
+                        truncated.add(repo.full_name)
+                        # Reaches the report, not only the terminal: a consumer
+                        # has to be able to see that this repository's list is
+                        # a prefix (#266).
+                        warnings.append(
+                            f"{repo.full_name}: GitHub truncated the git tree; "
+                            "the manifest list is a prefix, so this "
+                            "repository's dependency count is a floor"
+                        )
                 except Exception as exc:
                     warning = f"{repo.full_name}: manifest discovery failed: {exc}"
                     logger.warning(warning)
@@ -240,8 +270,12 @@ class OrgScanRunner:
                 total = len(repositories)
                 self._emit(f"Scanned manifest trees for {completed} / {total} repos")
 
-        if warnings:
-            logger.warning("Skipped %s repositories during discovery", len(warnings))
+        # Counted from `undiscovered`, not from `warnings`: the warning list
+        # now also carries truncated trees, which were not skipped.
+        if undiscovered:
+            logger.warning(
+                "Skipped %s repositories during discovery", len(undiscovered)
+            )
         return _Discovery(
             manifests=sorted(
                 manifests, key=lambda item: (item.repo_full_name, item.path)
@@ -250,12 +284,16 @@ class OrgScanRunner:
                 unreadable, key=lambda item: (item.repo_full_name, item.path)
             ),
             undiscovered=undiscovered,
-            warnings=warnings,
+            truncated=truncated,
+            # Sorted because they are appended from an `as_completed` loop, so
+            # their arrival order varies run to run — the same reason the
+            # repository aggregate is built in sorted order (#207).
+            warnings=sorted(warnings),
         )
 
     def _fetch_repo_manifests(
         self, repo: RepositoryRef, options: OrgScanOptions
-    ) -> Tuple[List[ManifestRef], List[UnreadableManifestRef]]:
+    ) -> _RepoDiscovery:
         """Fetch one repository's supported manifests and name its unreadable ones.
 
         Args:
@@ -263,8 +301,9 @@ class OrgScanRunner:
             options: Scan options, including the user's manifest globs.
 
         Returns:
-            The fetched manifests and the recognized-but-unreadable ones. The
-            second list is never fetched, so it adds no requests.
+            The fetched manifests, the recognized-but-unreadable ones, and
+            whether the tree they came from was a prefix. The unreadable list
+            is never fetched, so it adds no requests.
         """
         listing = self.github_client.list_manifest_paths(repo)
         selected_paths = [
@@ -295,7 +334,11 @@ class OrgScanRunner:
                     content=content,
                 )
             )
-        return manifests, self._recognise_unreadable(repo, listing)
+        return _RepoDiscovery(
+            manifests=manifests,
+            unreadable=self._recognise_unreadable(repo, listing),
+            truncated=listing.truncated,
+        )
 
     def _recognise_unreadable(
         self, repo: RepositoryRef, listing: RepositoryManifestListing
@@ -419,6 +462,7 @@ class OrgScanRunner:
             read_manifests=read_manifests,
             unreadable_manifests=discovery.unreadable,
             undiscovered_repositories=discovery.undiscovered,
+            truncated_repositories=discovery.truncated,
             parse_failures=failures,
             warnings=discovery.warnings,
         )
@@ -530,11 +574,17 @@ class OrgScanRunner:
                 RepositoryCoverage.DISCOVERY_FAILED,
             }
         )
+        partially_listed_count = sum(
+            1
+            for state in coverage.values()
+            if state is RepositoryCoverage.PARTIALLY_LISTED
+        )
         headline = build_headline(
             known_vulnerable_count=known_vulnerable_count,
             high_risk_count=len(high_risk_dependencies),
             unscored_count=unscored_count,
             unread_repository_count=unread_repository_count,
+            partially_listed_repository_count=partially_listed_count,
             dependency_count=len(inventory),
             repository_count=len(parsed.repositories),
         )
@@ -573,6 +623,13 @@ class OrgScanRunner:
         * the tree listed and holds no manifest this tool knows about;
         * manifests were read and simply declare nothing.
 
+        A truncated tree outranks all of them but the first, and the ordering
+        is the whole point. Every state below it is a claim about a complete
+        listing: ``no_manifests`` says the tree holds nothing, ``read`` says a
+        zero is a real zero, and neither is available to a scan that saw a
+        prefix. ``discovery_failed`` still wins, because knowing nothing is
+        worse news than knowing part (#266).
+
         Args:
             parsed: The parsed inventory, carrying every coverage fact.
 
@@ -602,6 +659,8 @@ class OrgScanRunner:
         for name in names:
             if name in parsed.undiscovered_repositories:
                 coverage[name] = RepositoryCoverage.DISCOVERY_FAILED
+            elif name in parsed.truncated_repositories:
+                coverage[name] = RepositoryCoverage.PARTIALLY_LISTED
             elif name in read_repositories:
                 coverage[name] = (
                     RepositoryCoverage.PARTIALLY_READ

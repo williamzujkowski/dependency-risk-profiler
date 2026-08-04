@@ -548,6 +548,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A git tree GitHub truncated was reported as `coverage: read`, which claims
+  the scan saw all of it.** GitHub caps the recursive tree response and sets
+  `"truncated": true` when it does. `GitHubOrgClient.list_manifest_paths`
+  noticed, wrote a `logger.warning`, and returned the partial listing as though
+  it were complete. Nothing downstream knew: whatever manifests happened to
+  fall inside the returned prefix were read, scored, and reported under a state
+  #262 defines as "every recognized manifest was fetched and parsed, so a zero
+  here is a real zero".
+
+  Reproduced on `torvalds/linux`, which returns 71,798 entries with
+  `truncated: true`. Before: `coverage: read`, three dependencies, and
+  `"warnings": []` — the truncation existed only in a log line nobody reads
+  after a scan. After: `coverage: partially_listed`, the reason in `warnings`,
+  a `partially_listed_repository_count` key in the JSON, and a headline that
+  says `1 repo listed only in part`.
+
+  `RepositoryManifestListing` now carries `truncated` as a required,
+  undefaulted field, so a client cannot answer "here is what I found" without
+  answering "did I see all of it".
+
+  **`partially_listed` is a new state rather than a reuse of
+  `partially_read`,** and the difference is what a consumer can do next.
+  `partially_read` names every manifest it did not read, in
+  `unreadable_manifests[]`, each with a remedy — generate the lock file and the
+  gap closes. A truncated tree's unread manifests have no names, because they
+  were never listed, and no command produces them. It is not even the same
+  shape: a truncated repository may have read every manifest it was shown, so
+  "at least one read and at least one not" is not true of it.
+
+  It outranks every state but `discovery_failed`, so "this repository's
+  dependency list is a prefix" is one comparison for a consumer rather than a
+  conjunction. Nothing is lost to that ranking: `unreadable_manifests[]` and
+  `parse_failures[]` still carry every per-manifest fact the prefix contained.
+  `discovery_failed` still wins, because knowing nothing is worse than knowing
+  part.
+
+  **Paginating the tree was considered and not built.** GitHub's Contents API
+  lists one directory per request, so walking a repository that truncates at
+  ~100k entries costs thousands of requests against a 5000/hour budget — for a
+  repository whose manifests are, in the observed case, two files. Reporting
+  the truncation honestly is the right stopping point, and it is one the
+  operator can act on with `--manifest-glob` or a targeted `analyze`. Building
+  the pagination would need its own measurement, which is why this change does
+  not guess at it.
+
 - **`scan-org` never fetched a `.csproj`, so every .NET repository in an
   account was reported as holding no dependency manifests at all.** The org
   scanner decided what to fetch from `SUPPORTED_MANIFEST_NAMES`, a tuple of

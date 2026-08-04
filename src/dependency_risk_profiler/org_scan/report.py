@@ -69,6 +69,7 @@ def render_terminal_summary(report: OrgScanReport) -> str:
         )
 
     lines.extend(_unread_repository_lines(report))
+    lines.extend(_partially_listed_repository_lines(report))
 
     if report.parse_failures:
         lines.extend(
@@ -92,6 +93,7 @@ def _no_dependencies_reason(coverage: RepositoryCoverage) -> str:
     reasons = {
         RepositoryCoverage.READ: "none",
         RepositoryCoverage.PARTIALLY_READ: "none read",
+        RepositoryCoverage.PARTIALLY_LISTED: "none in the part we saw",
         RepositoryCoverage.UNREADABLE: "NOT READ",
         RepositoryCoverage.NO_MANIFESTS: "no manifests",
         RepositoryCoverage.DISCOVERY_FAILED: "NOT LISTED",
@@ -104,6 +106,7 @@ def _coverage_label(coverage: RepositoryCoverage) -> str:
     labels = {
         RepositoryCoverage.READ: "read",
         RepositoryCoverage.PARTIALLY_READ: "partly read",
+        RepositoryCoverage.PARTIALLY_LISTED: "listed in part",
         RepositoryCoverage.UNREADABLE: "not read",
         RepositoryCoverage.NO_MANIFESTS: "no manifests",
         RepositoryCoverage.DISCOVERY_FAILED: "not listed",
@@ -154,6 +157,39 @@ def _unread_repository_lines(report: OrgScanReport) -> List[str]:
             lines.append(f"- {entry.display_path} · {entry.guidance}")
         if len(report.unreadable_manifests) > 5:
             lines.append(f"- ... and {len(report.unreadable_manifests) - 5} more")
+    return lines
+
+
+def _partially_listed_repository_lines(report: OrgScanReport) -> List[str]:
+    """Name the repositories whose manifest list is a prefix (#266).
+
+    Its own block, not folded into "no measurement": these repositories were
+    measured, and the fact worth stating is that nobody can say how completely.
+    GitHub caps the recursive tree it will return, and the repositories most
+    likely to hit that cap are the ones with the most dependencies.
+
+    Args:
+        report: The completed org scan report.
+
+    Returns:
+        The summary lines, empty when every tree listed in full.
+    """
+    partial = [
+        repo
+        for repo in report.riskiest_repositories
+        if repo.coverage is RepositoryCoverage.PARTIALLY_LISTED
+    ]
+    if not partial:
+        return []
+
+    lines = ["", f"Repositories listed only in part: {len(partial)}"]
+    for repo in partial[:10]:
+        lines.append(
+            f"- {repo.repo_full_name} · GitHub truncated the git tree, so "
+            f"{repo.dependency_count} is a floor, not a total"
+        )
+    if len(partial) > 10:
+        lines.append(f"- ... and {len(partial) - 10} more")
     return lines
 
 
@@ -352,6 +388,9 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
             for entry in report.unreadable_manifests
         ],
         "unread_repository_count": _unread_repository_count(report),
+        # Present on every scan, so a consumer can branch on "some repository's
+        # dependency list is a prefix" without parsing warning prose (#266).
+        "partially_listed_repository_count": _partially_listed_repository_count(report),
         "warnings": report.warnings,
     }
 
@@ -368,6 +407,21 @@ def _unread_repository_count(report: OrgScanReport) -> int:
         for repo in report.riskiest_repositories
         if repo.coverage
         in {RepositoryCoverage.UNREADABLE, RepositoryCoverage.DISCOVERY_FAILED}
+    )
+
+
+def _partially_listed_repository_count(report: OrgScanReport) -> int:
+    """Count repositories whose git tree GitHub truncated (#266).
+
+    Kept apart from ``_unread_repository_count``: these repositories produced a
+    measurement, and the caveat is that it covers an unknown fraction of them.
+    Folding the two together would report a repository that was read in part as
+    one that was not read at all, which is the mirror of the defect #262 fixed.
+    """
+    return sum(
+        1
+        for repo in report.riskiest_repositories
+        if repo.coverage is RepositoryCoverage.PARTIALLY_LISTED
     )
 
 
@@ -491,6 +545,15 @@ def _coverage_caveat(report: OrgScanReport) -> str:
             "produced no measurement at all — dependency manifests were found "
             "and not read, or the repository could not be listed — so those "
             "repositories are absent from every number above."
+        )
+    partial = _partially_listed_repository_count(report)
+    if partial:
+        total_repos = len(report.repositories_scanned)
+        sentences.append(
+            f" GitHub truncated the git tree for {partial} of {total_repos} "
+            f"{_pluralize(total_repos, 'repository')}, so what was scanned "
+            "there is a prefix of what is in them and their dependency counts "
+            "are floors (#266)."
         )
     return "".join(sentences)
 
