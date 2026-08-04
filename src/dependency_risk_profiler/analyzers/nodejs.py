@@ -124,7 +124,9 @@ class NodeJSAnalyzer(BaseAnalyzer):
         repository_url = self._repository_url(npm_data)
         if repository_url:
             dep.repository_url = repository_url
-        record_source_repository(dep, repository_url)
+        record_source_repository(
+            dep, repository_url, declared=self._declared_repository(npm_data)
+        )
 
         apply_registry_release_date(dep, self._released_at(npm_data, latest))
 
@@ -229,6 +231,30 @@ class NodeJSAnalyzer(BaseAnalyzer):
         if not isinstance(manifest, dict):
             return False
         return bool(manifest.get("deprecated"))
+
+    @staticmethod
+    def _declared_repository(npm_data: Dict[str, object]) -> Optional[str]:
+        """Return the raw ``repository`` field, or None when there is none.
+
+        This is npm's designated source pointer, and it is read raw so that a
+        package which declares a repository nobody can clone stays
+        distinguishable from one that declares none (#176). ``homepage`` is
+        deliberately not consulted: it is a resolution fallback, not a
+        declaration of source, and a docs site promoted to a broken repository
+        would be a fabricated finding rather than a missed one.
+
+        Args:
+            npm_data: ``registry.npmjs.org/<package>`` packument.
+
+        Returns:
+            The declared repository URL as published, or None.
+        """
+        repository = npm_data.get("repository")
+        if isinstance(repository, dict):
+            repository = repository.get("url")
+        if isinstance(repository, str) and repository.strip():
+            return repository
+        return None
 
     @staticmethod
     def _repository_url(npm_data: Dict[str, object]) -> Optional[str]:

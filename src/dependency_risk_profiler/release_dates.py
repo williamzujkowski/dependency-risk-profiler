@@ -23,7 +23,7 @@ defaulted to a date nobody published.
 
 import logging
 from datetime import datetime
-from typing import Iterable, List, Optional
+from typing import FrozenSet, Iterable, List, Optional
 
 from .models import DependencyMetadata
 from .utils import canonical_repository_url
@@ -37,12 +37,32 @@ RELEASE_DATE_SOURCE_KEY = "release_date_source"
 RELEASE_DATE_SOURCE_REGISTRY = "registry"
 RELEASE_DATE_SOURCE_REPOSITORY = "repository"
 
-# Whether the registry declares a source repository for the package. A package
-# that no longer says where its source lives is a leading indicator in its own
+# What the registry says about the package's source repository. A package that
+# no longer says where its source lives is a leading indicator in its own
 # right, and it is the reason eight repository-derived signals go quiet.
+#
+# Three states, not two. "Declares nothing" and "declares something that is not
+# a git forge" are different facts and used to be recorded identically:
+# commons-collections:3.1 carries no <scm> element at all, while log4j:1.2.17
+# declares one pointing at svn.apache.org. One project never said where its
+# source lives; the other said so in the idiom of 2012 and the answer has since
+# been decommissioned (#176).
+#
+# A fourth state is the absence of this key entirely: the lookup did not happen
+# or did not answer. That is unmeasured, and it must never be written as a
+# negative finding — a 404 scored as "declares no source repository" is #141's
+# fabricated zero in a different field (#182).
 SOURCE_REPOSITORY_KEY = "declares_source_repository"
 SOURCE_REPOSITORY_DECLARED = "true"
+SOURCE_REPOSITORY_UNUSABLE = "unusable"
 SOURCE_REPOSITORY_UNDECLARED = "false"
+
+# The states in which no repository can be read, whatever the registry said.
+# Both silence the same eight repository-derived signals, so both explain that
+# silence as one measured fact rather than eight independent gaps (#146).
+SOURCE_REPOSITORY_UNREADABLE: FrozenSet[str] = frozenset(
+    {SOURCE_REPOSITORY_UNUSABLE, SOURCE_REPOSITORY_UNDECLARED}
+)
 
 
 def parse_registry_timestamp(value: object) -> Optional[datetime]:
@@ -145,23 +165,48 @@ def apply_repository_activity_date(
 
 
 def record_source_repository(
-    dependency: DependencyMetadata, repository_url: Optional[str]
+    dependency: DependencyMetadata,
+    repository_url: Optional[str],
+    *,
+    declared: Optional[str],
 ) -> None:
-    """Record whether the registry declares a usable source repository.
+    """Record what the registry said about the package's source repository.
 
-    Only a URL that canonicalizes to an ``owner/repo`` root on a supported host
-    counts. A documentation site, a dead vanity domain, or the registry's own
-    project page is not a source repository, and treating one as though it were
-    is what let "no source declared" masquerade as "lookup failed".
+    Three states, and the caller has to supply the evidence for the middle one,
+    which is why ``declared`` is keyword-only and has no default: the difference
+    between "declared nothing" and "declared something unusable" is only visible
+    in the registry's own source field, before canonicalization throws it away.
+
+    * ``repository_url`` canonicalizes to an ``owner/repo`` root on a supported
+      host -> DECLARED. The repository-derived signals can be measured.
+    * it does not, but the registry's source field carried *something* ->
+      UNUSABLE. A Subversion connection string, a decommissioned vanity host, a
+      URL that does not parse. The package told us where its source lived and
+      the answer is no longer reachable.
+    * neither -> UNDECLARED. The registry answered and names no source at all.
+
+    ``declared`` must come from the field the registry designates for the source
+    repository — Maven's ``<scm>``, npm's ``repository``, a nuspec's
+    ``<repository>``. A project homepage or a docs site is not a declaration of
+    source, so a homepage that fails to canonicalize leaves the state
+    UNDECLARED rather than promoting a landing page to a broken repository.
+
+    Call this only when the registry actually answered. A failed lookup leaves
+    the key unset, which is the unmeasured state (#182).
 
     Args:
         dependency: Dependency metadata to update in place.
-        repository_url: Repository URL the registry published, if any.
+        repository_url: Repository URL resolved from the registry answer, if any.
+        declared: Raw text of the registry's own source-repository field, or
+            None when that field is absent or empty.
     """
-    declared = canonical_repository_url(repository_url) is not None
-    dependency.additional_info[SOURCE_REPOSITORY_KEY] = (
-        SOURCE_REPOSITORY_DECLARED if declared else SOURCE_REPOSITORY_UNDECLARED
-    )
+    if canonical_repository_url(repository_url) is not None:
+        state = SOURCE_REPOSITORY_DECLARED
+    elif declared is not None and declared.strip():
+        state = SOURCE_REPOSITORY_UNUSABLE
+    else:
+        state = SOURCE_REPOSITORY_UNDECLARED
+    dependency.additional_info[SOURCE_REPOSITORY_KEY] = state
 
 
 def _normalize_fractional_seconds(text: str) -> Optional[str]:

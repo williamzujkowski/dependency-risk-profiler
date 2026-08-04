@@ -66,6 +66,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `source_repository` signal has three states, and was recording two of
+  them as one.** `record_source_repository` marks whether a registry *declares*
+  a source repository, which is what lets the scorer treat "this package
+  publishes no repo" as one measured fact rather than eight independent
+  unmeasured signals (#146). It only ever wrote DECLARED or UNDECLARED, so
+  "declared a repository nobody can read" was indistinguishable from "declared
+  none". Maven Central serves the pair that proves the difference:
+  `commons-collections:commons-collections:3.1` carries no `<scm>` element at
+  all, while `log4j:log4j:1.2.17` declares one and every spelling of it is
+  Subversion. PR #175 had already found the discriminator across 25 sampled
+  artifacts — 9 declaring nothing, 12 naming SVN or CVS, 4 naming a git forge
+  and all 4 resolving — and it was being thrown away. There is now a third
+  state, DECLARED-BUT-UNUSABLE, recorded whenever the registry's own
+  source field carries something that does not canonicalize to a repository on
+  a supported host. **Scores will move**: it scores 0.75 rather than the 1.0
+  those packages used to get. The discount is for the declaration itself, which
+  is real evidence about a project's publishing hygiene and its era; it is only
+  a discount because the operative consequence is unchanged — nobody can read
+  the source either way, so the eight repository-derived signals stay dark and
+  the #146 collapse still applies to both states. Affected: every ecosystem, and
+  Go modules most of all, where a path resolving to `go.googlesource.com` or a
+  private vanity host now reads as declared-but-unusable rather than as
+  declaring nothing (Go has no separate repository field — the import path *is*
+  the declaration, so a Go module is never UNDECLARED). (#176)
+
+- **nuget resolved a source repository and then reported nothing about whether
+  one was declared.** `NuGetAnalyzer` read `<repository url>` off the nuspec,
+  set `dep.repository_url`, and never called `record_source_repository`, so
+  `_calculate_source_repository_score` returned `None` and the signal was
+  dropped from `weighted_scores` entirely. nuget was the only ecosystem scoring
+  15 signals where the other seven scored 16, and the absence read as though
+  nuget.org had said nothing either way — it says plenty, since a nuspec either
+  carries `<repository>` or it does not. Worse, a .NET package declaring no
+  repository counted eight separate unknowns instead of one explained gap,
+  which is the arithmetic that pushed abandoned packages to UNKNOWN in the
+  first place. `MIN_MEASURED_SIGNALS["nuget"]` moves 8 → 9 in the same change,
+  because a floor below measured coverage is a permission slip (#183, #158).
+
+- **A failed registry lookup was being scored as "this package declares no
+  source repository".** `ComposerAnalyzer` called `record_source_repository`
+  outside the `if release is not None` guard, and `_get_latest_release`
+  swallows a connection error, a non-200 and an unparseable body alike — so a
+  404 and a network blip both came out as a confident 1.0, the highest score
+  the signal has. Nobody asked Packagist anything. An unmeasured signal is
+  excluded from both the numerator and the denominator, never defaulted (#74),
+  and this is #141's fabricated zero in a different field. Sweeping the other
+  seven adapters found the same ordering in maven (an artifact whose POM could
+  not be fetched was recorded as declaring nothing) and in the Go vanity-import
+  resolver (a host that never answered was indistinguishable from one that
+  answered with nothing). All three now leave the key unset, which is the
+  unmeasured branch the scorer already handled. (#182)
+
 - **`community_score` measures development cadence, which it never has.**
   The score advertised a composite of popularity and development activity.
   `CommunityMetrics.commit_frequency` was read in six places and assigned in

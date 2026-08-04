@@ -85,7 +85,10 @@ from dependency_risk_profiler.parsers.nuget_registry import (
 )
 from dependency_risk_profiler.parsers.pom_model import PomCoordinate, read_pom
 from dependency_risk_profiler.parsers.xml_utils import parse_xml_bytes
-from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.scoring.risk_scorer import (
+    SOURCE_REPOSITORY_UNUSABLE_SCORE,
+    RiskScorer,
+)
 
 # The community signal is scraped off a GitHub repository page, not off a
 # registry document, so it is out of scope for a *registry* fixture and is
@@ -876,6 +879,19 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
         ),
     },
     "nuget": {
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "nuget resolved a repository off the nuspec and then recorded "
+                "nothing about whether one was declared, so the signal was "
+                "dropped from the score entirely and nuget alone measured 15 "
+                "where the other seven measured 16 (#183). Now that it is "
+                "recorded, it has npm's shape: a read that finds nothing "
+                "records UNDECLARED and scores 1.0, which a dead read also "
+                "produces, so the DECLARED branch has to be proven by value."
+            ),
+        ),
         "deprecation": Polarity(
             default=0.0,
             non_default=1.0,
@@ -2004,8 +2020,8 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
                 "source_repository",
                 equals=1.0,
                 because=(
-                    "the POM was read and declares no usable source — the "
-                    "default branch"
+                    "no <scm> element at all, and <url> is a project homepage "
+                    "rather than a declaration of source — the default branch"
                 ),
             ),
             SignalValue(
@@ -2027,6 +2043,120 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
                 "version",
                 equals=1.0,
                 because="1.7.0 against a 2.x latest is a major-version gap",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="log4j.pom",
+        extra_fixtures=("log4j.metadata",),
+        installed_version="1.2.17",
+        purpose=(
+            "#176's acceptance case, first half: an artifact that declares a "
+            "source repository nobody can clone. log4j 1.2.17's <scm> names "
+            "svn.apache.org — a Subversion host, not a git forge, and long "
+            "decommissioned. Before #176 this scored identically to an "
+            "artifact that declares no <scm> at all, which threw away the only "
+            "thing separating a project of 2012 from one that never said where "
+            "its source lived. PR #175 sampled 25 artifacts across both eras: "
+            "9 declared no <scm>, 12 named SVN or CVS, and the 4 that named a "
+            "forge all resolved."
+        ),
+        expected_latest_version="1.2.17",
+        expected_repository_url=None,
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        ground_truth=(
+            "<scm> is present and carries all three of <connection>, "
+            "<developerConnection> and <url>; every one of them is Subversion.",
+            "<url> at the project level is http://logging.apache.org/log4j/1.2/, "
+            "a docs site, so no fallback rescues the repository either.",
+            "maven-metadata.xml's <lastUpdated> is 20140318154402 — the "
+            "artifact is a decade dead and still one of the most depended-on "
+            "jars in the ecosystem.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.75,
+                because=(
+                    "THE #176 assertion. Declared, and not a git forge: the "
+                    "third state. Both 1.0 (as this scored before) and 0.0 are "
+                    "wrong, and the pair with commons-collections is what "
+                    "proves the two states are distinguishable at all"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="last published March 2014",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache 2.0, declared in the artifact's own <licenses>",
+            ),
+            SignalValue(
+                "community",
+                unmeasured=True,
+                because="an SVN URL is no more scrapeable than no URL at all",
+            ),
+            SignalValue(
+                "transitive",
+                minimum=0.0,
+                maximum=1.0,
+                because="the POM declares its own <dependencies>",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="commons-collections.pom",
+        extra_fixtures=("commons-collections.metadata",),
+        installed_version="3.1",
+        purpose=(
+            "#176's acceptance case, second half, and the artifact log4j has "
+            "to be told apart from. commons-collections 3.1 carries no <scm> "
+            "element of any kind — the string 'scm' does not appear in the "
+            "POM. It never said where its source lived; log4j said so and the "
+            "answer rotted. Different facts, and until #176 they were the same "
+            "recorded value."
+        ),
+        expected_latest_version="20040616",
+        expected_repository_url=None,
+        expected_license_id=None,
+        expected_deprecated=False,
+        ground_truth=(
+            "the POM has no <scm> element and no <licenses> block; its only "
+            "<url> is the organization's, http://www.apache.org.",
+            "maven-metadata.xml names 20040616 as both <latest> and <release>, "
+            "which is a date masquerading as a version and is what Maven "
+            "Central actually publishes for this artifact.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=1.0,
+                because=(
+                    "the other half of THE #176 assertion: nothing declared, "
+                    "so the undeclared branch, and it must not collapse into "
+                    "log4j's 0.75"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="3.1 shipped in 2004 and the line stopped in 2015",
+            ),
+            SignalValue(
+                "license",
+                unmeasured=True,
+                because="no <licenses> in the artifact POM; unmeasured, not zero",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because="the POM declares no dependencies, and someone looked",
             ),
         ),
     ),
@@ -2072,6 +2202,17 @@ NUGET_CASES: Tuple[FixtureCase, ...] = (
                 "maintainer",
                 equals=1.0,
                 because="the nuspec declares one author, and one is a risk",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "THE #183 assertion: the nuspec's <repository url> is "
+                    "declared and resolvable. Before this the signal was "
+                    "absent from nuget's score altogether, so a package "
+                    "declaring no repository counted eight separate unknowns "
+                    "instead of one explained gap (#146)"
+                ),
             ),
             SignalValue(
                 "version",
@@ -2257,8 +2398,9 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
             "lookup that fails records the source repository as UNDECLARED "
             "rather than unmeasured, so a 404 is scored as 'this package "
             "declares no source'. Both are filed rather than fixed here: the "
-            "first is a scoring change (#180) and the second needs a failure "
-            "fixture the capture script is deliberately not able to take "
+            "first is a scoring change (#180); the second is fixed, and the "
+            "failure fixture the capture script is deliberately not able to "
+            "take lives beside the adapter in test_composer_adapter instead "
             "(#182). Known limit "
             "carried by psr/log: the maintainer count comes from "
             "composer.json's declared authors, so a working group counts as "
@@ -2279,16 +2421,18 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
             "that key, so no amount of staring at one payload would have shown "
             "it — capturing both did. Fixed by pointing REGISTRATION_BASE at "
             "the SemVer2 hive, which is a base-URL change: the hive is "
-            "gzip-encoded, not gzip-named, and requests decodes it. Known "
-            "limit: nuget resolves a repository and still reports nothing "
-            "either way about whether one is declared, so source_repository "
-            "stays out of its measured set (#183)."
+            "gzip-encoded, not gzip-named, and requests decodes it. The "
+            "conversion also recorded that nuget resolved a repository and "
+            "still reported nothing either way about whether one was declared, "
+            "which made it the only ecosystem measuring 15 signals where the "
+            "rest measured 16; that is now fixed and the floor moved 8 -> 9 in "
+            "the same change (#183, #158)."
         ),
     ),
     "maven": ConversionStatus(
         converted=True,
         note=(
-            "Six captured XML documents across three artifacts — a "
+            "Ten captured XML documents across five artifacts — a "
             "maven-metadata.xml and an artifact POM each — and the first "
             "signal_floors entry maven has ever had. It is floored at 8, "
             "which is two higher than the capture found it at, because the "
@@ -2303,6 +2447,14 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
             "inherit them, the adapter reads the artifact POM and stops, and "
             "guava — whose own POM has neither — is the captured proof. That "
             "is a POM-graph walk rather than a key, so it is filed as #178. "
+            "log4j and commons-collections were captured later, for #176: they "
+            "are the pair proving the source-repository signal has three "
+            "states and not two. log4j 1.2.17 declares <scm> and every "
+            "spelling of it is Subversion; commons-collections 3.1 carries no "
+            "<scm> element at all. Both recorded UNDECLARED until the third "
+            "state existed, which is a distinction thrown away rather than one "
+            "never available — PR #175 had already found it across 25 sampled "
+            "artifacts, 9 declaring none and 12 naming SVN or CVS. "
             "Open: the "
             "deprecation branch is unprovable by construction; see "
             "POLARIZED_SIGNALS['maven']."
@@ -2450,6 +2602,44 @@ def assert_non_default_branches_are_proven(ecosystem: str) -> None:
         "polarized signals with no non-default fixture — a count-based floor "
         "cannot see a signal that is always measured and always wrong:\n  "
         + "\n  ".join(unproven)
+    )
+
+
+def assert_source_repository_states_are_pinned() -> None:
+    """Assert every source-repository state is pinned by value somewhere.
+
+    The signal has three answers and they are one line apart in the scorer, so
+    a refactor that collapses two of them back together is cheap to make and
+    invisible to a count. #176 is what happens when it goes unnoticed: "declared
+    an unusable repository" and "declared none" recorded the same value for the
+    life of the maven adapter, and the pair of artifacts that told them apart
+    was in Maven Central the whole time.
+
+    Raises:
+        AssertionError: If any of the three scores has no captured fixture
+            asserting it.
+    """
+    pinned = {
+        expectation.equals
+        for case in CASES
+        for expectation in case.signals
+        if expectation.signal == "source_repository" and expectation.equals is not None
+    }
+    missing = sorted(
+        f"{score} ({label})"
+        for score, label in (
+            (0.0, "declared and resolvable"),
+            (SOURCE_REPOSITORY_UNUSABLE_SCORE, "declared but not a git forge"),
+            (1.0, "declares none"),
+        )
+        if score not in pinned
+    )
+
+    assert not missing, (
+        "source_repository states with no captured fixture pinning them by "
+        f"value: {missing}. Three states one line apart in the scorer collapse "
+        f"back into two the moment nobody is asserting the middle one (#176). "
+        f"Pinned: {sorted(pinned)}"
     )
 
 

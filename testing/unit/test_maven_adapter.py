@@ -13,6 +13,7 @@ from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.maven import MavenPomParser
 from dependency_risk_profiler.parsers.maven_central import MavenCentralClient
+from dependency_risk_profiler.release_dates import SOURCE_REPOSITORY_KEY
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
 POM_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -185,6 +186,28 @@ def test_maven_analyzer_reads_repo_license_and_deps_from_the_artifact_pom() -> N
         "com.google.code.findbugs:jsr305",
     }
     assert updated.additional_info["transitive_source"] == "maven-pom"
+
+
+def test_an_unreadable_pom_leaves_the_source_signal_unmeasured() -> None:
+    """#182's rule in maven: no POM read is no answer about the artifact.
+
+    ``_offline_analyzer`` reads no POMs at all, which is the same shape as an
+    artifact whose POM 404s or whose coordinate has no colon in it. Recording
+    UNDECLARED off that would stamp "declares no source repository" on a
+    question nobody got to ask.
+    """
+    analyzer = _offline_analyzer()
+    dep = DependencyMetadata(
+        name="com.google.guava:guava", installed_version="31.1-jre"
+    )
+
+    with mock.patch("dependency_risk_profiler.analyzers.maven.requests.get") as get:
+        get.return_value = mock.Mock(
+            status_code=200, content=MAVEN_METADATA.encode("utf-8")
+        )
+        result = analyzer.analyze({"com.google.guava:guava": dep})
+
+    assert SOURCE_REPOSITORY_KEY not in result["com.google.guava:guava"].additional_info
 
 
 def test_maven_analyzer_clones_each_repository_once() -> None:

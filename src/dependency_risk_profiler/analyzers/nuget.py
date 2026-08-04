@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from ..models import DependencyMetadata
 from ..parsers.nuget_registry import CatalogEntry, NuGetRegistryClient, NuspecDocument
+from ..release_dates import record_source_repository
 from ..transitive.analyzer_enhanced import TRANSITIVE_SOURCE_KEY
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
@@ -130,6 +131,20 @@ class NuGetAnalyzer(BaseAnalyzer):
         repository_url = self._repository_url(nuspec, catalog)
         if repository_url:
             dep.repository_url = repository_url
+
+        # nuget resolved a repository and then reported nothing about whether
+        # one was declared, so the signal was dropped from the score entirely
+        # and nuget alone measured 15 where the other seven measured 16 (#183).
+        # The nuspec's <repository> is the declaration; <projectUrl> is a
+        # resolution fallback (MediatR publishes https://mediatr.io/) and does
+        # not count as one. Recorded only when nuget.org answered with a
+        # document at all: neither is unmeasured, not a negative finding (#182).
+        if nuspec is not None or catalog is not None:
+            record_source_repository(
+                dep,
+                repository_url,
+                declared=nuspec.repository_url if nuspec is not None else None,
+            )
 
         # The catalog is the only place a publication date exists. A cloned repo
         # refines this to the last commit; without a clone it is the release

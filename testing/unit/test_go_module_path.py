@@ -20,6 +20,11 @@ from dependency_risk_profiler.go_modules import (
     _validated_repo_root,
 )
 from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.release_dates import (
+    SOURCE_REPOSITORY_KEY,
+    SOURCE_REPOSITORY_UNUSABLE,
+)
+from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 
 def _meta(prefix: str, repo_root: str) -> str:
@@ -322,6 +327,71 @@ def test_analyzer_leaves_unresolvable_modules_without_a_repository() -> None:
 
     assert analyzed["example.invalid/pkg"].repository_url is None
     assert "module_subdirectory" not in analyzed["example.invalid/pkg"].additional_info
+
+
+def test_a_module_on_a_non_forge_host_is_declared_but_unusable() -> None:
+    """#176 for Go: the import path *is* the declaration, so nothing is undeclared.
+
+    ``software.sslmate.com/src/go-pkcs12`` resolves to a real repository on a
+    host this tool cannot clone or query — the same class as
+    ``go.googlesource.com`` and the two Hugo dependencies #137 leaves honestly
+    unmeasured. The module told us where its source lives. We cannot read it.
+    That is not "declares no source repository", which is what it used to score.
+    """
+    name = "software.sslmate.com/src/go-pkcs12"
+    analyzer = _analyzer(RecordingFetcher())
+    with mock.patch.object(golang, "fetch_json", return_value=None):
+        analyzed = analyzer.analyze(
+            {name: DependencyMetadata(name=name, installed_version="v0.2.0")}
+        )[name]
+
+    assert analyzed.repository_url == "https://software.sslmate.com/src/go-pkcs12.git"
+    assert analyzed.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNUSABLE
+    assert RiskScorer().score_dependency(analyzed).source_repository_score == 0.75
+
+
+def test_a_module_path_with_no_repository_in_it_is_declared_but_unusable() -> None:
+    """A code-host path too short to name a repository still named something."""
+    name = "github.com/orphan"
+    analyzer = _analyzer(RecordingFetcher())
+    with mock.patch.object(golang, "fetch_json", return_value=None):
+        analyzed = analyzer.analyze(
+            {name: DependencyMetadata(name=name, installed_version="v1.0.0")}
+        )[name]
+
+    assert analyzed.repository_url is None
+    assert analyzed.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNUSABLE
+
+
+def test_a_vanity_host_that_does_not_answer_leaves_the_signal_unmeasured() -> None:
+    """#182's rule for Go: a host that never replied said nothing about the module.
+
+    ``RecordingFetcher`` returns None for an unrecorded page, which is what the
+    bounded ``?go-get=1`` fetch returns on a timeout, a non-200, or a body it
+    refused. Recording UNDECLARED off that would be a finding about a lookup
+    that did not happen.
+    """
+    name = "example.invalid/pkg"
+    analyzer = _analyzer(RecordingFetcher())
+    with mock.patch.object(golang, "fetch_json", return_value=None):
+        analyzed = analyzer.analyze(
+            {name: DependencyMetadata(name=name, installed_version="v1.0.0")}
+        )[name]
+
+    assert SOURCE_REPOSITORY_KEY not in analyzed.additional_info
+    assert RiskScorer().score_dependency(analyzed).source_repository_score is None
+
+
+def test_a_vanity_page_with_no_go_import_tag_is_an_answer_not_a_failure() -> None:
+    """A host that replied and named nothing is measured; a silent host is not."""
+    name = "vanity.example/pkg"
+    fetcher = RecordingFetcher(
+        {"https://vanity.example/pkg?go-get=1": "<html><head></head></html>"}
+    )
+    resolution = GoModuleResolver(fetch=fetcher).resolve_module(name)
+
+    assert resolution.repository is None
+    assert resolution.lookup_failed is False
 
 
 def test_analyzer_clones_each_repository_once_for_all_its_modules() -> None:

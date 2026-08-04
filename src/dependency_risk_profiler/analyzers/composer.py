@@ -49,18 +49,32 @@ class ComposerAnalyzer(BaseAnalyzer):
             dep.additional_info["ecosystem"] = "composer"
 
             try:
+                # composer.lock already records source.url, so the repository is
+                # resolvable even when the Packagist lookup fails. Captured
+                # before the registry pass so it can stand as a declaration in
+                # its own right.
+                lock_declared = _string_or_none(dep.repository_url)
+
                 release = self._get_latest_release(name)
                 if release is not None:
                     self.metadata_cache[name] = release
                     self._apply_registry_metadata(dep, release)
 
-                # composer.lock already records source.url, so the repository is
-                # resolvable even when the Packagist lookup fails; both spellings
-                # are trimmed to the repo root before use.
+                # Both spellings are trimmed to the repo root before use.
                 repository_url = canonical_repository_url(dep.repository_url)
                 if repository_url:
                     dep.repository_url = repository_url
-                record_source_repository(dep, repository_url)
+
+                # Only when somebody actually answered. ``_get_latest_release``
+                # swallows a connection error, a non-200 and an unparseable body
+                # alike, and recording UNDECLARED off any of them stamps "this
+                # package declares no source repository" on a question nobody
+                # asked — #141's fabricated zero in a different field (#182).
+                # A source.url in composer.lock is a real declaration whatever
+                # Packagist did, so it counts on its own.
+                declared = self._declared_source(release) or lock_declared
+                if release is not None or lock_declared is not None:
+                    record_source_repository(dep, repository_url, declared=declared)
 
                 # Repository-derived signals (last commit, tests/CI, the
                 # OpenSSF-style security checks) come from the source repo, the
@@ -129,6 +143,27 @@ class ComposerAnalyzer(BaseAnalyzer):
             if canonical:
                 return canonical
         return canonical_repository_url(_string_or_none(release.get("homepage")))
+
+    @staticmethod
+    def _declared_source(release: Optional[Dict[str, object]]) -> Optional[str]:
+        """Return the raw ``source.url`` Packagist published, or None.
+
+        ``source`` is Packagist's designated VCS pointer; ``homepage`` is the
+        resolution fallback and is not a declaration of source (#176).
+
+        Args:
+            release: The newest Packagist release entry, or None when the
+                lookup did not answer.
+
+        Returns:
+            The declared source URL as published, or None.
+        """
+        if release is None:
+            return None
+        source = release.get("source")
+        if not isinstance(source, dict):
+            return None
+        return _string_or_none(source.get("url"))
 
     @staticmethod
     def _author_count(release: Optional[Dict[str, object]]) -> Optional[int]:

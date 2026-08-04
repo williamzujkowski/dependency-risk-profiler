@@ -88,6 +88,25 @@ class ModuleRepository:
     subdirectory: str = ""
 
 
+@dataclass(frozen=True)
+class ModuleResolution:
+    """What resolving a module path found, and whether it could look at all.
+
+    ``repository`` None with ``lookup_failed`` False is an answer: the module
+    path names no repository this tool can read. ``lookup_failed`` True is the
+    absence of an answer — the vanity host did not respond — and a caller must
+    not record it as a finding about the module (#182).
+
+    Attributes:
+        repository: The repository hosting the module, when one was found.
+        lookup_failed: Whether a ``?go-get=1`` lookup was attempted and could
+            not be completed.
+    """
+
+    repository: Optional[ModuleRepository] = None
+    lookup_failed: bool = False
+
+
 class _GoImportParser(HTMLParser):
     """Collects the ``content`` of ``go-import`` meta tags and nothing else.
 
@@ -134,9 +153,9 @@ class GoModuleResolver:
         """
         self.timeout = timeout
         self._fetch: MetaFetcher = fetch if fetch is not None else self._fetch_go_import
-        # Keyed by import prefix; the value is the repository for that prefix
-        # itself, or None when the prefix is known not to resolve.
-        self._cache: Dict[str, Optional[ModuleRepository]] = {}
+        # Keyed by import prefix; the value is the resolution for that prefix
+        # itself, including whether its lookup could be performed at all.
+        self._cache: Dict[str, ModuleResolution] = {}
 
     def resolve(self, module_path: str) -> Optional[ModuleRepository]:
         """Return the repository hosting a module path, or ``None``.
@@ -148,35 +167,48 @@ class GoModuleResolver:
             The resolved :class:`ModuleRepository`, or ``None`` when the module
             path does not resolve to a repository we can inspect.
         """
+        return self.resolve_module(module_path).repository
+
+    def resolve_module(self, module_path: str) -> ModuleResolution:
+        """Resolve a module path, distinguishing "no repository" from "no answer".
+
+        Args:
+            module_path: Go module path, e.g. ``golang.org/x/net``.
+
+        Returns:
+            The resolution, whose ``lookup_failed`` flag separates a vanity host
+            that did not respond from one that answered with nothing usable.
+        """
         path = module_path.strip().strip("/")
         if not path:
-            return None
+            return ModuleResolution()
         direct = _repository_from_path(path)
         if direct is not None:
-            return direct
+            return ModuleResolution(direct)
         if path.split("/", 1)[0].lower() in _CODE_HOSTS:
             # A code host is never a vanity path. If the rule above could not
             # find a repository in it, there is not one to find.
-            return None
+            return ModuleResolution()
         return self._resolve_vanity(path)
 
-    def _resolve_vanity(self, path: str) -> Optional[ModuleRepository]:
+    def _resolve_vanity(self, path: str) -> ModuleResolution:
         """Resolve a vanity import path through its ``go-import`` meta tag."""
-        prefix, repository = self._cached_prefix(path)
-        if prefix is None:
-            prefix, repository = self._lookup_go_import(path)
-            self._cache[prefix] = repository
+        prefix, resolution = self._cached_prefix(path)
+        if prefix is None or resolution is None:
+            prefix, resolution = self._lookup_go_import(path)
+            self._cache[prefix] = resolution
+        repository = resolution.repository
         if repository is None:
-            return None
+            return resolution
         relative = path[len(prefix) :].strip("/")
         subdirectory = "/".join(
             part for part in (repository.subdirectory, relative) if part
         )
-        return ModuleRepository(repository.url, subdirectory)
+        return ModuleResolution(ModuleRepository(repository.url, subdirectory))
 
     def _cached_prefix(
         self, path: str
-    ) -> Tuple[Optional[str], Optional[ModuleRepository]]:
+    ) -> Tuple[Optional[str], Optional[ModuleResolution]]:
         """Return the longest cached import prefix covering ``path``."""
         best: Optional[str] = None
         for prefix in self._cache:
@@ -187,27 +219,29 @@ class GoModuleResolver:
             return None, None
         return best, self._cache[best]
 
-    def _lookup_go_import(self, path: str) -> Tuple[str, Optional[ModuleRepository]]:
+    def _lookup_go_import(self, path: str) -> Tuple[str, ModuleResolution]:
         """Fetch and parse the ``go-import`` meta tag for a module path.
 
         Returns:
             The import prefix to cache the result under (the module path itself
-            when resolution failed) and the repository, or ``None``.
+            when resolution failed) and the resolution.
         """
         host = path.split("/", 1)[0]
         if not _is_public_host(host) or ".." in path.split("/"):
             logger.debug("Refusing go-import lookup for module path: %s", path)
-            return path, None
+            return path, ModuleResolution()
         # The host is already constrained to hostname characters; percent-encode
         # the rest so a module path cannot smuggle a query, fragment or
         # authority into the URL we are about to request.
         body = self._fetch(f"https://{quote(path, safe='/')}?go-get=1")
         if not body:
-            return path, None
+            # The host did not answer. That is the absence of a measurement, not
+            # a statement that the module names no source (#182).
+            return path, ModuleResolution(lookup_failed=True)
         match = _select_go_import(body, path)
         if match is None:
             logger.debug("No usable go-import meta tag for %s", path)
-            return path, None
+            return path, ModuleResolution()
         prefix, repo_root = match
         repository = _repository_from_path(repo_root)
         if repository is None:
@@ -215,7 +249,7 @@ class GoModuleResolver:
             # it anyway so the report names the right source, and let the
             # signals stay unmeasured.
             repository = ModuleRepository(f"https://{repo_root}")
-        return prefix, repository
+        return prefix, ModuleResolution(repository)
 
     def _fetch_go_import(self, url: str) -> Optional[str]:
         """Fetch a ``?go-get=1`` document under strict bounds, or return None.
