@@ -55,6 +55,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `deprecation_score` and `transitive_score` against a number without a `None`
   guard.
 
+- **npm dependencies now report version drift.** `latest_version` was `None`
+  for every npm dependency — 804 of 804 on OWASP NodeGoat's
+  `package-lock.json` — so the version-drift signal, the one the tool leads
+  with, was never computed for the largest ecosystem it supports. The registry
+  data was fetched and then dropped on a shape mismatch: the packument at
+  `registry.npmjs.org/<package>` has no top-level `version` key, because npm
+  publishes the current release as `dist-tags.latest`. The adapter now reads
+  `dist-tags.latest`, falls back to the `/<package>/latest` document for
+  mirrors that omit dist-tags, percent-encodes scoped names
+  (`@cypress/xvfb` -> `@cypress%2Fxvfb`), and **logs a warning when a lookup
+  fails** — the failure was previously silent, which is why it survived. Two
+  neighbouring reads of the same payload are fixed alongside it: deprecation is
+  read from the version manifest where npm actually records it (the top-level
+  `deprecated` key never existed), and repository URLs go through
+  `canonical_repository_url`, so a `.git` substring inside a repository name no
+  longer mangles the URL (`jekyll.github.io` -> `jekyllhub.io`). **npm scans
+  will now show a version signal, and therefore different scores, for
+  dependencies that previously had none.** Packages with no resolvable latest
+  version keep the signal honestly unmeasured rather than scored at zero.
+
 - **Go module paths now resolve to their source repository.** A module path is
   an import path, not a repository URL, and the resolver only understood the
   plain `github.com/owner/repo` form. Everything else — a `/vN` major-version
