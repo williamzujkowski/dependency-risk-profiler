@@ -819,33 +819,6 @@ class RiskScorer:
             else:
                 sub_scores.append(0.75)  # Not very popular
 
-        # Issue activity score
-        if (
-            community_metrics.open_issues_count is not None
-            and community_metrics.closed_issues_count is not None
-            and (
-                community_metrics.open_issues_count
-                + community_metrics.closed_issues_count
-            )
-            > 0
-        ):
-
-            # Calculate ratio of closed issues to total issues
-            total_issues = (
-                community_metrics.open_issues_count
-                + community_metrics.closed_issues_count
-            )
-            closed_ratio = community_metrics.closed_issues_count / total_issues
-
-            if closed_ratio >= 0.8:
-                sub_scores.append(0.0)  # High issue resolution rate
-            elif closed_ratio >= 0.5:
-                sub_scores.append(0.25)  # Moderate issue resolution rate
-            elif closed_ratio >= 0.2:
-                sub_scores.append(0.5)  # Low issue resolution rate
-            else:
-                sub_scores.append(1.0)  # Very low issue resolution rate
-
         # Commit frequency score
         if community_metrics.commit_frequency is not None:
             if community_metrics.commit_frequency >= 10:
