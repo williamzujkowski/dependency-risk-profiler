@@ -257,8 +257,11 @@ class TestAsyncVulnerabilityAggregation:
         # Arrange
         mock_get_cached.return_value = None  # No cache hit
 
-        # Mock vulnerability response
-        mock_vulns = [
+        # Mock vulnerability response. Annotated rather than inferred: an
+        # advisory record is a heterogeneous JSON object, and mypy narrows this
+        # literal to ``dict[str, Sequence[str]]``, which is not the same type
+        # the pipeline passes around.
+        mock_vulns: List[Dict[str, object]] = [
             {
                 "id": "OSV-2023-123",
                 "source": "OSV",

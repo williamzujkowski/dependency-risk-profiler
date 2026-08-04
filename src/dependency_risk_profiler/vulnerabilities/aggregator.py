@@ -130,14 +130,21 @@ class SourceLookup:
     and the constructors below are the reason it cannot be anything else: a
     failed lookup carries no list at all, so there is no empty list to mistake
     for a clean package.
+
+    The record is typed ``Dict[str, object]`` rather than ``Dict[str, Any]``,
+    which is the spelling the rest of the advisory pipeline already uses —
+    ``annotate_vulnerabilities_for_scoring`` and everything downstream of it.
+    New code does not need a new ``Any`` (AGENTS.md rule 7), and ``object``
+    keeps the record mutable, which ``Mapping`` would not: the annotation step
+    writes ``counted_in_score`` and its siblings onto these dicts.
     """
 
     state: SourceState
-    vulnerabilities: Tuple[Dict[str, Any], ...] = ()
+    vulnerabilities: Tuple[Dict[str, object], ...] = ()
     detail: str = ""
 
     @classmethod
-    def answered(cls, vulnerabilities: Sequence[Dict[str, Any]]) -> "SourceLookup":
+    def answered(cls, vulnerabilities: Sequence[Dict[str, object]]) -> "SourceLookup":
         """Record a readable reply.
 
         Args:
@@ -1456,8 +1463,9 @@ class AggregateOutcome:
     """What a whole package's advisory lookup established, across all sources."""
 
     #: Advisories from every source that answered, deduplicated by id. A floor
-    #: rather than a total whenever ``state`` is ``PARTIAL``.
-    vulnerabilities: List[Dict[str, Any]]
+    #: rather than a total whenever ``state`` is ``PARTIAL``. Typed as
+    #: :class:`SourceLookup` types them, and for the same reasons.
+    vulnerabilities: List[Dict[str, object]]
     #: The measurement state to record on the dependency.
     state: AdvisoryLookupState
     #: Names of the sources that were asked and did not answer.
@@ -1513,7 +1521,7 @@ def combine_source_lookups(
         The combined outcome.
     """
     seen_ids = set()
-    unique_vulnerabilities: List[Dict[str, Any]] = []
+    unique_vulnerabilities: List[Dict[str, object]] = []
     answered = False
     unavailable: List[str] = []
     absence_broken = False
