@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING CHANGE: Python 3.9 is no longer supported; `requires-python` is
+  now `>=3.10`.** The floor was not a style preference. It was putting 47 known
+  advisories — 20 high, 23 medium, 4 low — into this project's own committed
+  lockfile, and `uv lock --upgrade` could not remove a single one of them.
+
+  The mechanism is worth stating exactly, because the symptom pointed nowhere
+  near the cause. `requires-python = ">=3.9"` makes uv *fork* the resolution and
+  carry a second, older pin for the 3.9 leg:
+
+  ```
+  { name = "cryptography", version = "47.0.0", marker = "python_full_version <= '3.9'" }
+  { name = "cryptography", version = "50.0.0", marker = "python_full_version >  '3.9'" }
+  ```
+
+  Everyone on 3.10 or newer was already getting the patched version. The
+  vulnerable pins existed solely to serve an interpreter that has received no
+  security patches of its own since October 2025, and that no upstream still
+  supports: urllib3 2.7.0, pillow 12.3.0 and requests 2.33.0 all declare
+  `>=3.10`, and cryptography 50.0.0 excludes 3.9.0 and 3.9.1 outright. The
+  project could not have obtained patched versions on 3.9 even in principle.
+
+  Changing that one line and relocking: cryptography 47.0.0 -> 50.0.0, pillow
+  11.3.0 -> 12.3.0, requests 2.32.5 -> 2.34.2, urllib3 2.6.3 -> 2.7.0, filelock
+  3.19.1 -> 3.32.2. The lockfile drops from **153 resolved packages to 114** —
+  39 existed only to serve the fork — and no `python_full_version <= '3.9'`
+  marker remains. The `test (3.9)` CI job, which installed the vulnerable set on
+  every run, is gone with it.
+
+  Decided by consensus vote, 7-0, and the download data was gathered rather than
+  assumed: of 223 sampled PyPI downloads, **zero** were Python 3.9 (88.8%
+  reported no version, the remainder 3.11, 3.12 and 3.14). The panel's stated
+  threshold for keeping the floor was 5%.
+
+  Two things deliberately not done. `[tool.uv.environments]` would have
+  collapsed the fork without touching `requires-python`, and was rejected on
+  purpose: it removes the 3.9 lock and the 3.9 test job while leaving the
+  package metadata still *advertising* 3.9. Untested-but-advertised support for
+  an EOL interpreter is worse than honest removal. And `aiohttp` stays at
+  3.13.5 with 14 open advisories, because the `<3.14` cap in the dev extra is a
+  separate cause with a separate fix (#195) — one relock diff, one reason.
+
+  Consumers still on 3.9 keep every release published to date; pip resolves them
+  to the last compatible version. That is the ordinary Python deprecation path.
+
+  Noted without flinching: a tool whose thesis is that an end-of-life runtime
+  floor is a *leading* indicator of dependency risk had one, and it produced 47
+  lagging advisories. The thesis held. The repository was the counterexample.
+
 ### Added
 
 - **NuGet collects `<GlobalPackageReference>` packages, which appear in no

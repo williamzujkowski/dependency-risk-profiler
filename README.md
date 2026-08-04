@@ -3,7 +3,7 @@
 [![CI](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml/badge.svg)](https://github.com/williamzujkowski/dependency-risk-profiler/actions/workflows/ci.yml)
 [![OSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/williamzujkowski/dependency-risk-profiler/badge)](https://securityscorecards.dev/viewer/?uri=github.com/williamzujkowski/dependency-risk-profiler)
 [![OSSF Allstar](https://img.shields.io/badge/OSSF-Allstar%20Protected-success)](https://github.com/ossf/allstar)
-[![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![Python Versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages dependencies across nine ecosystems — Python, JavaScript/TypeScript (npm), Go, Rust, Ruby, PHP, .NET, Java/Maven, and Java/Kotlin/Android via Gradle — on leading signals — release cadence, maintainer concentration, provenance, version drift, and license risk — while reporting unknown signals as unknown and filtering advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure.
