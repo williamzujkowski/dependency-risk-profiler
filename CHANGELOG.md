@@ -167,6 +167,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A repository the scorecard checks could not read reported as a repository
+  with nothing in it.** All five OpenSSF-style checks — security policy,
+  dependency update tooling, signed commits, branch protection, maintained
+  status — opened with `has_X = False` and returned that initial value on the
+  broad `except` around the read and on the no-repository path alike. `False`
+  is also the correct answer for a project that genuinely ships no
+  `SECURITY.md`, so an unreadable file, a `git` subprocess that exited
+  non-zero, or a type error part-way through came back as a confident negative
+  finding that nothing in the output distinguished from a measured one. Unlike
+  the advisory case this failed *closed*, inventing risk rather than hiding it,
+  which is the more embarrassing direction to be wrong in: it accuses a project
+  of neglect on the evidence of a permission bit.
+
+  The readers underneath were the larger half of it. Each of the sixteen
+  file-and-git readers caught its own exceptions and returned an all-`False`
+  result dictionary, so the failure never reached the check function's own
+  handler — an unreadable `.github/settings.yml`, the issue's own example, was
+  swallowed a layer below where anyone was looking. Changing only the five
+  return types would have produced a fix that never fired. The readers now let
+  the failure propagate to their single caller, which is the one place that
+  decides what it means.
+
+  The five checks return `Optional[bool]`, answer `None` on both unmeasured
+  paths, and say which one it was using the existing `UnmeasuredReason`
+  vocabulary rather than a parallel one: `source_repository_unreadable` when
+  there was no repository, `source_lookup_failed` when the read was attempted
+  and raised. The paired score follows the same treatment — the initial `0.0`
+  was the same lie with a decimal point. `analysis_helpers` guards each write on
+  `is not None`, the way it already guards the contributor count and the commit
+  cadence, so an unmeasured signal reaches the model as absent rather than as
+  zero. Per #74 the scorer then drops it from both the numerator and the
+  denominator; that arithmetic was already correct and is now pinned by a test.
+
+  A genuine absence is still a finding. "We read the repository and there is no
+  `SECURITY.md`" remains `False`, and is still scored, still reported.
+
+  Measured on a real clone of this repository with `chmod 000` on `.git/`, which
+  is what a clone owned by another account looks like in CI: before, the tool
+  reported `is_maintained: false`, `has_signed_commits: false` and
+  `has_branch_protection: false`, raised the total score from 0.865 to 1.341,
+  moved the verdict from LOW to MEDIUM, and printed "Project does not appear to
+  be actively maintained" about a repository committed to that week. After, the
+  three signals report unmeasured and the verdict is UNKNOWN. The two checks
+  that read only files are unaffected in both runs, and the readable control
+  run is byte-identical before and after.
+
 - **An advisory source that failed read exactly like one that found nothing.**
   `get_vulnerabilities` returned the empty list for a connection failure, a
   4xx, a GraphQL `errors` block, an unreadable body, an ecosystem the source

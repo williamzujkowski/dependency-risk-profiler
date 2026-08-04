@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
+from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,12 @@ def check_security_file_existence(repo_dir: str) -> SecurityFileExistence:
 
     Returns:
         Dictionary with results of security file checks.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: SecurityFileExistence = {"has_security_file": False}
 
@@ -97,6 +104,7 @@ def check_security_file_existence(repo_dir: str) -> SecurityFileExistence:
 
     except Exception as e:
         logger.error(f"Error checking security file existence: {e}")
+        raise
 
     return result
 
@@ -109,6 +117,12 @@ def analyze_security_file_content(file_path: str) -> SecurityPolicyContent:
 
     Returns:
         Dictionary with security policy content analysis results.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: SecurityPolicyContent = {
         "has_vulnerability_reporting": False,
@@ -199,6 +213,7 @@ def analyze_security_file_content(file_path: str) -> SecurityPolicyContent:
 
     except Exception as e:
         logger.error(f"Error analyzing security file content: {e}")
+        raise
 
     return result
 
@@ -211,6 +226,12 @@ def check_other_security_indicators(repo_dir: str) -> OtherSecurityIndicators:
 
     Returns:
         Dictionary with other security indicator check results.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: OtherSecurityIndicators = {
         "has_security_workflows": False,
@@ -284,6 +305,7 @@ def check_other_security_indicators(repo_dir: str) -> OtherSecurityIndicators:
 
     except Exception as e:
         logger.error(f"Error checking other security indicators: {e}")
+        raise
 
     return result
 
@@ -378,7 +400,7 @@ def identify_security_policy_issues(
 
 def check_security_policy(
     dependency: DependencyMetadata, repo_dir: Optional[str] = None
-) -> Tuple[bool, float, List[str]]:
+) -> Tuple[Optional[bool], Optional[float], List[str]]:
     """Check if a dependency has a security policy.
 
     Args:
@@ -387,19 +409,19 @@ def check_security_policy(
 
     Returns:
         Tuple of (has_security_policy, security_policy_score, list of issues).
+        The first two are None when the signal could not be measured — no
+        repository to read, or a read that raised — and the issue list says
+        which of the two it was. ``False`` means the repository was read and
+        carries no security policy, which is a finding; ``None`` is not (#218).
     """
-    has_security_policy = False
-    security_policy_score = 0.0
-    issues = []
+    has_security_policy: Optional[bool] = None
+    security_policy_score: Optional[float] = None
+    issues: List[str] = []
 
     if repo_dir:
         try:
             # Check for security policy file existence
             file_existence = check_security_file_existence(repo_dir)
-
-            # Initialize security metrics if not already present
-            if dependency.security_metrics is None:
-                dependency.security_metrics = SecurityMetrics()
 
             if file_existence.get("has_security_file", False):
                 has_security_policy = True
@@ -423,10 +445,12 @@ def check_security_policy(
                 # Identify issues
                 issues = identify_security_policy_issues(file_existence, file_content)
             else:
+                # Read the repository, found no policy. A measurement, and a
+                # finding: 0.0 here is earned rather than left over from an
+                # initial value.
+                has_security_policy = False
+                security_policy_score = 0.0
                 issues.append("No security policy file found")
-
-            # Update dependency metadata
-            dependency.security_metrics.has_security_policy = has_security_policy
 
             # Log results
             policy_status = "Found" if has_security_policy else "Not found"
@@ -439,11 +463,20 @@ def check_security_policy(
                 logger.info(f"Security policy issue for {dependency.name}: {issue}")
 
         except Exception as e:
+            # The read failed part-way through. Whatever was gathered before it
+            # failed is not an answer, so nothing is returned as one.
             logger.error(f"Error checking security policy: {e}")
-            issues.append(f"Error checking security policy: {str(e)}")
+            has_security_policy = None
+            security_policy_score = None
+            issues.append(read_failed_issue("Security policy", e))
     else:
-        issues.append(
-            "No repository information available for security policy analysis"
-        )
+        issues.append(no_repository_issue("Security policy"))
+
+    # One writer, after the outcome is settled, so the model and the return
+    # value cannot disagree about whether the signal was measured.
+    if has_security_policy is not None:
+        if dependency.security_metrics is None:
+            dependency.security_metrics = SecurityMetrics()
+        dependency.security_metrics.has_security_policy = has_security_policy
 
     return has_security_policy, security_policy_score, issues

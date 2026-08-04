@@ -102,7 +102,12 @@ def analyze_repository(
         for issue in security_issues:
             logger.info(f"Security policy issue for {dependency.name}: {issue}")
 
-        # Check for dependency update tools
+        # Check for dependency update tools. Each of the four writes below is
+        # guarded on ``is not None`` for the reason the contributor count above
+        # is: the check answers None for a signal it could not measure — no
+        # repository, or a read that raised — and None is not a finding. Writing
+        # it would be indistinguishable from "we looked and the tooling isn't
+        # there", which is what the scorer counts as evidence (#218).
         has_update_tools, update_tools_score, update_issues = (
             check_dependency_update_tools(dependency, repo_dir)
         )
@@ -111,8 +116,7 @@ def analyze_repository(
         if dependency.security_metrics is None:
             dependency.security_metrics = SecurityMetrics()
 
-        # Make sure security_metrics is not None before accessing it
-        if dependency.security_metrics:
+        if has_update_tools is not None:
             dependency.security_metrics.has_dependency_update_tools = has_update_tools
 
         # Log dependency update tools issues
@@ -128,8 +132,7 @@ def analyze_repository(
         if dependency.security_metrics is None:
             dependency.security_metrics = SecurityMetrics()
 
-        # Make sure security_metrics is not None before accessing it
-        if dependency.security_metrics:
+        if has_signed_commits is not None:
             dependency.security_metrics.has_signed_commits = has_signed_commits
 
         # Log signed commits issues
@@ -145,8 +148,7 @@ def analyze_repository(
         if dependency.security_metrics is None:
             dependency.security_metrics = SecurityMetrics()
 
-        # Make sure security_metrics is not None before accessing it
-        if dependency.security_metrics:
+        if has_branch_protection is not None:
             dependency.security_metrics.has_branch_protection = has_branch_protection
 
         # Log branch protection issues
@@ -162,7 +164,7 @@ def analyze_repository(
         if dependency.security_metrics is None:
             dependency.security_metrics = SecurityMetrics()
 
-        if dependency.security_metrics:
+        if is_maintained is not None:
             dependency.security_metrics.is_maintained = is_maintained
 
         # Log maintained status issues

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
+from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,12 @@ def check_dependabot_configuration(repo_dir: str) -> DependabotConfiguration:
 
     Returns:
         Dictionary with results of Dependabot configuration checks.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: DependabotConfiguration = {
         "has_dependabot": False,
@@ -91,6 +98,7 @@ def check_dependabot_configuration(repo_dir: str) -> DependabotConfiguration:
 
     except Exception as e:
         logger.error(f"Error checking Dependabot configuration: {e}")
+        raise
 
     return result
 
@@ -103,6 +111,12 @@ def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
 
     Returns:
         Dictionary with results of Renovate configuration checks.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: RenovateConfiguration = {
         "has_renovate": False,
@@ -152,6 +166,7 @@ def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
 
     except Exception as e:
         logger.error(f"Error checking Renovate configuration: {e}")
+        raise
 
     return result
 
@@ -164,6 +179,12 @@ def check_pyup_configuration(repo_dir: str) -> PyUpConfiguration:
 
     Returns:
         Dictionary with results of PyUp.io configuration checks.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: PyUpConfiguration = {
         "has_pyup": False,
@@ -192,6 +213,7 @@ def check_pyup_configuration(repo_dir: str) -> PyUpConfiguration:
 
     except Exception as e:
         logger.error(f"Error checking PyUp configuration: {e}")
+        raise
 
     return result
 
@@ -206,6 +228,12 @@ def check_github_actions_dependency_updates(
 
     Returns:
         Dictionary with results of GitHub Actions checks.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: DependencyUpdateWorkflows = {
         "has_update_actions": False,
@@ -244,6 +272,7 @@ def check_github_actions_dependency_updates(
                         update_workflows.append(workflow_file.name)
             except Exception as e:
                 logger.error(f"Error reading workflow file {workflow_file}: {e}")
+                raise
 
         if update_workflows:
             result["has_update_actions"] = True
@@ -251,6 +280,7 @@ def check_github_actions_dependency_updates(
 
     except Exception as e:
         logger.error(f"Error checking GitHub Actions for dependency updates: {e}")
+        raise
 
     return result
 
@@ -359,7 +389,7 @@ def identify_dependency_update_issues(
 
 def check_dependency_update_tools(
     dependency: DependencyMetadata, repo_dir: Optional[str] = None
-) -> Tuple[bool, float, List[str]]:
+) -> Tuple[Optional[bool], Optional[float], List[str]]:
     """Check if a dependency uses tools to automatically update its dependencies.
 
     Args:
@@ -367,11 +397,15 @@ def check_dependency_update_tools(
         repo_dir: Optional path to cloned repository.
 
     Returns:
-        Tuple of (has_update_tools, update_tools_score, list of issues).
+        Tuple of (has_update_tools, update_tools_score, list of issues). The
+        first two are None when the signal could not be measured — no
+        repository to read, or a read that raised — and the issue list says
+        which of the two it was. ``False`` means the repository was read and
+        runs no updater, which is a finding; ``None`` is not (#218).
     """
-    has_update_tools = False
-    update_tools_score = 0.0
-    issues = []
+    has_update_tools: Optional[bool] = None
+    update_tools_score: Optional[float] = None
+    issues: List[str] = []
 
     if repo_dir:
         try:
@@ -445,11 +479,13 @@ def check_dependency_update_tools(
                 )
 
         except Exception as e:
+            # The read failed part-way through. Whatever was gathered before it
+            # failed is not an answer, so nothing is returned as one.
             logger.error(f"Error checking dependency update tools: {e}")
-            issues.append(f"Error checking dependency update tools: {str(e)}")
+            has_update_tools = None
+            update_tools_score = None
+            issues.append(read_failed_issue("Dependency update tools", e))
     else:
-        issues.append(
-            "No repository information available for dependency update tools analysis"
-        )
+        issues.append(no_repository_issue("Dependency update tools"))
 
     return has_update_tools, update_tools_score, issues

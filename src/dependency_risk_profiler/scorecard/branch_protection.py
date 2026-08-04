@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
+from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,12 @@ def check_github_branch_protection_config(repo_dir: str) -> GitHubBranchProtecti
 
     Returns:
         Dictionary with branch protection configuration status.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: GitHubBranchProtection = {
         "has_branch_protection": False,
@@ -113,12 +120,13 @@ def check_github_branch_protection_config(repo_dir: str) -> GitHubBranchProtecti
                                 f"GitHub Actions: {workflow_file.name}"
                             )
                             break
-                except Exception as e:  # nosec B112
+                except Exception as e:
                     logger.debug(f"Error reading workflow file {workflow_file}: {e}")
-                    continue
+                    raise
 
     except Exception as e:
         logger.error(f"Error checking GitHub branch protection: {e}")
+        raise
 
     return result
 
@@ -133,6 +141,12 @@ def check_common_branch_protection_indicators(
 
     Returns:
         Dictionary with branch protection indicators.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: BranchProtectionIndicators = {
         "has_protected_branches": False,
@@ -189,12 +203,13 @@ def check_common_branch_protection_indicators(
             if protected_branches:
                 result["has_protected_branches"] = True
                 result["protected_branches"] = list(protected_branches)
-        except Exception as e:  # nosec B110
+        except Exception as e:
             logger.debug(f"Error checking git config for protected branches: {e}")
-            # Continue without protected branch info
+            raise
 
     except Exception as e:
         logger.error(f"Error checking branch protection indicators: {e}")
+        raise
 
     return result
 
@@ -207,6 +222,12 @@ def check_pull_request_patterns(repo_dir: str) -> PullRequestPatterns:
 
     Returns:
         Dictionary with pull request pattern analysis results.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: PullRequestPatterns = {
         "uses_pull_requests": False,
@@ -232,6 +253,7 @@ def check_pull_request_patterns(repo_dir: str) -> PullRequestPatterns:
 
     except Exception as e:
         logger.error(f"Error checking pull request patterns: {e}")
+        raise
 
     return result
 
@@ -333,7 +355,7 @@ def identify_branch_protection_issues(
 
 def check_branch_protection(
     dependency: DependencyMetadata, repo_dir: Optional[str] = None
-) -> Tuple[bool, float, List[str]]:
+) -> Tuple[Optional[bool], Optional[float], List[str]]:
     """Check if a dependency implements branch protection.
 
     Args:
@@ -341,11 +363,16 @@ def check_branch_protection(
         repo_dir: Optional path to cloned repository.
 
     Returns:
-        Tuple of (has_branch_protection, branch_protection_score, list of issues).
+        Tuple of (has_branch_protection, branch_protection_score, list of
+        issues). The first two are None when the signal could not be measured —
+        no repository to read, or a read that raised — and the issue list says
+        which of the two it was. ``False`` means the repository was read and
+        nothing protects its branches, which is a finding; ``None`` is not
+        (#218).
     """
-    has_branch_protection = False
-    branch_protection_score = 0.0
-    issues = []
+    has_branch_protection: Optional[bool] = None
+    branch_protection_score: Optional[float] = None
+    issues: List[str] = []
 
     if repo_dir:
         try:
@@ -420,11 +447,13 @@ def check_branch_protection(
                 logger.info(f"Branch protection issue for {dependency.name}: {issue}")
 
         except Exception as e:
+            # The read failed part-way through. Whatever was gathered before it
+            # failed is not an answer, so nothing is returned as one.
             logger.error(f"Error checking branch protection: {e}")
-            issues.append(f"Error checking branch protection: {str(e)}")
+            has_branch_protection = None
+            branch_protection_score = None
+            issues.append(read_failed_issue("Branch protection", e))
     else:
-        issues.append(
-            "No repository information available for branch protection analysis"
-        )
+        issues.append(no_repository_issue("Branch protection"))
 
     return has_branch_protection, branch_protection_score, issues
