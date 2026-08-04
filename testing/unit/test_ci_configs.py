@@ -11,49 +11,6 @@ import pytest
 import yaml
 
 
-def test_github_workflow_yaml_valid():
-    """Test that the GitHub Actions workflow YAML is valid."""
-    # Get the workflow file path
-    root_dir = Path(__file__).parent.parent.parent
-    workflow_path = (
-        root_dir
-        / "src"
-        / "dependency_risk_profiler"
-        / "secure_release"
-        / "github_actions_ci_cd.yaml"
-    )
-
-    # Verify the file exists
-    assert workflow_path.exists(), "GitHub Actions workflow file should exist"
-
-    # Verify the YAML is valid by examining the raw content first
-    with open(workflow_path, "r") as f:
-        content = f.read()
-
-    # Check for key sections in raw text
-    assert "name:" in content, "Workflow should have a name"
-    assert "on:" in content, "Workflow should have triggers section"
-    assert "jobs:" in content, "Workflow should have jobs section"
-
-    # Now try to parse the YAML
-    try:
-        yaml_content = yaml.safe_load(content)
-
-        # Basic validation that it's a dict
-        assert isinstance(
-            yaml_content, dict
-        ), "Workflow YAML should parse as a dictionary"
-
-        # Check for required jobs in a more robust way
-        assert "jobs" in yaml_content, "Workflow should have jobs defined"
-        assert isinstance(yaml_content["jobs"], dict), "Jobs should be a dictionary"
-        assert "test" in yaml_content["jobs"], "Workflow should have a test job"
-        assert "build" in yaml_content["jobs"], "Workflow should have a build job"
-
-    except yaml.YAMLError as e:
-        pytest.fail(f"Invalid YAML in workflow file: {e}")
-
-
 def test_flake8_config_valid():
     """Test that the flake8 configuration is valid and works as expected."""
     # Get the pyproject.toml path where flake8 config is now stored

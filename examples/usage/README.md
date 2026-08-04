@@ -6,7 +6,6 @@ This directory contains examples of how to use the Dependency Risk Profiler as a
 
 - `api_usage.py` - Basic example of how to use the library API
 - `simple_test.py` - Simple test script for the Dependency Risk Profiler
-- `secure_release_demo.py` - Demo of the secure release management features
 
 ## Running the Examples
 
@@ -18,9 +17,6 @@ python examples/usage/api_usage.py
 
 # Run the simple test
 python examples/usage/simple_test.py
-
-# Run the secure release demo
-python examples/usage/secure_release_demo.py
 ```
 
 ## API Usage Overview
