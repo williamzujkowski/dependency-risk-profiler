@@ -53,11 +53,12 @@ def test_normalize_ecosystem_covers_all_supported_ecosystems() -> None:
         ({"ecosystem": "cargo"}, "https://github.com/x/y", "cargo"),
         ({}, "https://npmjs.com/package/x", "nodejs"),
         ({}, "https://github.com/golang/go", "golang"),
-        ({}, "", "python"),
+        ({}, "", ""),
+        ({}, "https://example.com/some/pkg", ""),
     ],
 )
 def test_infer_ecosystem_dedup_helper(additional_info, repo_url, expected) -> None:
-    """Prefer the declared ecosystem, else a URL guess defaulting to python.
+    """Prefer the declared ecosystem, else a URL guess that fails closed (#109).
 
     One shared implementation now backs both the sync and async aggregators.
     """

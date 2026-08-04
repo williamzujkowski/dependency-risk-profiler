@@ -20,12 +20,14 @@ logger = logging.getLogger(__name__)
 
 
 def infer_ecosystem(dependency: DependencyMetadata) -> str:
-    """Return the dependency's ecosystem for vulnerability lookup.
+    """Return the dependency's ecosystem for vulnerability lookup, or "".
 
-    Prefers the value callers set from the manifest (``additional_info``); only
-    falls back to a coarse repository-URL guess when it's absent. That guess
-    defaults to python and mis-routes most npm/cargo deps, so it is a last
-    resort — callers that know the ecosystem should set it explicitly.
+    Prefers the value callers set from the manifest (``additional_info``), which
+    every analyzer stamps; only falls back to a coarse repository-URL guess when
+    it is absent. The guess recognizes npm and Go tokens and otherwise fails
+    closed with "", consistent with ``ecosystems.resolve``: silently defaulting
+    to python mis-routed unknown dependencies to PyPI and returned a confident
+    zero advisories (#66/#109). Callers skip the lookup on "".
     """
     ecosystem = dependency.additional_info.get("ecosystem", "").strip()
     if ecosystem:
@@ -35,7 +37,7 @@ def infer_ecosystem(dependency: DependencyMetadata) -> str:
         return "nodejs"
     if "go" in url:
         return "golang"
-    return "python"
+    return ""
 
 
 # Cache settings
@@ -1070,6 +1072,14 @@ def aggregate_vulnerability_data(
     """
     package_name = dependency.name
     ecosystem = infer_ecosystem(dependency)
+    if not ecosystem:
+        # Fail closed (#109): querying every source under a guessed ecosystem
+        # returns an authoritative-looking empty result for the wrong package.
+        logger.warning(
+            f"Skipping vulnerability lookup for {package_name}: "
+            "ecosystem could not be determined"
+        )
+        return dependency, []
 
     # Check cache first
     cached = get_cached_data(package_name, ecosystem)

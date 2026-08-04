@@ -1,7 +1,7 @@
 """Base analyzer interface for dependency metadata collection."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict, Optional, Type
 
 from ..models import DependencyMetadata
 
@@ -40,13 +40,25 @@ class BaseAnalyzer(ABC):
     def get_analyzer_for_ecosystem(ecosystem: str) -> Optional["BaseAnalyzer"]:
         """Get the appropriate analyzer for a given ecosystem.
 
+        Dispatch is table-driven off the canonical ecosystem registry
+        (``vulnerabilities.ecosystems``) rather than a second hand-maintained
+        alias chain, so every spelling the registry knows routes here too
+        ("rust"/"crates" -> cargo, "php" -> composer, "dotnet" -> nuget) and a
+        new ecosystem is one registry entry plus one row below. Unknown input
+        stays non-raising (``lookup``, not ``resolve``): callers treat None as
+        "skip this dependency".
+
         Args:
             ecosystem: The dependency ecosystem (e.g., "nodejs", "python", "golang").
 
         Returns:
             An instance of the appropriate analyzer, or None if no analyzer matches.
         """
+        if not ecosystem:
+            return None
+
         try:
+            from ..vulnerabilities.ecosystems import lookup
             from .composer import ComposerAnalyzer
             from .crates import CratesIOAnalyzer
             from .golang import GoAnalyzer
@@ -56,29 +68,27 @@ class BaseAnalyzer(ABC):
             from .python import PythonAnalyzer
             from .ruby import RubyGemsAnalyzer
 
-            if not ecosystem:
+            # Keyed on canonical Ecosystem.key. "java" is a separate registry
+            # entry from "maven" (they diverge in NVD CPE prefix only) and both
+            # are served by the same analyzer.
+            analyzers: Dict[str, Type[BaseAnalyzer]] = {
+                "nodejs": NodeJSAnalyzer,
+                "python": PythonAnalyzer,
+                "golang": GoAnalyzer,
+                "cargo": CratesIOAnalyzer,
+                "maven": MavenAnalyzer,
+                "java": MavenAnalyzer,
+                "nuget": NuGetAnalyzer,
+                "ruby": RubyGemsAnalyzer,
+                "composer": ComposerAnalyzer,
+            }
+
+            resolved = lookup(ecosystem)
+            if resolved is None:
                 return None
 
-            ecosystem = ecosystem.lower().strip()
-
-            if ecosystem == "nodejs":
-                return NodeJSAnalyzer()
-            elif ecosystem in ["python", "pyproject"]:
-                return PythonAnalyzer()
-            elif ecosystem == "golang":
-                return GoAnalyzer()
-            elif ecosystem in ["cargo", "rust", "crates"]:
-                return CratesIOAnalyzer()
-            elif ecosystem == "rubygems":
-                return RubyGemsAnalyzer()
-            elif ecosystem == "composer":
-                return ComposerAnalyzer()
-            elif ecosystem == "nuget":
-                return NuGetAnalyzer()
-            elif ecosystem == "maven":
-                return MavenAnalyzer()
-            else:
-                return None
+            analyzer_class = analyzers.get(resolved.key)
+            return analyzer_class() if analyzer_class is not None else None
 
         except ImportError:
             # Handle the case where one of the analyzers can't be imported

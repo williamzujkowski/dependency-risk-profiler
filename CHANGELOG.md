@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **More ecosystem spellings are now analyzed.** Analyzer dispatch is driven by
+  the canonical ecosystem registry instead of a hand-maintained `if`/`elif`
+  chain, so registry aliases the chain silently dropped — `java`, `dotnet`,
+  `gems`, `node`, `py`, `pypi`, `go`, `ruby`, `php` — now route to the correct
+  analyzer. **Scans that previously skipped dependencies under those spellings
+  will now report findings for them**, so a scan diff across this version can
+  show new results without anything having changed upstream. Every spelling the
+  old chain accepted maps to the same analyzer as before, and unrecognized input
+  is still skipped rather than raising.
+
+### Fixed
+
+- **Unknown ecosystems no longer silently default to PyPI.** `infer_ecosystem`
+  returned `"python"` for any URL it could not classify, so non-Python packages
+  were queried against the wrong advisory source and came back clean. It now
+  returns no ecosystem and the aggregators skip the dependency with a warning.
+
 ## [0.4.0] - 2026-08-01
 
 ### Changed

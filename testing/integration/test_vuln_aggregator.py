@@ -20,6 +20,9 @@ def test_vulnerability_aggregator_basic():
     dependency = DependencyMetadata(
         name=package_name, installed_version="7.0.0", security_metrics=SecurityMetrics()
     )
+    # Analyzers stamp the ecosystem; without it the aggregator fails closed
+    # (#109) and this test would exercise nothing.
+    dependency.additional_info["ecosystem"] = "python"
 
     # Run the aggregator
     updated_dep, vulnerabilities = aggregate_vulnerability_data(dependency)
