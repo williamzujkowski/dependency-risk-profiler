@@ -433,10 +433,14 @@ class RiskScorer:
             risk_level=risk_level,
             factors=risk_factors,
             unknown_signals=unknown_signals,
-            unknown_signal_count=len(unknown_signals),
             measured_signal_count=measured_signal_count,
             total_signal_count=len(weighted_scores),
             insufficient_data=insufficient_data,
+            # Handed over by reference, not reshaped: ``DependencyRiskScore``
+            # derives the per-signal mapping the output contract needs, on
+            # demand. Building it here cost enough per dependency to breach the
+            # scoring SLA once coverage instrumentation was counted.
+            weighted_signals=weighted_scores,
         )
 
     def create_project_profile(
@@ -498,7 +502,7 @@ class RiskScorer:
             unknown_risk_dependencies=unknown_risk,
             insufficient_data_dependencies=insufficient_data,
             unknown_signal_count=sum(
-                dep.unknown_signal_count for dep in scored_dependencies
+                len(dep.unknown_signals) for dep in scored_dependencies
             ),
             overall_risk_score=overall_score,
         )

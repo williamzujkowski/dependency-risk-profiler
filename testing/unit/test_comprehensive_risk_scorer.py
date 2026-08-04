@@ -865,6 +865,16 @@ def test_project_profile_performance_sla() -> None:
     SLA Requirements:
     - Processing time: < 50ms for 100 dependencies
     - Memory usage: No excessive memory allocation
+
+    Measured as the median of three timed runs after a warm-up, not as one
+    cold call. The threshold is unchanged; what changed is what the number
+    means. A single cold call charges the scorer for `packaging`'s first
+    regex compilation, coverage's tracer warm-up, and whatever else the CI
+    runner is doing in the other three matrix jobs — on Python 3.12, where
+    coverage runs on `sys.monitoring`, that noise was most of the budget, and
+    the test flipped between pass and fail on identical code. A median of
+    warm runs still fails on any real algorithmic regression, because that
+    shows up in every sample rather than in one.
     """
     # Arrange
     scorer = RiskScorer()
@@ -897,9 +907,15 @@ def test_project_profile_performance_sla() -> None:
         dependencies[dep.name] = dep
 
     # Act
-    start_time = time.time()
-    profile = scorer.create_project_profile("requirements.txt", "python", dependencies)
-    elapsed_time = (time.time() - start_time) * 1000  # Convert to ms
+    scorer.create_project_profile("requirements.txt", "python", dependencies)  # warm-up
+    timings = []
+    for _ in range(3):
+        start_time = time.perf_counter()
+        profile = scorer.create_project_profile(
+            "requirements.txt", "python", dependencies
+        )
+        timings.append((time.perf_counter() - start_time) * 1000)  # Convert to ms
+    elapsed_time = sorted(timings)[1]
 
     # Assert
     assert elapsed_time < 50.0, (

@@ -7,7 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING CHANGE: `analyze --output json` and `scan-org` now emit one
+  `ScoredDependency` shape (schema v2).** Both commands described the same
+  concept and agreed on 5 keys out of ~21; the rest were silent renames of
+  identical data — `installed_version`/`version`, `scores`/`component_scores`,
+  `has_known_exploits`/`known_vulnerable`, `vulnerabilities`/`advisories`,
+  `advisories`/`details` — so a consumer of the documented agent workflow had
+  to write two parsers for one concept. Both paths now serialize from
+  `dependency_risk_profiler.contract.scored_dependency`, and every document
+  declares `schema_version` on its envelope.
+
+  Org-only concepts (`blast_radius`, `usage`, `version_specs`, `remediation`)
+  moved under a declared `extensions.org_scan` block. An extension may add
+  keys; it may never rename or shadow a shared field.
+
+  **`--schema v1` selects the previous pair of shapes, byte for byte**, on
+  `analyze`, `scan-org` and `scan-user`. It is deprecated and **removed in
+  1.0.0**. The deprecation notice goes to stderr, so stdout stays parseable.
+  The v1 writers are frozen in `cli/json_v1.py` and `org_scan/report_v1.py`
+  and are self-contained; they are not kept in sync with v2.
+
+  Fixed in the process, because a mechanical rename would have preserved them:
+
+  - **`analyze -o json` computed licence and community data on every run and
+    never serialized it.** It emitted `scores.license_score` while withholding
+    which licence produced it. Schema v2 emits `license` and `community` blocks
+    on both paths.
+  - **The advisory list was emitted twice** in `analyze`, under
+    `vulnerability_summary.advisories` and again under `vulnerabilities`. It
+    now appears exactly once, at `advisories.details`.
+  - **`scan-org` dropped `applicability_unknown_count` /
+    `applicability_unknown_reasons`**, collapsing "no applicable advisories"
+    into "we could not tell whether these apply". Both survive on both paths.
+
+- **BREAKING CHANGE: an unmeasured signal is now structurally distinct from a
+  measured zero in the output.** The two-state `Measurement` stopped at the
+  scorer; both writers flattened it to a bare `null`, which a consumer cannot
+  tell from "measured, and the answer happens to be null". Schema v2 replaces
+  `scores` / `component_scores` with `signals`, where each entry is
+  `{"state": "measured", "value": …}` or `{"state": "unmeasured", "reason": …}`
+  — so a consumer can tell not only *that* a signal is missing but *why*.
+
+- **BREAKING CHANGE: `remediation` is a structured block, not a sentence.**
+  `{action, fix_versions, target_version, detail}` with an enumerated action
+  (`upgrade_to_fixed_version`, `upgrade_to_latest`, `replace`, `no_action`,
+  `unclassified`) so an agent branches on a value instead of regexing prose.
+  `unclassified` is the escape variant: an unclassifiable case is reported as
+  such rather than force-fitted into a neighbouring action. `fix_versions` and
+  `target_version` are treated as untrusted registry data — anything that could
+  not be a version is refused rather than published.
+
 ### Removed
+
+- **BREAKING CHANGE: four fields are gone from the JSON output** rather than
+  carried into the frozen contract, all still available under `--schema v1`:
+  `display_name` and `versions_display` were string formatting over fields
+  already in the payload; `key_signals` was a third hand-maintained
+  English-string generator over the same scores `risk_factors` already
+  describes; the per-dependency `unknown_signal_count` is
+  `len(unknown_signals)`. The HTML, terminal and CSV reports now render the
+  scorer's own `risk_factors`, so there is one generator instead of three.
+  `version_specs` is **kept**: it is the set of raw specifiers different
+  manifests declared, and no formatting reconstructs it from one resolved
+  version.
 
 - **BREAKING CHANGE: the simulated code-signing subsystem is gone, along with
   the public API it exposed.** `src/dependency_risk_profiler/secure_release/`
