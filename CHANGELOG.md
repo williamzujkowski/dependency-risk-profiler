@@ -59,6 +59,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `target_version` are treated as untrusted registry data — anything that could
   not be a version is refused rather than published.
 
+  The CSV report's `remediation` column is now that same block rendered as one
+  sentence, rather than a second precedence chain over the same facts. Two
+  independent descriptions of one dependency can disagree, and this pair did
+  worse than drift: the prose path printed raw registry version strings that
+  the structured path had already refused as unsafe to publish. The wording of
+  the column changes as a result — it names the action and the version facts
+  the structure carries, and is blank for `no_action`.
+
+### Fixed
+
+- **`scan-org` produced a different risk figure for identical input across
+  runs.** The org repository summary averaged a float over the dependencies in
+  a repository, and read those dependencies out of a `set`. Set iteration order
+  for strings varies with `PYTHONHASHSEED`, which CPython randomises per
+  process, and float addition is not associative — so `average_risk_score`
+  moved in its last bit from one run to the next, with nothing about the input
+  changed. A last-bit difference, but a real one, in a number the tool
+  publishes: it defeats byte-comparison of two reports (exactly the wall the
+  schema-v2 work hit while proving its `--schema v1` guarantee, which it could
+  only get by pinning `PYTHONHASHSEED=0`) and it breaks scan-to-scan diffing,
+  since "what changed since last week" is worthless if a number moves when
+  nothing did. The summary now accumulates in sorted identity order.
+
+  Worth recording, since it explains why CI did not catch this: CPython 3.12
+  gave `sum()` Neumaier compensation, which hides the symptom on 3.12 for
+  values in this range. It was live on the 3.9-3.11 jobs. A published number's
+  stability should not rest on the interpreter's summation algorithm. A test
+  now asserts the property the honest way — two `scan-org` runs under different
+  `PYTHONHASHSEED` values in child processes, compared byte for byte — with a
+  second test pinning the fixture's order-sensitivity so the sweep cannot
+  quietly become decorative. A sweep of every other `sum()` and float aggregate
+  in `src/` found no second instance: the rest sum over lists, or sum integers.
+
 ### Removed
 
 - **BREAKING CHANGE: four fields are gone from the JSON output** rather than

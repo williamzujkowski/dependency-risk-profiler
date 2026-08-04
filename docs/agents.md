@@ -167,6 +167,12 @@ version that is `>=` every relevant `fix_versions` entry.
 > becomes `unclassified`), but you must still pass them as **arguments**, never
 > interpolate them into a shell string. Same for `name` and `installed_version`.
 
+The `remediation` column in the CSV report is this same block rendered as one
+sentence — `detail`, plus the target or the published fixes, and blank for
+`no_action`. It is generated from the structure, not classified beside it, so
+the CSV cannot describe a dependency differently from the JSON and cannot print
+a version string the JSON refused. Branch on the JSON; read the CSV.
+
 ## The envelopes
 
 ### `analyze --output json`

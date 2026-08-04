@@ -388,9 +388,9 @@ def test_remediation_target_version_abstains_when_several_fixes_apply() -> None:
     """GUARD: picking among fix versions needs range resolution we do not do."""
     block = remediation(_metadata(), fix_versions=["3.1.4", "3.2.0"])
 
-    assert block["action"] == RemediationAction.UPGRADE_TO_FIXED_VERSION.value
-    assert block["fix_versions"] == ["3.1.4", "3.2.0"]
-    assert block["target_version"] is None
+    assert block.action is RemediationAction.UPGRADE_TO_FIXED_VERSION
+    assert block.fix_versions == ("3.1.4", "3.2.0")
+    assert block.target_version is None
 
 
 def test_remediation_escapes_rather_than_guessing_an_action() -> None:
@@ -401,9 +401,12 @@ def test_remediation_escapes_rather_than_guessing_an_action() -> None:
     """
     block = remediation(_metadata(), fix_versions=["3.1.4; rm -rf /"])
 
-    assert block["action"] == RemediationAction.UNCLASSIFIED.value
-    assert block["fix_versions"] == []
-    assert block["target_version"] is None
+    assert block.action is RemediationAction.UNCLASSIFIED
+    assert block.fix_versions == ()
+    assert block.target_version is None
+    # And the prose the CSV prints is derived from that same structure, so the
+    # rejected string does not reach a human-facing report either.
+    assert "rm -rf" not in block.sentence()
 
 
 def test_fix_versions_are_treated_as_untrusted_registry_data() -> None:
@@ -430,7 +433,7 @@ def test_no_action_is_distinct_from_unclassified() -> None:
 
     block = remediation(clean, fix_versions=[])
 
-    assert block["action"] == RemediationAction.NO_ACTION.value
+    assert block.action is RemediationAction.NO_ACTION
 
 
 def test_deprecation_without_an_advisory_is_a_replace() -> None:
@@ -441,7 +444,7 @@ def test_deprecation_without_an_advisory_is_a_replace() -> None:
 
     block = remediation(deprecated, fix_versions=[])
 
-    assert block["action"] == RemediationAction.REPLACE.value
+    assert block.action is RemediationAction.REPLACE
 
 
 def test_both_envelopes_declare_the_schema_version() -> None:

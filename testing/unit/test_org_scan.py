@@ -9,6 +9,7 @@ import requests
 from typer.testing import CliRunner
 
 from dependency_risk_profiler.cli.typer_cli import app
+from dependency_risk_profiler.contract import Remediation, RemediationAction
 from dependency_risk_profiler.models import (
     CommunityMetrics,
     DependencyMetadata,
@@ -600,6 +601,43 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert "Most exposed risky dependencies:" in summary
     assert "python:risky@1.0 · HIGH · 2 / 2 repos" in summary
     assert "Riskiest repositories:" in summary
+
+
+def test_csv_remediation_prose_is_generated_from_the_structured_block(
+    tmp_path: Path,
+) -> None:
+    """INVARIANT (#164 step 6): one classifier, two renderings, not two of each.
+
+    The CSV column used to run its own precedence chain over the same facts.
+    Two independent descriptions of one dependency can disagree, and this pair
+    did worse than drift: the prose path printed raw registry version strings
+    the structured path had already refused as unsafe to publish. The sentence
+    is now derived from the block, so this rebuilds it from the serialized JSON
+    and demands the bytes match.
+    """
+    report = OrgScanRunner(FixtureGitHubClient(), FixtureProfiler()).run(
+        OrgScanOptions(org="acme")
+    )
+    csv_path = tmp_path / "org.csv"
+    write_csv_report(report, csv_path)
+    with csv_path.open(encoding="utf-8") as handle:
+        prose_by_package = {
+            row["package"]: row["remediation"] for row in csv.DictReader(handle)
+        }
+
+    inventory = cast(List[Dict[str, object]], report_to_dict(report)["inventory"])
+    assert prose_by_package
+    for entry in inventory:
+        extensions = cast(Dict[str, object], entry["extensions"])
+        org_scan = cast(Dict[str, object], extensions["org_scan"])
+        block = cast(Dict[str, object], org_scan["remediation"])
+        rebuilt = Remediation(
+            action=RemediationAction(cast(str, block["action"])),
+            fix_versions=tuple(cast(List[str], block["fix_versions"])),
+            target_version=cast(Optional[str], block["target_version"]),
+            detail=cast(str, block["detail"]),
+        )
+        assert prose_by_package[cast(str, entry["name"])] == rebuilt.sentence()
 
 
 def test_zero_high_risk_headline_still_reports_advisories_and_coverage() -> None:

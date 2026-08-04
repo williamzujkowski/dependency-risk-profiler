@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
-from ..contract import SCHEMA_VERSION, remediation, scored_dependency
+from ..contract import SCHEMA_VERSION, Remediation, remediation, scored_dependency
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel, SecurityMetrics
 from ..versioning import (
     calendar_drift_days,
@@ -170,7 +170,7 @@ def _dependency_to_csv_row(
         "license": license_info.license_id if license_info is not None else "",
         "deprecated": "yes" if metadata.is_deprecated else "no",
         "known_vulnerable": "yes" if dependency.is_known_vulnerable else "no",
-        "remediation": _remediation_hint(dependency) or "",
+        "remediation": _remediation_for(dependency).sentence(),
         "advisories_scored": (
             metrics.counted_vulnerability_count if metrics is not None else ""
         ),
@@ -1036,36 +1036,20 @@ def _scored_fixed_versions(dependency: AggregatedDependency) -> List[str]:
     return versions
 
 
-def _remediation_hint(dependency: AggregatedDependency) -> Optional[str]:
-    """Return a one-line, action-oriented remediation string, or ``None``.
+def _remediation_for(dependency: AggregatedDependency) -> Remediation:
+    """Classify what to do about one dependency, once, for every renderer.
 
-    Honest by construction: it states the action the available data supports
-    and no more. It does not attempt cross-ecosystem version-range resolution
-    (that's tracked separately), so for a known-vulnerable dependency it names
-    the fix version(s) and leaves the precise pick to the caller. Precedence:
-    known-vulnerable (upgrade past the fixes, or replace if unfixed), then
-    deprecation (replace), then version drift (upgrade to latest). Returns
-    ``None`` when there is no supported action.
+    The JSON embeds :meth:`Remediation.to_dict` and the CSV prints
+    :meth:`Remediation.sentence`, so both describe the same classification
+    rather than two of them (#164 step 6). Until this existed the CSV ran a
+    second precedence chain of its own, which — beyond drifting from the
+    structured block — printed raw registry version strings that the structured
+    path had already refused as unsafe to publish.
     """
-    metadata = dependency.risk_score.dependency
-    installed = metadata.installed_version or "the installed version"
-    if dependency.is_known_vulnerable:
-        fixes = _scored_fixed_versions(dependency)
-        if fixes:
-            return (
-                f"{installed} has scored advisories; upgrade to a version at or "
-                f"past the fix(es): {', '.join(fixes)}"
-            )
-        return (
-            f"{installed} has scored advisories with no published fix; "
-            "evaluate a replacement"
-        )
-    if metadata.is_deprecated:
-        return "deprecated upstream; evaluate a maintained replacement"
-    latest = metadata.latest_version
-    if latest and latest != installed:
-        return f"behind latest; upgrade {installed} → {latest}"
-    return None
+    return remediation(
+        dependency.risk_score.dependency,
+        fix_versions=_scored_fixed_versions(dependency),
+    )
 
 
 def _advisory_list(
@@ -1420,10 +1404,7 @@ def _dependency_to_dict(
                 # raw specifiers the manifests actually declared, and it cannot
                 # be reconstructed from one resolved version.
                 "version_specs": dependency.version_specs_list,
-                "remediation": remediation(
-                    dependency.risk_score.dependency,
-                    fix_versions=_scored_fixed_versions(dependency),
-                ),
+                "remediation": _remediation_for(dependency).to_dict(),
             }
         },
     )
