@@ -84,8 +84,10 @@ parseable. Migrate.
     "filtered_reasons": { "withdrawn": 1 },
     "applicability_unknown": 1,               // #61: could not decide applicability
     "applicability_unknown_reasons": { "no_affected_ranges": 1 },
+    "severity_unknown": 0,                    // #272: counted, no severity published
+    "severity_unknown_reasons": {},
     "max_counted_cvss_score": 7.5,
-    "max_counted_severity": "HIGH",
+    "max_counted_severity": "HIGH",           // MALICIOUS ranks above CRITICAL
     "details": [ { "id": "GHSA-…", "counted_in_score": true,
                    "fixed_versions": ["3.1.4"] } ]
   },
@@ -142,6 +144,15 @@ Two consequences for a gate:
 * The floor keys only on `advisories.counted_in_score`. Filtered advisories —
   fixed before your version, withdrawn, informational, below the severity
   threshold — floor nothing.
+* A counted advisory that states **no** severity floors nothing either, and
+  `max_counted_severity` stays `null` for it. Read `advisories.severity_unknown`
+  beside it: a non-zero count there with a null maximum is a package with live
+  advisories none of whose publishers scored them, which is the normal case for
+  Go and Rust. `known_vulnerable` is still `true`.
+* `MALICIOUS` is a severity above `CRITICAL`, assigned to an OSV Malicious
+  Packages advisory (`MAL-*`). It floors at `CRITICAL` with no one-rung
+  discount, and `max_counted_cvss_score` stays `null` unless some other
+  advisory in the same group published a real score.
 
 ### `signals` — measured zero is not the same as unmeasured
 
@@ -385,5 +396,10 @@ risk level to compare.
   from the score and from `known_vulnerable`; act on the scored ones.
   `advisories.applicability_unknown` are advisories whose applicability to the
   installed version could not be decided — neither "applies" nor "doesn't".
+  `advisories.severity_unknown` are advisories that **do** apply and whose
+  severity nobody published; they are counted, and no threshold filters them.
+- **One vulnerability, one entry.** Records that name each other in `aliases`
+  are collapsed to one, keeping the worst severity in the group; the collapsed
+  IDs stay readable in the surviving record's `aliases`.
 - **Versioned.** Breaking changes bump `schema_version` and are announced with
   a removal version, not a vague "later".

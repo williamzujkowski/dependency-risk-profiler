@@ -133,6 +133,8 @@ def _metadata() -> DependencyMetadata:
             filtered_vulnerability_reasons={"withdrawn": 1},
             applicability_unknown_count=1,
             applicability_unknown_reasons={"no_affected_ranges": 1},
+            severity_unknown_count=1,
+            severity_unknown_reasons={"source published no severity": 1},
             max_cvss_score=7.5,
             max_vulnerability_severity="HIGH",
             vulnerability_details=[
@@ -333,6 +335,23 @@ def test_applicability_unknown_survives_both_paths() -> None:
 
         assert advisories["applicability_unknown"] == 1
         assert advisories["applicability_unknown_reasons"] == {"no_affected_ranges": 1}
+
+
+def test_severity_unknown_survives_both_paths() -> None:
+    """The #272 counters reach a consumer, on both commands.
+
+    A count with no reader is a count nobody can act on. These say how many
+    counted advisories state no severity, and why — the fact that makes a null
+    ``max_counted_severity`` beside a non-zero ``counted_in_score`` readable
+    rather than contradictory.
+    """
+    for entry in (_analyze_dependency(), _org_dependency()):
+        advisories = cast(Dict[str, object], entry["advisories"])
+
+        assert advisories["severity_unknown"] == 1
+        assert advisories["severity_unknown_reasons"] == {
+            "source published no severity": 1
+        }
 
 
 def test_unmeasured_is_structurally_distinct_from_a_measured_zero() -> None:

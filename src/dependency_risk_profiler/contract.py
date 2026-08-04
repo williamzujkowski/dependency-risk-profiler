@@ -522,6 +522,8 @@ def advisories_to_dict(metrics: Optional[SecurityMetrics]) -> Dict[str, object]:
             "filtered_reasons": {},
             "applicability_unknown": None,
             "applicability_unknown_reasons": {},
+            "severity_unknown": None,
+            "severity_unknown_reasons": {},
             "max_counted_cvss_score": None,
             "max_counted_severity": None,
             "details": [],
@@ -536,6 +538,13 @@ def advisories_to_dict(metrics: Optional[SecurityMetrics]) -> Dict[str, object]:
         # (#61); without them "none apply" and "we could not tell" read alike.
         "applicability_unknown": metrics.applicability_unknown_count,
         "applicability_unknown_reasons": dict(metrics.applicability_unknown_reasons),
+        # Counted advisories that state no severity, and why (#272). Additive,
+        # and load-bearing for reading the two fields below: a non-zero count
+        # here with a null ``max_counted_severity`` is a package with live
+        # advisories none of whose publishers scored them, which is the normal
+        # case for Go and Rust and for every malicious-package advisory.
+        "severity_unknown": metrics.severity_unknown_count,
+        "severity_unknown_reasons": dict(metrics.severity_unknown_reasons),
         "max_counted_cvss_score": metrics.max_cvss_score,
         "max_counted_severity": metrics.max_vulnerability_severity,
         "details": list(metrics.vulnerability_details),

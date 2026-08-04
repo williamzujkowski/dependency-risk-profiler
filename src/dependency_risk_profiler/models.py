@@ -125,6 +125,15 @@ class SecurityMetrics:
     # be decided, with the reasons why. Reported rather than assumed away (#61).
     applicability_unknown_count: Optional[int] = None
     applicability_unknown_reasons: Dict[str, int] = field(default_factory=dict)
+    # Counted advisories whose severity nobody published, with the reasons why.
+    # The same two-state shape as ``applicability_unknown`` above, and needed
+    # for the same reason: these advisories were being dropped from the score
+    # for carrying no severity label, which silenced the ``GO-*`` and
+    # ``RUSTSEC-*`` databases entirely and every malware finding the tool made
+    # (#272). ``max_vulnerability_severity`` cannot express them — it holds a
+    # tier or nothing, and "nothing" means no counted advisory stated one.
+    severity_unknown_count: Optional[int] = None
+    severity_unknown_reasons: Dict[str, int] = field(default_factory=dict)
     max_vulnerability_severity: Optional[str] = None
     vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
 

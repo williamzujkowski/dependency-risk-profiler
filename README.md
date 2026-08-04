@@ -77,7 +77,7 @@ Useful flags: `--max-repos N`, `--include-archived`, `--include-collaborations` 
 - **Maintainer concentration** — single-maintainer and low-maintainer packages carry more continuity risk.
 - **Provenance and repository health** — source location, project metadata, tests, CI, contribution signals, and related supply-chain health checks.
 - **License risk** — permissive, copyleft, missing, or unusual license signals.
-- **Vulnerabilities** — advisories are considered, but withdrawn, informational, low-confidence, and below-threshold findings are filtered out of scoring (raise the bar with `--minimum-vulnerability-severity MEDIUM`).
+- **Vulnerabilities** — advisories are considered, but withdrawn, informational, low-confidence, and below-threshold findings are filtered out of scoring (raise the bar with `--minimum-vulnerability-severity MEDIUM`). An advisory that applies to the installed version and states **no** severity is counted at every threshold, not filtered: whole databases publish none (`GO-*`, `RUSTSEC-*`, and every malicious-package `MAL-*` record), and silence about how bad something is is not a reason to say it is not there. Records that alias each other are one vulnerability and count once.
 
 Two behaviors are intentionally conservative:
 

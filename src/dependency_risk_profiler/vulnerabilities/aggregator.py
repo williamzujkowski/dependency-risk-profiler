@@ -81,6 +81,28 @@ CACHE_EXPIRY = 24 * 60 * 60  # 24 hours in seconds
 # In-memory cache (for backward compatibility): key -> (payloads, cached-at).
 VULNERABILITY_CACHE: Dict[str, Tuple[List[Dict[str, object]], float]] = {}
 DEFAULT_MINIMUM_SEVERITY_FOR_SCORING = "LOW"
+
+#: What "this package version contains malicious code" is worth on the severity
+#: scale. Its own rung, above ``CRITICAL``, and not a CVSS band.
+#:
+#: A malware advisory has no severity for a reason that is categorical rather
+#: than a gap: CVSS scores a vulnerability *in* software, and there is nothing
+#: to score when the software **is** the attack. Folding these into the
+#: unknown-severity bucket would say the tool could not tell how bad it was,
+#: which is the one thing it can tell.
+#:
+#: Recognized by ID prefix. ``MAL-`` is OSV's registered prefix for the OSV
+#: Malicious Packages database, which is a schema-level fact about the ID
+#: rather than a guess about the text, and the check reads a record's aliases
+#: too so a merged group keeps it (#272, #274).
+MALICIOUS_SEVERITY = "MALICIOUS"
+MALICIOUS_ADVISORY_ID_PREFIX = "MAL-"
+
+#: The severity tiers, ordered. ``UNKNOWN`` is deliberately **absent**: an
+#: advisory whose severity nobody published is not an advisory of severity
+#: zero, and nothing may order it against a tier that is a measurement. Every
+#: read of this mapping is a membership test first, so an unstated severity
+#: raises rather than silently sorting below ``LOW`` (#272).
 SEVERITY_ORDER = {
     "INFO": 0,
     "NONE": 0,
@@ -88,6 +110,7 @@ SEVERITY_ORDER = {
     "MEDIUM": 2,
     "HIGH": 3,
     "CRITICAL": 4,
+    MALICIOUS_SEVERITY: 5,
 }
 SEVERITY_FROM_CVSS = (
     (9.0, "CRITICAL"),
@@ -95,6 +118,20 @@ SEVERITY_FROM_CVSS = (
     (4.0, "MEDIUM"),
     (0.1, "LOW"),
 )
+
+#: The tiers that name a CVSS band, and so the only ones a CVSS score may be
+#: derived from when an advisory publishes none. ``MALICIOUS`` is excluded
+#: because deriving 10.0 from it would publish a CVSS nobody scored, in a field
+#: whose whole contract is that it holds a measurement or nothing (#217).
+CVSS_SEVERITY_TIERS = frozenset(SEVERITY_ORDER) - {MALICIOUS_SEVERITY}
+
+#: Why an advisory's severity could not be read. Two states, not one, because
+#: "the database never publishes one" and "the value in this record is not a
+#: severity" call for different action: the first is normal for GO-*, RUSTSEC-*
+#: and MAL-*, the second is a parser or a publisher to go and look at.
+SEVERITY_NOT_PUBLISHED_REASON = "source published no severity"
+SEVERITY_UNREADABLE_REASON = "severity is not a value this code can read"
+
 LOW_CONFIDENCE_VALUES = {"LOW", "VERY_LOW", "UNKNOWN", "UNTRUSTED"}
 
 # Get cache settings from environment variables
@@ -1304,6 +1341,9 @@ def exploit_score_from_severity(severity: str) -> float:
         "MEDIUM": 0.45,
         "HIGH": 0.75,
         "CRITICAL": 1.0,
+        # A package that ships malicious code is not one rung of judgment away
+        # from the top of this scale.
+        MALICIOUS_SEVERITY: 1.0,
     }
     return mapping.get(severity, 0.0)
 
@@ -1316,9 +1356,21 @@ def annotate_vulnerabilities_for_scoring(
 ) -> List[Dict[str, object]]:
     """Annotate vulnerabilities with scoring inclusion and filter reasons.
 
+    **What ``minimum_severity`` does to an advisory with no published
+    severity: nothing, at any threshold.** The threshold is a comparison
+    against a measured tier, and there is no comparison to make — so a
+    severity-less advisory that applies to the installed version is counted
+    under ``--minimum-vulnerability-severity CRITICAL`` exactly as it is under
+    ``LOW``. Dropping it at a high threshold would be the tool answering "how
+    bad is this?" with "not very" on the strength of nobody having said, which
+    is #272 reappearing behind a flag. The threshold still does its whole job
+    on advisories that *do* state a severity, which is what a user raising it
+    is asking for.
+
     Args:
         vulnerabilities: Vulnerability records from all sources.
-        minimum_severity: Minimum severity tier that counts toward scoring.
+        minimum_severity: Minimum **stated** severity tier that counts toward
+            scoring. Advisories that state no severity are outside its reach.
         installed_version: The version actually installed, used to rule out
             advisories that were fixed before it (#61). Omitting it leaves
             every advisory's applicability unknown, which counts them all.
@@ -1351,6 +1403,8 @@ def _annotate_vulnerability_for_scoring(
         vulnerability.get("normalized_severity") or vulnerability.get("severity"),
         cvss_score,
     )
+    if _is_malicious_package_advisory(vulnerability):
+        normalized_severity = MALICIOUS_SEVERITY
     withdrawn = _is_withdrawn(vulnerability)
     confidence = _normalize_confidence(vulnerability)
     applicability = affected_ranges.evaluate_applicability(
@@ -1361,6 +1415,8 @@ def _annotate_vulnerability_for_scoring(
         scheme,
     )
 
+    severity_unknown = normalized_severity == "UNKNOWN"
+
     filter_reasons = []
     if withdrawn:
         filter_reasons.append("withdrawn")
@@ -1368,9 +1424,17 @@ def _annotate_vulnerability_for_scoring(
         filter_reasons.append(affected_ranges.NOT_AFFECTED_FILTER_REASON)
     if normalized_severity == "INFO":
         filter_reasons.append("informational")
-    elif normalized_severity == "UNKNOWN":
-        filter_reasons.append("unknown severity")
-    elif SEVERITY_ORDER[normalized_severity] < SEVERITY_ORDER[threshold]:
+    elif not severity_unknown and (
+        SEVERITY_ORDER[normalized_severity] < SEVERITY_ORDER[threshold]
+    ):
+        # An unstated severity is not compared: see
+        # ``annotate_vulnerabilities_for_scoring`` for the argument. The
+        # ``unknown severity`` filter reason that used to live on this branch
+        # is gone entirely — it discarded advisories the range matcher had
+        # already decided were live against the installed version, and whole
+        # databases (``GO-*``, ``RUSTSEC-*``, ``MAL-*``) publish no severity at
+        # all, so it silenced two ecosystems' native advisory sources and every
+        # malware finding the tool ever made (#272).
         filter_reasons.append(f"below {threshold.lower()} threshold")
     if confidence in LOW_CONFIDENCE_VALUES:
         filter_reasons.append("low confidence")
@@ -1378,6 +1442,14 @@ def _annotate_vulnerability_for_scoring(
     counted = not filter_reasons
     annotated["normalized_severity"] = normalized_severity
     annotated["cvss_score"] = cvss_score
+    # Two states, never one: an advisory can be counted *and* carry no readable
+    # severity, and a reader has to be able to tell that from a measured LOW.
+    # This is the same shape ``applicability_unknown`` already has one field
+    # over, and it is now the only thing ``UNKNOWN`` means here (rule 4).
+    annotated["severity_unknown"] = severity_unknown
+    annotated["severity_unknown_reason"] = (
+        _severity_unknown_reason(vulnerability) if severity_unknown else None
+    )
     annotated["withdrawn"] = withdrawn
     annotated["confidence"] = confidence
     annotated["version_match"] = applicability.status.value
@@ -1386,6 +1458,53 @@ def _annotate_vulnerability_for_scoring(
     annotated["filtered"] = not counted
     annotated["filter_reasons"] = filter_reasons
     return annotated
+
+
+def _is_malicious_package_advisory(vulnerability: Dict[str, object]) -> bool:
+    """Return whether a record is a malicious-package advisory.
+
+    Reads the record's own ID **and** its aliases, so a group that collapsed a
+    ``MAL-`` record into a lexicographically earlier ``GHSA-`` one still
+    answers yes (#274 merges before this runs).
+
+    Args:
+        vulnerability: A normalized advisory record.
+
+    Returns:
+        True when any identifier the record answers to is an OSV Malicious
+        Packages ID.
+    """
+    identifiers = [_advisory_identity(vulnerability), *_advisory_aliases(vulnerability)]
+    return any(
+        identifier.startswith(MALICIOUS_ADVISORY_ID_PREFIX)
+        for identifier in identifiers
+    )
+
+
+def _severity_unknown_reason(vulnerability: Dict[str, object]) -> str:
+    """Return why an advisory's severity could not be read.
+
+    Args:
+        vulnerability: A normalized advisory record whose severity came out
+            ``UNKNOWN``.
+
+    Returns:
+        One of :data:`SEVERITY_NOT_PUBLISHED_REASON` or
+        :data:`SEVERITY_UNREADABLE_REASON`.
+    """
+    for key in ("severity", "normalized_severity"):
+        value = vulnerability.get(key)
+        if (
+            isinstance(value, str)
+            and value.strip()
+            and value.strip().upper() != "UNKNOWN"
+        ):
+            return SEVERITY_UNREADABLE_REASON
+    # A score is present but did not survive ``normalize_cvss_score``: that is a
+    # value claiming to be a CVSS and failing, not an absence.
+    if vulnerability.get("cvss_score") is not None:
+        return SEVERITY_UNREADABLE_REASON
+    return SEVERITY_NOT_PUBLISHED_REASON
 
 
 def _extract_osv_cvss_score(severity_data: object) -> Optional[float]:
@@ -2033,6 +2152,15 @@ def _update_dependency_with_vulnerabilities(
         for vuln in counted_vulnerabilities
         if vuln.get("version_match") == affected_ranges.Applicability.UNKNOWN.value
     ]
+    # Counted advisories whose severity nobody published. The same two-state
+    # treatment ``applicability_unknown`` gets, and for the same reason: these
+    # are advisories the tool decided apply, so dropping them was the fail-open
+    # direction, and folding them into a default tier would be a measurement
+    # nobody made. Whole databases live here — ``GO-*``, ``RUSTSEC-*`` and the
+    # malware advisories, before they are recognized as ``MALICIOUS`` (#272).
+    severity_unknown_vulnerabilities = [
+        vuln for vuln in counted_vulnerabilities if vuln.get("severity_unknown") is True
+    ]
 
     # Count vulnerabilities
     dependency.security_metrics.vulnerability_count = len(vulnerabilities)
@@ -2052,6 +2180,12 @@ def _update_dependency_with_vulnerabilities(
     dependency.security_metrics.applicability_unknown_reasons = (
         _count_applicability_reasons(undecided_vulnerabilities)
     )
+    dependency.security_metrics.severity_unknown_count = len(
+        severity_unknown_vulnerabilities
+    )
+    dependency.security_metrics.severity_unknown_reasons = _count_severity_reasons(
+        severity_unknown_vulnerabilities
+    )
 
     # Find maximum CVSS score. ``None`` is the unmeasured state and 0.0 is a
     # measurement: a CVSS of 0.0 and an INFO/NONE tier are both real answers
@@ -2066,17 +2200,23 @@ def _update_dependency_with_vulnerabilities(
     for vuln in counted_vulnerabilities:
         candidate = normalize_cvss_score(vuln.get("cvss_score"))
         if candidate is None:
-            # No CVSS: derive from the tier, but only from a tier that is a
-            # statement about severity. ``severity_to_score`` answers 0.0 both
-            # for NONE and for anything it does not recognize, so UNKNOWN would
-            # otherwise fabricate a measured zero.
+            # No CVSS: derive from the tier, but only from a tier that names a
+            # CVSS band. ``severity_to_score`` answers 0.0 both for NONE and for
+            # anything it does not recognize, so UNKNOWN would otherwise
+            # fabricate a measured zero — and MALICIOUS would fabricate a 10.0
+            # nobody scored, which is why it is not in ``CVSS_SEVERITY_TIERS``.
             tier = _get_string(vuln, "normalized_severity")
-            if tier in SEVERITY_ORDER:
+            if tier in CVSS_SEVERITY_TIERS:
                 candidate = severity_to_score(tier)
         if candidate is not None:
             max_cvss = candidate if max_cvss is None else max(max_cvss, candidate)
         severity = _get_string(vuln, "normalized_severity")
-        if severity and (
+        # Membership first, always: ``UNKNOWN`` is not in ``SEVERITY_ORDER`` on
+        # purpose, so this is where a severity nobody published stops rather
+        # than sorting itself in at the bottom of the scale. The maximum stays
+        # ``None``, which is what the field means — no counted advisory stated
+        # a severity — and ``severity_unknown_count`` says how many did not.
+        if severity in SEVERITY_ORDER and (
             max_severity is None
             or SEVERITY_ORDER[severity] > SEVERITY_ORDER[max_severity]
         ):
@@ -2098,6 +2238,18 @@ def _count_filter_reasons(vulnerabilities: List[Dict[str, object]]) -> Dict[str,
             for reason in filter_reasons:
                 if isinstance(reason, str):
                     reason_counts[reason] = reason_counts.get(reason, 0) + 1
+    return reason_counts
+
+
+def _count_severity_reasons(
+    vulnerabilities: List[Dict[str, object]],
+) -> Dict[str, int]:
+    """Tally why severity could not be read for counted advisories."""
+    reason_counts: Dict[str, int] = {}
+    for vulnerability in vulnerabilities:
+        reason = _get_string(vulnerability, "severity_unknown_reason")
+        if reason:
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
     return reason_counts
 
 

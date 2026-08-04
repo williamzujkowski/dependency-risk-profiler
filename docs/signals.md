@@ -250,15 +250,43 @@ still reproducible and the reason it cannot quietly come back.
 
 | Maximum counted severity | Verdict may not sit below |
 |---|---|
+| `MALICIOUS` | `CRITICAL` |
 | `CRITICAL` | `HIGH` |
 | `HIGH` | `MEDIUM` |
 | `MEDIUM` | `LOW` |
 | `LOW` | `LOW` |
+| *no severity published* | nothing — see below |
 
 **One rung under the worst live advisory**, clamped at the bottom of the scale.
 The two lower rows are no-ops by construction — `LOW` is the floor of the scale
 — and they are written out anyway, because a rule with unstated edges is a rule
 somebody will re-derive differently.
+
+**`MALICIOUS` is the exception, and it gets no slack.** It is the tier this
+tool assigns to an OSV Malicious Packages advisory (`MAL-*`), which will never
+carry a CVSS: CVSS scores a vulnerability *in* software, and there is nothing
+to score when the software **is** the attack. The rung of slack every other row
+gets is paid for by reachability, which this tool does not measure — and
+malware does not depend on it. The payload runs at install or on import, from a
+package the manifest already asked for, and there is no vulnerable code path
+for a caller to avoid. So the allowance has nothing to be an allowance for, and
+`MALICIOUS` floors at `CRITICAL` rather than one rung under it.
+
+**An advisory whose severity nobody published floors nothing, and that is a
+decision.** Absence of a severity is not evidence of a high one, so the honest
+floor is the weakest rung the scale has — and `LOW` floors at `LOW`, the bottom
+of the scale, so such a floor would forbid nothing any real verdict was going
+to do. `severity_floor` therefore returns nothing rather than a vacuous floor,
+which keeps `verdict_floor.applied` meaning what it says.
+
+What protects the reader is upstream of the floor. Before #272 these advisories
+were **discarded** — `counted_in_score: 0`, `known_vulnerable: false`,
+`0 scored` in the terminal — for a package holding an advisory the tool itself
+had matched against the pinned version. They are now counted, so
+`known_vulnerable` is true, the `N scored` column is non-zero, the `exploit`
+signal carries a non-zero floor rather than the 0.0 a clean package scores, and
+`advisories.severity_unknown` says how many counted advisories are in this
+state and why.
 
 The single rung of slack is the whole of the argument. Advisory severity is a
 property of the vulnerability considered alone: a CVSS base tier, assigned
@@ -292,10 +320,12 @@ reaches that count and therefore floors nothing:
 | Situation | Floors? |
 |---|---|
 | Advisory affects the installed version, at or above the scoring threshold | **yes** |
+| Advisory affects the installed version and states no severity | **counted, floors nothing** |
+| Advisory affects the installed version and is a `MAL-*` record | **yes, at `CRITICAL`** |
 | Fixed before the installed version, or otherwise not applicable (#61) | no |
 | Withdrawn | no |
-| Informational, or of unknown severity | no |
-| Below `--vuln-min-severity` | no |
+| Informational | no |
+| Below `--minimum-vulnerability-severity`, having stated a severity | no |
 | Advisory lookup failed or never ran (#219) | no — unmeasured is not a fact |
 | Verdict is `UNKNOWN` | no — see below |
 
