@@ -1,5 +1,34 @@
 # Dependabot configuration file
 # See documentation: https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+#
+# The `directory` of each entry is the ONLY thing that scopes it. There is no
+# way to enrol a directory and then subtract paths from it: `ignore` accepts
+# `dependency-name`, `versions`, and `update-types` — never `paths`. The three
+# entries below previously carried
+#
+#     ignore:
+#       - dependency-name: "*"
+#         paths: ["examples/**", "testing/**", ...]
+#
+# which GitHub rejects outright:
+#
+#     The property '#/updates/0/ignore/0' contains additional properties
+#     ["paths"] outside of the schema when none are allowed
+#
+# That made the WHOLE FILE invalid, so Dependabot processed none of it (#167,
+# #191). The intent behind those blocks was right and is preserved by scoping:
+# `directory: "/"` enrols only the root manifests, so the deliberately-outdated
+# scan fixtures under testing/projects/ are never enrolled in the first place.
+#
+# Those fixtures are scan TARGETS, pinned old on purpose so the test corpus
+# exercises version drift, advisory matching, and staleness. Bumping them
+# silently degrades the corpus — tests over a current fixture pass for the
+# wrong reason. Do not add an entry whose `directory` reaches them.
+#
+# Verify by observation, never by reading this file: a config that LOOKS
+# correct is exactly what shipped here for months. After any change, confirm
+# the `.github/dependabot.yml` check on the merge commit is green, and check
+# Insights -> Dependency graph -> Dependabot for a successful run per entry.
 
 version: 2
 updates:
@@ -7,68 +36,28 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      # Ignore all example and test dependencies as they're intentionally outdated for demonstration
-      - dependency-name: "*"
-        paths:
-          - "examples/**"
-          - "dependabot_check/**"
-          - "testing/**"
-          - "tests/**"
-          - "test_projects/**"
-          - "test_dirs/**"
-          - "test-projects/**"
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      # Ignore all example and test dependencies as they're intentionally outdated for demonstration
-      - dependency-name: "*"
-        paths:
-          - "examples/**"
-          - "dependabot_check/**"
-          - "testing/**"
-          - "tests/**"
-          - "test_projects/**"
-          - "test_dirs/**"
-          - "test-projects/**"
 
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      # Ignore all example and test dependencies as they're intentionally outdated for demonstration
-      - dependency-name: "*"
-        paths:
-          - "examples/**"
-          - "dependabot_check/**"
-          - "testing/**"
-          - "tests/**"
-          - "test_projects/**"
-          - "test_dirs/**"
-          - "test-projects/**"
 
-  # Keeps the commit-SHA pins in .github/workflows/ current (#186). Pinning to a
-  # SHA without an updater trades a mutable-tag risk for a frozen-pin risk; this
-  # entry is the half that makes the pins maintained rather than merely frozen.
+  # Keeps the commit-SHA pins in .github/workflows/ current (#186). Pinning to
+  # a SHA without an updater trades a mutable-tag risk for a frozen-pin risk;
+  # this entry is the half that makes the pins maintained rather than frozen.
   #
-  # Deliberately carries no `ignore` block. The three entries above use
-  # `ignore: - dependency-name: "*" / paths:` to exclude the scan fixtures and
-  # it does not work — Dependabot still opens PRs against testing/projects/**
-  # (#167). Do not copy that shape. Nothing needs excluding here anyway:
   # `github-actions` only ever reads `.github/workflows/`, which holds no
-  # fixtures.
+  # fixtures, so nothing needs excluding here.
   #
-  # Verify by observation, not by reading the docs — the #167 config *looks*
-  # correct and isn't. After this merges, check the repo's Dependabot job log
-  # (Insights -> Dependency graph -> Dependabot) for a "github-actions" entry
-  # with a successful last-run timestamp, then wait for an upstream action to
-  # publish a release and confirm a PR appears rewriting both the SHA and its
-  # trailing version comment. A green job log with no PR while an upstream tag
-  # has demonstrably advanced means this entry is not doing its job.
+  # Its acceptance test is a PR, not a green job log: wait for an upstream
+  # action to publish a release and confirm a PR appears rewriting both the SHA
+  # and its trailing version comment. A successful run with no PR, while an
+  # upstream tag has demonstrably advanced, means this entry is not working.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
