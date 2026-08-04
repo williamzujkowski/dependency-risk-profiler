@@ -109,6 +109,8 @@ def categorize_license(license_id: str) -> LicenseCategory:
 
     # Default to unknown
     return LicenseCategory.UNKNOWN
+
+
 def first_license_string(value: object) -> Optional[str]:
     """Return the first non-empty license string in a metadata value.
 
