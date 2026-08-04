@@ -65,7 +65,7 @@ class PythonAnalyzer(BaseAnalyzer):
         """
         super().__init__(timeout)
         # Cache for package metadata
-        self.metadata_cache = {}
+        self.metadata_cache: Dict[str, Dict[str, object]] = {}
 
     def analyze(
         self, dependencies: Dict[str, DependencyMetadata]

@@ -163,14 +163,6 @@ module = "dependency_risk_profiler.vulnerabilities.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = "dependency_risk_profiler.parsers.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.analyzers.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = "dependency_risk_profiler.cli.*"
 ignore_errors = true
 
