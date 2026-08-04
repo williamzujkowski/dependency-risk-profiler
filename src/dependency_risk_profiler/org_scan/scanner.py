@@ -9,9 +9,10 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple
 
+from ..manifest_guidance import recognise_unreadable_manifest_in_listing
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
@@ -25,8 +26,11 @@ from .models import (
     ManifestParseFailure,
     ManifestRef,
     OrgScanReport,
+    RepositoryCoverage,
+    RepositoryManifestListing,
     RepositoryRef,
     RepositoryRiskSummary,
+    UnreadableManifestRef,
     build_headline,
     canonical_ecosystem,
     risk_points,
@@ -93,8 +97,8 @@ class GitHubDiscoveryClient(Protocol):
         self,
         repo: RepositoryRef,
         supported_names: Iterable[str],
-    ) -> List[str]:
-        """List supported manifest paths in a repository."""
+    ) -> RepositoryManifestListing:
+        """List a repository's manifests, split into readable and unreadable."""
         raise NotImplementedError
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
@@ -115,6 +119,20 @@ class OrgScanOptions:
     concurrency: int = 8
 
 
+@dataclass(frozen=True)
+class _Discovery:
+    """What the discovery pass learned about every repository in the account."""
+
+    manifests: List[ManifestRef]
+    # Recognized dependency manifests nobody fetched, because their names say
+    # the parsers cannot use them.
+    unreadable: List[UnreadableManifestRef]
+    # Repositories whose tree listing raised. Nothing is known about their
+    # contents, which is not the same as knowing they are empty (#262).
+    undiscovered: Set[str]
+    warnings: List[str]
+
+
 @dataclass
 class _ParsedInventory:
     """Parsed dependency inventory before profiling."""
@@ -123,6 +141,11 @@ class _ParsedInventory:
     manifests: List[ManifestRef]
     unique_dependencies: Dict[DependencyKey, DependencyMetadata]
     occurrences: List[DependencyOccurrence]
+    # Manifests that were fetched and parsed without raising. A repository with
+    # one of these was read, whether or not the file declared any dependency.
+    read_manifests: Set[Tuple[str, str]] = field(default_factory=set)
+    unreadable_manifests: List[UnreadableManifestRef] = field(default_factory=list)
+    undiscovered_repositories: Set[str] = field(default_factory=set)
     parse_failures: List[ManifestParseFailure] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
 
@@ -157,10 +180,15 @@ class OrgScanRunner:
         self._emit(f"Discovered {len(repositories)} repositories to scan")
 
         self._ensure_parser_registry()
-        manifests = self._discover_manifests(repositories, options)
-        self._emit(f"Found {len(manifests)} supported manifests")
+        discovery = self._discover_manifests(repositories, options)
+        self._emit(f"Found {len(discovery.manifests)} supported manifests")
+        if discovery.unreadable:
+            self._emit(
+                f"Recognized {len(discovery.unreadable)} manifest(s) this tool "
+                "cannot read; they are reported, not scored"
+            )
 
-        parsed = self._parse_manifests(repositories, manifests)
+        parsed = self._parse_manifests(repositories, discovery)
         self._emit(
             "Parsed "
             f"{len(parsed.unique_dependencies)} unique dependencies across "
@@ -174,9 +202,26 @@ class OrgScanRunner:
 
     def _discover_manifests(
         self, repositories: List[RepositoryRef], options: OrgScanOptions
-    ) -> List[ManifestRef]:
-        """Discover and fetch supported manifests with bounded concurrency."""
+    ) -> _Discovery:
+        """Discover and fetch supported manifests with bounded concurrency.
+
+        Returns the discovery warnings rather than only logging them. They used
+        to be appended to a local list that the function then dropped on the
+        floor, so a repository whose tree listing was refused left no trace in
+        the report at all — it simply appeared with no dependencies, next to
+        repositories that genuinely have none (#262).
+
+        Args:
+            repositories: Every repository the scan was asked to cover.
+            options: Scan options, including discovery concurrency.
+
+        Returns:
+            The fetched manifests, the recognized-but-unreadable ones, and the
+            repositories whose trees never listed.
+        """
         manifests: List[ManifestRef] = []
+        unreadable: List[UnreadableManifestRef] = []
+        undiscovered: Set[str] = set()
         warnings: List[str] = []
         max_workers = max(1, options.concurrency)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -189,26 +234,48 @@ class OrgScanRunner:
                 repo = futures[future]
                 completed += 1
                 try:
-                    repo_manifests = future.result()
+                    repo_manifests, repo_unreadable = future.result()
                     manifests.extend(repo_manifests)
+                    unreadable.extend(repo_unreadable)
                 except Exception as exc:
                     warning = f"{repo.full_name}: manifest discovery failed: {exc}"
                     logger.warning(warning)
                     warnings.append(warning)
+                    undiscovered.add(repo.full_name)
                 total = len(repositories)
                 self._emit(f"Scanned manifest trees for {completed} / {total} repos")
 
         if warnings:
             logger.warning("Skipped %s repositories during discovery", len(warnings))
-        return sorted(manifests, key=lambda item: (item.repo_full_name, item.path))
+        return _Discovery(
+            manifests=sorted(
+                manifests, key=lambda item: (item.repo_full_name, item.path)
+            ),
+            unreadable=sorted(
+                unreadable, key=lambda item: (item.repo_full_name, item.path)
+            ),
+            undiscovered=undiscovered,
+            warnings=warnings,
+        )
 
     def _fetch_repo_manifests(
         self, repo: RepositoryRef, options: OrgScanOptions
-    ) -> List[ManifestRef]:
-        """Fetch all supported manifests for one repository."""
-        paths = self.github_client.list_manifest_paths(repo, SUPPORTED_MANIFEST_NAMES)
+    ) -> Tuple[List[ManifestRef], List[UnreadableManifestRef]]:
+        """Fetch one repository's supported manifests and name its unreadable ones.
+
+        Args:
+            repo: The repository to read.
+            options: Scan options, including the user's manifest globs.
+
+        Returns:
+            The fetched manifests and the recognized-but-unreadable ones. The
+            second list is never fetched, so it adds no requests.
+        """
+        listing = self.github_client.list_manifest_paths(repo, SUPPORTED_MANIFEST_NAMES)
         selected_paths = [
-            path for path in paths if self._matches_manifest_globs(path, options)
+            path
+            for path in listing.supported
+            if self._matches_manifest_globs(path, options)
         ]
         manifests: List[ManifestRef] = []
         for path in selected_paths:
@@ -233,15 +300,73 @@ class OrgScanRunner:
                     content=content,
                 )
             )
-        return manifests
+        return manifests, self._recognise_unreadable(repo, listing)
+
+    def _recognise_unreadable(
+        self, repo: RepositoryRef, listing: RepositoryManifestListing
+    ) -> List[UnreadableManifestRef]:
+        """Name the manifests in one repository that this tool cannot read.
+
+        Deliberately not filtered by ``--manifest-glob``. The glob narrows what
+        gets *scored*; this list answers "what did you not read", and a coverage
+        gap the user cannot see is the whole defect. The default globs are the
+        supported names, so filtering here would empty the list on every
+        default run.
+
+        Sibling lookup runs against ``listing.supported`` — the repository's own
+        tree — so a ``package.json`` with the lock file beside it is correctly
+        silent, and nothing is resolved against the local filesystem.
+
+        Args:
+            repo: The repository the listing came from.
+            listing: That repository's split manifest listing.
+
+        Returns:
+            One entry per unreadable manifest that is a real coverage gap.
+        """
+        recognised: List[UnreadableManifestRef] = []
+        for path in listing.unreadable:
+            parent = str(PurePosixPath(path).parent)
+            location = repo.full_name
+            if parent != ".":
+                location = f"{repo.full_name}:{parent}"
+            entry = recognise_unreadable_manifest_in_listing(
+                path, listing.supported, location=location
+            )
+            if entry is None or entry.supported_input_present:
+                # A supported input for the same ecosystem sits in the same
+                # directory, so the ecosystem was read and this file is not a
+                # gap in coverage.
+                continue
+            recognised.append(
+                UnreadableManifestRef(
+                    repo_full_name=repo.full_name,
+                    path=path,
+                    ecosystem=entry.ecosystem,
+                    guidance=entry.guidance,
+                )
+            )
+        return recognised
 
     def _parse_manifests(
-        self, repositories: List[RepositoryRef], manifests: List[ManifestRef]
+        self, repositories: List[RepositoryRef], discovery: _Discovery
     ) -> _ParsedInventory:
-        """Parse fetched manifests through the existing parser registry."""
+        """Parse fetched manifests through the existing parser registry.
+
+        Args:
+            repositories: Every repository the scan was asked to cover.
+            discovery: What the discovery pass fetched, recognized, and failed
+                to list.
+
+        Returns:
+            The parsed inventory, carrying the coverage facts through to
+            aggregation rather than discarding them here.
+        """
+        manifests = discovery.manifests
         unique_dependencies: Dict[DependencyKey, DependencyMetadata] = {}
         occurrences: List[DependencyOccurrence] = []
         failures: List[ManifestParseFailure] = []
+        read_manifests: Set[Tuple[str, str]] = set()
 
         with tempfile.TemporaryDirectory(prefix="dependency-risk-org-scan-") as tmp:
             temp_root = Path(tmp)
@@ -269,6 +394,12 @@ class OrgScanRunner:
                     )
                     continue
 
+                # Parsed without raising. Recorded even when it declared
+                # nothing, because "read it and it declares nothing" is a
+                # measurement and has to stay distinct from "could not read
+                # it" (AGENTS.md rule 4).
+                read_manifests.add((manifest.repo_full_name, manifest.path))
+
                 for dependency in dependencies.values():
                     key = DependencyKey(
                         ecosystem=manifest.ecosystem,
@@ -290,7 +421,11 @@ class OrgScanRunner:
             manifests=manifests,
             unique_dependencies=unique_dependencies,
             occurrences=occurrences,
+            read_manifests=read_manifests,
+            unreadable_manifests=discovery.unreadable,
+            undiscovered_repositories=discovery.undiscovered,
             parse_failures=failures,
+            warnings=discovery.warnings,
         )
 
     def _aggregate(
@@ -375,7 +510,8 @@ class OrgScanRunner:
                 RiskLevel.UNKNOWN,
             }
         ]
-        repo_summaries = self._repository_summaries(parsed, by_identity)
+        coverage = self._repository_coverage(parsed)
+        repo_summaries = self._repository_summaries(parsed, by_identity, coverage)
 
         high_risk_dependencies = [
             item
@@ -390,10 +526,20 @@ class OrgScanRunner:
             1 for item in inventory if item.is_known_vulnerable
         )
         unscored_count = sum(1 for item in inventory if item.is_unscored)
+        unread_repository_count = sum(
+            1
+            for state in coverage.values()
+            if state
+            in {
+                RepositoryCoverage.UNREADABLE,
+                RepositoryCoverage.DISCOVERY_FAILED,
+            }
+        )
         headline = build_headline(
             known_vulnerable_count=known_vulnerable_count,
             high_risk_count=len(high_risk_dependencies),
             unscored_count=unscored_count,
+            unread_repository_count=unread_repository_count,
             dependency_count=len(inventory),
             repository_count=len(parsed.repositories),
         )
@@ -406,6 +552,7 @@ class OrgScanRunner:
             manifests_scanned=[manifest.display_path for manifest in parsed.manifests],
             unique_dependency_count=len(inventory),
             parse_failures=parsed.parse_failures,
+            unreadable_manifests=parsed.unreadable_manifests,
             inventory=inventory,
             most_exposed_risky_dependencies=most_exposed,
             riskiest_repositories=repo_summaries,
@@ -417,10 +564,66 @@ class OrgScanRunner:
             unscored_dependency_count=unscored_count,
         )
 
+    def _repository_coverage(
+        self, parsed: _ParsedInventory
+    ) -> Dict[str, RepositoryCoverage]:
+        """Classify how much of each repository the scan actually read.
+
+        Every repository the scan was asked to cover gets exactly one state,
+        and the four ways of ending up with no dependencies are four different
+        states rather than one shared silence (#262):
+
+        * the tree never listed, so the contents are unknown;
+        * manifests were recognized and none could be read;
+        * the tree listed and holds no manifest this tool knows about;
+        * manifests were read and simply declare nothing.
+
+        Args:
+            parsed: The parsed inventory, carrying every coverage fact.
+
+        Returns:
+            One state per repository, keyed by full name.
+        """
+        read_repositories = {repo for repo, _ in parsed.read_manifests}
+        unreadable_repositories = {
+            entry.repo_full_name for entry in parsed.unreadable_manifests
+        }
+        # A manifest that was fetched and then refused is also a manifest this
+        # repository was not read from. The two are reported separately — they
+        # are different facts with different remedies — but at the repository
+        # level they answer the same question the same way.
+        refused_repositories = {
+            failure.repo_full_name for failure in parsed.parse_failures
+        }
+
+        # The union, not just the listed repositories: every name that reaches
+        # a summary must reach a state, so a missing one raises rather than
+        # quietly picking the reassuring default.
+        names = {repo.full_name for repo in parsed.repositories}
+        names |= read_repositories | unreadable_repositories | refused_repositories
+        names |= {occurrence.repo_full_name for occurrence in parsed.occurrences}
+
+        coverage: Dict[str, RepositoryCoverage] = {}
+        for name in names:
+            if name in parsed.undiscovered_repositories:
+                coverage[name] = RepositoryCoverage.DISCOVERY_FAILED
+            elif name in read_repositories:
+                coverage[name] = (
+                    RepositoryCoverage.PARTIALLY_READ
+                    if name in unreadable_repositories or name in refused_repositories
+                    else RepositoryCoverage.READ
+                )
+            elif name in unreadable_repositories or name in refused_repositories:
+                coverage[name] = RepositoryCoverage.UNREADABLE
+            else:
+                coverage[name] = RepositoryCoverage.NO_MANIFESTS
+        return coverage
+
     def _repository_summaries(
         self,
         parsed: _ParsedInventory,
         by_identity: Dict[PackageIdentity, AggregatedDependency],
+        coverage: Dict[str, RepositoryCoverage],
     ) -> List[RepositoryRiskSummary]:
         """Build repository aggregate risk summaries.
 
@@ -482,6 +685,7 @@ class OrgScanRunner:
                     risk_points=points,
                     average_risk_score=average_score,
                     worst_dependencies=worst,
+                    coverage=coverage[repo_full_name],
                 )
             )
 

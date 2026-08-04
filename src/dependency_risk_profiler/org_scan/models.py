@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from typing import Dict, List, Literal, Protocol, Set, Tuple
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
@@ -75,6 +76,24 @@ class DependencyOccurrence:
     key: DependencyKey
 
 
+@dataclass(frozen=True)
+class RepositoryManifestListing:
+    """What one repository's tree listing contains, split by whether we read it.
+
+    One request produces both halves. ``unreadable`` is not an afterthought to
+    ``supported``: a repository whose tree holds only ``package.json`` used to
+    return an empty list here, which the scanner could not tell apart from a
+    repository holding no manifests at all (#262). Neither field has a default,
+    so a client cannot answer only the reassuring half.
+    """
+
+    # Paths the tool fetches and parses.
+    supported: List[str]
+    # Paths recognized as dependency manifests this tool does not read. Never
+    # fetched — recognition is by file name — so this costs no extra request.
+    unreadable: List[str]
+
+
 @dataclass
 class ManifestParseFailure:
     """A manifest that could not be parsed."""
@@ -82,6 +101,61 @@ class ManifestParseFailure:
     repo_full_name: str
     path: str
     reason: str
+
+
+@dataclass(frozen=True)
+class UnreadableManifestRef:
+    """A dependency manifest an org scan recognized and did not read.
+
+    Field names match ``analyze``'s ``unreadable_manifests[]`` (#243/#264) so
+    one consumer parses both paths; ``repo_full_name`` is the org dimension
+    ``analyze`` has no equivalent for.
+
+    This is deliberately *not* a :class:`ManifestParseFailure`. That records a
+    manifest that was fetched and then refused, which is a different fact about
+    a different byte stream: these were never fetched, because their names are
+    enough to know the parsers cannot use them.
+    """
+
+    repo_full_name: str
+    path: str
+    ecosystem: str
+    guidance: str
+
+    @property
+    def display_path(self) -> str:
+        """Return a repository-qualified manifest path."""
+        return f"{self.repo_full_name}:{self.path}"
+
+
+class RepositoryCoverage(Enum):
+    """How much of one repository an org scan actually managed to read.
+
+    The failing states used to be one indistinguishable output: a repository
+    that could not be listed, one whose only manifests were unreadable, and one
+    that genuinely declares no dependencies all appeared as a summary with
+    ``dependency_count: 0`` and no worst dependencies (#262). Only one of those
+    is good news.
+    """
+
+    #: Every recognized manifest was fetched and parsed. A zero here is a real
+    #: zero: the repository declares no dependencies.
+    READ = "read"
+    #: At least one manifest was read and at least one was not, so this
+    #: repository's dependency count is a floor rather than a total.
+    PARTIALLY_READ = "partially_read"
+    #: Dependency manifests were found and none of them could be read. The
+    #: scan measured nothing here.
+    UNREADABLE = "unreadable"
+    #: The tree was listed and holds no manifest this tool recognizes at all.
+    NO_MANIFESTS = "no_manifests"
+    #: The tree could not be listed, so nothing is known about the contents.
+    DISCOVERY_FAILED = "discovery_failed"
+
+    @property
+    def is_complete(self) -> bool:
+        """Whether the scan read everything it recognized in this repository."""
+        return self is RepositoryCoverage.READ
 
 
 @dataclass
@@ -173,6 +247,10 @@ class RepositoryRiskSummary:
     risk_points: int
     average_risk_score: float
     worst_dependencies: List[AggregatedDependency]
+    # Required, and last, so every construction has to answer it. A summary
+    # that omitted it would default to the reassuring state, which is the
+    # defect (#262, AGENTS.md rule 4).
+    coverage: RepositoryCoverage
 
 
 @dataclass
@@ -186,6 +264,10 @@ class OrgScanReport:
     manifests_scanned: List[str]
     unique_dependency_count: int
     parse_failures: List[ManifestParseFailure]
+    # Recognized dependency manifests the scan did not read. Required and
+    # undefaulted: empty means "everything recognized was read", and that is a
+    # claim a caller has to make on purpose (#262).
+    unreadable_manifests: List[UnreadableManifestRef]
     inventory: List[AggregatedDependency]
     most_exposed_risky_dependencies: List[AggregatedDependency]
     riskiest_repositories: List[RepositoryRiskSummary]
@@ -203,6 +285,7 @@ def build_headline(
     known_vulnerable_count: int,
     high_risk_count: int,
     unscored_count: int,
+    unread_repository_count: int,
     dependency_count: int,
     repository_count: int,
 ) -> str:
@@ -210,7 +293,25 @@ def build_headline(
 
     Ordered by what demands action: known-vulnerable first (there is a fix and
     a version to move to), then high-risk leading indicators, then the coverage
-    caveat, then the totals that give all three a denominator.
+    caveats, then the totals that give all three a denominator.
+
+    Both coverage caveats sit next to each other on purpose. "Could not be
+    scored" is about a dependency the scan found and could not profile;
+    "could not be read" is about a repository whose dependencies the scan never
+    saw at all. Reporting only the first leaves the second looking like a
+    repository with nothing in it (#262).
+
+    Args:
+        known_vulnerable_count: Dependencies with scored advisories.
+        high_risk_count: Dependencies at HIGH or CRITICAL.
+        unscored_count: Dependencies found but not scorable.
+        unread_repository_count: Repositories the scan could not read, whether
+            because their manifests are unreadable or the tree never listed.
+        dependency_count: Unique dependencies in the inventory.
+        repository_count: Repositories the scan was asked to cover.
+
+    Returns:
+        The single-line headline.
     """
     parts = [
         f"{known_vulnerable_count} known-vulnerable",
@@ -218,6 +319,11 @@ def build_headline(
     ]
     if unscored_count:
         parts.append(f"{unscored_count} could not be scored")
+    if unread_repository_count:
+        parts.append(
+            f"{unread_repository_count} "
+            f"{_plural(unread_repository_count, 'repo')} could not be read"
+        )
     parts.append(
         f"{dependency_count} {_plural(dependency_count, 'dependency')} across "
         f"{repository_count} {_plural(repository_count, 'repo')}"

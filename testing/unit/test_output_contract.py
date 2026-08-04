@@ -227,6 +227,7 @@ def _org_report() -> OrgScanReport:
         manifests_scanned=["acme/web:requirements.txt"],
         unique_dependency_count=1,
         parse_failures=[],
+        unreadable_manifests=[],
         inventory=[aggregate],
         most_exposed_risky_dependencies=[aggregate],
         riskiest_repositories=[],

@@ -11,7 +11,11 @@ from urllib.parse import parse_qs, urlparse
 
 import requests
 
-from .models import RepositoryRef
+from ..manifest_guidance import (
+    is_recognized_unreadable_name,
+    is_vendored_relative_path,
+)
+from .models import RepositoryManifestListing, RepositoryRef
 
 logger = logging.getLogger(__name__)
 
@@ -244,8 +248,25 @@ class GitHubOrgClient:
         self,
         repo: RepositoryRef,
         supported_names: Iterable[str],
-    ) -> List[str]:
-        """List supported manifest paths from a repository git tree."""
+    ) -> RepositoryManifestListing:
+        """List a repository's manifests, split into what we read and what we don't.
+
+        Both halves come out of the one recursive-tree request this method
+        already made. Recognition of the unreadable half is by file name only —
+        :func:`is_recognized_unreadable_name` opens nothing and fetches nothing
+        — so the request count for a scan is unchanged by #262. The classifier
+        lives here rather than in the scanner because this is the only place
+        holding the whole tree, and shipping every blob path upstream just to
+        classify it would multiply the scanner's retained memory by the size of
+        the largest monorepo in the account.
+
+        Args:
+            repo: The repository to list.
+            supported_names: Manifest file names the parsers read.
+
+        Returns:
+            The supported and recognized-but-unreadable paths, each sorted.
+        """
         tree = self._get_json(
             f"/repos/{repo.full_name}/git/trees/{repo.default_branch}",
             {"recursive": "1"},
@@ -262,21 +283,33 @@ class GitHubOrgClient:
 
         raw_items = tree.get("tree")
         if not isinstance(raw_items, list):
-            return []
+            return RepositoryManifestListing(supported=[], unreadable=[])
 
-        supported = {name.lower() for name in supported_names}
-        paths: List[str] = []
+        supported_lookup = {name.lower() for name in supported_names}
+        supported: List[str] = []
+        unreadable: List[str] = []
         for item in raw_items:
             if not isinstance(item, Mapping):
                 continue
             item_type = item.get("type")
             path = item.get("path")
-            if item_type == "blob" and isinstance(path, str):
-                leaf = path.rsplit("/", 1)[-1].lower()
-                if leaf in supported:
-                    paths.append(path)
+            if item_type != "blob" or not isinstance(path, str):
+                continue
+            leaf = path.rsplit("/", 1)[-1]
+            if leaf.lower() in supported_lookup:
+                supported.append(path)
+            elif is_vendored_relative_path(path):
+                # Committed installed dependencies. Without this a repo that
+                # checked in node_modules reports one unreadable manifest per
+                # installed package, which is how a coverage warning stops
+                # being read.
+                continue
+            elif is_recognized_unreadable_name(leaf):
+                unreadable.append(path)
 
-        return sorted(paths)
+        return RepositoryManifestListing(
+            supported=sorted(supported), unreadable=sorted(unreadable)
+        )
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Fetch a manifest file as raw text, bounded to ``_MAX_MANIFEST_BYTES``.

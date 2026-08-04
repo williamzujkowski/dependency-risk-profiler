@@ -17,6 +17,7 @@ from ..config import Config
 from ..contract import schema_deprecation_notice
 from ..manifest_guidance import (
     UnreadableManifest,
+    is_vendored_relative_path,
     recognise_unreadable_manifest,
     unsupported_manifest_guidance,
 )
@@ -367,39 +368,17 @@ def _refused_manifests(failed_files: List[Dict[str, object]]) -> bool:
     return any(failed.get("reason") in _REFUSAL_REASONS for failed in failed_files)
 
 
-# Directories whose contents are installed dependencies rather than the project
-# being scanned. A recursive walk that recognizes `package.json` would otherwise
-# report one per installed package — thousands of them, all noise.
-#
-# Scoped to the unreadable-manifest sweep only. Which files the registry finds
-# and scores is unchanged by #243, because narrowing that is a change to what
-# gets analyzed and needs its own evidence (filed as a follow-up).
-_VENDORED_DIRECTORIES = frozenset(
-    {
-        ".bundle",
-        ".git",
-        ".gradle",
-        ".mypy_cache",
-        ".pytest_cache",
-        ".tox",
-        ".venv",
-        "__pycache__",
-        "bower_components",
-        "node_modules",
-        "site-packages",
-        "vendor",
-        "venv",
-    }
-)
-
-
 def _is_vendored(path: str, scan_root: str) -> bool:
-    """Whether a path sits inside an installed-dependency directory."""
+    """Whether a path sits inside an installed-dependency directory.
+
+    The directory table itself lives in ``manifest_guidance`` so the org
+    scanner's remote tree filter reads the same one (#262).
+    """
     try:
         relative = Path(path).relative_to(scan_root)
     except ValueError:
         return False
-    return any(part in _VENDORED_DIRECTORIES for part in relative.parts[:-1])
+    return is_vendored_relative_path(relative.as_posix())
 
 
 def _record_unreadable(
@@ -1857,6 +1836,41 @@ def _scan_github_account(
         write_csv_report(report, output_csv)
         console.print(f"[bold green]CSV report written to {output_csv}[/bold green]")
     _apply_fail_on(report, fail_on)
+    _exit_on_nothing_read(report)
+
+
+def _exit_on_nothing_read(report: OrgScanReport) -> None:
+    """Exit 1 when an account scan recognized manifests and read none of them.
+
+    The same rule ``analyze`` got in #264, one level up: a scan that produced
+    no measurement must not exit 0 alongside a report full of zeroes, because
+    a CI job branching on the exit code records that as a clean account.
+
+    Deliberately narrow. An account whose repositories genuinely declare no
+    dependencies still exits 0 — that is a measurement, and a real zero. Only
+    "I recognized dependency manifests and read none of them" is a refusal.
+
+    ``--fail-on`` is checked first and keeps exit code 2, and it is *not*
+    extended to coverage: ``--fail-on`` answers "is the risk you found above my
+    threshold", which is a different question from "did you find anything at
+    all". Wiring coverage into it would make a threshold gate fire on a scan
+    that never got far enough to have a risk level (#262, acceptance
+    criterion 5).
+
+    Args:
+        report: The completed account scan report.
+
+    Raises:
+        typer.Exit: With code 1 when nothing was read.
+    """
+    if report.manifests_scanned or not report.unreadable_manifests:
+        return
+    console.print(
+        "[bold red]Read 0 of "
+        f"{len(report.unreadable_manifests) + len(report.manifests_scanned)} "
+        "recognized manifest(s); nothing was scored.[/bold red]"
+    )
+    raise typer.Exit(code=1)
 
 
 def _vulnerability_options(config: Config, token: str) -> VulnerabilityOptions:

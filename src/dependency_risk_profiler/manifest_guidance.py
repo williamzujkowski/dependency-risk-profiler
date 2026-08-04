@@ -34,14 +34,27 @@ The table is deliberately a list of *recognized* names, not a heuristic. A file
 it does not name keeps the generic message and is not counted as unreadable: a
 confident guess about an ecosystem the tool cannot parse would be worse than
 the bare message it replaces.
+
+#262 brought the org path here, and found one thing that does not transfer.
+:func:`recognise_unreadable_manifest` opens no file, but it does *stat* the
+directory next to the manifest to answer "is the supported input already
+there?" — and an org scan's paths are repository-relative names for files on
+somebody else's server. Resolving ``package.json`` against the local working
+directory is not merely useless there, it is wrong in the dangerous direction:
+a ``package-lock.json`` in the operator's shell would mark a remote repository
+as covered and drop it from the report again.
+:func:`recognise_unreadable_manifest_in_listing` takes the sibling set
+explicitly and touches no filesystem, so the two callers share one table, one
+message, and no assumptions about where the bytes live.
 """
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path, PurePosixPath
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from .parsers.base import BaseParser
 from .parsers.registry import EcosystemRegistry
@@ -51,6 +64,31 @@ _CONTENT_PROBE_BYTES = 256 * 1024
 
 _FILE_NAME_PREFIX = "File name: "
 _CONTENT_PREFIX = "Content pattern: "
+
+# Directories whose contents are installed dependencies rather than the project
+# being scanned. A sweep that recognizes `package.json` would otherwise report
+# one per installed package — thousands of them, all noise.
+#
+# One table, two callers: the local recursive walk in the CLI and the org
+# scanner's remote tree filter. A second copy would drift, and the drift would
+# show up as a warning storm on exactly one of the two paths (#262).
+_VENDORED_DIRECTORIES = frozenset(
+    {
+        ".bundle",
+        ".git",
+        ".gradle",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "bower_components",
+        "node_modules",
+        "site-packages",
+        "vendor",
+        "venv",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -260,14 +298,95 @@ def recognise_unreadable_manifest(manifest_path: str) -> Optional[UnreadableMani
         The recognition, or ``None`` when the name is not a recognized manifest.
     """
     path = Path(manifest_path)
-    rule = _unreadable_rule(path)
+    rule = _unreadable_rule_for_name(path.name)
     if rule is None:
         return None
     found = _first_supported_input(path.parent, rule.ecosystem)
+    return _recognised(
+        path, rule, None if found is None else str(found), str(path.parent)
+    )
+
+
+def recognise_unreadable_manifest_in_listing(
+    manifest_path: str,
+    listing: Iterable[str],
+    *,
+    location: str,
+) -> Optional[UnreadableManifest]:
+    """Recognize an unreadable manifest against a listing instead of a filesystem.
+
+    Same table, same message, no I/O at all: ``listing`` supplies the paths that
+    exist beside the manifest, so this works on a remote tree the scanner has
+    already fetched. That matters beyond convenience — resolving a
+    repository-relative name against the local filesystem would let a stray
+    ``package-lock.json`` in the operator's working directory mark somebody
+    else's repository as covered (#262).
+
+    Args:
+        manifest_path: Repository-relative path of the candidate manifest.
+        listing: Repository-relative paths of the manifests that *are* read.
+            Only entries in the same directory as ``manifest_path`` are
+            consulted.
+        location: How to name the containing directory in the message, e.g.
+            ``acme/web:frontend``. Required, because the local-filesystem
+            spelling would be a lie here.
+
+    Returns:
+        The recognition, or ``None`` when the name is not a recognized manifest.
+    """
+    path = PurePosixPath(manifest_path)
+    rule = _unreadable_rule_for_name(path.name)
+    if rule is None:
+        return None
+    found = _first_listed_supported_input(path, rule.ecosystem, listing)
+    return _recognised(Path(manifest_path), rule, found, location)
+
+
+def is_vendored_relative_path(relative_path: str) -> bool:
+    """Whether a path sits inside an installed-dependency directory.
+
+    Scoped to the unreadable-manifest sweep on both the local and the org path.
+    Which files get *scored* is not narrowed by this, because that would change
+    what the tool analyzes and needs its own evidence.
+
+    Args:
+        relative_path: A path relative to the scan root or repository root.
+
+    Returns:
+        Whether any directory component names a vendored tree.
+    """
+    parts = PurePosixPath(relative_path).parts[:-1]
+    return any(part in _VENDORED_DIRECTORIES for part in parts)
+
+
+def is_recognized_unreadable_name(file_name: str) -> bool:
+    """Whether a bare file name is a dependency manifest this tool cannot read.
+
+    Filename-only and free of I/O, so a caller holding a whole repository tree
+    can afford to run it on every blob without a second request. It exists so
+    the org scanner's tree filter and the guidance messages read from one table
+    rather than two (#262).
+
+    Args:
+        file_name: A file name or path; only the final component is used.
+
+    Returns:
+        Whether the name is in the recognized-but-unreadable table.
+    """
+    return _unreadable_rule_for_name(PurePosixPath(file_name).name) is not None
+
+
+def _recognised(
+    path: Path,
+    rule: _UnreadableRule,
+    found: Optional[str],
+    location: str,
+) -> UnreadableManifest:
+    """Assemble the recognition shared by the filesystem and listing entries."""
     return UnreadableManifest(
         path=path,
         ecosystem=rule.ecosystem.label,
-        guidance=_describe(path, rule, found),
+        guidance=_describe(path.name, rule, found, location),
         supported_input_present=found is not None,
     )
 
@@ -286,17 +405,22 @@ def unsupported_manifest_guidance(manifest_path: str) -> Optional[str]:
     return _misnamed_guidance(path)
 
 
-def _unreadable_rule(path: Path) -> Optional[_UnreadableRule]:
-    """Look one filename up in the recognized-unreadable table."""
-    by_name = _UNREADABLE_BY_NAME.get(path.name.lower())
+def _unreadable_rule_for_name(file_name: str) -> Optional[_UnreadableRule]:
+    """Look one bare file name up in the recognized-unreadable table."""
+    by_name = _UNREADABLE_BY_NAME.get(file_name.lower())
     if by_name is not None:
         return by_name
-    return _UNREADABLE_BY_SUFFIX.get(path.suffix.lower())
+    return _UNREADABLE_BY_SUFFIX.get(PurePosixPath(file_name).suffix.lower())
 
 
-def _describe(path: Path, rule: _UnreadableRule, found: Optional[Path]) -> str:
+def _describe(
+    file_name: str,
+    rule: _UnreadableRule,
+    found: Optional[str],
+    location: str,
+) -> str:
     """Build the whole message: what this file is, and what is read instead."""
-    opening = f"{path.name} {rule.reason}."
+    opening = f"{file_name} {rule.reason}."
     ecosystem = rule.ecosystem
 
     if not ecosystem.inputs:
@@ -313,8 +437,28 @@ def _describe(path: Path, rule: _UnreadableRule, found: Optional[Path]) -> str:
     # Singular and plural are spelled differently on purpose: "not found in" is
     # a statement about one named file, and there is more than one here.
     absence = "not found in" if len(ecosystem.inputs) == 1 else "none found in"
-    located = f"{opening} {reads} — {absence} {path.parent}."
+    located = f"{opening} {reads} — {absence} {location}."
     return f"{located} {rule.remedy}" if rule.remedy else located
+
+
+def _first_listed_supported_input(
+    path: PurePosixPath, ecosystem: _Ecosystem, listing: Iterable[str]
+) -> Optional[str]:
+    """Return the first supported input for an ecosystem beside a listed path.
+
+    The listing's own spelling is returned rather than a reconstructed one, so
+    the message quotes a path the caller can actually go and open.
+    """
+    siblings = [
+        candidate
+        for candidate in (PurePosixPath(entry) for entry in listing)
+        if candidate.parent == path.parent and candidate != path
+    ]
+    for name in ecosystem.inputs:
+        for sibling in siblings:
+            if fnmatch.fnmatch(sibling.name.lower(), name.lower()):
+                return str(sibling)
+    return None
 
 
 def _join(names: Tuple[str, ...]) -> str:

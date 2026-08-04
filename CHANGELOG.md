@@ -548,6 +548,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`scan-org` counted a repository it could not read as a repository with
+  nothing in it.** The tree listing was filtered against the manifest names the
+  parsers accept *before* anything was fetched, so a repository whose only
+  manifests were `package.json` and `pnpm-lock.yaml` matched nothing, was never
+  fetched, and never reached `parse_failures` — which only records manifests
+  that were fetched and then refused. It still appeared in the report, with
+  `dependency_count: 0`, zero risk points and `worst: none`, which is
+  byte-for-byte what a repository that genuinely declares no dependencies looks
+  like. On a real account: two of four repositories read that way, and nothing
+  in the output distinguished them from the one that holds no manifests at all.
+
+  This is the #243 defect on the org path, and the blast radius is larger. An
+  org scan is exactly where nobody is watching any individual repository, so a
+  repository missing from the numbers is a repository nobody notices is
+  missing.
+
+  Four outcomes now have four names instead of one shared zero. Every
+  repository carries a `coverage` state: `read` (a zero here is a real zero),
+  `partially_read` (one ecosystem read, another not, so the count is a floor),
+  `unreadable` (dependency manifests found, none readable), `no_manifests` (the
+  tree listed and holds nothing this tool knows), and `discovery_failed` (the
+  tree never came back, so nothing at all is known). `unreadable_manifests[]`
+  carries every recognized-and-unread manifest with its repository, ecosystem
+  and next step, using the same field names `analyze` emits so one consumer
+  parses both paths. Both are required, undefaulted arguments to the models, so
+  the reassuring shape cannot be produced by forgetting to fill them in. The
+  headline states the repository count beside `unscored_dependency_count`,
+  in the same register: "2 repos could not be read".
+
+  **Discovery failures were being built and then dropped on the floor.** Found
+  while fixing the above: `_discover_manifests` appended each failed tree
+  listing to a local list, logged a count, and returned only the manifests, so
+  `OrgScanReport.warnings` was empty on every scan the scanner ever produced. A
+  repository GitHub refused left no trace in the report at all. It now reaches
+  `warnings` and gets its own coverage state, because "I could not fetch it" is
+  a third fact and must not be folded into "I could not read it".
+
+  **It costs no additional requests.** Recognition is by file name against the
+  recursive tree listing the scan already paid for; the unreadable half is
+  never fetched. Measured on a four-repository account, before and after: seven
+  discovery requests either way, four tree listings and three manifest fetches,
+  the same three paths.
+
+  An account whose repositories are all unreadable now exits 1, the same rule
+  `analyze` got in #264. An account that genuinely declares no dependencies
+  still exits 0 — that is a measurement. `--fail-on` is deliberately untouched:
+  it answers "is the risk you found above my threshold", which is a different
+  question from "did you find anything at all", and wiring coverage into it
+  would make a threshold gate fire on a scan that never got far enough to have
+  a risk level.
+
+  Nothing changed about which manifests the parsers accept, which files get
+  fetched, or which dependencies get scored. Detection, reporting and exit
+  semantics only.
+
 - **`analyze <dir>` over a project it could not read reported zero dependencies
   and exited 0.** Point it at an npm project — a `package.json`, no lock file —
   and it printed "No supported manifest files found", a catalogue of the ten

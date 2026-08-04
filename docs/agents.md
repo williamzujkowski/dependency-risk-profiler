@@ -306,17 +306,44 @@ Top level: `schema_version`, `org`, `account_type`, `generated_at`,
 `repositories_scanned` / `repository_count`, `manifests_scanned` /
 `manifest_count`, `unique_dependency_count`, `known_vulnerable_dependency_count`,
 `unscored_dependency_count`, `high_risk_dependency_count`,
-`high_risk_exposed_repository_count`, `headline`, `riskiest_repositories`,
-`parse_failures`, `warnings`, and two arrays of `ScoredDependency`:
-`inventory` (everything) and `most_exposed_risky_dependencies` (the triage
-list).
+`high_risk_exposed_repository_count`, `unread_repository_count`, `headline`,
+`riskiest_repositories`, `parse_failures`, `unreadable_manifests`, `warnings`,
+and two arrays of `ScoredDependency`: `inventory` (everything) and
+`most_exposed_risky_dependencies` (the triage list).
 
-The headline carries both risk axes plus the coverage caveat, in the order they
-demand action: `198 known-vulnerable · 2 high-risk · 812 could not be scored ·
-1135 dependencies across 25 repos`. Read all of it. `high_risk_dependency_count`
-is depressed whenever coverage is poor — a dependency that could not be scored
-cannot score high — so `unscored_dependency_count` is what tells you whether a
-low high-risk count means "clean" or "we measured almost nothing".
+The headline carries both risk axes plus both coverage caveats, in the order
+they demand action: `198 known-vulnerable · 2 high-risk · 812 could not be
+scored · 3 repos could not be read · 1135 dependencies across 25 repos`. Read
+all of it. `high_risk_dependency_count` is depressed whenever coverage is poor —
+a dependency that could not be scored cannot score high — so
+`unscored_dependency_count` is what tells you whether a low high-risk count
+means "clean" or "we measured almost nothing".
+
+**A repository with `dependency_count: 0` is five different answers, and
+`coverage` is how you tell them apart (#262).** Every entry in
+`riskiest_repositories` carries one:
+
+| `coverage` | What it means |
+|------------|---------------|
+| `read` | Every recognized manifest was fetched and parsed. A zero here is a real zero. |
+| `partially_read` | One ecosystem was read and another was not. The count is a floor. |
+| `unreadable` | Dependency manifests were found and none could be read. Nothing was measured. |
+| `no_manifests` | The tree listed and holds no manifest this tool recognizes. |
+| `discovery_failed` | The tree never came back. Nothing at all is known about this repository. |
+
+`unreadable_manifests[]` names the files behind the `unreadable` and
+`partially_read` states, with `repo`, `manifest_path`, `ecosystem` and
+`guidance` — the same field names `analyze` uses, plus the repository. It is
+present and empty when everything recognized was read, so branch on it rather
+than inferring from a count. `unread_repository_count` is the repository-level
+total, comparable against `repository_count`.
+
+`scan-org` / `scan-user` exit codes: `0` = the scan produced a measurement,
+including a genuine "this account declares no dependencies"; `1` = the scan
+failed, or it recognized dependency manifests and read none of them; `2` =
+`--fail-on` matched. `--fail-on` is about risk found, not coverage: it never
+fires on an unread repository, because a repository that was never read has no
+risk level to compare.
 
 ## A worked loop
 
