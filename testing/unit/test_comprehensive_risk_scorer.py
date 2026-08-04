@@ -318,8 +318,12 @@ def test_total_score_calculation_with_partial_metrics() -> None:
     assert score.total_score <= 5.0, "Score should not exceed max_score"
     assert score.risk_level == RiskLevel.UNKNOWN
     assert score.insufficient_data is True
-    assert score.unknown_signal_count == 12
-    assert score.measured_signal_count == 3
+    # A minimal package measures two signals, not three: nothing resolved its
+    # transitive tree, and since #199 an unset marker reads as unmeasured
+    # rather than as a confident "no transitive dependencies".
+    assert score.unknown_signal_count == 13
+    assert score.measured_signal_count == 2
+    assert "transitive" in score.unknown_signals
 
 
 def test_project_profile_creation() -> None:
@@ -1019,7 +1023,7 @@ def test_risk_factor_determination_performance_sla() -> None:
             dep.community_metrics
         )
         transitive_score = scorer._calculate_transitive_score(
-            dep.transitive_dependencies
+            dep.transitive_dependencies, measured=True
         )
         security_policy_score = scorer._calculate_security_policy_score(
             dep.security_metrics

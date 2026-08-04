@@ -12,13 +12,17 @@ metadata alone** — no repository clone, no GitHub token — which is the weake
 environment the tool runs in and the one a regression shows up in first.
 Transitive resolution is not among those signals for most ecosystems: it only
 understands npm lockfiles and Python requirement sets, and a lockfile is not
-registry metadata, so :func:`mark_transitive_unmeasured` reproduces the
-unmeasured marker here (#141) rather than letting an empty set score as "no
-transitive risk". Three registries are the exception, because each publishes
-the package's own dependency list beside it: nuget in the ``.nuspec`` (#129),
-maven in the POM's ``<dependencies>``, and — since #180 — composer in the p2
-entry's ``require`` block, minus the platform constraints (``php``, ``ext-*``)
-that are runtimes rather than packages.
+registry metadata. Nothing in the harness marks that absence any more —
+:func:`mark_transitive_unmeasured` existed to reproduce the pipeline's marker
+here (#141) and was deleted with #199, which made an unset marker read as
+unmeasured everywhere. Five adapters therefore say nothing and are scored as
+unmeasured *because* they said nothing, which is the property
+``adapter_conformance.assert_transitive_is_recorded_not_assumed`` pins. Three
+registries are the exception, because each publishes the package's own
+dependency list beside it: nuget in the ``.nuspec`` (#129), maven in the POM's
+``<dependencies>``, and — since #180 — composer in the p2 entry's ``require``
+block, minus the platform constraints (``php``, ``ext-*``) that are runtimes
+rather than packages.
 
 **The floor sits at the measured value, not below it.** Every number here was
 read off the offline adapter test it guards, and it is the exact count that
@@ -113,14 +117,7 @@ underneath it.
 from datetime import datetime, timezone
 from typing import Dict, FrozenSet
 
-from dependency_risk_profiler.models import (
-    DependencyMetadata,
-    DependencyRiskScore,
-    RiskLevel,
-)
-from dependency_risk_profiler.transitive.analyzer_enhanced import (
-    record_transitive_source,
-)
+from dependency_risk_profiler.models import DependencyRiskScore, RiskLevel
 
 # Minimum signals an ecosystem must measure from registry metadata alone, set
 # at what each one measures today. Raising these is a normal part of improving
@@ -244,35 +241,6 @@ assert not _MISCOUNTED, (
 # Nothing here asserts a *specific* date: the property is that a decade-dead
 # package produces a number at all.
 ABANDONED_PACKAGE_MIN_AGE_DAYS = 3650
-
-
-def mark_transitive_unmeasured(dependency: DependencyMetadata) -> DependencyMetadata:
-    """Mark transitive resolution as not having run, as it does for these ecosystems.
-
-    The real pipeline applies this marker to every manifest that is not an npm
-    lockfile or a Python requirement set, so an offline adapter test that skips
-    it would credit the ecosystem with a signal it never measures.
-
-    It also leaves an adapter's own record alone, and so does this: nuget reads
-    its ``.nuspec`` dependencies, maven its POM's ``<dependencies>`` and
-    composer the p2 entry's ``require`` block, all three of which are real
-    measurements the adapter stamps with its own source. An empty
-    ``<dependencies>`` block on an artifact that declares none is a measured
-    zero, not an unmeasured one — as is a ``require`` block holding nothing but
-    ``php`` — and overwriting the stamp here would report it as unmeasured while
-    the pipeline reports it as measured (see
-    ``transitive.analyzer_enhanced``, which skips dependencies that already
-    carry a source).
-
-    Args:
-        dependency: Dependency metadata to mark in place.
-
-    Returns:
-        The same dependency, for chaining.
-    """
-    if not dependency.transitive_source:
-        record_transitive_source(dependency, source=None)
-    return dependency
 
 
 def assert_measures_registry_signals(

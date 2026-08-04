@@ -39,11 +39,11 @@ from ..signals import (
     SIGNAL_TRANSITIVE,
     SIGNAL_VERSION,
     SOURCE_REPOSITORY_UNREADABLE,
-    TRANSITIVE_SOURCE_UNMEASURED,
     Measurement,
     MeasurementState,
     SourceRepositoryState,
     UnmeasuredReason,
+    transitive_is_measured,
     unmeasured_reason_for,
 )
 from ..versioning import (
@@ -228,7 +228,7 @@ class RiskScorer:
         )
         transitive_score = self._calculate_transitive_score(
             dependency.transitive_dependencies,
-            measured=dependency.transitive_source != TRANSITIVE_SOURCE_UNMEASURED,
+            measured=transitive_is_measured(dependency.transitive_source),
         )
 
         # OpenSSF Scorecard-inspired risk scores
@@ -1035,24 +1035,28 @@ class RiskScorer:
         return sum(measured) / len(measured)
 
     def _calculate_transitive_score(
-        self, transitive_dependencies: Collection[str], measured: bool = True
+        self, transitive_dependencies: Collection[str], *, measured: bool
     ) -> Optional[float]:
         """Calculate transitive dependency risk score.
 
         Args:
             transitive_dependencies: Set of transitive dependencies.
-            measured: Whether transitive resolution actually ran. An empty set
-                means "no transitive dependencies" only when someone looked;
-                when nothing looked, the signal is unavailable, not zero (#74).
+            measured: Whether transitive resolution actually ran. Keyword-only
+                and defaultless on purpose (#199): the old ``measured=True``
+                default meant a caller that said nothing got a confident score
+                for a signal nobody measured. An empty set means "no transitive
+                dependencies" only when someone looked; when nothing looked the
+                signal is unavailable, not zero (#74).
 
         Returns:
             Transitive dependency risk score between 0.0 and 1.0, or None when
             the signal could not be measured.
         """
+        if not measured:
+            # A set nobody vouched for is not evidence, whatever is in it.
+            return None
         if not transitive_dependencies:
-            if not measured:
-                return None
-            return 0.0  # No transitive dependencies = no risk
+            return 0.0  # Looked, found none = no transitive risk
 
         # Calculate risk based on number of transitive dependencies
         num_deps = len(transitive_dependencies)

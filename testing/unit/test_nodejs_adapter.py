@@ -33,7 +33,6 @@ from signal_floors import (
     SCORES_FROM_REGISTRY_ALONE,
     assert_measures_registry_signals,
     assert_meets_signal_floor,
-    mark_transitive_unmeasured,
 )
 
 from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer, npm_registry_path
@@ -410,7 +409,7 @@ def _score_offline(
     ):
         dep = community_analyzer.analyze_community_metrics(dep, metadata)
 
-    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
+    return RiskScorer().score_dependency(dep)
 
 
 def _express_score() -> DependencyRiskScore:

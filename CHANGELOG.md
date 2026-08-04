@@ -90,6 +90,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`transitive_source` was fail-open: an absent marker read as *measured*, so
+  a dependency nobody resolved scored a confident `0.0` for transitive risk.**
+  This is #141's fabricated zero surviving in one field. #141 marked the
+  unmeasured cases explicitly but never inverted the default, so the guarantee
+  held only where someone remembered to annotate — and the places nobody
+  annotated were not hypothetical. The org scan (`org_scan.pipeline`) never
+  calls the transitive analyzer at all, so *every* dependency it scored arrived
+  with an unset marker and got a free `0.0`; a crash part-way through
+  resolution did the same to whatever the analyzer had not reached yet. PR #198
+  found the near-miss that proves the hazard was live: Maven was writing its
+  marker as a bare `"transitive_source"` string literal rather than through the
+  recorder, one typo from silently reverting to fabricating zeros, with no test
+  failing because `0.0` is a perfectly plausible score. The read now fails
+  closed (`signals.transitive_is_measured`), `_calculate_transitive_score`'s
+  `measured` argument is keyword-only and defaultless — the #189
+  `record_source_repository` shape — and a set carrying no source marker is
+  declined rather than credited to an unnamed resolver.
+
+  **Scores move, for real dependencies.** An unmeasured signal leaves both
+  numerator and denominator (#74), so removing a fabricated `0.0` *raises* the
+  reported risk of everything it was diluting, and costs one measured signal
+  against the insufficient-data bar. Verified against the captured registry
+  fixtures for all eight ecosystems, scored the way the org scan scores them:
+  12 of 25 moved, all of them in the five ecosystems whose adapter reads no
+  dependency list (nodejs, python, cargo, rubygems, golang) — express 0.95 →
+  1.04 and LOW → UNKNOWN, request MEDIUM → UNKNOWN, flask LOW → UNKNOWN,
+  hpricot LOW → MEDIUM, sklearn 2.25 → 2.47. The three ecosystems that
+  genuinely measure transitive dependencies are byte-identical: nuget reads the
+  `.nuspec` `<dependencies>` (#129), maven the POM's scope-filtered
+  `<dependencies>`, composer the p2 entry's `require` block (#180). An audit of
+  all eight confirmed those are the only three that populate the field at all.
+  `MIN_MEASURED_SIGNALS` is unchanged and correct: no ecosystem measures more
+  than it did, and the three that measure transitive were already floored
+  including it.
+
+  For npm lockfiles the analyzer now records `manifest` only for packages the
+  lockfile actually names. A package absent from the lock resolved to the empty
+  set and was stamped as measured, which claimed the manifest said "none" when
+  it said nothing. Packages the lock does name are unaffected, including the
+  genuine measured zero for a leaf with no dependencies of its own. (#199)
+
 - **The `source_repository` signal has three states, and was recording two of
   them as one.** `record_source_repository` marks whether a registry *declares*
   a source repository, which is what lets the scorer treat "this package

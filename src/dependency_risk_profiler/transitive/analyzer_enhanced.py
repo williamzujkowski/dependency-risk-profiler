@@ -438,6 +438,11 @@ def record_transitive_source(
     this dependency's tree, and the scorer drops the transitive signal from
     both numerator and denominator (#74) rather than scoring an unearned zero.
 
+    Since #199 the *reading* side agrees with that shape: a dependency this
+    function never touched reads as unmeasured too (see
+    ``signals.transitive_is_measured``). A new adapter that stays silent
+    reports an honest gap; it can no longer inherit a confident ``0.0``.
+
     Args:
         dependency: Dependency metadata to update in place.
         source: Sanitized logical name of whatever resolved the tree —
@@ -460,6 +465,12 @@ def mark_unmeasured_transitive(
     signal as unavailable rather than as "zero transitive dependencies,
     therefore zero risk".
 
+    Since #199 this no longer *carries* that guarantee — the scorer's read
+    defaults to unmeasured, so a dependency this never reaches is safe anyway.
+    It stays because the marker is the recorded state a report can show, and
+    "unmeasured, and here is the field saying so" beats an absent field that
+    the reader has to know the default for.
+
     Args:
         dependencies: Dictionary mapping dependency names to their metadata.
 
@@ -467,8 +478,6 @@ def mark_unmeasured_transitive(
         The same dictionary, with unmeasured dependencies marked.
     """
     for dependency in dependencies.values():
-        if dependency.transitive_dependencies:
-            continue
         if dependency.transitive_source:
             continue
         record_transitive_source(dependency, source=None)
@@ -527,20 +536,31 @@ def analyze_transitive_dependencies_enhanced(
                 "whatever the ecosystem analyzer collected",
                 manifest_path,
             )
-            return mark_unmeasured_transitive(dependencies)
+        else:
+            # Build transitive dependency graph
+            direct_dependencies = list(dependencies.keys())
+            transitive_deps = build_dependency_graph(
+                direct_dependencies, dependency_map
+            )
 
-        # Build transitive dependency graph
-        direct_dependencies = list(dependencies.keys())
-        transitive_deps = build_dependency_graph(direct_dependencies, dependency_map)
-
-        # Update dependency metadata with transitive dependencies
-        for pkg_name, deps in transitive_deps.items():
-            if pkg_name in dependencies:
-                dependencies[pkg_name].transitive_dependencies = deps
-                record_transitive_source(dependencies[pkg_name], source="manifest")
-                logger.info(f"Found {len(deps)} transitive dependencies for {pkg_name}")
+            # Update dependency metadata with transitive dependencies. Only a
+            # package the map actually names was resolved: ``build_dependency_
+            # graph`` answers the empty set for one it has never heard of, and
+            # stamping that as measured would claim the manifest said "none"
+            # when it said nothing at all.
+            for pkg_name, deps in transitive_deps.items():
+                if pkg_name in dependencies and pkg_name in dependency_map:
+                    dependencies[pkg_name].transitive_dependencies = deps
+                    record_transitive_source(dependencies[pkg_name], source="manifest")
+                    logger.info(
+                        f"Found {len(deps)} transitive dependencies for {pkg_name}"
+                    )
 
     except Exception as e:
         logger.error(f"Error analyzing transitive dependencies: {e}")
 
-    return dependencies
+    # Every exit runs through the marker, including the failure above. A crash
+    # part-way through resolution used to leave the untouched dependencies with
+    # no marker at all, which was the fail-open case reading as a measured zero
+    # (#199).
+    return mark_unmeasured_transitive(dependencies)

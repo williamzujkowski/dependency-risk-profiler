@@ -46,7 +46,7 @@ provenance-dated, replayed offline. This module never touches the network.
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, FrozenSet, List, Mapping, Optional, Sequence, Tuple
 from unittest import mock
 
 from registry_fixtures import (
@@ -55,11 +55,7 @@ from registry_fixtures import (
     replay_fetcher,
     replay_requests_get,
 )
-from signal_floors import (
-    REGISTRY_MEASURED_SIGNALS,
-    assert_meets_signal_floor,
-    mark_transitive_unmeasured,
-)
+from signal_floors import REGISTRY_MEASURED_SIGNALS, assert_meets_signal_floor
 
 from dependency_risk_profiler.analyzers import composer as composer_module
 from dependency_risk_profiler.analyzers import maven as maven_module
@@ -237,15 +233,22 @@ def _finish(
         metadata: The adapter's cached registry payload.
 
     Returns:
-        The scored dependency, with transitive resolution marked unmeasured the
-        way the real pipeline marks it for registry-only ecosystems (#141).
+        The scored dependency, exactly as the adapter left it.
+
+    Nothing marks transitive unmeasured here, and that is the point since #199.
+    This used to call ``mark_transitive_unmeasured`` to reproduce what the
+    pipeline does for registry-only ecosystems — which meant the harness
+    asserted the marker rather than the default, and would have stayed green if
+    the default flipped back to fail-open. Now the five adapters that never
+    read a dependency list say nothing and are scored as unmeasured *because*
+    they said nothing, which is the property under test.
     """
     dep = analyze_license(dep, dict(metadata))
     with mock.patch.object(
         community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
     ):
         dep = community_analyzer.analyze_community_metrics(dep, dict(metadata))
-    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
+    return RiskScorer().score_dependency(dep)
 
 
 def _score_nodejs(
@@ -1033,6 +1036,16 @@ NODEJS_CASES: Tuple[FixtureCase, ...] = (
                     "SCORES_FROM_REGISTRY_ALONE['nodejs'] is False"
                 ),
             ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "the adapter reads no dependency list from the packument, "
+                    "so nothing measured this and nothing marks it on the "
+                    "adapter's behalf. Before #199 that silence scored a "
+                    "confident 0.0 (#141's shape, in the one field it survived)"
+                ),
+            ),
         ),
     ),
     FixtureCase(
@@ -1174,6 +1187,14 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
                 maximum=1.0,
                 because="the trimmed repository root lets the star scrape land",
             ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "rubygems' versions endpoint carries a dependencies object "
+                    "the adapter does not read, so nothing measured this (#199)"
+                ),
+            ),
         ),
     ),
     FixtureCase(
@@ -1293,6 +1314,14 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
                 minimum=0.0,
                 maximum=1.0,
                 because="a resolvable repository lets the star scrape land",
+            ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "PyPI publishes requires_dist and the adapter does not read "
+                    "it; an unread field is not a measured empty tree (#199)"
+                ),
             ),
         ),
     ),
@@ -1485,6 +1514,14 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
                 minimum=0.0,
                 maximum=1.0,
                 because="a resolvable repository lets the star scrape land",
+            ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "crates.io serves dependencies from a separate endpoint the "
+                    "adapter never calls, so nothing measured this (#199)"
+                ),
             ),
         ),
     ),
@@ -1889,6 +1926,14 @@ GOLANG_CASES: Tuple[FixtureCase, ...] = (
                 maximum=1.0,
                 because="a resolvable repository lets the star scrape land",
             ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "the proxy serves the module's go.mod and the adapter reads "
+                    "it for the version, not for the require block (#199)"
+                ),
+            ),
         ),
     ),
     FixtureCase(
@@ -2022,6 +2067,16 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
                 because=(
                     "Maven Central publishes no owner list; <developers> is "
                     "free text in a POM the artifact's own author controls"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.1,
+                because=(
+                    "the POM's scope-filtered <dependencies> is a real read: "
+                    "two shipped artifacts, which is the 1-4 bucket. This is "
+                    "the marker PR #198 found written as a bare string literal, "
+                    "one typo from reverting to a fabricated zero"
                 ),
             ),
         ),
@@ -2505,9 +2560,13 @@ NUGET_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "transitive",
-                minimum=0.0,
-                maximum=1.0,
-                because="the nuspec states the package's own dependencies (#129)",
+                equals=0.25,
+                because=(
+                    "the nuspec states the package's own dependencies (#129): "
+                    "six of them, which is the 5-19 bucket. Pinned to a value "
+                    "rather than a 0..1 range since #199, because the range "
+                    "admitted the 0.0 a fail-open default produces"
+                ),
             ),
             SignalValue(
                 "community",
@@ -2826,6 +2885,63 @@ def unproven_branches() -> List[str]:
 # --- The assertions --------------------------------------------------------
 
 
+#: The ecosystems whose adapter positively records a measured transitive set,
+#: from an audit of all eight (#199). nuget reads the ``.nuspec``
+#: ``<dependencies>`` (#129), maven the POM's scope-filtered ``<dependencies>``,
+#: composer the p2 entry's ``require`` block minus platform constraints (#180).
+#:
+#: The other five never assign ``transitive_dependencies`` at all — verified by
+#: grep, not by trusting the list — so under the fail-closed default they
+#: report the signal as unmeasured. That is not a gap that needs a waiver: it
+#: is the honest answer, and it is asserted in both directions below so that
+#: adding a read without recording it, or losing a read while keeping the
+#: marker, both fail here.
+#:
+#: (npm packuments, PyPI ``requires_dist``, crates.io's dependencies endpoint,
+#: rubygems' ``dependencies`` object and a module's ``go.mod`` all *carry* a
+#: dependency list none of those five adapters reads. Reading them is an
+#: enhancement with its own floor changes, not part of closing the default.)
+TRANSITIVE_RECORDING_ECOSYSTEMS: FrozenSet[str] = frozenset(
+    {"composer", "maven", "nuget"}
+)
+
+
+def assert_transitive_is_recorded_not_assumed(
+    score: DependencyRiskScore, case: FixtureCase
+) -> None:
+    """Assert the transitive signal is measured exactly where it is read.
+
+    The regression this pins is #199's: an adapter that reads no dependency
+    list and records nothing must produce an UNMEASURED transitive signal, not
+    a confident ``0.0``. Nothing in this harness marks the signal on the
+    adapter's behalf any more, so a fail-open default would show up here as
+    five ecosystems suddenly scoring 0.0 for a list they never looked at.
+
+    Args:
+        score: The scored dependency, straight from the adapter.
+        case: The conformance case, for the failure message.
+
+    Raises:
+        AssertionError: If a non-reading ecosystem produced a value, or a
+            reading one produced None.
+    """
+    records = case.ecosystem in TRANSITIVE_RECORDING_ECOSYSTEMS
+    actual = score.transitive_score
+    if records:
+        assert actual is not None, (
+            f"{case.slug}: transitive came back unmeasured, but {case.ecosystem} "
+            f"reads a dependency list off its registry document. Either the "
+            f"read broke or the recorder stopped being called."
+        )
+        return
+    assert actual is None, (
+        f"{case.slug}: transitive scored {actual}, but {case.ecosystem}'s "
+        f"adapter reads no dependency list, so nothing measured it. A value "
+        f"here means the fail-open default is back (#199): silence being read "
+        f"as 'resolved, and it is empty'."
+    )
+
+
 def assert_case_conforms(case: FixtureCase) -> DependencyRiskScore:
     """Assert one captured payload produces the values it should.
 
@@ -2864,6 +2980,8 @@ def assert_case_conforms(case: FixtureCase) -> DependencyRiskScore:
 
     for expectation in case.signals:
         expectation.check(score, case.slug)
+
+    assert_transitive_is_recorded_not_assumed(score, case)
 
     if case.meets_signal_floor:
         assert_meets_signal_floor(score, case.ecosystem)

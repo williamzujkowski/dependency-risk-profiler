@@ -313,6 +313,29 @@ SOURCE_REPOSITORY_UNREADABLE: FrozenSet[SourceRepositoryState] = frozenset(
 TRANSITIVE_SOURCE_UNMEASURED = "unmeasured"
 
 
+def transitive_is_measured(source: Optional[str]) -> bool:
+    """Decide whether a dependency's transitive set was actually resolved.
+
+    The one place that reads the marker, and it fails **closed**: an absent
+    marker means nobody resolved this tree, not that someone resolved it and
+    found nothing. That default is the whole point of #199. It used to be the
+    other way around — ``source != TRANSITIVE_SOURCE_UNMEASURED``, which is
+    True for ``None`` — so a dependency no adapter and no analyzer ever touched
+    scored a confident ``0.0``, the #141 fabricated zero surviving in one
+    field. Every other measurement state in this package is unreachable by
+    omission (``Measurement``, ``record_source_repository``); this one now is
+    too.
+
+    Args:
+        source: The dependency's ``transitive_source`` marker, as written by
+            ``transitive.analyzer_enhanced.record_transitive_source``.
+
+    Returns:
+        True only when something positively claimed to have resolved the tree.
+    """
+    return source is not None and source != TRANSITIVE_SOURCE_UNMEASURED
+
+
 # --- The catalog -----------------------------------------------------------
 
 

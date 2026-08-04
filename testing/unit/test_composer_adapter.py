@@ -6,11 +6,7 @@ from pathlib import Path
 from typing import Dict, Optional
 from unittest import mock
 
-from signal_floors import (
-    assert_measures_registry_signals,
-    assert_meets_signal_floor,
-    mark_transitive_unmeasured,
-)
+from signal_floors import assert_measures_registry_signals, assert_meets_signal_floor
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.composer import ComposerAnalyzer
@@ -178,7 +174,7 @@ def _score_package_offline(
     ):
         dep = community_analyzer.analyze_community_metrics(dep, metadata)
 
-    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
+    return RiskScorer().score_dependency(dep)
 
 
 def test_packagist_metadata_lands_on_the_fields_the_scorer_reads() -> None:
@@ -287,7 +283,7 @@ def test_a_failed_packagist_lookup_leaves_the_source_signal_unmeasured() -> None
     with mock.patch.object(analyzer, "_get_latest_release", return_value=None):
         analyzed = analyzer.analyze({"acme/unreachable": dep})["acme/unreachable"]
 
-    score = RiskScorer().score_dependency(mark_transitive_unmeasured(analyzed))
+    score = RiskScorer().score_dependency(analyzed)
 
     assert analyzed.source_repository_state is None
     assert score.source_repository_score is None

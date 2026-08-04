@@ -4,11 +4,7 @@ import copy
 from typing import Dict, List, Optional
 from unittest import mock
 
-from signal_floors import (
-    assert_measures_registry_signals,
-    assert_meets_signal_floor,
-    mark_transitive_unmeasured,
-)
+from signal_floors import assert_measures_registry_signals, assert_meets_signal_floor
 
 from dependency_risk_profiler.analyzers.crates import CratesIOAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
@@ -121,7 +117,7 @@ def _score_crate_offline(
     ):
         dep = community_analyzer.analyze_community_metrics(dep, metadata)
 
-    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
+    return RiskScorer().score_dependency(dep)
 
 
 def test_registry_metadata_lands_on_the_fields_the_scorer_reads() -> None:
