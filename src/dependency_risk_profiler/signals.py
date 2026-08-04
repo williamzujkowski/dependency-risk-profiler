@@ -412,6 +412,14 @@ ADVISORY_LOOKUP_UNMEASURED: FrozenSet[AdvisoryLookupState] = frozenset(
     {AdvisoryLookupState.FAILED, AdvisoryLookupState.NOT_ATTEMPTED}
 )
 
+#: The states in which at least one source was asked and did not answer, so the
+#: report owes the reader a line about it. Deliberately not the same set as
+#: :data:`ADVISORY_LOOKUP_UNMEASURED`: a ``PARTIAL`` lookup is a measurement and
+#: still an incomplete one, and a ``NOT_ATTEMPTED`` one had nothing to fail.
+ADVISORY_LOOKUP_DEGRADED: FrozenSet[AdvisoryLookupState] = frozenset(
+    {AdvisoryLookupState.FAILED, AdvisoryLookupState.PARTIAL}
+)
+
 
 def advisory_lookup_is_measured(state: Optional[AdvisoryLookupState]) -> bool:
     """Decide whether the advisory lookup produced a measurement.

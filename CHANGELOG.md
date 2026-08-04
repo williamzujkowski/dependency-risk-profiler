@@ -184,6 +184,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (source_lookup_failed)` and nothing is cached. With OSV reachable, four of
   those seven are in fact known-vulnerable.
 
+  One shape note for whoever edits `RiskScorer.score_dependency` next. Its
+  50ms-per-100-dependencies SLA is enforced *with coverage instrumentation
+  active*, and under instrumentation that method sits on a cliff: adding as few
+  as five physical lines to it — comments included, which generate no bytecode
+  at all — costs about 30% of the budget, while the same lines in a helper or at
+  the end of the file cost nothing measurable. So the second fact travels to
+  `_measure` as one tuple rather than as two arguments (a two-argument tail puts
+  fifteen call sites onto four lines apiece), and the new risk-factor branches
+  live in a module-level `advisory_risk_factors` with their explanation. Scoring
+  ends up 5% slower than before under instrumentation and 4% slower without it,
+  against an unchanged threshold.
+
 - **A package npm removed for malware read as current and undeprecated.** npm's
   security team does not delete a package it pulls; it republishes the name as
   a placeholder described `security holding package` at a version carrying a
