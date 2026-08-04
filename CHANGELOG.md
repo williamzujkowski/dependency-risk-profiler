@@ -144,6 +144,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The advisory cache served one package's advisories for another.** Cache
+  filenames were built by sanitizing the package name, and sanitizing loses
+  information, so two distinct packages could land on one entry — in either
+  direction: a clean package inheriting advisories, or a vulnerable one reading
+  as clean. `/` was rewritten to `__`, so composer's `foo/bar` and a literal
+  `foo__bar` were one file; and the key kept the source casing, so npm's
+  grandfathered `Foo` and a separate `foo` were one file on macOS and Windows,
+  which are case-insensitive by default. The second was the worse of the two
+  because it depended on the developer's filesystem: it reproduced for some
+  people and not others, on the platforms most people run locally.
+
+  Both keys are now a SHA-256 digest of `f"{ecosystem}\x00{package_name}"`. The
+  NUL separator cannot appear in either input, so no two `(ecosystem, package)`
+  pairs can produce the same joined string — `("a", "b/c")` and `("a/b", "c")`
+  stay distinct. Hashing rather than extending the replacement list also
+  retires three problems that were queued behind the same design: a
+  300-character package name exceeded `NAME_MAX` and failed to write, a NUL
+  byte in a name raised `ValueError` out of `open()`, and traversal-shaped
+  names stop being a question anyone has to re-answer. (They were never a
+  vulnerability — `"../../etc/passwd"` produced the literal filename
+  `python_..__..__etc__passwd.json` — but the digest closes it structurally.)
+
+  The in-memory cache in `aggregator.get_cache_key` collided the same two ways
+  and one more. It lowercased unconditionally, so `Foo` and `foo` shared an
+  entry on *every* platform, and its `:` separator could not split maven
+  coordinates back apart, where the package name is itself `group:artifact`.
+  The OSV batch pre-warm folded case in its dedupe set for the same reason.
+  Both are case-exact now. The cost is that `Flask` and `flask` occupy two
+  entries on registries that fold case: a lookup, where the collision cost
+  correctness.
+
+  Cache filenames stop being human-readable; the `package` and `ecosystem`
+  fields inside each record carry that, and nothing reads a filename for
+  meaning any more — `clear(ecosystem=...)` reads the recorded ecosystem
+  instead of matching a filename prefix, which is also exact where the prefix
+  match was not. `CACHE_SCHEMA_VERSION` goes to 3, so a record written under
+  the old layout into a shared cache directory is discarded on read rather than
+  scored against. (#212)
+
+- **A JSON `true` in a CVSS field scored as a real severity.** `bool` is a
+  subclass of `int`, so `true` satisfied a numeric guard and was returned as
+  `True`, behaving as `1.0` downstream: a malformed or hostile registry payload
+  produced a valid-looking LOW severity finding instead of an honest refusal.
+  The return path was fixed in the previous release; this is the sweep of
+  everywhere else the shape survived.
+
+  The NVD and GitHub Advisory normalizers copied `cvssData.baseScore` and
+  `advisory.cvss.score` into the record verbatim, so the boolean reached the
+  cache and every consumer that did not re-normalize. Both now normalize at the
+  point of extraction, as OSV already did. The same pass fixes the mirror-image
+  bug beside it: NVD's confidence read `severity or cvss_score`, so a *measured*
+  `0.0` — a score NVD published — was treated as a missing one.
+
+  Withdrawal got the same treatment in the other direction. `withdrawn` is an
+  RFC 3339 timestamp in both OSV's and GitHub's schemas, but `bool(...)`
+  accepted any truthy JSON value, so a payload carrying `"withdrawn": true`
+  suppressed a real advisory from the score without ever naming a withdrawal
+  date. A withdrawal now requires the timestamp its schema promises.
+
+  Adjacent string fields that arrived as something else were doing damage of
+  two kinds. `vuln.get("severity", "").upper()` and `status.lower()` raised
+  `AttributeError` on a boolean or null, and the caller's broad `except
+  Exception` turned that crash into "this package has no advisories" — a
+  fail-open on the whole lookup. Elsewhere the wrong-typed value was simply
+  copied through, putting a JSON `true` in `published`, in a `fixed_versions`
+  list nothing can version-order, and in reference URLs. All of these are read
+  through type-checked accessors now.
+
+  `None` from `normalize_cvss_score` means **unmeasured**, not "no severity",
+  and downstream honors that: the advisory falls to `UNKNOWN` severity and is
+  filtered with the reason `unknown severity` recorded, rather than scored as
+  `INFO`. A severity string NVD states independently still scores — an advisory
+  rated CRITICAL with a junk `baseScore` stays CRITICAL. (#213)
+
 - **`scan-org` produced a different risk figure for identical input across
   runs.** The org repository summary averaged a float over the dependencies in
   a repository, and read those dependencies out of a `set`. Set iteration order

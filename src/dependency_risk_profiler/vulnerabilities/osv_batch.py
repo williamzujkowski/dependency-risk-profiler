@@ -69,7 +69,10 @@ def _dedupe_and_filter_cached(
     queries: list[OSVBatchQuery] = []
 
     for package_name, ecosystem in package_ecosystems:
-        cache_key = (package_name.lower(), ecosystem.lower())
+        # Case-exact, matching the cache these results are written to. Folding
+        # case here dropped one of `Foo` and `foo` from the batch and then
+        # pre-warmed the survivor's advisories under both (#212).
+        cache_key = (package_name, ecosystem)
         if cache_key in seen:
             continue
         seen.add(cache_key)
