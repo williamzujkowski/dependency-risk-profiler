@@ -2,9 +2,10 @@
 
 import logging
 import re
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from ..analysis_helpers import analyze_repository
+from ..go_modules import GoModuleResolver
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
 from .common import cloned_repo, fetch_json
@@ -24,6 +25,9 @@ class GoAnalyzer(BaseAnalyzer):
         super().__init__(timeout)
         # Cache for package metadata
         self.metadata_cache = {}
+        # Module path -> repository. A module path is an import path, not a
+        # repository URL: see ..go_modules for the three rules between them.
+        self.resolver = GoModuleResolver()
 
     def analyze(
         self, dependencies: Dict[str, DependencyMetadata]
@@ -36,6 +40,22 @@ class GoAnalyzer(BaseAnalyzer):
         Returns:
             Updated dictionary with collected metadata.
         """
+        repositories = self._resolve_repositories(dependencies)
+        if self.clone_repos:
+            self._analyze_repositories(dependencies, repositories)
+        return dependencies
+
+    def _resolve_repositories(
+        self, dependencies: Dict[str, DependencyMetadata]
+    ) -> Dict[str, List[str]]:
+        """Collect proxy metadata and map each module to its repository.
+
+        Returns:
+            Repository URL -> the dependency names hosted in it. Modules that do
+            not resolve are absent, so their repository-derived signals stay
+            unmeasured rather than guessed.
+        """
+        repositories: Dict[str, List[str]] = {}
         for name, dep in dependencies.items():
             logger.info(f"Analyzing Go package: {name}")
             # Set the OSV ecosystem explicitly; the URL heuristic only matches
@@ -44,7 +64,9 @@ class GoAnalyzer(BaseAnalyzer):
             dep.additional_info["ecosystem"] = "golang"
 
             try:
-                # Get latest version from proxy.golang.org
+                # Get latest version from proxy.golang.org. This uses the full
+                # module path, major-version suffix included — that is what the
+                # module proxy is keyed on.
                 latest_version = self._get_latest_version(name)
                 if latest_version:
                     dep.latest_version = latest_version
@@ -54,34 +76,47 @@ class GoAnalyzer(BaseAnalyzer):
                         "latest_version": latest_version,
                     }
 
-                # Check if GitHub repository
-                if "github.com" in name:
-                    # Extract GitHub repo path
-                    github_path = re.sub(r"^github\.com/", "", name)
-
-                    # Format repository URL
-                    repo_url = f"https://github.com/{github_path}"
-                    dep.repository_url = repo_url
-
-                    # Clone the repository into a self-cleaning temp dir
-                    # (skipped for org scans, which use API signals instead).
-                    if self.clone_repos:
-                        with cloned_repo(repo_url) as clone_result:
-                            if clone_result:
-                                repo_dir, _ = clone_result
-
-                                try:
-                                    # Helper avoids circular imports.
-                                    dep = analyze_repository(dep, repo_dir)
-                                except Exception as e:
-                                    logger.error(
-                                        f"Error analyzing repository for {name}: {e}"
-                                    )
-
+                repository = self.resolver.resolve(name)
+                if repository is None:
+                    logger.debug("No source repository resolved for %s", name)
+                    continue
+                dep.repository_url = repository.url
+                if repository.subdirectory:
+                    # Many modules can share one repository; record where this
+                    # one lives so a shared repository URL is not confusing.
+                    dep.additional_info["module_subdirectory"] = repository.subdirectory
+                repositories.setdefault(repository.url, []).append(name)
             except Exception as e:
                 logger.error(f"Error analyzing {name}: {e}")
 
-        return dependencies
+        return repositories
+
+    def _analyze_repositories(
+        self,
+        dependencies: Dict[str, DependencyMetadata],
+        repositories: Dict[str, List[str]],
+    ) -> None:
+        """Clone each repository once and analyze every module it hosts.
+
+        Subdirectory modules mean one repository can back dozens of
+        dependencies; cloning per repository rather than per dependency keeps
+        that from multiplying the network cost by the same factor.
+        """
+        for repo_url, names in repositories.items():
+            # Clone the repository into a self-cleaning temp dir
+            # (skipped for org scans, which use API signals instead).
+            with cloned_repo(repo_url) as clone_result:
+                if not clone_result:
+                    continue
+                repo_dir, _ = clone_result
+                for name in names:
+                    try:
+                        # Helper avoids circular imports.
+                        dependencies[name] = analyze_repository(
+                            dependencies[name], repo_dir
+                        )
+                    except Exception as e:
+                        logger.error(f"Error analyzing repository for {name}: {e}")
 
     def _get_latest_version(self, package_name: str) -> Optional[str]:
         """Get the latest version of a Go package.
