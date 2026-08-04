@@ -31,6 +31,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pinned projects too, and there is no way to know one is there without
   reading the props file, so the lookup now always runs. Resolved versions for
   pinned and centrally-managed projects are unchanged.
+- **A bar and its violation shipped in the same commit, and now they cannot.**
+  AGENTS.md rule 7 said "Never commit `uv.lock`". The commit that introduced
+  that rule committed `uv.lock`. Nothing noticed, because nothing was looking —
+  the rule was a sentence in a file, and this repository has now produced four
+  of those: the `Any` ban that `disallow_any_explicit` never enforced, a 90%
+  coverage bar spelled with a pytest option that does not exist, this, and the
+  one below.
+
+  Put to a consensus vote rather than settled by preference, because the
+  library-versus-application question is genuinely contested. It came back 7-0
+  the other way, on a point that survives scrutiny: `uv.lock` is not packaged
+  into the wheel or the sdist, so it constrains no consumer of this library and
+  the entire lockfiles-in-libraries argument is about consumers. What it
+  constrains is a contributor's `uv sync`. A tool whose thesis is that unpinned
+  dependencies are a leading risk indicator does not get to except itself.
+
+  The rule now says commit it, and says the opposite of what would be
+  convenient: **the lockfile is not load-bearing in CI.** CI installs with
+  `pip install -e ".[dev]"` and does not invoke `uv` anywhere, so the committed
+  lockfile pins the contributor environment and nothing else. Six of the seven
+  voters cited reproducible CI as a reason to keep it; that reason is not true
+  today, and writing it down as though it were would have made this the fifth
+  instance instead of the fix for the third. The contrarian voter flagged the
+  install flag as a condition rather than an assumption, which is the only
+  reason it was checked.
+
+  What landed is the half that is completely correct: `uv lock --check` now runs
+  in CI, so the lockfile cannot drift out of agreement with `pyproject.toml` —
+  the case where someone edits a dependency and never relocks. Making the
+  install itself consume the lockfile is #232, split out rather than stubbed
+  because CI installs across a 3.9–3.12 matrix and a single locked resolution is
+  not automatically installable on all four. Replacing a decorative lockfile
+  with a red matrix is a worse trade than the status quo.
+
+  Both gates were verified by observing them fail. Untracking `uv.lock` fails
+  the new check in `test_repository_rules.py`; adding a dependency to
+  `pyproject.toml` without relocking exits `uv lock --check` with status 2.
 
 - **Four more ecosystems measure transitive dependencies, and the fifth says
   why it cannot.** nodejs, python, cargo and rubygems never populated

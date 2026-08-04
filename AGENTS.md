@@ -84,7 +84,9 @@ Prefer assertions on **values** over assertions on **counts**. A count cannot di
 - No new dependencies without an explicit, argued exception.
   - **Never hand-roll cryptography.** Signing, verification, and key handling go through an audited primitive (sigstore, minisign, age) via the exception path — which exists for exactly this and is meant to be used. Hand-rolled parsing is fine; hand-rolled crypto is how the fake signer gets rebuilt "for real" and badly.
   - The bar is *argued exception*, not *never*. A rule that makes the honest answer unavailable produces a dishonest one.
-- Never commit `uv.lock`.
+- **Commit `uv.lock`.** It pins the **development environment only**: `uv.lock` is not packaged into the wheel or the sdist, so it constrains no consumer of this library. What it constrains is a contributor's `uv sync`, which is exactly where a floating dev toolchain does damage. A tool that scores other projects on pinning does not get to except itself.
+  - This is **not** licence to over-pin runtime ranges in `pyproject.toml`. Narrow ranges there *do* reach consumers and are a separate, worse decision.
+  - **It is not load-bearing in CI, and the rule does not pretend otherwise.** CI installs with `pip install -e ".[dev]"` and does not invoke `uv` at all, so today the lockfile pins the contributor environment and nothing else. `uv lock --check` runs in CI so the lockfile cannot silently drift out of agreement with `pyproject.toml`; making the install itself consume it is #232.
 - Run `uv sync --extra dev` before testing — without it, `uv run` can silently import the package from another checkout and your tests pass against someone else's source.
 
 ---
