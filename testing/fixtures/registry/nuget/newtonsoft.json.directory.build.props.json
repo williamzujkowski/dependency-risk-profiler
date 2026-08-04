@@ -1,0 +1,11 @@
+{
+  "payload": "<Project>\n  <PropertyGroup>\n    <AutofacPackageVersion>4.6.2</AutofacPackageVersion>\n    <BenchmarkDotNetPackageVersion>0.10.10</BenchmarkDotNetPackageVersion>\n    <FSharpCorePackageVersion>4.2.3</FSharpCorePackageVersion>\n    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>8.0.0</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>\n    <MicrosoftCSharpPackageVersion>4.3.0</MicrosoftCSharpPackageVersion>\n    <MicrosoftSourceLinkGitHubPackageVersion>1.0.0</MicrosoftSourceLinkGitHubPackageVersion>\n    <MicrosoftNETTestSdkPackageVersion>16.3.0</MicrosoftNETTestSdkPackageVersion>\n    <MoqPackageVersion>4.8.1</MoqPackageVersion>\n    <NunitPackageVersion>3.11.0</NunitPackageVersion>\n    <Nunit3TestAdapterPackageVersion>3.13.0</Nunit3TestAdapterPackageVersion>\n    <SystemBuffersPackageVersion>4.4.0</SystemBuffersPackageVersion>\n    <SystemCollectionsImmutablePackageVersion>1.4.0</SystemCollectionsImmutablePackageVersion>\n    <SystemComponentModelTypeConverterPackageVersion>4.3.0</SystemComponentModelTypeConverterPackageVersion>\n    <SystemObjectModelPackageVersion>4.3.0</SystemObjectModelPackageVersion>\n    <SystemRuntimeSerializationFormattersPackageVersion>4.3.0</SystemRuntimeSerializationFormattersPackageVersion>\n    <SystemRuntimeSerializationPrimitivesPackageVersion>4.3.0</SystemRuntimeSerializationPrimitivesPackageVersion>\n    <SystemRuntimeSerializationXmlPackageVersion>4.3.0</SystemRuntimeSerializationXmlPackageVersion>\n    <SystemXmlXmlDocumentPackageVersion>4.3.0</SystemXmlXmlDocumentPackageVersion>\n    <SystemValueTuplePackageVersion>4.4.0</SystemValueTuplePackageVersion>\n    <XunitPackageVersion>2.3.1</XunitPackageVersion>\n    <XunitRunnerVisualStudioPackageVersion>2.3.1</XunitRunnerVisualStudioPackageVersion>\n  </PropertyGroup>\n</Project>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://raw.githubusercontent.com/JamesNK/Newtonsoft.Json/13.0.4/Src/Directory.Build.props",
+    "trimming": []
+  }
+}

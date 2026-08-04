@@ -8,6 +8,15 @@ version-drift signal, and eighteen UNKNOWN risk levels.
 
 The fixtures under ``testing/manifests/nuget/`` mirror that layout on disk, so
 the whole walk-up-and-resolve path is exercised without a network or a checkout.
+
+#151 added the two things #129 left out, and they are tested here the way
+``test_gradle_parser`` splits its own coverage: the *captured* half — Dapper and
+Newtonsoft.Json, real repositories, parsed and then scored against recorded
+nuget.org bytes — lives in ``adapter_conformance``, and this file holds the
+branches a captured project happens not to contain plus the ones whose whole
+content is a refusal. A synthetic fixture cannot prove a reader matches the
+world; it can prove a reader declines when it should, which is most of what is
+below.
 """
 
 from pathlib import Path
@@ -16,10 +25,13 @@ import pytest
 
 from dependency_risk_profiler.parsers.nuget import NuGetParser
 from dependency_risk_profiler.parsers.nuget_cpm import (
+    BUILD_DEPENDENCY_KEY,
+    BUILD_PROPS_FILENAME,
     CENTRAL_PROPS_FILENAME,
     collect_properties,
     concrete_version,
     expand_properties,
+    find_build_props,
     find_central_props,
     read_central_versions,
 )
@@ -219,10 +231,24 @@ def test_package_ids_match_case_insensitively(tmp_path: Path) -> None:
     assert _parse(project)["MediatR"].installed_version == "12.0.1"
 
 
-def test_an_inline_only_project_never_looks_for_a_props_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A project that pins everything stays on its own manifest."""
+def test_an_inline_only_project_still_reads_the_props_file(tmp_path: Path) -> None:
+    """#129's shortcut for a pinned project did not survive #151.
+
+    #129 skipped the props lookup entirely when every reference carried its own
+    version, so a fully pinned project touched no file but its own manifest.
+    A ``<GlobalPackageReference>`` is a dependency of every project under the
+    file *including* the pinned ones, and there is no way to know one is there
+    without reading the file. So the lookup now always runs, and the property
+    the old test pinned is gone deliberately rather than by accident. What must
+    not change is the answer for the pins themselves.
+    """
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<PackageVersion Include="MediatR" Version="9.9.9" />'
+        '<GlobalPackageReference Include="Nerdbank.GitVersioning" Version="3.6.133" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
     project = tmp_path / "App.csproj"
     project.write_text(
         '<Project><ItemGroup><PackageReference Include="MediatR" Version="12.0.1" />'
@@ -230,14 +256,14 @@ def test_an_inline_only_project_never_looks_for_a_props_file(
         encoding="utf-8",
     )
 
-    def explode(_: Path) -> None:
-        raise AssertionError("the props lookup must not run for a pinned project")
+    deps = _parse(project)
 
-    monkeypatch.setattr(
-        "dependency_risk_profiler.parsers.nuget.find_central_props", explode
+    # The inline pin still wins over the central declaration, unchanged.
+    assert deps["MediatR"].installed_version == "12.0.1"
+    assert deps["MediatR"].additional_info[VERSION_SOURCE_KEY] == (
+        VERSION_SOURCE_DECLARED
     )
-
-    assert _parse(project)["MediatR"].installed_version == "12.0.1"
+    assert deps["Nerdbank.GitVersioning"].installed_version == "3.6.133"
 
 
 def test_find_central_props_stops_at_the_filesystem_root(tmp_path: Path) -> None:
@@ -354,3 +380,435 @@ def test_props_files_resolve_no_external_entities(tmp_path: Path) -> None:
     # and the version is honestly unmanaged. The secret never appears.
     assert "s3cret" not in mediatr.installed_version
     assert mediatr.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_UNMANAGED
+
+
+# --- <GlobalPackageReference>: dependencies with nothing in the project ------
+#
+# The captured case is Dapper, in ``adapter_conformance``: one
+# ``<GlobalPackageReference Include="ReferenceTrimmer">`` in the repository's
+# Directory.Packages.props, nothing in Dapper.csproj, and a package that was
+# entirely invisible to the scanner before #151. What follows is the rest of the
+# shape — the declarations a real repository does not happen to contain, and the
+# cases where the honest answer is to decline.
+
+
+def test_a_global_package_reference_is_a_dependency_of_the_project(
+    tmp_path: Path,
+) -> None:
+    """The whole of gap 1: a package the .csproj never mentions."""
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<GlobalPackageReference Include="ReferenceTrimmer" Version="3.5.7" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="MediatR" Version="12.0.1" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    trimmer = _parse(project)["ReferenceTrimmer"]
+
+    assert trimmer.installed_version == "3.5.7"
+    assert trimmer.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_CENTRAL
+
+
+def test_a_global_package_is_marked_as_a_build_dependency(tmp_path: Path) -> None:
+    """Build-time and runtime are not merged silently.
+
+    The marker is the same key ``parsers/toml.py`` writes for pyproject's
+    ``build-system.requires``, so nothing new is invented here. It stops at the
+    Python API: the unified ``ScoredDependency`` (#205) has no field for a
+    dependency's kind, and ``additional_info`` reaches neither reporter, which
+    is recorded in ``nuget_cpm`` rather than papered over with a contract field
+    this issue was not asked to add.
+    """
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<GlobalPackageReference Include="StyleCop.Analyzers" '
+        'Version="1.2.0-beta.556" />'
+        '<PackageVersion Include="MediatR" Version="12.0.1" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="MediatR" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    deps = _parse(project)
+
+    assert deps["StyleCop.Analyzers"].additional_info[BUILD_DEPENDENCY_KEY] == "true"
+    assert deps["StyleCop.Analyzers"].installed_version == "1.2.0-beta.556"
+    # A package the project does reference is not marked, and that asymmetry is
+    # the entire point of marking anything.
+    assert BUILD_DEPENDENCY_KEY not in deps["MediatR"].additional_info
+
+
+def test_a_csproj_with_no_package_references_still_gets_its_global_packages(
+    tmp_path: Path,
+) -> None:
+    """The extreme of the same fact: every dependency comes from above."""
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<GlobalPackageReference Include="Microsoft.SourceLink.GitHub" '
+        'Version="8.0.0" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        "<Project><PropertyGroup><TargetFramework>net8.0</TargetFramework>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+
+    deps = _parse(project)
+
+    assert set(deps) == {"Microsoft.SourceLink.GitHub"}
+    assert deps["Microsoft.SourceLink.GitHub"].installed_version == "8.0.0"
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        '<GlobalPackageReference Include="Polly" Version="$(Nope)" />',
+        '<GlobalPackageReference Include="Polly" Version="1.2.*" />',
+        '<GlobalPackageReference Include="Polly" />',
+    ],
+    ids=["undefined-property", "floating-version", "no-version-at-all"],
+)
+def test_an_unresolvable_global_package_is_unmanaged_not_dropped(
+    tmp_path: Path, declaration: str
+) -> None:
+    """A global package with no readable version is still a dependency.
+
+    Dropping it would hide a package that ships in the build; inventing a
+    version would be worse. It is reported with the same ``unmanaged`` contract
+    every other unresolvable NuGet version gets (#74, #141).
+    """
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        f"<Project><ItemGroup>{declaration}</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text("<Project />", encoding="utf-8")
+
+    polly = _parse(project)["Polly"]
+
+    assert polly.installed_version == ""
+    assert polly.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_UNMANAGED
+    assert polly.additional_info[BUILD_DEPENDENCY_KEY] == "true"
+
+
+def test_the_projects_own_reference_wins_over_a_global_declaration(
+    tmp_path: Path,
+) -> None:
+    """A project that does both is rejected by NuGet; the specific one is kept."""
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<GlobalPackageReference Include="MediatR" Version="1.0.0" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="mediatr" Version="12.0.1" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    deps = _parse(project)
+
+    # Matched case-insensitively, so the global does not arrive under a second
+    # spelling of the same package.
+    assert set(deps) == {"mediatr"}
+    assert deps["mediatr"].installed_version == "12.0.1"
+    assert BUILD_DEPENDENCY_KEY not in deps["mediatr"].additional_info
+
+
+def test_global_packages_do_not_apply_when_central_management_is_off(
+    tmp_path: Path,
+) -> None:
+    """``GlobalPackageReference`` is a Central Package Management item.
+
+    Switch the feature off and MSBuild ignores the item, so reporting it would
+    be reporting a dependency the build does not have.
+    """
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>"
+        "</PropertyGroup><ItemGroup>"
+        '<GlobalPackageReference Include="ReferenceTrimmer" Version="3.5.7" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="MediatR" Version="12.0.1" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    assert set(_parse(project)) == {"MediatR"}
+
+
+def test_a_repeated_global_package_is_declared_once(tmp_path: Path) -> None:
+    """First declaration wins, matching how a repeated PackageVersion resolves."""
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<GlobalPackageReference Include="ReferenceTrimmer" Version="3.5.7" />'
+        '<GlobalPackageReference Include="referencetrimmer" Version="1.0.0" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text("<Project />", encoding="utf-8")
+
+    deps = _parse(project)
+
+    assert set(deps) == {"ReferenceTrimmer"}
+    assert deps["ReferenceTrimmer"].installed_version == "3.5.7"
+
+
+def test_the_props_reader_reports_global_packages_on_its_own() -> None:
+    """The reader is usable directly, and says nothing when there are none."""
+    central = read_central_versions(
+        MANIFESTS / "central-managed" / CENTRAL_PROPS_FILENAME
+    )
+
+    assert central is not None
+    assert central.global_packages == ()
+
+
+# --- Directory.Build.props as a property source ------------------------------
+#
+# The captured case is Newtonsoft.Json, in ``adapter_conformance``: seven
+# ``PackageReference`` items whose versions are all
+# ``$(SomethingPackageVersion)`` and a Src/Directory.Build.props one directory
+# up that defines every one of them. All seven read as ``unmanaged`` before
+# #151. Below is the precedence, which a single repository cannot demonstrate,
+# and the failure modes.
+
+
+def test_a_version_property_defined_one_directory_up_resolves(tmp_path: Path) -> None:
+    """Gap 2, in its smallest form."""
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<SerilogPackageVersion>3.1.1</SerilogPackageVersion>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    nested = tmp_path / "src" / "App"
+    nested.mkdir(parents=True)
+    project = nested / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" '
+        'Version="$(SerilogPackageVersion)" /></ItemGroup></Project>',
+        encoding="utf-8",
+    )
+
+    serilog = _parse(project)["Serilog"]
+
+    assert serilog.installed_version == "3.1.1"
+    # The project stated the version; where the *property* came from is a
+    # different question from where the version came from, and the vocabulary
+    # answers the second one.
+    assert serilog.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_DECLARED
+
+
+def test_the_project_overrides_a_property_it_inherits(tmp_path: Path) -> None:
+    """The project wins, because MSBuild imports Directory.Build.props first.
+
+    This is the precedence half of "resolve conservatively": getting it
+    backwards produces a confident version that the build would never install,
+    which is worse than the ``unmanaged`` this replaced.
+    """
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<SerilogPackageVersion>1.0.0</SerilogPackageVersion>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        "<Project><PropertyGroup>"
+        "<SerilogPackageVersion>3.1.1</SerilogPackageVersion>"
+        "</PropertyGroup><ItemGroup>"
+        '<PackageReference Include="Serilog" Version="$(SerilogPackageVersion)" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    assert _parse(project)["Serilog"].installed_version == "3.1.1"
+
+
+def test_the_packages_props_overrides_a_property_it_inherits(tmp_path: Path) -> None:
+    """Directory.Packages.props is imported after Directory.Build.props."""
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<SerilogPackageVersion>1.0.0</SerilogPackageVersion>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<SerilogPackageVersion>3.1.1</SerilogPackageVersion>"
+        "</PropertyGroup><ItemGroup>"
+        '<PackageVersion Include="Serilog" Version="$(SerilogPackageVersion)" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    serilog = _parse(project)["Serilog"]
+
+    assert serilog.installed_version == "3.1.1"
+    assert serilog.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_CENTRAL
+
+
+def test_an_inherited_property_resolves_a_central_declaration(tmp_path: Path) -> None:
+    """The props file may reference a property only the build props defines."""
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<SerilogPackageVersion>3.1.1</SerilogPackageVersion>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<PackageVersion Include="Serilog" Version="$(SerilogPackageVersion)" />'
+        '<GlobalPackageReference Include="Nerdbank.GitVersioning" '
+        'Version="$(SerilogPackageVersion)" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    deps = _parse(project)
+
+    assert deps["Serilog"].installed_version == "3.1.1"
+    assert deps["Nerdbank.GitVersioning"].installed_version == "3.1.1"
+
+
+def test_central_management_can_be_switched_off_from_the_build_props(
+    tmp_path: Path,
+) -> None:
+    """A property source is a property source, including for this property.
+
+    ``ManagePackageVersionsCentrally`` is an ordinary MSBuild property and
+    Dapper's real repository sets it in Directory.Build.props. Reading the file
+    for versions and not for the switch that decides whether those versions
+    apply would be the confidently-wrong answer the walk exists to avoid.
+    """
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup>"
+        "<ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    (tmp_path / CENTRAL_PROPS_FILENAME).write_text(
+        "<Project><ItemGroup>"
+        '<PackageVersion Include="Serilog" Version="3.1.1" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" />'
+        "</ItemGroup></Project>",
+        encoding="utf-8",
+    )
+
+    serilog = _parse(project)["Serilog"]
+
+    assert serilog.installed_version == ""
+    assert serilog.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_UNMANAGED
+
+
+def test_the_nearest_build_props_wins(tmp_path: Path) -> None:
+    """First hit walking up, the same rule the packages props gets."""
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup><SerilogVersion>1.0.0</SerilogVersion>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    nested = tmp_path / "src" / "App"
+    nested.mkdir(parents=True)
+    (nested.parent / BUILD_PROPS_FILENAME).write_text(
+        "<Project><PropertyGroup><SerilogVersion>2.0.0</SerilogVersion>"
+        "</PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    project = nested / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" '
+        'Version="$(SerilogVersion)" /></ItemGroup></Project>',
+        encoding="utf-8",
+    )
+
+    assert _parse(project)["Serilog"].installed_version == "2.0.0"
+
+
+def test_a_malformed_build_props_leaves_the_version_unmanaged(tmp_path: Path) -> None:
+    """Unparseable XML above the project must not take the scan down."""
+    (tmp_path / BUILD_PROPS_FILENAME).write_text("<Project", encoding="utf-8")
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" '
+        'Version="$(SerilogPackageVersion)" /></ItemGroup></Project>',
+        encoding="utf-8",
+    )
+
+    serilog = _parse(project)["Serilog"]
+
+    assert serilog.installed_version == ""
+    assert serilog.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_UNMANAGED
+
+
+def test_build_props_resolve_no_external_entities(tmp_path: Path) -> None:
+    """A Directory.Build.props is untrusted XML too; XXE must not be possible."""
+    secret = tmp_path / "secret.txt"
+    secret.write_text("s3cret", encoding="utf-8")
+    (tmp_path / BUILD_PROPS_FILENAME).write_text(
+        "<?xml version='1.0'?>"
+        f"<!DOCTYPE Project [<!ENTITY xxe SYSTEM 'file://{secret}'>]>"
+        "<Project><PropertyGroup><SerilogPackageVersion>&xxe;"
+        "</SerilogPackageVersion></PropertyGroup></Project>",
+        encoding="utf-8",
+    )
+    project = tmp_path / "App.csproj"
+    project.write_text(
+        '<Project><ItemGroup><PackageReference Include="Serilog" '
+        'Version="$(SerilogPackageVersion)" /></ItemGroup></Project>',
+        encoding="utf-8",
+    )
+
+    serilog = _parse(project)["Serilog"]
+
+    assert "s3cret" not in serilog.installed_version
+    assert serilog.additional_info[VERSION_SOURCE_KEY] == VERSION_SOURCE_UNMANAGED
+
+
+def test_find_build_props_stops_at_the_filesystem_root(tmp_path: Path) -> None:
+    """The walk is bounded for both filenames, not just the one #129 added."""
+    nested = tmp_path / "a" / "b" / "c"
+    nested.mkdir(parents=True)
+
+    found = find_build_props(nested)
+
+    assert found is None or BUILD_PROPS_FILENAME in str(found)

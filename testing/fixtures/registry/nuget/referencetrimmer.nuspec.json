@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<package xmlns=\"http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd\">\r\n  <metadata>\r\n    <id>ReferenceTrimmer</id>\r\n    <version>3.5.7</version>\r\n    <authors>David Federman</authors>\r\n    <developmentDependency>true</developmentDependency>\r\n    <license type=\"expression\">MIT</license>\r\n    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>\r\n    <readme>README.md</readme>\r\n    <projectUrl>https://github.com/dfederm/ReferenceTrimmer</projectUrl>\r\n    <description>Easily identify which dependencies can be removed from an MSBuild project.</description>\r\n    <copyright>\u00a9 David Federman. All rights reserved.</copyright>\r\n    <repository type=\"git\" url=\"https://github.com/dfederm/ReferenceTrimmer.git\" commit=\"8ee2bd8691dbe566cee9fedb51a74fa795d54988\" />\r\n  </metadata>\r\n</package>",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.7/referencetrimmer.nuspec",
+    "trimming": []
+  }
+}

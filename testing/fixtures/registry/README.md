@@ -31,6 +31,16 @@ Half the ecosystems answer with something else, so a manifest entry may declare
 | nuget | flat-container index and registration index (JSON) plus the `.nuspec` (XML) |
 | golang | `@latest` (JSON) plus the module's `go.mod` (plain text) |
 
+Two ecosystems also capture something no registry serves at all: a **project
+file** out of somebody's repository, from `raw.githubusercontent.com`. Gradle
+needs one because it has no registry of its own and the parse is the thing that
+can break (#101); nuget needs one because a `.csproj` states neither its
+versions nor its full dependency set, and the `Directory.Packages.props` and
+`Directory.Build.props` above it are where the rest lives (#129, #151). The
+drivers partition their fixtures on that host prefix and materialise each file
+at the path its source URL describes, so the walk-up runs against the
+repository's real layout rather than one a test author arranged.
+
 Text payloads are never string-truncated and never reduced. Shortening a POM
 changes how it *parses*, which is a key difference wearing a volume costume;
 the capture script refuses the combination outright.

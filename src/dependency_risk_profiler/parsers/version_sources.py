@@ -33,7 +33,10 @@ VERSION_SOURCE_DECLARED = "declared"
 # own block, a parent POM in the chain, or an imported BOM.
 VERSION_SOURCE_MANAGED = "dependency-management"
 
-# NuGet: resolved from a Directory.Packages.props <PackageVersion> entry.
+# NuGet: resolved from a Directory.Packages.props entry — a <PackageVersion>
+# the project referenced, or a <GlobalPackageReference> that applies to every
+# project in the tree whether or not it referenced anything (#151). Both are
+# the same fact about where the number came from, so both say so the same way.
 VERSION_SOURCE_CENTRAL = "central-package-management"
 
 # NuGet: a VersionOverride on the PackageReference beat the central declaration.
