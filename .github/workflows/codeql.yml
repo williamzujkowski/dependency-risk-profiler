@@ -50,12 +50,30 @@ jobs:
         include:
         - language: actions
           build-mode: none
-        - language: go
-          build-mode: autobuild
-        # javascript-typescript removed: the repo authors no first-party JS/TS
-        # (the only .js files are vendored express test fixtures under
-        # testing/projects/, and the HTML report's script is a Python string),
-        # so CodeQL fatally errors "no source code seen during build".
+        # Only `actions` and `python` are analysed, because they are the only
+        # languages this repository authors.
+        #
+        # `go` was removed in #231, and the reason is worth keeping. It had
+        # been reporting SUCCESS while analysing nothing: every .go file in the
+        # tree lived under testing/projects/, and `paths-ignore: **/testing/**`
+        # in codeql-config.yml excluded all of them. A green check measuring
+        # zero lines is exactly what AGENTS.md rule 6 is about. Deleting that
+        # directory left no .go file at all, at which point autobuild found
+        # testing/manifests/gin/go.mod — a two-line parser input with no
+        # `module` declaration — tried to build it, and failed:
+        #
+        #     go: error reading go.mod: missing module declaration
+        #     CodeQL could not process any code written in Go
+        #
+        # https://github.com/williamzujkowski/dependency-risk-profiler/actions/runs/30941393388/job/92100361643
+        #
+        # javascript-typescript was removed earlier for the same fatal error
+        # (the HTML report's script is a Python string; the only .js files were
+        # vendored express fixtures, now also gone).
+        #
+        # Add a language back when the repository actually contains one, and
+        # confirm the job reports a nonzero line count rather than merely
+        # passing.
         - language: python
           build-mode: none
         # CodeQL supports the following values keywords for 'language': 'actions', 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'

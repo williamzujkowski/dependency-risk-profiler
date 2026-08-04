@@ -3,9 +3,9 @@ repos:
     rev: v4.5.0
     hooks:
     -   id: trailing-whitespace
-        exclude: ^(testing/projects/|examples/|dependabot_check/)
+        exclude: ^examples/
     -   id: end-of-file-fixer
-        exclude: ^(testing/projects/|examples/|dependabot_check/)
+        exclude: ^examples/
     -   id: check-yaml
     -   id: check-added-large-files
     -   id: check-ast
@@ -15,28 +15,28 @@ repos:
     rev: 24.4.0
     hooks:
     -   id: black
-        exclude: ^(testing/projects/|examples/|dependabot_check/)
+        exclude: ^examples/
 
 -   repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.3.4
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-        exclude: ^(testing/projects/|examples/|dependabot_check/)
+        exclude: ^examples/
 
 -   repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
     -   id: isort
         name: isort (python)
-        exclude: ^(testing/projects/|examples/|dependabot_check/)
+        exclude: ^examples/
 
 -   repo: https://github.com/pycqa/flake8
     rev: 7.0.0
     hooks:
     -   id: flake8
         additional_dependencies: [flake8-docstrings]
-        exclude: ^(testing/projects/|examples/|dependabot_check/)
+        exclude: ^examples/
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.9.0

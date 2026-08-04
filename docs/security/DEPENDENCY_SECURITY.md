@@ -84,13 +84,20 @@ When contributing to this project, please follow these best practices:
 
 ## Example Files and Intentional Vulnerabilities
 
-The project contains intentionally outdated dependencies in the following directories:
-- `/examples/`
-- `/dependabot_check/`
+There are none, and there is no mechanism to have them.
 
-These files contain dependencies with known vulnerabilities for testing and demonstration purposes of the Dependency Risk Profiler tool. These intentional vulnerabilities are excluded from Dependabot alerts via the configuration in `.github/dependabot.yml`.
+This section used to name `/examples/` and `/dependabot_check/` as homes for
+deliberately vulnerable pins "excluded from Dependabot alerts via the
+configuration in `.github/dependabot.yml`". `/dependabot_check/` has not
+existed for the life of this document, and the exclusion never existed at all:
+Dependabot security updates are a repository setting that reads the whole
+dependency graph, and no key in `dependabot.yml` can subtract a path from it.
+The pins under `/examples/manifests/` were therefore not excluded from
+anything — they were 30 of the 65 alerts that #231 cleared.
 
-DO NOT use these example dependencies in production environments.
+Anything this repository commits into the dependency graph gets maintained like
+a real dependency. Test inputs that must hold a specific old version are kept
+as fragments under `/testing/` that the graph does not treat as installable.
 
 ## History of Security Updates
 

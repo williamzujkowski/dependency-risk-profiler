@@ -60,8 +60,8 @@ open examples/visualization/trend_visualizer.html
 xdg-open examples/visualization/trend_visualizer.html
 ```
 
-## Important Security Note
+## A note on the example manifests
 
-The example manifests contain intentionally outdated dependencies for testing and demonstration purposes. They serve as test cases for the Dependency Risk Profiler tool to identify and classify various risks.
-
-**⚠️ WARNING: DO NOT use these example dependencies in production environments.**
+They carry current pins and are maintained that way. See
+[`manifests/README.md`](manifests/README.md) for why the previous note here —
+that they were intentionally outdated — was both wrong and expensive (#231).

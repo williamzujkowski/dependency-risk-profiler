@@ -125,11 +125,11 @@ disallow_incomplete_defs = true
 # The repo bans `# type: ignore`; this makes a suppression that has stopped
 # being load-bearing fail the gate instead of quietly becoming cargo cult.
 warn_unused_ignores = true
-# `testing/` is checked (see testing/unit/test_mypy_config.py, which ratchets
-# its error count). Only `testing/projects/` is excluded: that is a vendored
-# upstream checkout used as parser input, not code this repo owns.
+# All of `testing/` is checked (see testing/unit/test_mypy_config.py, which
+# ratchets its error count). The one-time exclusion for `testing/projects/`
+# went with the directory itself in #231 — it was a vendored upstream checkout
+# no test ever read.
 exclude = [
-    "testing/projects/",
     "venv/",
     "build/",
     "dist/",
@@ -241,7 +241,6 @@ version = {attr = "dependency_risk_profiler.__version__"}
 [tool.ruff]
 target-version = "py39"
 line-length = 88
-exclude = ["testing/projects/*", "**/testing/projects/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I"]

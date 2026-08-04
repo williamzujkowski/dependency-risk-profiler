@@ -5,7 +5,11 @@
 set -uo pipefail
 PR="$1"
 REPO=williamzujkowski/dependency-risk-profiler
-REQUIRED=("test (3.10)" "test (3.11)" "test (3.12)" "security" "Analyze (actions)" "Analyze (go)" "Analyze (python)")
+# "Analyze (go)" was here until #231. It passed for months while analysing zero
+# lines -- every .go file was under testing/, which codeql-config.yml ignores --
+# and became a hard failure the moment that directory was deleted. A required
+# check that measures nothing is worse than an absent one.
+REQUIRED=("test (3.10)" "test (3.11)" "test (3.12)" "security" "Analyze (actions)" "Analyze (python)")
 
 HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid -q .headRefOid)
 BASE_OK=$(gh pr view "$PR" --repo "$REPO" --json mergeable -q .mergeable)

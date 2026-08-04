@@ -1,48 +1,54 @@
 # Dependabot configuration file
 # See documentation: https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 #
-# The `directory` of each entry is the ONLY thing that scopes it. There is no
-# way to enrol a directory and then subtract paths from it: `ignore` accepts
-# `dependency-name`, `versions`, and `update-types` — never `paths`. The three
-# entries below previously carried
+# ---------------------------------------------------------------------------
+# What this file does and does not control
+# ---------------------------------------------------------------------------
 #
-#     ignore:
-#       - dependency-name: "*"
-#         paths: ["examples/**", "testing/**", ...]
+# This file configures **version updates** only. It has no effect whatsoever on
+# **security updates**, which are a repository setting:
 #
-# which GitHub rejects outright:
+#     $ gh api repos/williamzujkowski/dependency-risk-profiler/automated-security-fixes
+#     {"enabled":true,"paused":false}
 #
-#     The property '#/updates/0/ignore/0' contains additional properties
-#     ["paths"] outside of the schema when none are allowed
+# Security updates run against everything in the dependency graph and are not
+# scoped by `directory`, `directories`, or anything else writable here. There is
+# no `exclude-paths` key; `directories` (plural) takes globs but not negation.
 #
-# That made the WHOLE FILE invalid, so Dependabot processed none of it (#167,
-# #191). The intent behind those blocks was right and is preserved by scoping:
-# `directory: "/"` enrols only the root manifests, so the deliberately-outdated
-# scan fixtures under testing/projects/ are never enrolled in the first place.
+# A previous version of this comment claimed that `directory: "/"` kept the
+# scan fixtures under testing/projects/ out of scope. It did not, and four PRs
+# proved it — #17 (/testing/projects/gin), #18 and #229 (/testing/projects/
+# flask/requirements), #19 (/testing/projects/express) — three of them opened
+# while this file was syntactically invalid and no version update could run at
+# all. They never needed this file. #231 has the full diagnosis.
 #
-# Those fixtures are scan TARGETS, pinned old on purpose so the test corpus
-# exercises version drift, advisory matching, and staleness. Bumping them
-# silently degrades the corpus — tests over a current fixture pass for the
-# wrong reason. Do not add an entry whose `directory` reaches them.
+# What has been observed, rather than read off the docs:
 #
-# Verify by observation, never by reading this file: a config that LOOKS
-# correct is exactly what shipped here for months. After any change, confirm
-# the `.github/dependabot.yml` check on the merge commit is green, and check
-# Insights -> Dependency graph -> Dependabot for a successful run per entry.
+#   * `directory: "/"` does NOT recurse for version updates. #195 bumped the
+#     aiohttp range in the root pyproject.toml and touched nothing under
+#     examples/ or testing/, both of which hold pip manifests.
+#   * Security updates DO reach every manifest in the graph regardless. #241
+#     targeted testing/projects/flask/requirements with no config entry within
+#     a mile of it.
+#
+# So the only durable way to keep a file out of Dependabot's way is to keep it
+# out of the dependency graph. #231 did that by deleting the vendored
+# testing/projects/ checkout no test ever read, and by bringing
+# examples/manifests/ current so its alerts resolve rather than accumulate.
+#
+# ---------------------------------------------------------------------------
+# Why there is no npm or gomod entry
+# ---------------------------------------------------------------------------
+#
+# There is no package.json and no go.mod at the repository root, so entries for
+# them enrolled nothing. They sat here looking like coverage. If a root
+# manifest for either ever appears, add the entry then — and confirm it works
+# by watching for a PR, not by re-reading this file.
 
 version: 2
 updates:
+  # Reads the root pyproject.toml. Observed working: #195.
   - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -51,13 +57,11 @@ updates:
   # a SHA without an updater trades a mutable-tag risk for a frozen-pin risk;
   # this entry is the half that makes the pins maintained rather than frozen.
   #
-  # `github-actions` only ever reads `.github/workflows/`, which holds no
-  # fixtures, so nothing needs excluding here.
-  #
   # Its acceptance test is a PR, not a green job log: wait for an upstream
   # action to publish a release and confirm a PR appears rewriting both the SHA
   # and its trailing version comment. A successful run with no PR, while an
   # upstream tag has demonstrably advanced, means this entry is not working.
+  # Observed working: #192, #193, #196, #197.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
