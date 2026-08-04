@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 
-def test_flake8_config_valid():
+def test_flake8_config_valid() -> None:
     """Test that the flake8 configuration is valid and works as expected."""
     # Get the pyproject.toml path where flake8 config is now stored
     root_dir = Path(__file__).parent.parent.parent
@@ -36,7 +36,7 @@ def test_flake8_config_valid():
     assert result.returncode == 0, f"flake8 configuration is invalid: {result.stderr}"
 
 
-def test_flake8_ignores_are_effective():
+def test_flake8_ignores_are_effective() -> None:
     """Test that flake8 ignores are properly configured."""
     # Get the root directory
     root_dir = Path(__file__).parent.parent.parent
@@ -82,7 +82,7 @@ very_long_line = (
             temp_file.unlink()
 
 
-def test_pre_commit_config_valid():
+def test_pre_commit_config_valid() -> None:
     """Test that the pre-commit configuration is valid."""
     # Get the pre-commit config path
     root_dir = Path(__file__).parent.parent.parent

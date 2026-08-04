@@ -13,7 +13,7 @@ from dependency_risk_profiler.vulnerabilities.aggregator import (
 )
 
 
-def test_vulnerability_aggregator_basic():
+def test_vulnerability_aggregator_basic() -> None:
     """Basic test for the vulnerability aggregator."""
     # Create a test dependency with a safe package
     package_name = "pytest"  # Using a common package that's likely safe
@@ -90,6 +90,7 @@ def vuln_aggregator_test_func(
 
         # Print updated security metrics
         sm = updated_dep.security_metrics
+        assert sm is not None
         print("\nUpdated Security Metrics:")
         print(f"  Vulnerability Count: {sm.vulnerability_count}")
         print(f"  Counted in Score: {sm.counted_vulnerability_count}")

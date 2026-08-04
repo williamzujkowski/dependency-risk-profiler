@@ -551,7 +551,9 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
 
     model = report_to_dict(report)
     assert model["unique_dependency_count"] == 4
-    assert model["known_vulnerable_dependency_count"] >= 1
+    known_vulnerable_count = model["known_vulnerable_dependency_count"]
+    assert isinstance(known_vulnerable_count, int)
+    assert known_vulnerable_count >= 1
     assert "most_exposed_risky_dependencies" in model
     first_dependencies = cast(
         List[Dict[str, object]], model["most_exposed_risky_dependencies"]

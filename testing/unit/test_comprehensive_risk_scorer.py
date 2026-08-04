@@ -844,7 +844,7 @@ def test_scoring_performance_sla() -> None:
 
     # Assert
     avg_time = sum(scoring_times) / len(scoring_times)
-    p95_time = numpy.percentile(scoring_times, 95)
+    p95_time = float(numpy.percentile(scoring_times, 95))
     max_time = max(scoring_times)
 
     assert avg_time < 1.0, f"Average scoring time {avg_time}ms exceeds SLA of 1ms"

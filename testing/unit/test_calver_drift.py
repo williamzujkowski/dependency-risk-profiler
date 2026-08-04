@@ -7,6 +7,7 @@ hiding the real risk (a stale trust store).
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import TypedDict
 
 from dependency_risk_profiler.cli.formatter import TerminalFormatter
 from dependency_risk_profiler.community.analyzer import analyze_pypi_community_metrics
@@ -151,10 +152,24 @@ def test_calver_drift_is_unmeasured_without_release_timestamps() -> None:
     assert "version" in score.unknown_signals
 
 
+class _CommunitySignals(TypedDict):
+    """The community kwargs both fixtures below share.
+
+    A ``TypedDict`` rather than a bare dict so ``**common`` is checked against
+    the real ``DependencyMetadata`` signature instead of widening to
+    ``dict[str, object]``.
+    """
+
+    maintainer_count: int
+    has_tests: bool
+    has_ci: bool
+    has_contribution_guidelines: bool
+
+
 def test_unmeasured_calver_drift_is_excluded_from_the_denominator() -> None:
     """An unmeasured drift signal must not deflate the score as a confident zero."""
     scorer = RiskScorer()
-    common = {
+    common: _CommunitySignals = {
         "maintainer_count": 5,
         "has_tests": True,
         "has_ci": True,

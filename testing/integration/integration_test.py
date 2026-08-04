@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def test_with_real_repository():
+def test_with_real_repository() -> None:
     """Test a real repo with security policy and dependency update tools."""
     logger.info("\n=== INTEGRATION TEST WITH REAL REPOSITORY ===")
 
@@ -60,6 +60,7 @@ def test_with_real_repository():
         )
 
         # Set the metrics explicitly for testing
+        assert dependency.security_metrics is not None
         dependency.security_metrics.has_security_policy = has_security_policy
         dependency.security_metrics.has_dependency_update_tools = has_update_tools
 

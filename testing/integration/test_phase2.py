@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def test_with_real_repository():
+def test_with_real_repository() -> None:
     """Test a real repository with code signing and branch protection."""
     logger.info("\n=== INTEGRATION TEST WITH REAL REPOSITORY (PHASE 2) ===")
 
@@ -52,6 +52,7 @@ def test_with_real_repository():
         )
 
         # Update security metrics
+        assert dependency.security_metrics is not None
         dependency.security_metrics.has_signed_commits = has_signed_commits
 
         # Print results
@@ -70,6 +71,7 @@ def test_with_real_repository():
         )
 
         # Update security metrics
+        assert dependency.security_metrics is not None
         dependency.security_metrics.has_branch_protection = has_branch_protection
 
         # Print results

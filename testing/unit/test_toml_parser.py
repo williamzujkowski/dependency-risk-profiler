@@ -1,16 +1,21 @@
 """Tests for the TOML parser."""
 
 import os
-import sys
 import tempfile
+from typing import List
 
 import pytest
 
 from dependency_risk_profiler.parsers.toml import TomlParser
 
+# Temp files the fixtures below create, cleaned up in teardown_module.
+# Previously stashed as attributes on the module object, which no type
+# checker can follow and which ruff's B010 will not let you write honestly.
+_TEMP_FILES: List[str] = []
+
 
 @pytest.fixture
-def pyproject_toml_file():
+def pyproject_toml_file() -> str:
     """Create a temporary pyproject.toml file for testing."""
     content = """
 [build-system]
@@ -41,14 +46,13 @@ dev = [
 
     # Store path for cleanup
 
-    current_module = sys.modules[__name__]
-    current_module.pyproject_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def poetry_toml_file():
+def poetry_toml_file() -> str:
     """Create a temporary poetry-style pyproject.toml file for testing."""
     content = """
 [tool.poetry]
@@ -72,14 +76,13 @@ black = "^22.0.0"
 
     # Store path for cleanup
 
-    current_module = sys.modules[__name__]
-    current_module.poetry_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def cargo_toml_file():
+def cargo_toml_file() -> str:
     """Create a temporary Cargo.toml file for testing."""
     content = """
 [package]
@@ -102,13 +105,12 @@ mockall = "0.11"
 
     # Store path for cleanup
 
-    current_module = sys.modules[__name__]
-    current_module.cargo_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
-def test_pyproject_toml_parser(pyproject_toml_file):
+def test_pyproject_toml_parser(pyproject_toml_file: str) -> None:
     """Test parsing a standard pyproject.toml file."""
     # Run this before the actual test to modify the file to add dev dependencies
     # that will be parsed correctly
@@ -159,7 +161,7 @@ def test_pyproject_toml_parser(pyproject_toml_file):
     assert dependencies["cryptography"].installed_version == "==39.0.0"
 
 
-def test_poetry_toml_parser(poetry_toml_file):
+def test_poetry_toml_parser(poetry_toml_file: str) -> None:
     """Test parsing a Poetry-style pyproject.toml file."""
     # Modify the file structure to make it more compatible with our parser
     try:
@@ -195,7 +197,7 @@ def test_poetry_toml_parser(poetry_toml_file):
     assert "python" not in dependencies
 
 
-def test_cargo_toml_parser(cargo_toml_file):
+def test_cargo_toml_parser(cargo_toml_file: str) -> None:
     """Test parsing a Cargo.toml file."""
     parser = TomlParser(cargo_toml_file)
     dependencies = parser.parse()
@@ -229,13 +231,13 @@ def test_cargo_toml_parser(cargo_toml_file):
     assert len(dev_deps) > 0, "No dev dependencies were found"
 
 
-def test_file_not_found():
+def test_file_not_found() -> None:
     """Test that the parser raises an error for non-existent files."""
     with pytest.raises(FileNotFoundError):
         TomlParser("nonexistent_file.toml")
 
 
-def test_invalid_toml():
+def test_invalid_toml() -> None:
     """Test parsing an invalid TOML file."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
         f.write(
@@ -248,22 +250,16 @@ def test_invalid_toml():
 
     # Store path for cleanup
 
-    current_module = sys.modules[__name__]
-    current_module.invalid_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     parser = TomlParser(temp_file)
     with pytest.raises(ValueError):
         parser.parse()
 
 
-def teardown_module(module):
-    """Clean up temporary files."""
-    # Clean up any temporary files that might have been created
-    for path in [
-        getattr(module, "pyproject_toml_path", None),
-        getattr(module, "poetry_toml_path", None),
-        getattr(module, "cargo_toml_path", None),
-        getattr(module, "invalid_toml_path", None),
-    ]:
-        if path and os.path.exists(path):
+def teardown_module() -> None:
+    """Remove every temp file the fixtures in this module created."""
+    while _TEMP_FILES:
+        path = _TEMP_FILES.pop()
+        if os.path.exists(path):
             os.unlink(path)

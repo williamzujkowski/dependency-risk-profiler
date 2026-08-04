@@ -1,7 +1,7 @@
 """Tests for the risk scoring system."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Callable, Dict, List, Tuple, TypedDict
 
 from dependency_risk_profiler.cli.formatter import JsonFormatter, TerminalFormatter
 from dependency_risk_profiler.models import (
@@ -577,26 +577,40 @@ def test_each_weighted_score_maps_to_its_own_weight_attribute() -> None:
     shipped bug where ``maintained`` reused ``branch_protection_weight``: with
     ``branch_protection_weight=0`` the buggy wiring would zero maintained out.
     """
-    # signal name -> (weight kwarg, SecurityMetrics field that makes it risky)
-    security_signals = {
-        "security_policy": ("security_policy_weight", "has_security_policy"),
+    # signal name -> (weight kwarg, a SecurityMetrics with exactly that signal
+    # reading risky). Written as constructor calls rather than field-name
+    # strings so mypy checks each field actually exists on SecurityMetrics.
+    security_signals: Dict[str, Tuple[str, Callable[[], SecurityMetrics]]] = {
+        "security_policy": (
+            "security_policy_weight",
+            lambda: SecurityMetrics(has_security_policy=False),
+        ),
         "dependency_update": (
             "dependency_update_weight",
-            "has_dependency_update_tools",
+            lambda: SecurityMetrics(has_dependency_update_tools=False),
         ),
-        "signed_commits": ("signed_commits_weight", "has_signed_commits"),
-        "branch_protection": ("branch_protection_weight", "has_branch_protection"),
-        "maintained": ("maintained_weight", "is_maintained"),
+        "signed_commits": (
+            "signed_commits_weight",
+            lambda: SecurityMetrics(has_signed_commits=False),
+        ),
+        "branch_protection": (
+            "branch_protection_weight",
+            lambda: SecurityMetrics(has_branch_protection=False),
+        ),
+        "maintained": (
+            "maintained_weight",
+            lambda: SecurityMetrics(is_maintained=False),
+        ),
     }
 
-    for name, (weight_kwarg, metric_field) in security_signals.items():
+    for name, (weight_kwarg, risky_metrics) in security_signals.items():
         scorer = _zero_weight_scorer(**{weight_kwarg: 1.0})
         dep = DependencyMetadata(
             name=f"only-{name}",
             installed_version="1.0.0",
             # A risky reading (False) for exactly one security signal; all other
             # signals stay None (unmeasured) and drop out of the denominator.
-            security_metrics=SecurityMetrics(**{metric_field: False}),
+            security_metrics=risky_metrics(),
         )
 
         score = scorer.score_dependency(dep)
@@ -636,10 +650,28 @@ def test_branch_protection_and_maintained_contribute_at_independent_weights() ->
     assert score.total_score != (0.15 / (0.15 + 0.15)) * scorer.max_score
 
 
+class _HealthySignals(TypedDict):
+    """The non-security ``DependencyMetadata`` kwargs shared by two fixtures.
+
+    Spelled as a ``TypedDict`` rather than a bare ``dict`` so that ``**common``
+    is checked against the real constructor signature; a plain dict literal
+    widens to ``dict[str, object]`` and the splat stops meaning anything.
+    """
+
+    installed_version: str
+    latest_version: str
+    last_updated: datetime
+    maintainer_count: int
+    has_tests: bool
+    has_ci: bool
+    has_contribution_guidelines: bool
+    license_info: LicenseInfo
+
+
 def test_missing_maintained_signal_leaves_other_packages_unchanged() -> None:
     """#116: #74 renormalization is missing-signal invariant for maintained."""
     scorer = RiskScorer()
-    common = dict(
+    common: _HealthySignals = dict(
         installed_version="1.0.0",
         latest_version="1.0.0",
         last_updated=datetime.now(timezone.utc) - timedelta(days=15),

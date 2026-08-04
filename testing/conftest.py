@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from typing import Dict
+from typing import Dict, Iterator
 
 import pytest
 
@@ -10,7 +10,7 @@ from dependency_risk_profiler.models import DependencyMetadata
 
 
 @pytest.fixture
-def sample_nodejs_manifest() -> str:
+def sample_nodejs_manifest() -> Iterator[str]:
     """Create a sample package-lock.json file.
 
     Returns:
@@ -76,7 +76,7 @@ def sample_nodejs_manifest() -> str:
 
 
 @pytest.fixture
-def sample_python_manifest() -> str:
+def sample_python_manifest() -> Iterator[str]:
     """Create a sample requirements.txt file.
 
     Returns:
@@ -100,7 +100,7 @@ def sample_python_manifest() -> str:
 
 
 @pytest.fixture
-def sample_golang_manifest() -> str:
+def sample_golang_manifest() -> Iterator[str]:
     """Create a sample go.mod file.
 
     Returns:

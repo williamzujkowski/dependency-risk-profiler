@@ -1,13 +1,10 @@
 """Tests for async vulnerability aggregator."""
 
-from unittest.mock import patch
+from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple
+from unittest.mock import MagicMock, patch
 
 import pytest
-
-try:
-    from aioresponses import aioresponses
-except ImportError:
-    aioresponses = None
+from aioresponses import aioresponses
 
 from dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from dependency_risk_profiler.vulnerabilities.aggregator_async import (
@@ -24,14 +21,14 @@ async_test = pytest.mark.asyncio
 
 
 @pytest.fixture
-def mock_aioresponse():
+def mock_aioresponse() -> Iterator[aioresponses]:
     """Fixture for mocking aiohttp responses."""
     with aioresponses() as mock:
         yield mock
 
 
 @pytest.fixture
-async def osv_source():
+async def osv_source() -> AsyncIterator[AsyncOSVSource]:
     """Fixture for AsyncOSVSource."""
     source = AsyncOSVSource()
     yield source
@@ -39,7 +36,7 @@ async def osv_source():
 
 
 @pytest.fixture
-async def nvd_source():
+async def nvd_source() -> AsyncIterator[AsyncNVDSource]:
     """Fixture for AsyncNVDSource."""
     source = AsyncNVDSource(api_key="test_key")
     yield source
@@ -47,7 +44,7 @@ async def nvd_source():
 
 
 @pytest.fixture
-async def github_source():
+async def github_source() -> AsyncIterator[AsyncGitHubAdvisorySource]:
     """Fixture for AsyncGitHubAdvisorySource."""
     source = AsyncGitHubAdvisorySource(api_token="test_token")
     yield source
@@ -55,7 +52,7 @@ async def github_source():
 
 
 @pytest.fixture
-def test_dependency():
+def test_dependency() -> DependencyMetadata:
     """Fixture for a test dependency."""
     dep = DependencyMetadata(
         name="test-package",
@@ -80,8 +77,11 @@ class TestAsyncVulnerabilitySources:
         "dependency_risk_profiler.vulnerabilities.aggregator_async.AsyncHTTPClient.post"
     )
     async def test_osv_source_get_vulnerabilities(
-        self, mock_post, mock_normalize, osv_source
-    ):
+        self,
+        mock_post: MagicMock,
+        mock_normalize: MagicMock,
+        osv_source: AsyncOSVSource,
+    ) -> None:
         """HYPOTHESIS: AsyncOSVSource should retrieve and normalize vulnerabilities."""
         # Arrange
         package_name = "test-package"
@@ -121,7 +121,9 @@ class TestAsyncVulnerabilitySources:
     @patch(
         "dependency_risk_profiler.vulnerabilities.aggregator_async.AsyncHTTPClient.post"
     )
-    async def test_osv_source_empty_response(self, mock_post, osv_source):
+    async def test_osv_source_empty_response(
+        self, mock_post: MagicMock, osv_source: AsyncOSVSource
+    ) -> None:
         """HYPOTHESIS: AsyncOSVSource should handle empty responses."""
         # Arrange
         package_name = "test-package"
@@ -147,8 +149,11 @@ class TestAsyncVulnerabilitySources:
         "dependency_risk_profiler.vulnerabilities.aggregator_async.AsyncHTTPClient.get"
     )
     async def test_nvd_source_get_vulnerabilities(
-        self, mock_get, mock_normalize, nvd_source
-    ):
+        self,
+        mock_get: MagicMock,
+        mock_normalize: MagicMock,
+        nvd_source: AsyncNVDSource,
+    ) -> None:
         """HYPOTHESIS: AsyncNVDSource should retrieve and normalize vulnerabilities."""
         # Arrange
         package_name = "test-package"
@@ -187,8 +192,11 @@ class TestAsyncVulnerabilitySources:
         "dependency_risk_profiler.vulnerabilities.aggregator_async.AsyncHTTPClient.post"
     )
     async def test_github_source_get_vulnerabilities(
-        self, mock_post, mock_normalize, github_source
-    ):
+        self,
+        mock_post: MagicMock,
+        mock_normalize: MagicMock,
+        github_source: AsyncGitHubAdvisorySource,
+    ) -> None:
         """HYPOTHESIS: GitHub source should retrieve and normalize vulnerabilities."""
         # Arrange
         package_name = "test-package"
@@ -237,8 +245,12 @@ class TestAsyncVulnerabilityAggregation:
     @patch("dependency_risk_profiler.vulnerabilities.aggregator_async.get_cached_data")
     @patch("dependency_risk_profiler.vulnerabilities.aggregator_async.cache_data")
     async def test_aggregate_vulnerabilities_for_package(
-        self, mock_cache_data, mock_get_cached, mock_get_vulns, test_dependency
-    ):
+        self,
+        mock_cache_data: MagicMock,
+        mock_get_cached: MagicMock,
+        mock_get_vulns: MagicMock,
+        test_dependency: DependencyMetadata,
+    ) -> None:
         """HYPOTHESIS: per-package async aggregation should gather vulnerabilities."""
         # Arrange
         mock_get_cached.return_value = None  # No cache hit
@@ -267,6 +279,7 @@ class TestAsyncVulnerabilityAggregation:
 
         # Assert
         assert vulnerabilities == mock_vulns
+        assert updated_dep.security_metrics is not None
         assert updated_dep.security_metrics.vulnerability_count == 1
         mock_cache_data.assert_called_once()
         mock_get_vulns.assert_called_once()
@@ -274,8 +287,8 @@ class TestAsyncVulnerabilityAggregation:
     @async_test
     @patch("dependency_risk_profiler.vulnerabilities.aggregator_async.get_cached_data")
     async def test_aggregate_vulnerabilities_with_cache(
-        self, mock_get_cached, test_dependency
-    ):
+        self, mock_get_cached: MagicMock, test_dependency: DependencyMetadata
+    ) -> None:
         """HYPOTHESIS: per-package async aggregation should use cache."""
         # Arrange
         cached_vulns = [
@@ -298,13 +311,16 @@ class TestAsyncVulnerabilityAggregation:
         # Assert
         assert len(vulnerabilities) == 1
         assert vulnerabilities[0]["id"] == "CACHED-123"
+        assert updated_dep.security_metrics is not None
         assert updated_dep.security_metrics.vulnerability_count == 1
 
     @async_test
     @patch(
         "dependency_risk_profiler.vulnerabilities.aggregator_async.aggregate_vulnerabilities_for_package_async"
     )
-    async def test_aggregate_vulnerability_data_async_impl(self, mock_aggregate_pkg):
+    async def test_aggregate_vulnerability_data_async_impl(
+        self, mock_aggregate_pkg: MagicMock
+    ) -> None:
         """HYPOTHESIS: async aggregation should process multiple dependencies."""
         # Arrange
         deps = {
@@ -313,7 +329,9 @@ class TestAsyncVulnerabilityAggregation:
         }
 
         # Mock responses for each package
-        def mock_side_effect(dep, *args, **kwargs):
+        def mock_side_effect(
+            dep: DependencyMetadata, *args: object, **kwargs: object
+        ) -> Tuple[DependencyMetadata, List[Dict[str, Any]]]:
             if dep.name == "pkg1":
                 vulns = [{"id": "OSV-2023-1", "severity": "HIGH"}]
                 updated = DependencyMetadata(name="pkg1", installed_version="1.0.0")
@@ -339,8 +357,10 @@ class TestAsyncVulnerabilityAggregation:
 
         # Assert
         assert len(updated_deps) == 2
-        assert updated_deps["pkg1"].security_metrics.vulnerability_count == 1
-        assert updated_deps["pkg2"].security_metrics.vulnerability_count == 1
+        for name in ("pkg1", "pkg2"):
+            metrics = updated_deps[name].security_metrics
+            assert metrics is not None
+            assert metrics.vulnerability_count == 1
         assert "pkg1" in vuln_counts and "pkg2" in vuln_counts
         assert vuln_counts["pkg1"] == 1
         assert vuln_counts["pkg2"] == 1
@@ -348,7 +368,9 @@ class TestAsyncVulnerabilityAggregation:
     @patch(
         "dependency_risk_profiler.vulnerabilities.aggregator_async.aggregate_vulnerability_data_async_impl"
     )
-    def test_aggregate_vulnerability_data_async(self, mock_impl, test_dependency):
+    def test_aggregate_vulnerability_data_async(
+        self, mock_impl: MagicMock, test_dependency: DependencyMetadata
+    ) -> None:
         """HYPOTHESIS: sync wrapper should invoke the async implementation."""
         # Arrange
         deps = {"pkg1": test_dependency}
@@ -367,7 +389,7 @@ class TestAsyncVulnerabilityAggregation:
 
 
 @pytest.mark.benchmark
-def test_aggregator_async_performance():
+def test_aggregator_async_performance() -> None:
     """BENCHMARK: Async aggregator should beat sync for many dependencies.
 
     SLA Requirements:

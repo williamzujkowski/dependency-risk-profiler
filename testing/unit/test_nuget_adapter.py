@@ -341,7 +341,7 @@ def test_nuget_analyzer_sets_ecosystem_and_reads_latest_stable() -> None:
     # Newest stable (12.1.0) wins over the pre-release 13.0.0-preview1.
     assert dep.latest_version == "12.1.0"
     # The flat-container index uses the lowercased id.
-    assert FLAT_INDEX_URL in client.client.requested  # type: ignore[attr-defined]
+    assert FLAT_INDEX_URL in client.client.requested
 
 
 def test_the_nuspec_repository_beats_a_documentation_project_url() -> None:
@@ -493,7 +493,7 @@ def test_an_off_host_registration_page_is_refused() -> None:
 
     dep, analyzer = _analyze_offline(_recorded_responses(registration=registration))
 
-    requested = analyzer.client.requested  # type: ignore[attr-defined]
+    requested = analyzer.client.requested
     assert not any("evil.example" in url for url in requested)
     # The catalog is simply unavailable; nothing is invented in its place.
     assert dep.last_updated is None

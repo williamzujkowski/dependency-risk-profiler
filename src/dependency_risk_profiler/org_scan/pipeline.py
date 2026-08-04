@@ -42,7 +42,7 @@ class VulnerabilityOptions:
 
 
 class RepositorySignalsClient(Protocol):
-    """Protocol-like base for authenticated repository signal enrichment."""
+    """Structural protocol for authenticated repository signal enrichment."""
 
     def get_repository_signals(self, owner_repo: str) -> RepoSignals:
         """Fetch popularity and repository state signals for owner/repo."""

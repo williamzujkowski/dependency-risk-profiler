@@ -32,14 +32,16 @@ class VulnerabilityCache:
     """Disk-based cache for vulnerability data."""
 
     def __init__(
-        self, cache_dir: Optional[Path] = None, expiry: int = DEFAULT_CACHE_EXPIRY
+        self, cache_dir: Optional[Path] = None, expiry: float = DEFAULT_CACHE_EXPIRY
     ):
         """Initialize the vulnerability cache.
 
         Args:
             cache_dir: Directory to store cache files.
                 Defaults to ~/.dependency_risk_profiler/vuln_cache
-            expiry: Cache expiry time in seconds. Defaults to 24 hours.
+            expiry: Cache expiry time in seconds, compared against
+                ``time.time()``, so fractional windows are meaningful.
+                Defaults to 24 hours.
         """
         self.cache_dir = Path(cache_dir) if cache_dir else DEFAULT_CACHE_DIR
         self.expiry = expiry

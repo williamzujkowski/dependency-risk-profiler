@@ -41,6 +41,7 @@ from adapter_conformance import (
 from registry_fixtures import (
     MANIFEST,
     FixtureError,
+    RegistryFixture,
     declared_fixtures,
     load_fixture,
     replay_fetcher,
@@ -297,7 +298,7 @@ def test_the_dotnet_deprecation_block_exists_in_only_one_registration_hive() -> 
     assert score.deprecation_score == 1.0
 
 
-def _newest_catalog_entry(fixture: object) -> Mapping[str, object]:
+def _newest_catalog_entry(fixture: RegistryFixture) -> Mapping[str, object]:
     """Return the newest inlined catalog entry in a captured registration index.
 
     Args:

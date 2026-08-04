@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def create_test_repository_with_dependabot():
+def create_test_repository_with_dependabot() -> str:
     """Create a temporary repository with Dependabot configuration."""
     repo_dir = tempfile.mkdtemp(prefix="dependency-update-test-")
     logger.info(f"Created test repository at {repo_dir}")
@@ -54,7 +54,7 @@ updates:
     return repo_dir
 
 
-def create_test_repository_with_renovate():
+def create_test_repository_with_renovate() -> str:
     """Create a temporary repository with Renovate configuration."""
     repo_dir = tempfile.mkdtemp(prefix="dependency-update-test-")
     logger.info(f"Created test repository at {repo_dir}")
@@ -83,7 +83,7 @@ def create_test_repository_with_renovate():
     return repo_dir
 
 
-def create_test_repository_without_update_tools():
+def create_test_repository_without_update_tools() -> str:
     """Create a temporary repository without update tools configuration."""
     repo_dir = tempfile.mkdtemp(prefix="dependency-update-test-")
     logger.info(f"Created test repository at {repo_dir}")
@@ -98,7 +98,7 @@ def create_test_repository_without_update_tools():
     return repo_dir
 
 
-def test_dependency_update_tools_detection():
+def test_dependency_update_tools_detection() -> None:
     """Test the dependency update tools detection functionality."""
     logger.info("Testing dependency update tools detection...")
 
@@ -112,7 +112,7 @@ def test_dependency_update_tools_detection():
     test_without_update_tools()
 
 
-def test_with_dependabot():
+def test_with_dependabot() -> None:
     """Test the case with Dependabot configuration."""
     logger.info("\n=== TESTING WITH DEPENDABOT ===")
 
@@ -137,6 +137,7 @@ def test_with_dependabot():
     # Make sure the dependency's security metrics are properly updated
     # This is normally done by the check_dependency_update_tools function
     # but we need to be explicit here for testing
+    assert dependency.security_metrics is not None
     if dependency.security_metrics.has_dependency_update_tools is None:
         dependency.security_metrics.has_dependency_update_tools = has_update_tools
 
@@ -165,7 +166,7 @@ def test_with_dependabot():
     logger.info(f"Risk factors: {score_result.factors}")
 
 
-def test_with_renovate():
+def test_with_renovate() -> None:
     """Test the case with Renovate configuration."""
     logger.info("\n=== TESTING WITH RENOVATE ===")
 
@@ -188,6 +189,7 @@ def test_with_renovate():
     )
 
     # Make sure the dependency's security metrics are properly updated
+    assert dependency.security_metrics is not None
     if dependency.security_metrics.has_dependency_update_tools is None:
         dependency.security_metrics.has_dependency_update_tools = has_update_tools
 
@@ -216,7 +218,7 @@ def test_with_renovate():
     logger.info(f"Risk factors: {score_result.factors}")
 
 
-def test_without_update_tools():
+def test_without_update_tools() -> None:
     """Test the case without dependency update tools."""
     logger.info("\n=== TESTING WITHOUT UPDATE TOOLS ===")
 
@@ -239,6 +241,7 @@ def test_without_update_tools():
     )
 
     # Make sure the dependency's security metrics are properly updated
+    assert dependency.security_metrics is not None
     if dependency.security_metrics.has_dependency_update_tools is None:
         dependency.security_metrics.has_dependency_update_tools = has_update_tools
 
