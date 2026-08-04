@@ -42,16 +42,21 @@ repos:
     rev: v1.9.0
     hooks:
     -   id: mypy
-        # `packaging`, `tomli` and `certifi` are real runtime dependencies; the
-        # hook runs in its own isolated env, so it needs them too or `scoring`
-        # fails import resolution, `parsers.toml` degrades to `Any`, and
-        # `secure_http` cannot resolve the CA bundle it pins TLS against.
+        # `packaging`, `tomli`, `certifi` and `rich` are real runtime
+        # dependencies; the hook runs in its own isolated env, so it needs them
+        # too or `scoring` fails import resolution, `parsers.toml` degrades to
+        # `Any`, `secure_http` cannot resolve the CA bundle it pins TLS
+        # against, and `cli.formatter` returns `Any` from three functions
+        # declared `-> str`. That last one was invisible until #154 unmasked
+        # `cli.*`; installing the dependency is the fix, not an
+        # `ignore_missing_imports` override, which would mask it again.
         additional_dependencies:
         -   types-PyYAML
         -   types-requests
         -   packaging>=23.2
         -   tomli>=2.0.1
         -   certifi>=2024.7.4
+        -   rich>=13.5.0
         args: [src]
         exclude: ^(testing/|venv/|build/|dist/|setup.py)
         pass_filenames: false

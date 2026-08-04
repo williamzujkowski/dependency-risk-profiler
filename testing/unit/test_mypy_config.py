@@ -1,6 +1,6 @@
 """Tests that keep the mypy gate honest.
 
-Four things are enforced here:
+Five things are enforced here:
 
 1. Every module that is *not* on the ``ignore_errors`` exemption list in
    ``pyproject.toml`` must type-check cleanly. That is the real gate.
@@ -14,6 +14,11 @@ Four things are enforced here:
 4. No class claims to be "Protocol-like" in a docstring while being a plain
    nominal base. That habit produced two separate defects (#153, #156); the
    grep is cheaper than either fix was.
+5. No injected dependency — an ``__init__`` parameter defaulting to ``None``,
+   the "pass one in or I will build my own" idiom — is annotated with a
+   concrete third-party class. Check 4 only catches classes that *say* they
+   are protocols; ``GitHubOrgClient.session: Optional[requests.Session]``
+   said nothing and cost a suppression anyway (#202).
 
 There is deliberately no test asserting that an exempt module stays broken.
 A module that starts type-checking cleanly should have its exemption deleted,
@@ -42,13 +47,16 @@ PACKAGE = "dependency_risk_profiler"
 # override from pyproject.toml and delete its entry here; the non-exempt test
 # below then guards it permanently.
 #
+# It is empty, and staying that way is the point: eleven first-party modules
+# were masked when this started (#143), and the last three — `config` (77),
+# `cli` (20), `vulnerabilities` (16) — came off in #154. Every entry ever added
+# here was debt, never policy. If a mask reappears in pyproject.toml without a
+# matching entry, `test_exemption_list_and_ratchet_agree` fails; the ceiling
+# itself only moves down.
+#
 # Measured against the repo config with the first-party `ignore_errors`
 # overrides stripped out (see `_strip_first_party_ignore_errors`).
-MAX_ERRORS_PER_EXEMPT_MODULE: Dict[str, int] = {
-    "cli": 22,
-    "config": 77,
-    "vulnerabilities": 16,
-}
+MAX_ERRORS_PER_EXEMPT_MODULE: Dict[str, int] = {}
 
 # The test tree mypy actually reads. `testing/projects/` is a vendored upstream
 # checkout used as parser input, so it stays excluded in pyproject.toml; every
@@ -59,23 +67,21 @@ TESTING_FILES = ("testing/conftest.py",)
 # Ceiling for the test tree, same rule as above: it may only ever go DOWN.
 # Bringing `testing/` under mypy started at 471 errors; 250 of those were one
 # missing `py.typed` marker and the rest were mostly missing annotations.
-# What is left is three calls that are deliberately out of contract:
+# What is left is two calls that are deliberately out of contract:
 #
 #   * `test_purl_adversarial.py` calls `parse(None)` to prove the parser fails
 #     closed on a non-string. `parse` is declared `(str)`, so no honest static
 #     spelling of "pass it the wrong type on purpose" exists.
-#   * `test_comprehensive_vulnerability_aggregator.py` feeds a dict to
-#     `normalize_cvss_score`, whose declared `Union[float, str, None]` is
-#     narrower than its real contract — production already calls it with
-#     `Dict[str, object].get(...)`. Widening the signature is the actual fix
-#     and belongs in `vulnerabilities/`, which is still exempt above.
 #   * `test_analyze_output_contract.py` passes `mix_stderr=` inside a
 #     `try/except TypeError`, because click below 8.2 (the only click the
 #     Python 3.9 job can install) folds stderr into stdout without it. mypy
 #     sees exactly one click version and cannot express "either signature".
 #
-# None of the three is fixable by adding a suppression that would be honest.
-MAX_ERRORS_IN_TESTING = 3
+# Neither is fixable by adding a suppression that would be honest. (The third
+# entry was a dict fed to `normalize_cvss_score`, whose declared type was
+# narrower than its real contract; widening it to `object` was the actual fix
+# and landed with the `vulnerabilities` unmasking, #202.)
+MAX_ERRORS_IN_TESTING = 2
 
 # `[[tool.mypy.overrides]]` blocks that switch off checking for our own code.
 _FIRST_PARTY_IGNORE_BLOCK = re.compile(
@@ -278,4 +284,111 @@ def test_no_class_claims_to_be_a_protocol_without_being_one() -> None:
         "These classes claim a structural contract the type system does not "
         "enforce. Make them `typing.Protocol` subclasses, or stop claiming "
         "it:\n" + "\n".join(offenders)
+    )
+
+
+def _is_stdlib_module(name: str) -> bool:
+    """Return whether a top-level module name belongs to the standard library."""
+    stdlib_names = getattr(sys, "stdlib_module_names", None)
+    if stdlib_names is not None:
+        return name in stdlib_names
+
+    # Python 3.9 has no `sys.stdlib_module_names`; fall back to where the
+    # module actually lives.
+    try:
+        spec = importlib.util.find_spec(name)
+    except (ImportError, ValueError):
+        return False
+    if spec is None or spec.origin is None:
+        return True
+    return "site-packages" not in spec.origin
+
+
+def _third_party_import_aliases(tree: ast.AST) -> Dict[str, str]:
+    """Map each name bound by a third-party import to its top-level module."""
+    aliases: Dict[str, str] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top != PACKAGE and not _is_stdlib_module(top):
+                    aliases[alias.asname or top] = top
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:  # relative import: first-party by construction
+                continue
+            top = (node.module or "").split(".")[0]
+            if not top or top == PACKAGE or _is_stdlib_module(top):
+                continue
+            for alias in node.names:
+                aliases[alias.asname or alias.name] = top
+    return aliases
+
+
+def _annotation_names(annotation: ast.expr) -> List[str]:
+    """Return the identifiers an annotation expression refers to."""
+    names = []
+    for node in ast.walk(annotation):
+        if isinstance(node, ast.Name):
+            names.append(node.id)
+        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            names.append(node.value.id)
+    return names
+
+
+def test_no_injected_dependency_is_typed_as_a_third_party_class() -> None:
+    """An injection seam must be a Protocol, not a concrete third-party class.
+
+    ``GitHubOrgClient.session`` was annotated ``Optional[requests.Session]``, so
+    a test could not pass a lightweight fake without subclassing ``requests`` or
+    reaching for ``# type: ignore`` — which is exactly what it did (#202). The
+    docstring grep above cannot see this shape: nothing claimed to be a
+    protocol, a nominal type was simply used where a structural one belonged.
+
+    The trigger is narrow on purpose. An ``__init__`` parameter defaulting to
+    ``None`` is the "pass one in or I will build my own" idiom, and the caller
+    passing one in is precisely who gets rejected. Declare the handful of
+    methods actually called as a ``typing.Protocol``; the concrete third-party
+    object still satisfies it at runtime.
+    """
+    offenders = []
+    for path in sorted((ROOT_DIR / "src").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        aliases = _third_party_import_aliases(tree)
+        if not aliases:
+            continue
+
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if node.name != "__init__":
+                continue
+
+            args = node.args.args
+            padding: List[Optional[ast.expr]] = [None] * (
+                len(args) - len(node.args.defaults)
+            )
+            for arg, default in zip(args, padding + list(node.args.defaults)):
+                if arg.annotation is None:
+                    continue
+                if not (isinstance(default, ast.Constant) and default.value is None):
+                    continue
+                modules = sorted(
+                    {
+                        aliases[name]
+                        for name in _annotation_names(arg.annotation)
+                        if name in aliases
+                    }
+                )
+                if modules:
+                    offenders.append(
+                        f"  {path.relative_to(ROOT_DIR)}:{node.lineno} "
+                        f"{arg.arg}: {ast.unparse(arg.annotation)} "
+                        f"(from {', '.join(modules)})"
+                    )
+
+    assert not offenders, (
+        "These injected dependencies are typed as concrete third-party classes, "
+        "so no caller can substitute a fake without subclassing or suppressing. "
+        "Declare the methods actually used as a `typing.Protocol` instead:\n"
+        + "\n".join(offenders)
     )

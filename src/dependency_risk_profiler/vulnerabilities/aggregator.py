@@ -7,7 +7,7 @@ and caches the results to disk to reduce the number of API calls.
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -40,9 +40,25 @@ def infer_ecosystem(dependency: DependencyMetadata) -> str:
     return ""
 
 
+def _http_error_status(error: requests.HTTPError) -> Optional[int]:
+    """Return the status code an HTTPError carries, or None if it carries none.
+
+    `requests` raises `HTTPError` from `raise_for_status()` with a response
+    attached, but the exception type does not guarantee one — a transport
+    adapter or a hand-rolled raise can produce an `HTTPError` whose `response`
+    is None. Callers classify on the code, so give them "unknown" rather than
+    an AttributeError.
+    """
+    response = error.response
+    if response is None:
+        return None
+    return response.status_code
+
+
 # Cache settings
 CACHE_EXPIRY = 24 * 60 * 60  # 24 hours in seconds
-VULNERABILITY_CACHE = {}  # In-memory cache (for backward compatibility)
+# In-memory cache (for backward compatibility): key -> (payloads, cached-at).
+VULNERABILITY_CACHE: Dict[str, Tuple[List[Dict[str, object]], float]] = {}
 DEFAULT_MINIMUM_SEVERITY_FOR_SCORING = "LOW"
 SEVERITY_ORDER = {
     "INFO": 0,
@@ -153,17 +169,31 @@ class VulnerabilitySource:
                     url, params=params, headers=headers, timeout=self.timeout
                 )
                 response.raise_for_status()
-                return response.json()
+                payload = response.json()
+                if not isinstance(payload, dict):
+                    # The signature promises a mapping. A list or scalar body
+                    # is a malformed response, not a result: fail closed rather
+                    # than handing callers something `.get()` will blow up on.
+                    logger.debug(
+                        f"Ignoring non-object JSON response from {url}: "
+                        f"{type(payload).__name__}"
+                    )
+                    return None
+                return payload
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                is_client_error = (
-                    e.response.status_code >= 400 and e.response.status_code < 500
-                )
-                is_rate_limited = e.response.status_code == 429
+                # `HTTPError.response` is optional — an adapter can raise one
+                # without ever producing a response — so reading `.status_code`
+                # off it unconditionally was an AttributeError waiting for a bad
+                # day. No response means no status to classify: fall through to
+                # the retry path rather than treating it as a client error.
+                status_code = _http_error_status(e)
+                is_client_error = status_code is not None and 400 <= status_code < 500
+                is_rate_limited = status_code == 429
                 if is_client_error and not is_rate_limited:
                     logger.debug(
-                        f"Client error ({e.response.status_code}) fetching data "
+                        f"Client error ({status_code}) fetching data "
                         f"from {url}: {e}"
                     )
                     return None
@@ -256,13 +286,12 @@ class OSVSource(VulnerabilitySource):
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                is_client_error = (
-                    e.response.status_code >= 400 and e.response.status_code < 500
-                )
-                is_rate_limited = e.response.status_code == 429
+                status_code = _http_error_status(e)
+                is_client_error = status_code is not None and 400 <= status_code < 500
+                is_rate_limited = status_code == 429
                 if is_client_error and not is_rate_limited:
                     logger.debug(
-                        f"Client error ({e.response.status_code}) fetching OSV "
+                        f"Client error ({status_code}) fetching OSV "
                         f"data for {package_name}: {e}"
                     )
                     return []
@@ -664,13 +693,12 @@ class GitHubAdvisorySource(VulnerabilitySource):
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
-                is_client_error = (
-                    e.response.status_code >= 400 and e.response.status_code < 500
-                )
-                is_rate_limited = e.response.status_code == 429
+                status_code = _http_error_status(e)
+                is_client_error = status_code is not None and 400 <= status_code < 500
+                is_rate_limited = status_code == 429
                 if is_client_error and not is_rate_limited:
                     logger.debug(
-                        f"Client error ({e.response.status_code}) fetching "
+                        f"Client error ({status_code}) fetching "
                         f"GitHub Advisory data for {package_name}: {e}"
                     )
                     return []
@@ -773,28 +801,36 @@ class GitHubAdvisorySource(VulnerabilitySource):
         return normalized
 
 
-def normalize_cvss_score(score: Union[float, str, None]) -> Optional[float]:
+def normalize_cvss_score(score: object) -> Optional[float]:
     """Normalize a CVSS score to a float between 0 and 10.
 
+    The parameter is ``object`` because that is the real contract: every caller
+    reads this value straight out of a registry payload (``Dict[str, object]``),
+    so it can be any JSON value — including a dict, which the previous
+    ``Union[float, str, None]`` annotation claimed was impossible while the
+    tests asserted it returned ``None`` (#202).
+
     Args:
-        score: CVSS score as string or float
+        score: CVSS score from a registry payload — any JSON value.
 
     Returns:
-        Normalized score as a float, or None if invalid
+        Normalized score as a float, or None if it is not a score in 0-10.
     """
-    if score is None:
+    if isinstance(score, str):
+        try:
+            score = float(score.strip())
+        except ValueError:
+            return None
+
+    # `bool` is an `int` subclass, so `true` in a payload would otherwise
+    # normalize to 1.0 and be reported as a LOW finding. A boolean is not a
+    # score.
+    if isinstance(score, bool) or not isinstance(score, (int, float)):
         return None
 
-    try:
-        # Convert to float if it's a string
-        if isinstance(score, str):
-            score = float(score.strip())
-
-        # Ensure it's in the valid range
-        if 0 <= score <= 10:
-            return score
-    except (ValueError, TypeError):
-        pass
+    value = float(score)
+    if 0 <= value <= 10:
+        return value
 
     return None
 
