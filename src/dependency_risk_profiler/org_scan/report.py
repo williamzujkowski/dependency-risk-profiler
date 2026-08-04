@@ -11,7 +11,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
-from ..models import DependencyRiskScore, RiskLevel, SecurityMetrics
+from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel, SecurityMetrics
+from ..versioning import (
+    calendar_drift_days,
+    calendar_drift_label,
+    release_timestamps,
+    uses_calendar_versioning,
+)
 from ..vulnerabilities import ecosystems
 from .models import (
     AggregatedDependency,
@@ -726,9 +732,7 @@ def _why_lines(dependency: AggregatedDependency) -> List[str]:
             lines.append(f"Provenance: {missing_health}")
 
     if _score_fired(score.version_score):
-        lines.append(
-            _version_drift_line(metadata.installed_version, metadata.latest_version)
-        )
+        lines.append(_version_drift_line(metadata))
 
     if _score_fired(score.license_score):
         lines.append(_license_risk_line(score))
@@ -777,10 +781,21 @@ def _missing_health_facts(has_tests: Optional[bool], has_ci: Optional[bool]) -> 
     return ""
 
 
-def _version_drift_line(installed: str, latest: Optional[str]) -> str:
+def _version_drift_line(metadata: DependencyMetadata) -> str:
     """Return a version drift fact line."""
+    installed = metadata.installed_version
+    latest = metadata.latest_version
     if latest is None:
         return f"Version drift: installed {installed}; latest version unknown"
+
+    # Calendar versions encode a date, not a compatibility promise, so their
+    # drift is reported as elapsed time rather than major/minor distance (#126).
+    if uses_calendar_versioning(installed, latest):
+        installed_release, latest_release = release_timestamps(metadata)
+        drift_days = calendar_drift_days(installed_release, latest_release)
+        label = calendar_drift_label(drift_days)
+        return f"Version drift: {installed} → {latest} ({label})"
+
     drift = _version_drift(installed, latest)
     if drift:
         return f"Version drift: {installed} → {latest} ({drift} behind)"

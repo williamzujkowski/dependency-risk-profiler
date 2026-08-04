@@ -167,6 +167,17 @@ The tool compares installed and latest versions using the following approach:
    - Compares major, minor, and patch components
    - Higher weight given to major version differences
    - Special handling for pre-release versions and non-standard versioning schemes
+3. **Calendar Versioning**: A version whose leading component is a four-digit
+   year in a plausible range and whose shape is `YYYY.MM`, `YYYY.MM.DD` or
+   `YYYY.N` (`certifi`, `pytz`, `tzdata`, Go `vYYYY.MM.DD` tags) is detected
+   before distance is computed. Component distance carries no compatibility
+   meaning there, so drift is measured as elapsed time between the installed
+   release and the latest release, using the release timestamps already
+   collected for the staleness signal, and reported as "N years behind
+   (calendar versioning)". Without those timestamps the drift signal is
+   reported as unmeasured rather than estimated. Detection requires the
+   calendar shape, so Go pseudo-versions (`v0.0.0-20210428235338-…`) and
+   ordinary semantic versions are unaffected.
 
 ## Data Processing Approach
 

@@ -15,6 +15,12 @@ from rich.text import Text
 
 from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
 from ..popularity import should_soften_low_release_cadence
+from ..versioning import (
+    calendar_drift_days,
+    calendar_drift_label,
+    release_timestamps,
+    uses_calendar_versioning,
+)
 
 
 class BaseFormatter:
@@ -365,6 +371,15 @@ class TerminalFormatter(BaseFormatter):
         metadata = dep.dependency
         if not metadata.latest_version:
             return "latest version unknown"
+
+        # CalVer drift is elapsed time, not breaking changes (#126).
+        if uses_calendar_versioning(
+            metadata.installed_version, metadata.latest_version
+        ):
+            installed_release, latest_release = release_timestamps(metadata)
+            return calendar_drift_label(
+                calendar_drift_days(installed_release, latest_release)
+            )
 
         try:
             installed = parse(metadata.installed_version)
