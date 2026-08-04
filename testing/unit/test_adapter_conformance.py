@@ -501,6 +501,13 @@ def test_unproven_branches_are_named_rather_than_assumed_closed() -> None:
     for line in waived:
         assert len(line) > 80, f"a waiver needs a reason, not a shrug: {line}"
     assert any(line.startswith("rubygems.deprecation") for line in waived)
+    assert any(line.startswith("maven.deprecation") for line in waived), (
+        "the sharpest waiver of the eight: Maven Central publishes no "
+        "retirement marker of any kind, so the deprecation signal reads as "
+        "measured and False for every artifact in the repository and no "
+        "captured payload can make it read otherwise. Deleting this entry "
+        "would turn a known #142-shaped hole back into a silent green (#179)."
+    )
 
 
 # --- 3. Fixture hygiene ----------------------------------------------------
