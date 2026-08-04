@@ -73,7 +73,14 @@ Reintroduce the defect and confirm the gate fails. Then revert.
 
 **A gate never observed to fail is unverified.** This repo has had: a mypy configuration exempting eleven modules, with a test *asserting the exemptions stay in place*; a test that ran an absent binary and therefore always passed; a Dependabot config rejected wholesale so nothing ran, including security updates; and a conformance harness that marked a signal on the adapter's behalf.
 
+**Verify what a required check actually analysed, not that it concluded success.** `Analyze (go)` sat in the required list for months reporting SUCCESS over **zero lines of Go** — every `.go` file lived under a path its own `paths-ignore` excluded, so the check's scope excluded the check's subject. A check that measures nothing is worse than an absent one: it occupies a slot in the required list and answers for a subject nobody is analysing. This one is now enforced (see below); the general habit is not, so ask it of every gate.
+
 Prefer assertions on **values** over assertions on **counts**. A count cannot distinguish "always measured correctly" from "always measured wrong".
+
+Two worked examples of the same shape in tests, both caught only because someone reintroduced the defect by hand — reintroduce it at the **production** line, not at the fixture:
+
+- A new test invoked the code without `--recursive`, so `os.walk` never descended and the branch it claimed to cover was never entered.
+- New scanner tests used a fixture client that classified its own trees; deleting the classifier from the *production* client left all seventeen green. The double had reimplemented the subject, so the test proved the double works.
 
 ### 7. The bar
 
@@ -99,6 +106,7 @@ Rule 6 says a gate never observed to fail is unverified. A file of prose is exac
 |---|---|
 | 1 — no simulated implementations | Fails on stub markers in `src/` (`in a real implementation`, `for simulation purposes`, `simulate ...ing`, `always clean in this example`) |
 | 3 — landed code must be reachable | Fails on a module-level function or class in `src/` with no reference outside its own definition |
+| 6 — a required check must analyse its own subject | Fails when an enrolled CodeQL language has **zero** tracked files surviving `paths-ignore` |
 | 7 — the bar | Fails on `# type: ignore` or `# noqa`; fails on a first-party `ignore_errors` entry; **ratchets `Any` down** |
 
 Each check was verified to fail before it was committed, by reintroducing a specimen of the defect it catches. Rules 2, 4 and 5 are review-time judgment and are honestly marked as such — not every rule can be mechanised, but a rule that *can* be and isn't is just a wish.
