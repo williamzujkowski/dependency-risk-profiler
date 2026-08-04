@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Go module paths now resolve to their source repository.** A module path is
+  an import path, not a repository URL, and the resolver only understood the
+  plain `github.com/owner/repo` form. Everything else — a `/vN` major-version
+  suffix, a subdirectory module, a vanity import path — failed to resolve, so
+  the dependency got *no* repository-derived signals at all. Measured against
+  `gohugoio/hugo`'s `go.mod`, that was 93 of 180 dependencies (52%) with zero
+  of ten signals, including `golang.org/x/net`, `golang.org/x/text` and the
+  whole AWS SDK. One normalizer now applies the documented rules before any
+  repository lookup: strip a trailing `/vN` (N >= 2); treat host plus the first
+  two path segments as the repository on github.com / gitlab.com /
+  bitbucket.org, with the remainder as a subdirectory; rewrite
+  `golang.org/x/<name>` to its `github.com/golang/<name>` mirror without a
+  network call; and resolve remaining vanity hosts from their `go-import` meta
+  tag under strict bounds (hard timeout, response-size cap, redirect limit,
+  public hosts only, prefix-cached so one lookup serves many modules).
+  **Go scans will now report signals, and therefore risk levels and scores, for
+  dependencies that previously came back `UNKNOWN`**, so a scan diff across
+  this version can show large movement without anything having changed
+  upstream. Modules that still do not resolve keep their signals honestly
+  unmeasured rather than scored at a confident zero. As a side effect, each
+  repository is cloned once per scan instead of once per module, so projects
+  with many subdirectory modules from one repository do far less network work.
+
 ### Changed
 
 - **More ecosystem spellings are now analyzed.** Analyzer dispatch is driven by

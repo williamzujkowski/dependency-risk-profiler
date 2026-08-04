@@ -69,7 +69,16 @@ Example API response structure:
 ### Go Packages
 
 - **Method**: JSON request to the Go module proxy, `https://proxy.golang.org/{module}/@latest`
-- **Information Retrieved**: latest version (pseudo-versions and `+incompatible` handled correctly); repository URL inferred from the import path
+- **Information Retrieved**: latest version (pseudo-versions and `+incompatible` handled correctly)
+- **Repository resolution**: a module path is an import path, not a repository URL. The
+  normalizer strips a trailing `/vN` major-version suffix, treats host plus the first two
+  path segments as the repository on github.com / gitlab.com / bitbucket.org (the remainder
+  being a subdirectory module), and rewrites `golang.org/x/<name>` to its
+  `github.com/golang/<name>` mirror offline. Remaining vanity import paths are resolved from
+  the `go-import` meta tag at `https://{module}?go-get=1` — a bounded fetch (hard timeout,
+  response-size cap, redirect limit, public hosts only) whose response is trusted for
+  nothing but the `go-import` content, cached per import prefix. A module that does not
+  resolve keeps its repository-derived signals unmeasured rather than scored.
 
 ### Rust (crates.io)
 
