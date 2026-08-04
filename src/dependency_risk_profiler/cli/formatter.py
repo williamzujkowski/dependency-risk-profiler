@@ -13,6 +13,7 @@ from rich.cells import cell_len, set_cell_size
 from rich.console import Console
 from rich.text import Text
 
+from ..contract import SCHEMA_VERSION, scored_dependency
 from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
 from ..popularity import should_soften_low_release_cadence
 from ..versioning import (
@@ -438,7 +439,14 @@ class TerminalFormatter(BaseFormatter):
 
 
 class JsonFormatter(BaseFormatter):
-    """JSON output formatter."""
+    """Schema-v2 JSON output formatter.
+
+    Every dependency is serialized by ``contract.scored_dependency``, the one
+    shape ``scan-org`` emits too. This class owns only the envelope: which
+    manifests were read, how many dependencies came out, and the run-level
+    counts. See ``contract`` for what changed and why, and ``cli/json_v1.py``
+    for the frozen writer ``--schema v1`` still routes to.
+    """
 
     def format_profile(self, profile: ProjectRiskProfile) -> str:
         """Format a project risk profile as JSON.
@@ -497,6 +505,7 @@ class JsonFormatter(BaseFormatter):
             return self._profile_dict(profiles[0])
         if not profiles:
             return {
+                "schema_version": SCHEMA_VERSION,
                 "manifest_path": manifest_path,
                 "ecosystem": None,
                 "scan_time": datetime.now().isoformat(),
@@ -530,6 +539,7 @@ class JsonFormatter(BaseFormatter):
         else:
             overall = None
         return {
+            "schema_version": SCHEMA_VERSION,
             "manifest_path": manifest_path,
             # A mixed-ecosystem run has no single ecosystem; say so rather than
             # picking one of them.
@@ -555,12 +565,28 @@ class JsonFormatter(BaseFormatter):
                 profile.unknown_signal_count for profile in profiles
             ),
             "overall_risk_score": overall,
-            "dependencies": [self._format_dependency(dep) for dep in dependencies],
+            # Each dependency keeps the ecosystem of the manifest it came from,
+            # which the v1 merged document could not express: it had one
+            # ecosystem key for the whole run and set it to null for a mixed
+            # directory, leaving a consumer no way to tell which is which.
+            "dependencies": [
+                scored_dependency(dep, ecosystem=profile.ecosystem)
+                for profile in profiles
+                for dep in profile.dependencies
+            ],
         }
 
     def _profile_dict(self, profile: ProjectRiskProfile) -> Dict[str, object]:
-        """Serialize one manifest profile."""
+        """Serialize one manifest profile.
+
+        Args:
+            profile: Project risk profile.
+
+        Returns:
+            The serialized profile envelope.
+        """
         return {
+            "schema_version": SCHEMA_VERSION,
             "manifest_path": profile.manifest_path,
             "ecosystem": profile.ecosystem,
             "scan_time": profile.scan_time.isoformat(),
@@ -570,10 +596,14 @@ class JsonFormatter(BaseFormatter):
             "low_risk_dependencies": profile.low_risk_dependencies,
             "unknown_risk_dependencies": profile.unknown_risk_dependencies,
             "insufficient_data_dependencies": profile.insufficient_data_dependencies,
+            # A run-level total, not the per-dependency count v2 deleted: this
+            # one summarizes the whole manifest alongside the risk-level tallies
+            # rather than restating one dependency's own list.
             "unknown_signal_count": profile.unknown_signal_count,
             "overall_risk_score": profile.overall_risk_score,
             "dependencies": [
-                self._format_dependency(dep) for dep in profile.dependencies
+                scored_dependency(dep, ecosystem=profile.ecosystem)
+                for dep in profile.dependencies
             ],
         }
 
@@ -593,96 +623,3 @@ class JsonFormatter(BaseFormatter):
         if hasattr(obj, "__dict__"):
             return obj.__dict__
         raise TypeError(f"Type {type(obj)} not serializable")
-
-    def _format_dependency(self, dep: DependencyRiskScore) -> Dict[str, object]:
-        """Format dependency risk score as dict.
-
-        Args:
-            dep: Dependency risk score.
-
-        Returns:
-            Dictionary representation of the dependency risk score.
-        """
-        metadata = dep.dependency
-        vulnerability_summary = self._format_vulnerability_details(dep)
-
-        # Create dependency dict
-        return {
-            "name": metadata.name,
-            "installed_version": metadata.installed_version,
-            "latest_version": metadata.latest_version,
-            "last_updated": (
-                metadata.last_updated.isoformat() if metadata.last_updated else None
-            ),
-            "maintainer_count": metadata.maintainer_count,
-            "is_deprecated": metadata.is_deprecated,
-            "has_known_exploits": metadata.has_known_exploits,
-            "repository_url": metadata.repository_url,
-            "has_tests": metadata.has_tests,
-            "has_ci": metadata.has_ci,
-            "has_contribution_guidelines": metadata.has_contribution_guidelines,
-            "vulnerability_summary": vulnerability_summary,
-            "vulnerabilities": vulnerability_summary["advisories"],
-            "scores": {
-                "staleness_score": dep.staleness_score,
-                "maintainer_score": dep.maintainer_score,
-                "deprecation_score": dep.deprecation_score,
-                "exploit_score": dep.exploit_score,
-                "version_score": dep.version_score,
-                "health_indicators_score": dep.health_indicators_score,
-                "license_score": dep.license_score,
-                "community_score": dep.community_score,
-                "transitive_score": dep.transitive_score,
-                "source_repository_score": dep.source_repository_score,
-                "security_policy_score": dep.security_policy_score,
-                "dependency_update_score": dep.dependency_update_score,
-                "signed_commits_score": dep.signed_commits_score,
-                "branch_protection_score": dep.branch_protection_score,
-                "maintained_score": dep.maintained_score,
-                "total_score": dep.total_score,
-            },
-            "risk_level": dep.risk_level.value,
-            "unknown_signals": dep.unknown_signals,
-            "unknown_signal_count": dep.unknown_signal_count,
-            "measured_signal_count": dep.measured_signal_count,
-            "total_signal_count": dep.total_signal_count,
-            "insufficient_data": dep.insufficient_data,
-            "risk_factors": dep.factors,
-        }
-
-    def _format_vulnerability_details(
-        self, dep: DependencyRiskScore
-    ) -> Dict[str, object]:
-        """Format vulnerability accounting and advisory details for JSON output.
-
-        Args:
-            dep: Dependency risk score.
-
-        Returns:
-            Vulnerability summary dictionary.
-        """
-        metrics = dep.dependency.security_metrics
-        if metrics is None:
-            return {
-                "total_found": None,
-                "counted_in_score": None,
-                "filtered": None,
-                "filtered_reasons": {},
-                "applicability_unknown": None,
-                "applicability_unknown_reasons": {},
-                "max_counted_cvss_score": None,
-                "max_counted_severity": None,
-                "advisories": [],
-            }
-
-        return {
-            "total_found": metrics.vulnerability_count,
-            "counted_in_score": metrics.counted_vulnerability_count,
-            "filtered": metrics.filtered_vulnerability_count,
-            "filtered_reasons": metrics.filtered_vulnerability_reasons,
-            "applicability_unknown": metrics.applicability_unknown_count,
-            "applicability_unknown_reasons": metrics.applicability_unknown_reasons,
-            "max_counted_cvss_score": metrics.max_cvss_score,
-            "max_counted_severity": metrics.max_vulnerability_severity,
-            "advisories": metrics.vulnerability_details,
-        }

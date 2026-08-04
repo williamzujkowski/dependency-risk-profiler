@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
+from ..contract import SCHEMA_VERSION, remediation, scored_dependency
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel, SecurityMetrics
 from ..versioning import (
     calendar_drift_days,
@@ -21,11 +22,13 @@ from ..versioning import (
 from ..vulnerabilities import ecosystems
 from .models import (
     AggregatedDependency,
+    DependencyKey,
     OrgScanReport,
     RepositoryRef,
     RepositoryRiskSummary,
     risk_rank,
 )
+from .report_v1 import write_json_report_v1
 
 
 def render_terminal_summary(report: OrgScanReport) -> str:
@@ -43,10 +46,10 @@ def render_terminal_summary(report: OrgScanReport) -> str:
     ]
     for index, dependency in enumerate(report.most_exposed_risky_dependencies[:10], 1):
         lines.append(
-            f"{index}. {dependency.key.display_name} · "
+            f"{index}. {_display_label(dependency.key)} · "
             f"{dependency.risk_level.value} · "
             f"{dependency.blast_radius} / {len(report.repositories_scanned)} repos · "
-            f"{', '.join(dependency.key_signals)} · "
+            f"{_signal_phrases(dependency)} · "
             f"{dependency.advisory_summary}"
         )
 
@@ -76,8 +79,20 @@ def render_terminal_summary(report: OrgScanReport) -> str:
     return "\n".join(lines)
 
 
-def write_json_report(report: OrgScanReport, output_path: Path) -> None:
-    """Write the aggregate report model as JSON."""
+def write_json_report(
+    report: OrgScanReport, output_path: Path, *, legacy_schema: bool = False
+) -> None:
+    """Write the aggregate report model as JSON.
+
+    Args:
+        report: The org scan report.
+        output_path: Where to write the document.
+        legacy_schema: Route to the frozen schema-v1 writer instead of the
+            unified v2 contract.
+    """
+    if legacy_schema:
+        write_json_report_v1(report, output_path)
+        return
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
         json.dumps(report_to_dict(report), indent=2),
@@ -145,7 +160,7 @@ def _dependency_to_csv_row(
         "repos_exposed": dependency.blast_radius,
         "repos_scanned": repo_count,
         "installed_version": metadata.installed_version,
-        "version_specs": dependency.versions_display,
+        "version_specs": _versions_display(dependency),
         "latest_version": metadata.latest_version or "",
         "stars": community.star_count if community is not None else "",
         "contributors": community.contributor_count if community is not None else "",
@@ -162,7 +177,7 @@ def _dependency_to_csv_row(
         "advisories_filtered": (
             metrics.filtered_vulnerability_count if metrics is not None else ""
         ),
-        "signals": "; ".join(dependency.key_signals),
+        "signals": _signal_phrases(dependency, separator="; "),
         "repositories": "; ".join(sorted(dependency.repositories)),
         "manifests": "; ".join(sorted(dependency.manifests)),
         "source_repo": metadata.repository_url or "",
@@ -197,8 +212,20 @@ def render_html_report(report: OrgScanReport) -> str:
 
 
 def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
-    """Convert an org scan report into JSON-compatible data."""
+    """Convert an org scan report into schema-v2 JSON-compatible data.
+
+    Every dependency entry is ``contract.scored_dependency`` — the same shape
+    ``analyze --output json`` emits — with the org-only concepts under
+    ``extensions.org_scan``.
+
+    Args:
+        report: The org scan report.
+
+    Returns:
+        The v2 document body.
+    """
     return {
+        "schema_version": SCHEMA_VERSION,
         "org": report.org,
         "account": report.org,
         "account_type": report.account_type,
@@ -528,7 +555,7 @@ def _inventory_row(dependency: AggregatedDependency) -> str:
     return (
         f'<tr data-risk="{risk_rank(dependency.risk_level)}" '
         f'data-search="{search_text}">'
-        f"{_linked_dependency_td(key.name, key.display_name, key.ecosystem)}"
+        f"{_linked_dependency_td(key.name, _display_label(key), key.ecosystem)}"
         f'{_td(key.ecosystem, key.ecosystem, "mono")}'
         f"{_risk_td(dependency.risk_level)}"
         f'{_td(str(dependency.blast_radius), str(dependency.blast_radius), "num")}'
@@ -639,10 +666,10 @@ def _empty_exposure() -> str:
 def _dependency_search_text(dependency: AggregatedDependency) -> str:
     """Return searchable text for an inventory row."""
     parts = [
-        dependency.key.display_name,
-        dependency.versions_display,
+        _display_label(dependency.key),
+        _versions_display(dependency),
         " ".join(sorted(dependency.repositories)),
-        " ".join(dependency.key_signals),
+        _signal_phrases(dependency),
         dependency.advisory_summary,
         dependency.risk_level.value,
     ]
@@ -650,12 +677,69 @@ def _dependency_search_text(dependency: AggregatedDependency) -> str:
 
 
 def _signals_text(dependency: AggregatedDependency) -> str:
-    """Return escaped plain-language dependency signals."""
-    if not dependency.key_signals:
+    """Return escaped plain-language dependency signals.
+
+    Args:
+        dependency: The aggregated dependency.
+
+    Returns:
+        The escaped signal prose for an inventory row.
+    """
+    return escape(_signal_phrases(dependency))
+
+
+#: How many risk factors a display cell shows before it stops being scannable.
+_DISPLAYED_SIGNAL_LIMIT = 4
+
+
+def _signal_phrases(dependency: AggregatedDependency, *, separator: str = " · ") -> str:
+    """Render the dependency's leading risk factors as prose.
+
+    This used to read ``AggregatedDependency.key_signals``, a third
+    hand-maintained English-string generator over the same scores that
+    ``risk_factors`` already describes — deleted in the schema-v2 work. The
+    display now renders the scorer's own factors, so there is one generator and
+    the HTML, the terminal summary and the CSV cannot drift from the JSON.
+
+    Args:
+        dependency: The aggregated dependency.
+        separator: What to put between phrases.
+
+    Returns:
+        Up to :data:`_DISPLAYED_SIGNAL_LIMIT` factors, or a plain statement
+        that nothing led.
+    """
+    factors = dependency.risk_score.factors[:_DISPLAYED_SIGNAL_LIMIT]
+    if not factors:
         return "no leading risk signals"
-    return escape(
-        " · ".join(_sentence_case_lower(signal) for signal in dependency.key_signals)
-    )
+    return separator.join(_sentence_case_lower(factor) for factor in factors)
+
+
+def _display_label(key: DependencyKey) -> str:
+    """Render an ecosystem-qualified dependency label for display.
+
+    Formatting over fields the payload already carries, so it is a presentation
+    concern and no longer a model property or a serialized field.
+
+    Args:
+        key: The dependency key.
+
+    Returns:
+        ``ecosystem:name@version``.
+    """
+    return f"{key.ecosystem}:{key.name}@{key.version}"
+
+
+def _versions_display(dependency: AggregatedDependency) -> str:
+    """Render every observed version spec as one compact display string.
+
+    Args:
+        dependency: The aggregated dependency.
+
+    Returns:
+        The specs, comma-joined in deterministic order.
+    """
+    return ", ".join(dependency.version_specs_list)
 
 
 def _sentence_case_lower(text: str) -> str:
@@ -1147,7 +1231,7 @@ def _metadata_panel(dependency: AggregatedDependency) -> str:
             "installed → latest",
             f"{metadata.installed_version} → {_optional_text(metadata.latest_version)}",
         ),
-        ("version specs", dependency.versions_display),
+        ("version specs", _versions_display(dependency)),
         ("last updated", _date_text(metadata.last_updated)),
     ]
     # Prefer the real GitHub signals (stars, contributor count) when the scan
@@ -1304,38 +1388,56 @@ def _pluralize(count: int, singular: str) -> str:
 def _dependency_to_dict(
     dependency: AggregatedDependency, repo_count: int
 ) -> Dict[str, object]:
-    """Serialize dependency exposure."""
-    score = dependency.risk_score
-    return {
-        "ecosystem": dependency.key.ecosystem,
-        "name": dependency.key.name,
-        "version": dependency.key.version,
-        "version_specs": dependency.version_specs_list,
-        "versions_display": dependency.versions_display,
-        "display_name": dependency.key.display_name,
-        "risk_level": dependency.risk_level.value,
-        "known_vulnerable": dependency.is_known_vulnerable,
-        "remediation": _remediation_hint(dependency),
-        "risk_score": score.total_score,
-        "component_scores": _component_scores_to_dict(score),
-        "insufficient_data": score.insufficient_data,
-        "unknown_signals": score.unknown_signals,
-        "key_signals": dependency.key_signals,
-        "blast_radius": {
-            "repository_count": dependency.blast_radius,
-            "total_repositories_scanned": repo_count,
-            "repositories": sorted(dependency.repositories),
-            "manifests": sorted(dependency.manifests),
+    """Serialize one dependency in the shared contract, plus the org extension.
+
+    The org scan adds four concepts ``analyze`` has no notion of: how many
+    repositories a dependency reaches, where exactly it is declared, which raw
+    version specifiers those manifests used, and what to do about it. They go
+    under ``extensions.org_scan`` rather than at the top level, so a consumer
+    written against the shared shape reads the same keys on both paths and can
+    ignore the extension entirely.
+
+    Args:
+        dependency: The aggregated dependency.
+        repo_count: How many repositories the scan covered.
+
+    Returns:
+        The ``ScoredDependency`` entry.
+    """
+    return scored_dependency(
+        dependency.risk_score,
+        ecosystem=dependency.key.ecosystem,
+        extensions={
+            "org_scan": {
+                "blast_radius": {
+                    "repository_count": dependency.blast_radius,
+                    "total_repositories_scanned": repo_count,
+                    "repositories": sorted(dependency.repositories),
+                    "manifests": sorted(dependency.manifests),
+                },
+                "usage": _usage_to_dict(dependency),
+                # Kept, unlike the deleted display strings: this is the set of
+                # raw specifiers the manifests actually declared, and it cannot
+                # be reconstructed from one resolved version.
+                "version_specs": dependency.version_specs_list,
+                "remediation": remediation(
+                    dependency.risk_score.dependency,
+                    fix_versions=_scored_fixed_versions(dependency),
+                ),
+            }
         },
-        "usage": _usage_to_dict(dependency),
-        "advisories": _advisory_to_dict(score),
-        "risk_factors": score.factors,
-        "metadata": _metadata_to_dict(score),
-    }
+    )
 
 
 def _usage_to_dict(dependency: AggregatedDependency) -> List[Dict[str, object]]:
-    """Serialize dependency repository/manifest occurrences."""
+    """Serialize dependency repository/manifest occurrences.
+
+    Args:
+        dependency: The aggregated dependency.
+
+    Returns:
+        One entry per repository, sorted.
+    """
     usage: List[Dict[str, object]] = []
     for repo_full_name in sorted(dependency.manifest_paths_by_repo):
         repo_ref = dependency.repo_refs.get(repo_full_name)
@@ -1352,29 +1454,15 @@ def _usage_to_dict(dependency: AggregatedDependency) -> List[Dict[str, object]]:
     return usage
 
 
-def _component_scores_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
-    """Serialize component risk scores for drill-down consumers."""
-    return {
-        "staleness": score.staleness_score,
-        "maintainer": score.maintainer_score,
-        "deprecation": score.deprecation_score,
-        "exploit": score.exploit_score,
-        "version": score.version_score,
-        "health_indicators": score.health_indicators_score,
-        "license": score.license_score,
-        "community": score.community_score,
-        "transitive": score.transitive_score,
-        "source_repository": score.source_repository_score,
-        "security_policy": score.security_policy_score,
-        "dependency_update": score.dependency_update_score,
-        "signed_commits": score.signed_commits_score,
-        "branch_protection": score.branch_protection_score,
-        "maintained": score.maintained_score,
-    }
-
-
 def _repository_to_dict(repo: RepositoryRiskSummary) -> Dict[str, object]:
-    """Serialize repository summary."""
+    """Serialize repository summary.
+
+    Args:
+        repo: The repository summary.
+
+    Returns:
+        The repository entry.
+    """
     return {
         "repo": repo.repo_full_name,
         "dependency_count": repo.dependency_count,
@@ -1390,72 +1478,11 @@ def _repository_to_dict(repo: RepositoryRiskSummary) -> Dict[str, object]:
                 "name": dep.key.name,
                 "version": dep.key.version,
                 "version_specs": dep.version_specs_list,
-                "versions_display": dep.versions_display,
                 "risk_level": dep.risk_level.value,
                 "blast_radius": dep.blast_radius,
             }
             for dep in repo.worst_dependencies
         ],
-    }
-
-
-def _advisory_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
-    """Serialize vulnerability summary."""
-    metrics = score.dependency.security_metrics
-    if metrics is None:
-        return {
-            "total_found": None,
-            "counted_in_score": None,
-            "filtered": None,
-            "filtered_reasons": {},
-            "max_counted_cvss_score": None,
-            "max_counted_severity": None,
-            "details": [],
-        }
-    return _security_metrics_to_dict(metrics)
-
-
-def _security_metrics_to_dict(metrics: SecurityMetrics) -> Dict[str, object]:
-    """Serialize security metrics vulnerability fields."""
-    return {
-        "total_found": metrics.vulnerability_count,
-        "counted_in_score": metrics.counted_vulnerability_count,
-        "filtered": metrics.filtered_vulnerability_count,
-        "filtered_reasons": metrics.filtered_vulnerability_reasons,
-        "max_counted_cvss_score": metrics.max_cvss_score,
-        "max_counted_severity": metrics.max_vulnerability_severity,
-        "details": metrics.vulnerability_details,
-    }
-
-
-def _metadata_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
-    """Serialize dependency metadata relevant to the org report."""
-    dependency = score.dependency
-    license_info = dependency.license_info
-    community = dependency.community_metrics
-    return {
-        "latest_version": dependency.latest_version,
-        "last_updated": (
-            dependency.last_updated.isoformat() if dependency.last_updated else None
-        ),
-        "maintainer_count": dependency.maintainer_count,
-        "star_count": community.star_count if community is not None else None,
-        "contributor_count": (
-            community.contributor_count if community is not None else None
-        ),
-        "is_deprecated": dependency.is_deprecated,
-        "repository_url": dependency.repository_url,
-        "license": license_info.license_id if license_info is not None else None,
-        "license_category": (
-            license_info.category.value if license_info is not None else None
-        ),
-        "license_approved": (
-            license_info.is_approved if license_info is not None else None
-        ),
-        "has_tests": dependency.has_tests,
-        "has_ci": dependency.has_ci,
-        "has_contribution_guidelines": dependency.has_contribution_guidelines,
-        "transitive_dependency_count": len(dependency.transitive_dependencies),
     }
 
 

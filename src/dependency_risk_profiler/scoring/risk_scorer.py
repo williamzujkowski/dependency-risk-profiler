@@ -374,6 +374,9 @@ class RiskScorer:
 
         unknown_signals = self._determine_unknown_signals(weighted_scores)
         measured_signal_count = len(weighted_scores) - len(unknown_signals)
+        measurements = self._collect_measurements(
+            weighted_scores, source_repository_score, unreadable
+        )
         insufficient_data = (
             self._unexplained_unknown_count(weighted_scores) > measured_signal_count
         )
@@ -433,11 +436,50 @@ class RiskScorer:
             risk_level=risk_level,
             factors=risk_factors,
             unknown_signals=unknown_signals,
-            unknown_signal_count=len(unknown_signals),
             measured_signal_count=measured_signal_count,
             total_signal_count=len(weighted_scores),
             insufficient_data=insufficient_data,
+            measurements=measurements,
         )
+
+    def _collect_measurements(
+        self,
+        weighted_scores: Sequence[Tuple[str, Measurement, float]],
+        source_repository_score: Optional[float],
+        source_repository_unreadable: bool,
+    ) -> Dict[str, Measurement]:
+        """Return every catalog signal's measurement, for the output contract.
+
+        This is a *reporting* view and changes no arithmetic. It differs from
+        ``weighted_scores`` in exactly one way: ``source_repository`` is always
+        present. That signal is only appended to the weighted list when the
+        adapter reported the registry's answer, because #74's rule is that an
+        unavailable signal leaves both the numerator and the denominator — but
+        omitting it from the serialized signals would leave a consumer unable
+        to tell "absent because unmeasured" from "absent because this build
+        does not have that signal". So it is reported as UNMEASURED and still
+        excluded from ``unknown_signals`` and the signal counts, which describe
+        the weighted set.
+
+        Args:
+            weighted_scores: The signals that entered the weighted score.
+            source_repository_score: The source-repository score, or None when
+                the adapter reported nothing either way.
+            source_repository_unreadable: Whether the registry answered and no
+                readable source repository came out of it.
+
+        Returns:
+            Mapping of stable signal name to its measurement.
+        """
+        measurements = {name: measurement for name, measurement, _ in weighted_scores}
+        if source_repository_score is None:
+            measurements[SIGNAL_SOURCE_REPOSITORY] = Measurement.unmeasured(
+                unmeasured_reason_for(
+                    SIGNAL_SOURCE_REPOSITORY,
+                    source_repository_unreadable=source_repository_unreadable,
+                )
+            )
+        return measurements
 
     def create_project_profile(
         self,

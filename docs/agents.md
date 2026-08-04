@@ -24,38 +24,152 @@ dependency-risk-profiler scan-user <user> --github-token "$TOKEN" \
 branch on the exit code instead of parsing first. Exit `0` = under threshold,
 `1` = the scan itself failed (bad token, network), `2` = the gate tripped.
 
-## The fields to read (org/user scan JSON)
+## The schema
 
-Each entry under `inventory` and `most_exposed_risky_dependencies` carries what
-you need to act, no reconstruction required:
+Every JSON document carries `schema_version` on the envelope. **Schema 2 is the
+current contract and the default.**
 
-| Field | Use it to |
-|-------|-----------|
-| `name`, `ecosystem`, `version` | Identify the package. |
-| `risk_level` | Prioritize (critical/high/medium/low/unknown). |
-| `known_vulnerable` | A separate axis: the installed version has scored advisories. Fix these regardless of risk level. |
-| `remediation` | A one-line, ready-to-use action string when one applies (upgrade past the fix versions, upgrade to latest, or replace a deprecated package), else `null`. Put it straight in the issue/PR body. It names fix versions but does **not** resolve the exact target across version ranges — you still pick the precise pin. |
-| `metadata.latest_version` | The upgrade target for drift — but may be `null` when the registry lookup didn't resolve; treat `null` as unknown and fall back to `deps_dev` / `repository_url`. |
-| `advisories.details[].fixed_versions` | The version(s) that close each advisory — the reliable target for a known-vulnerable dep. |
-| `key_signals` / `risk_factors` | The "why", for the issue body. |
-| `usage[]` → `repo`, `html_url`, `manifests[]` | **Which repo and which manifest file to edit.** Each manifest links to the exact file. |
-| `blast_radius.repository_count` | How many repos this reaches — fix the widest first. |
-| `metadata.repository_url`, `deps_dev` (CSV) | Where to investigate a replacement. |
+Before schema 2 there were two contracts. `analyze --output json` and
+`scan-org` described the same concept — a dependency somebody scored — and
+agreed on five keys out of about twenty-one; the rest were silent renames
+(`installed_version` / `version`, `scores` / `component_scores`,
+`has_known_exploits` / `known_vulnerable`, `vulnerabilities` / `advisories`).
+A consumer had to write two parsers for one concept.
 
-The headline (`headline`, and the lead line of the terminal and HTML reports)
-carries both risk axes plus the coverage caveat, in the order they demand
-action: `198 known-vulnerable · 2 high-risk · 812 could not be scored · 1135
-dependencies across 25 repos`. Read all of it. `high_risk_dependency_count` is
-depressed whenever coverage is poor — a dependency that could not be scored
-cannot score high — so `unscored_dependency_count` is what tells you whether a
-low high-risk count means "clean" or "we measured almost nothing".
+Schema 2 makes both paths emit the **same `ScoredDependency` shape**, with
+org-only concepts under a declared extension block.
 
-For a single-project `analyze --output json`, the shape is flatter: a top-level
-`dependencies` array with `name`, `installed_version`, `latest_version`,
-`risk_level`, `vulnerabilities` (each with `fixed_versions`), `risk_factors`,
-and `repository_url`.
+`--schema v1` still selects the old pair of shapes, byte for byte, on
+`analyze`, `scan-org` and `scan-user`. It is **deprecated and removed in
+1.0.0**; the deprecation notice is written to stderr, so stdout stays
+parseable. Migrate.
 
-### The `analyze --output json` contract
+## `ScoredDependency` — the shape both paths emit
+
+```jsonc
+{
+  "name": "jinja2",
+  "ecosystem": "python",
+  "installed_version": "3.1.2",     // the resolved version actually installed
+  "latest_version": "3.1.6",        // null when the registry lookup didn't resolve
+  "last_updated": "2024-03-01T12:00:00",
+  "repository_url": "https://github.com/pallets/jinja",
+  "is_deprecated": false,
+  "known_vulnerable": true,         // scored advisories apply to installed_version
+  "maintainer_count": 2,
+  "risk_level": "MEDIUM",           // CRITICAL | HIGH | MEDIUM | LOW | UNKNOWN
+  "risk_score": 3.2,                // 0..5
+  "risk_factors": ["Known security issues (1 counted, max severity HIGH)"],
+  "insufficient_data": false,
+  "license":   { "id": "BSD-3-Clause", "category": "PERMISSIVE",
+                 "is_approved": true, "url": "…", "risk_level": "LOW" },
+  "community": { "star_count": 10000, "contributor_count": 300,
+                 "commit_frequency": 4.5,
+                 "last_release_date": "…", "installed_release_date": "…" },
+  "health":    { "has_tests": true, "has_ci": true,
+                 "has_contribution_guidelines": null },
+  "transitive_dependency_count": 0,
+  "advisories": {
+    "total_found": 3,
+    "counted_in_score": 1,
+    "filtered": 1,
+    "filtered_reasons": { "withdrawn": 1 },
+    "applicability_unknown": 1,               // #61: could not decide applicability
+    "applicability_unknown_reasons": { "no_affected_ranges": 1 },
+    "max_counted_cvss_score": 7.5,
+    "max_counted_severity": "HIGH",
+    "details": [ { "id": "GHSA-…", "counted_in_score": true,
+                   "fixed_versions": ["3.1.4"] } ]
+  },
+  "signals": {
+    "staleness":  { "state": "measured",   "value": 0.0,  "reason": null },
+    "maintained": { "state": "unmeasured", "value": null,
+                    "reason": "source_repository_unreadable" }
+  },
+  "unknown_signals": ["maintained"],
+  "measured_signal_count": 2,
+  "total_signal_count": 3,
+  "extensions": { }                            // see below
+}
+```
+
+### `signals` — measured zero is not the same as unmeasured
+
+This is the field to read before trusting anything else. Every signal is
+reported as one of exactly two states:
+
+| `state` | Means | Carries |
+|---------|-------|---------|
+| `measured` | Somebody looked and this is the answer. `value: 0.0` means **zero risk was measured**. | `value` |
+| `unmeasured` | Nobody could look. It is not zero and not safe. | `reason` |
+
+`reason` is one of `no_data_from_source` (the input this signal reads was
+absent from whatever answered), `source_repository_unreadable` (the registry
+answered and named no readable source repository, which silences every
+repository-derived signal at once), or `lookup_not_attempted` (the pipeline
+step never ran for this manifest).
+
+**Do not treat `unmeasured` as good news.** An unmeasured signal is excluded
+from both the numerator and the denominator of `risk_score`, so a
+sparsely-covered package gets a score computed over less evidence, not a lower
+one. `insufficient_data: true` means the scan could not produce a confident
+risk level at all, and `risk_level` is `UNKNOWN`.
+
+The signal names are ours and they are stable. `docs/signals.md` publishes the
+correspondence to OpenSSF Scorecard's checks, pinned to a Scorecard version,
+with every approximate row marked approximate.
+
+### `extensions` — path-specific blocks
+
+An extension may add keys. It never renames, shadows, or redefines a shared
+field, so one parser reads both paths. `analyze` emits `"extensions": {}`.
+
+`scan-org` and `scan-user` emit `extensions.org_scan`:
+
+```jsonc
+"extensions": {
+  "org_scan": {
+    "blast_radius": { "repository_count": 12, "total_repositories_scanned": 25,
+                      "repositories": ["acme/api", …],
+                      "manifests": ["acme/api:requirements.txt", …] },
+    "usage": [ { "repo": "acme/api",
+                 "html_url": "https://github.com/acme/api",
+                 "default_branch": "main",
+                 "manifests": ["requirements.txt"] } ],
+    "version_specs": [">=3.1.2", "3.1.6"],   // the raw specifiers the manifests declared
+    "remediation": { "action": "upgrade_to_fixed_version",
+                     "fix_versions": ["3.1.4"],
+                     "target_version": "3.1.4",
+                     "detail": "Scored advisories apply to the installed version…" }
+  }
+}
+```
+
+### `remediation` — branch on the enum, not on prose
+
+| `action` | What to do |
+|----------|------------|
+| `upgrade_to_fixed_version` | Scored advisories apply and at least one published fix version is known. `fix_versions` lists them. |
+| `upgrade_to_latest` | Version drift, no advisory. `target_version` is the latest published version. |
+| `replace` | Deprecated upstream, or vulnerable with no published fix. A different version will not help. |
+| `no_action` | Nothing measured demands an action. |
+| `unclassified` | Something demands an action and the data does not say which. **Read `detail` and decide yourself.** Never treated as one of the above. |
+
+`target_version` is filled in only when exactly one candidate exists. Picking
+among several fix versions needs cross-ecosystem range resolution this tool
+does not claim to do, so it abstains rather than guessing; use the smallest
+version that is `>=` every relevant `fix_versions` entry.
+
+> **Security.** `fix_versions` and `target_version` originate in registry and
+> advisory payloads. They are **untrusted input**. The tool refuses to publish
+> a string that could not be a version (anything containing whitespace, shell
+> metacharacters, quotes, or path separators is rejected, and the action
+> becomes `unclassified`), but you must still pass them as **arguments**, never
+> interpolate them into a shell string. Same for `name` and `installed_version`.
+
+## The envelopes
+
+### `analyze --output json`
 
 **If the process exits 0 in JSON mode, stdout is parseable JSON.** There is no
 case — no manifests found, unsupported file, parse failure, nothing declared —
@@ -64,11 +178,12 @@ guard. Every run emits exactly one document with the same top-level keys:
 
 | Field | Always present |
 |-------|----------------|
+| `schema_version` | Yes; `2`. |
 | `dependency_count`, `dependencies` | Yes; `0` and `[]` when there was nothing to report. |
 | `overall_risk_score` | Yes, but `null` when nothing was measured — never `0.0`, which would read as "safe". |
 | `manifests[]` | Every manifest that was successfully analyzed, with its own path, ecosystem, and count. Empty when none were. |
 | `warnings[]` | Why anything was skipped or refused, in plain language. Empty on a clean run. |
-| `ecosystem` | `null` for a mixed-ecosystem directory scan or an empty run. |
+| `ecosystem` | `null` for a mixed-ecosystem directory scan or an empty run. Each dependency still carries its own `ecosystem`. |
 
 A directory containing several manifests emits one merged document, not one per
 manifest.
@@ -78,30 +193,56 @@ manifest.
 scored. A refused manifest also explains itself — pointing `analyze` at
 `package.json` names `package-lock.json` and says whether it is there.
 
+### `scan-org` / `scan-user`
+
+Top level: `schema_version`, `org`, `account_type`, `generated_at`,
+`repositories_scanned` / `repository_count`, `manifests_scanned` /
+`manifest_count`, `unique_dependency_count`, `known_vulnerable_dependency_count`,
+`unscored_dependency_count`, `high_risk_dependency_count`,
+`high_risk_exposed_repository_count`, `headline`, `riskiest_repositories`,
+`parse_failures`, `warnings`, and two arrays of `ScoredDependency`:
+`inventory` (everything) and `most_exposed_risky_dependencies` (the triage
+list).
+
+The headline carries both risk axes plus the coverage caveat, in the order they
+demand action: `198 known-vulnerable · 2 high-risk · 812 could not be scored ·
+1135 dependencies across 25 repos`. Read all of it. `high_risk_dependency_count`
+is depressed whenever coverage is poor — a dependency that could not be scored
+cannot score high — so `unscored_dependency_count` is what tells you whether a
+low high-risk count means "clean" or "we measured almost nothing".
+
 ## A worked loop
 
 1. `scan-org <org> --output-json org.json --fail-on high`. If exit code is `0`,
    there's nothing above the bar — stop.
-2. Parse `org.json`. For each dependency where `known_vulnerable` is true or
-   `risk_level` is `high`/`critical`:
-   - **Open an issue** summarizing `name`, `risk_level`, `key_signals`, the
-     advisories, and every repo/manifest from `usage[]`.
-   - **Determine the fix:** start from `remediation` — it states the action
-     directly. When you need to pick the exact pin, use the smallest version
-     that is `>=` every relevant `fixed_versions` entry; otherwise
-     `latest_version`. If `remediation` says to replace (deprecated /
-     unmaintained, no published fix), investigate a replacement via
-     `repository_url` / deps.dev instead of a version bump.
+2. Parse `org.json`. Check `schema_version == 2`. For each entry in `inventory`
+   where `known_vulnerable` is true or `risk_level` is `high`/`critical`:
+   - **Open an issue** summarizing `name`, `ecosystem`, `installed_version`,
+     `risk_level`, `risk_factors`, the advisories, and every repo/manifest from
+     `extensions.org_scan.usage[]`.
+   - **Determine the fix:** branch on
+     `extensions.org_scan.remediation.action`. On `upgrade_to_fixed_version`
+     use `target_version` when present, else the smallest version `>=` every
+     `fix_versions` entry. On `upgrade_to_latest` use `target_version`. On
+     `replace`, investigate a replacement via `repository_url` / deps.dev
+     instead of a version bump. On `unclassified`, read `detail` and escalate
+     to a human rather than acting.
    - **Open a PR** that edits each manifest in `usage[]` to the fix version.
 3. Leave the merge decision to a human. The tool identifies and the agent
    prepares; a person keeps the judgment call.
 
 ## Guarantees an agent can rely on
 
-- **stdout is machine-clean.** In `--output json` mode, diagnostics go to
-  stderr; stdout is JSON only.
+- **One shape, two commands.** A `ScoredDependency` from `analyze` and one from
+  `scan-org` have the same keys with the same meanings.
+- **stdout is machine-clean.** In `--output json` mode, diagnostics — including
+  the `--schema v1` deprecation notice — go to stderr; stdout is JSON only.
 - **Non-interactive.** No prompts, ever.
 - **Unknown stays unknown.** A signal the tool couldn't measure is reported as
-  unknown, not guessed — don't treat `unknown` as safe.
+  `unmeasured` with a reason, never as a zero. Don't treat `unknown` as safe.
 - **Advisory noise is filtered.** `advisories.filtered` are counted but excluded
   from the score and from `known_vulnerable`; act on the scored ones.
+  `advisories.applicability_unknown` are advisories whose applicability to the
+  installed version could not be decided — neither "applies" nor "doesn't".
+- **Versioned.** Breaking changes bump `schema_version` and are announced with
+  a removal version, not a vague "later".

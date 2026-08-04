@@ -420,7 +420,7 @@ def test_org_scan_groups_report_by_canonical_package_identity() -> None:
     assert dependency.key.name == "jinja2"
     assert dependency.key.version == "3.1.6"
     assert dependency.version_specs == {">=3.1.2", "3.1.6"}
-    assert dependency.versions_display == ">=3.1.2, 3.1.6"
+    assert dependency.version_specs_list == [">=3.1.2", "3.1.6"]
     assert dependency.risk_level == RiskLevel.HIGH
     assert dependency.risk_score.total_score == 7.3
     assert dependency.advisory_summary == "2 scored / 0 filtered"
@@ -446,8 +446,15 @@ def test_org_scan_groups_report_by_canonical_package_identity() -> None:
     inventory = cast(List[Dict[str, object]], model["inventory"])
     assert len(inventory) == 1
     assert inventory[0]["ecosystem"] == "python"
-    assert inventory[0]["version_specs"] == [">=3.1.2", "3.1.6"]
-    assert inventory[0]["versions_display"] == ">=3.1.2, 3.1.6"
+    # Org-only concepts live under the declared extension block; the shared
+    # fields keep their names on both paths (#164).
+    org_scan = cast(
+        Dict[str, object], cast(Dict[str, object], inventory[0])["extensions"]
+    )["org_scan"]
+    assert cast(Dict[str, object], org_scan)["version_specs"] == [
+        ">=3.1.2",
+        "3.1.6",
+    ]
 
     html = render_html_report(report)
     assert '<span class="eco">· python</span>' in html
@@ -558,13 +565,23 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     first_dependencies = cast(
         List[Dict[str, object]], model["most_exposed_risky_dependencies"]
     )
-    # Every serialized dependency exposes a remediation key (null when no
-    # supported action); the known-vulnerable one states an action.
-    assert all("remediation" in dep for dep in first_dependencies)
-    vuln_dep = next(dep for dep in first_dependencies if dep["known_vulnerable"])
-    assert isinstance(vuln_dep["remediation"], str)
-    assert "advisories" in vuln_dep["remediation"]
-    assert first_dependencies[0]["usage"] == [
+    # Every serialized dependency carries a structured remediation block under
+    # the org extension; the known-vulnerable one classifies an action rather
+    # than describing one in prose an agent would have to regex (#164).
+    org_blocks = [
+        cast(Dict[str, object], cast(Dict[str, object], dep["extensions"])["org_scan"])
+        for dep in first_dependencies
+    ]
+    assert all("remediation" in block for block in org_blocks)
+    vuln_index = next(
+        index for index, dep in enumerate(first_dependencies) if dep["known_vulnerable"]
+    )
+    vuln_remediation = cast(Dict[str, object], org_blocks[vuln_index]["remediation"])
+    # This fixture's advisories publish no fix, so the honest classification is
+    # "replace", not an upgrade target invented to fill the field.
+    assert vuln_remediation["action"] == "replace"
+    assert vuln_remediation["fix_versions"] == []
+    assert org_blocks[0]["usage"] == [
         {
             "repo": "acme/api",
             "html_url": "https://github.com/acme/api",

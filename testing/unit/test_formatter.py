@@ -70,7 +70,8 @@ def test_terminal_report_uses_plain_language_table() -> None:
         ),
         total_score=4.9,
         risk_level=RiskLevel.UNKNOWN,
-        unknown_signal_count=10,
+        # The per-dependency count is derived from this list, not stored.
+        unknown_signals=[f"signal_{index}" for index in range(10)],
         measured_signal_count=2,
         total_signal_count=14,
         insufficient_data=True,

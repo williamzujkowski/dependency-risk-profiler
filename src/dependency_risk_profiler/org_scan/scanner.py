@@ -15,7 +15,6 @@ from typing import Callable, Dict, Iterable, List, Optional, Protocol, Set, Tupl
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 from ..parsers.base import BaseParser
 from ..parsers.registry import EcosystemRegistry
-from ..popularity import should_soften_low_release_cadence
 from .github import ManifestTooLargeError
 from .models import (
     AccountType,
@@ -339,7 +338,6 @@ class OrgScanRunner:
                     version=representative_key.version,
                 ),
                 risk_score=representative_score,
-                key_signals=self._key_signals(representative_score),
                 advisory_summary=self._advisory_summary(representative_score),
                 version_specs={key.version for key in variant_keys},
             )
@@ -481,7 +479,7 @@ class OrgScanRunner:
             risk_rank(dependency.risk_level),
             -dependency.blast_radius,
             -dependency.risk_score.total_score,
-            dependency.key.display_name.lower(),
+            f"{dependency.key.ecosystem}:{dependency.key.name}".lower(),
         )
 
     def _representative_variant_sort_key(
@@ -511,45 +509,6 @@ class OrgScanRunner:
         if metrics.vulnerability_count is not None:
             return metrics.vulnerability_count
         return 0
-
-    def _key_signals(self, score: DependencyRiskScore) -> List[str]:
-        """Return plain-language signals for report display."""
-        dependency = score.dependency
-        if score.insufficient_data:
-            return ["Insufficient data for confident risk level"]
-
-        signals: List[str] = []
-        if dependency.maintainer_count is not None and dependency.maintainer_count <= 1:
-            signals.append("single maintainer")
-        if dependency.is_deprecated:
-            signals.append("deprecated")
-        if should_soften_low_release_cadence(dependency) and (
-            (score.staleness_score is not None and score.staleness_score > 0)
-            or (score.maintained_score is not None and score.maintained_score > 0)
-        ):
-            signals.append("stable, low release cadence")
-        if score.maintained_score is not None and score.maintained_score > 0.5:
-            if not should_soften_low_release_cadence(dependency):
-                signals.append("not actively maintained")
-        if (
-            score.security_policy_score is not None
-            and score.security_policy_score > 0.5
-        ):
-            signals.append("missing security policy")
-        if score.version_score is not None and score.version_score > 0:
-            signals.append("behind latest")
-        if score.license_score is not None and score.license_score > 0.5:
-            signals.append("license risk")
-        if score.exploit_score is not None and score.exploit_score > 0:
-            signals.append("scored advisories")
-        if dependency.transitive_dependencies:
-            signals.append(f"{len(dependency.transitive_dependencies)} transitive deps")
-
-        if not signals and score.factors:
-            signals.extend(score.factors[:2])
-        if not signals:
-            signals.append("no leading risk signals")
-        return signals[:4]
 
     def _advisory_summary(self, score: DependencyRiskScore) -> str:
         """Return scored/filtered advisory counts."""

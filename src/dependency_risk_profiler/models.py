@@ -5,7 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Set
 
-from .signals import SourceRepositoryState
+from .signals import Measurement, SourceRepositoryState
 
 
 class RiskLevel(Enum):
@@ -157,10 +157,30 @@ class DependencyRiskScore:
     risk_level: RiskLevel = RiskLevel.UNKNOWN
     factors: List[str] = field(default_factory=list)
     unknown_signals: List[str] = field(default_factory=list)
-    unknown_signal_count: int = 0
     measured_signal_count: int = 0
     total_signal_count: int = 0
     insufficient_data: bool = False
+
+    # Every signal by its stable name, as a MEASURED value or an UNMEASURED
+    # reason (#198). The distinction used to stop at the scorer: both JSON
+    # writers flattened it to a bare ``null``, which a consumer cannot tell
+    # from "measured, and the answer happens to be null". Surfacing it is #164
+    # step 5. Keyed by the names in ``signals.SIGNAL_CATALOG``.
+    measurements: Dict[str, Measurement] = field(default_factory=dict)
+
+    @property
+    def unknown_signal_count(self) -> int:
+        """Return how many signals came back unmeasured.
+
+        A property rather than a stored field: it is ``len(unknown_signals)``
+        and always was, so storing it only created a second thing that could
+        disagree with the first. Not serialized in schema v2; the frozen v1
+        writer still emits it.
+
+        Returns:
+            The number of unmeasured signals.
+        """
+        return len(self.unknown_signals)
 
 
 @dataclass

@@ -14,6 +14,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ..analyzers.base import BaseAnalyzer
 from ..config import Config
+from ..contract import schema_deprecation_notice
 from ..manifest_guidance import unsupported_manifest_guidance
 from ..models import DependencyMetadata, ProjectRiskProfile, RiskLevel
 from ..org_scan import (
@@ -33,6 +34,7 @@ from ..parsers.registry import EcosystemRegistry
 from ..scoring.risk_scorer import RiskScorer
 from ..utils import resolve_github_token
 from .formatter import JsonFormatter, TerminalFormatter
+from .json_v1 import JsonFormatterV1
 
 # Create Typer app
 app = typer.Typer(
@@ -54,6 +56,19 @@ class OutputFormat(str, Enum):
 
     TERMINAL = "terminal"
     JSON = "json"
+
+
+class SchemaVersion(str, Enum):
+    """Which output schema a command emits.
+
+    ``v2`` is the unified ``ScoredDependency`` contract both ``analyze`` and
+    ``scan-org`` serialize. ``v1`` is the pre-unification pair of incompatible
+    shapes, kept for one release cycle and removed in
+    ``contract.SCHEMA_V1_REMOVAL_VERSION``.
+    """
+
+    V1 = "v1"
+    V2 = "v2"
 
 
 class GraphFormat(str, Enum):
@@ -272,11 +287,38 @@ def _skip_reason(manifest_path: str, reason: str) -> str:
     return f"Could not analyze {manifest_path} ({reason})"
 
 
+def _warn_legacy_schema(schema: SchemaVersion) -> None:
+    """Announce the v1 deprecation on stderr, never on stdout.
+
+    stdout is the JSON document. A notice printed there would be the one thing
+    a schema guarantee cannot survive, so this follows the existing convention
+    and writes to stderr regardless of output format.
+
+    Args:
+        schema: The schema the caller asked for.
+    """
+    if schema is SchemaVersion.V1:
+        Console(stderr=True).print(
+            schema_deprecation_notice(), style="yellow", markup=False, highlight=False
+        )
+
+
 def _emit_json_report(
-    profiles: List[ProjectRiskProfile], manifest_path: str, warnings: List[str]
+    profiles: List[ProjectRiskProfile],
+    manifest_path: str,
+    warnings: List[str],
+    schema: SchemaVersion = SchemaVersion.V2,
 ) -> None:
-    """Write the one JSON document a JSON-mode run always owes its caller."""
-    print(JsonFormatter().format_report(profiles, manifest_path, warnings))
+    """Write the one JSON document a JSON-mode run always owes its caller.
+
+    Args:
+        profiles: Successfully analyzed manifest profiles, possibly empty.
+        manifest_path: The path the user pointed the tool at.
+        warnings: Human-readable notes about skipped or refused inputs.
+        schema: Which output schema to emit.
+    """
+    formatter = JsonFormatterV1() if schema is SchemaVersion.V1 else JsonFormatter()
+    print(formatter.format_report(profiles, manifest_path, warnings))
 
 
 # A manifest that parsed but declared nothing is "nothing to do", not a refusal.
@@ -363,6 +405,14 @@ def analyze(
         "--output",
         "-o",
         help="Output format",
+    ),
+    schema: SchemaVersion = typer.Option(
+        "v2",
+        "--schema",
+        help=(
+            "JSON output schema. v2 is the unified contract shared with "
+            "scan-org; v1 is the deprecated pre-unification shape."
+        ),
     ),
     no_color: bool = typer.Option(
         False,
@@ -568,6 +618,7 @@ def analyze(
     # stays machine-clean (see docs/agents.md).
     json_output = config.get("general", "output_format") == "json"
     status_console = _auxiliary_console(json_output)
+    _warn_legacy_schema(schema)
 
     try:
         # Check if manifest argument is provided
@@ -638,7 +689,7 @@ def analyze(
                 # (#147).
                 if json_output:
                     _emit_json_report(
-                        [], input_path, ["No supported manifest files found"]
+                        [], input_path, ["No supported manifest files found"], schema
                     )
                 else:
                     display_ecosystem_list()
@@ -1194,7 +1245,7 @@ def analyze(
                 failed_files.append(failed_file)
 
         if json_output:
-            _emit_json_report(overall_results, input_path, warnings)
+            _emit_json_report(overall_results, input_path, warnings, schema)
 
         # Display summary if manifest files were scanned
         if len(manifest_files) > 0 and not json_output:
@@ -1394,6 +1445,14 @@ def scan_org(
         help="Optional path for a flat CSV of the dependency inventory",
         dir_okay=False,
     ),
+    schema: SchemaVersion = typer.Option(
+        "v2",
+        "--schema",
+        help=(
+            "JSON output schema. v2 is the unified contract shared with "
+            "analyze; v1 is the deprecated pre-unification shape."
+        ),
+    ),
     fail_on: Optional[FailOn] = typer.Option(
         None,
         "--fail-on",
@@ -1435,6 +1494,7 @@ def scan_org(
         output_html=output_html,
         output_json=output_json,
         output_csv=output_csv,
+        schema=schema,
         fail_on=fail_on,
         max_repos=max_repos,
         include_archived=include_archived,
@@ -1469,6 +1529,14 @@ def scan_user(
         "--output-csv",
         help="Optional path for a flat CSV of the dependency inventory",
         dir_okay=False,
+    ),
+    schema: SchemaVersion = typer.Option(
+        "v2",
+        "--schema",
+        help=(
+            "JSON output schema. v2 is the unified contract shared with "
+            "analyze; v1 is the deprecated pre-unification shape."
+        ),
     ),
     fail_on: Optional[FailOn] = typer.Option(
         None,
@@ -1520,6 +1588,7 @@ def scan_user(
         output_html=output_html,
         output_json=output_json,
         output_csv=output_csv,
+        schema=schema,
         fail_on=fail_on,
         max_repos=max_repos,
         include_archived=include_archived,
@@ -1537,6 +1606,7 @@ def _scan_github_account(
     output_html: Path,
     output_json: Path,
     output_csv: Optional[Path],
+    schema: SchemaVersion,
     fail_on: Optional[FailOn],
     max_repos: Optional[int],
     include_archived: bool,
@@ -1546,6 +1616,7 @@ def _scan_github_account(
     include_collaborations: bool = False,
 ) -> None:
     """Run the shared GitHub account scan implementation."""
+    _warn_legacy_schema(schema)
     token = resolve_github_token(github_token)
     if not token:
         console.print(
@@ -1591,7 +1662,7 @@ def _scan_github_account(
 
     output_html.parent.mkdir(parents=True, exist_ok=True)
     output_html.write_text(render_html_report(report), encoding="utf-8")
-    write_json_report(report, output_json)
+    write_json_report(report, output_json, legacy_schema=schema is SchemaVersion.V1)
     console.print(render_terminal_summary(report), soft_wrap=True)
     console.print(f"\n[bold green]HTML report written to {output_html}[/bold green]")
     console.print(f"[bold green]JSON report written to {output_json}[/bold green]")

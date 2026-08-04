@@ -25,14 +25,12 @@ def canonical_ecosystem(raw: str) -> str:
 class DependencyKey:
     """Stable identity for a dependency profile reused across repositories."""
 
+    # ``display_name`` used to live here and was serialized into the org JSON.
+    # It was ``f"{ecosystem}:{name}@{version}"`` over three fields already in
+    # the payload, so schema v2 deleted it; the reports format their own label.
     ecosystem: str
     name: str
     version: str
-
-    @property
-    def display_name(self) -> str:
-        """Return an ecosystem-qualified dependency label."""
-        return f"{self.ecosystem}:{self.name}@{self.version}"
 
 
 @dataclass(frozen=True)
@@ -90,7 +88,10 @@ class AggregatedDependency:
     manifests: Set[str] = field(default_factory=set)
     repo_refs: Dict[str, RepositoryRef] = field(default_factory=dict)
     manifest_paths_by_repo: Dict[str, Set[str]] = field(default_factory=dict)
-    key_signals: List[str] = field(default_factory=list)
+    # ``key_signals`` used to live here: a third hand-maintained
+    # English-string generator over the same scores ``risk_score.factors``
+    # already describes, serialized as its own contract field. Deleted in
+    # schema v2; the reports render the scorer's factors instead.
     advisory_summary: str = "unknown"
     version_specs: Set[str] = field(default_factory=set)
 
@@ -131,13 +132,16 @@ class AggregatedDependency:
         return self.risk_level == RiskLevel.UNKNOWN or self.risk_score.insufficient_data
 
     @property
-    def versions_display(self) -> str:
-        """Return a deterministic compact display of all seen version specs."""
-        return ", ".join(self.version_specs_list)
-
-    @property
     def version_specs_list(self) -> List[str]:
-        """Return all seen version specs in deterministic display order."""
+        """Return all seen version specs in deterministic display order.
+
+        Kept when its display-string sibling was deleted: this is the set of
+        raw specifiers the manifests actually declared, and no amount of
+        formatting reconstructs it from one resolved version.
+
+        Returns:
+            The observed specs, range-like ones first.
+        """
         if not self.version_specs:
             return [self.key.version]
         return sorted(self.version_specs, key=_version_spec_sort_key)
