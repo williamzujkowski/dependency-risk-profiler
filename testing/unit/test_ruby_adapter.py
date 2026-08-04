@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from unittest import mock
 
+from signal_floors import assert_meets_signal_floor, mark_transitive_unmeasured
+
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.ruby import RubyGemsAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
@@ -12,11 +14,7 @@ from dependency_risk_profiler.license.analyzer import (
     analyze_license,
     extract_license_info,
 )
-from dependency_risk_profiler.models import (
-    DependencyMetadata,
-    DependencyRiskScore,
-    RiskLevel,
-)
+from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.parsers.ruby import GemfileLockParser
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.vulnerabilities import ecosystems
@@ -132,13 +130,8 @@ GITHUB_REPO_HTML = (
     'aria-label="1,234 users starred this repository">1.2k</a>'
 )
 
-# Floor for how many of the scorer's signals a RubyGems dependency must be able
-# to measure from registry metadata alone — no repository clone, no GitHub
-# token. The scorer calls a dependency UNKNOWN when unmeasured > measured, so a
-# gem that cannot clear half of the signals is a regression back to #127, where
-# every RailsGoat gem scored UNKNOWN. #73's adapter-conformance harness is the
-# place to generalize this floor across ecosystems.
-RUBYGEMS_MIN_MEASURED_SIGNALS = 8
+# The measured-signal floor now lives in signal_floors.MIN_MEASURED_SIGNALS,
+# shared with the cargo and composer adapter tests (#132).
 
 
 def _score_gem_offline(gem_response: Dict[str, object]) -> DependencyRiskScore:
@@ -180,7 +173,7 @@ def _score_gem_offline(gem_response: Dict[str, object]) -> DependencyRiskScore:
     ):
         dep = community_analyzer.analyze_community_metrics(dep, metadata)
 
-    return RiskScorer().score_dependency(dep)
+    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
 
 
 def test_gem_license_is_read_from_the_licenses_list() -> None:
@@ -224,14 +217,7 @@ def test_yanked_gem_is_marked_deprecated() -> None:
 
 def test_rubygems_meets_minimum_measured_signal_coverage() -> None:
     """Registry metadata alone must carry a gem past the insufficient-data bar."""
-    score = _score_gem_offline(TZINFO_GEM_RESPONSE)
-
-    assert score.measured_signal_count >= RUBYGEMS_MIN_MEASURED_SIGNALS, (
-        f"rubygems measured only {score.measured_signal_count} of "
-        f"{score.total_signal_count} signals; unmeasured: {score.unknown_signals}"
-    )
-    assert score.insufficient_data is False
-    assert score.risk_level is not RiskLevel.UNKNOWN
+    assert_meets_signal_floor(_score_gem_offline(TZINFO_GEM_RESPONSE), "rubygems")
 
 
 def test_rubygems_measures_the_signals_the_registry_provides() -> None:
