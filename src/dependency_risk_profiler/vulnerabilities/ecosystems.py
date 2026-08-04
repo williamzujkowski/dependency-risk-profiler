@@ -31,7 +31,15 @@ class UnknownEcosystem(KeyError):
 
 @dataclass(frozen=True)
 class Ecosystem:
-    """One ecosystem's identity and its name in each vulnerability source."""
+    """One ecosystem's identity and its name in each vulnerability source.
+
+    ``purl_type`` is the ECMA-427 package-url type (#164). It lives here rather
+    than in a table of its own for the same reason the four source names do:
+    two tables claiming to know what an ecosystem is will drift, and the drift
+    is silent (#66). Note that it is not injective — ``java`` and ``maven`` are
+    separate entries that share the ``maven`` purl type — so nine keys yield
+    eight purl types.
+    """
 
     key: str
     osv: str
@@ -39,6 +47,7 @@ class Ecosystem:
     nvd_cpe_prefix: Optional[str]
     deps_dev: Optional[str]
     version_scheme: VersionScheme
+    purl_type: str
 
 
 # Canonical entries. Fully-supported ecosystems (an analyzer emits them) plus
@@ -47,13 +56,41 @@ class Ecosystem:
 # entry, not an alias of ``maven``: the two share OSV/GHA names but diverge in
 # the NVD CPE prefix, a legacy quirk preserved here.
 _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
-    Ecosystem("nodejs", "npm", "NPM", "cpe:2.3:a:*:node:", "npm", VersionScheme.SEMVER),
     Ecosystem(
-        "python", "PyPI", "PIP", "cpe:2.3:a:python:", "pypi", VersionScheme.PEP440
+        "nodejs",
+        "npm",
+        "NPM",
+        "cpe:2.3:a:*:node:",
+        "npm",
+        VersionScheme.SEMVER,
+        "npm",
     ),
-    Ecosystem("golang", "Go", "GO", "cpe:2.3:a:golang:", "go", VersionScheme.SEMVER),
     Ecosystem(
-        "cargo", "crates.io", "RUST", "cpe:2.3:a:rust:", "cargo", VersionScheme.SEMVER
+        "python",
+        "PyPI",
+        "PIP",
+        "cpe:2.3:a:python:",
+        "pypi",
+        VersionScheme.PEP440,
+        "pypi",
+    ),
+    Ecosystem(
+        "golang",
+        "Go",
+        "GO",
+        "cpe:2.3:a:golang:",
+        "go",
+        VersionScheme.SEMVER,
+        "golang",
+    ),
+    Ecosystem(
+        "cargo",
+        "crates.io",
+        "RUST",
+        "cpe:2.3:a:rust:",
+        "cargo",
+        VersionScheme.SEMVER,
+        "cargo",
     ),
     Ecosystem(
         "maven",
@@ -62,11 +99,18 @@ _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
         "cpe:2.3:a:apache:maven:",
         "maven",
         VersionScheme.MAVEN,
+        "maven",
     ),
     Ecosystem(
-        "java", "Maven", "MAVEN", "cpe:2.3:a:java:", "maven", VersionScheme.MAVEN
+        "java",
+        "Maven",
+        "MAVEN",
+        "cpe:2.3:a:java:",
+        "maven",
+        VersionScheme.MAVEN,
+        "maven",
     ),
-    Ecosystem("nuget", "NuGet", "NUGET", None, "nuget", VersionScheme.NUGET),
+    Ecosystem("nuget", "NuGet", "NUGET", None, "nuget", VersionScheme.NUGET, "nuget"),
     Ecosystem(
         "ruby",
         "RubyGems",
@@ -74,6 +118,7 @@ _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
         "cpe:2.3:a:ruby:",
         "rubygems",
         VersionScheme.RUBYGEMS,
+        "gem",
     ),
     Ecosystem(
         "composer",
@@ -82,6 +127,7 @@ _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
         "cpe:2.3:a:php:",
         None,
         VersionScheme.SEMVER,
+        "composer",
     ),
 )
 
