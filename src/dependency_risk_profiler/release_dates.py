@@ -26,20 +26,22 @@ from datetime import datetime
 from typing import Iterable, List, Optional
 
 from .models import DependencyMetadata
-from .signals import SourceRepositoryState
+from .signals import FieldSource, ProvenancedField, SourceRepositoryState
 from .utils import canonical_repository_url
 
 logger = logging.getLogger(__name__)
 
-# Provenance of ``DependencyMetadata.last_updated``. Recorded rather than
-# inferred from "is it already set?" so the precedence rule is explicit: only a
-# registry-sourced date blocks a later repository-sourced one.
+# Provenance of ``DependencyMetadata.last_updated``, in the coarse two-value
+# form the precedence rule needs: only a registry-sourced date blocks a later
+# repository-sourced one.
 #
-# Still a stringly-typed ``additional_info`` entry, and deliberately so. This
-# one records *which of two write paths won*, not whether a signal was
-# measured, which puts it under the provenance item of #164 — the one gated on
-# a benchmark and sequenced last. Folding it in here would be doing that work
-# early and under a different name.
+# This predates #164 step 7 and is now the *narrower* of two records. The typed
+# one, ``field_sources[ProvenancedField.LAST_UPDATED]``, says which of four
+# acquisition paths actually wrote the date; this one says only which of the
+# two precedence classes it belongs to, and survives because it is part of the
+# frozen v1 payload's ``additional_info``. It is written in the same statement
+# as the typed record so the two cannot drift, and it goes away with v1 at
+# ``contract.SCHEMA_V1_REMOVAL_VERSION``.
 RELEASE_DATE_SOURCE_KEY = "release_date_source"
 RELEASE_DATE_SOURCE_REGISTRY = "registry"
 RELEASE_DATE_SOURCE_REPOSITORY = "repository"
@@ -117,10 +119,16 @@ def apply_registry_release_date(
         return
     dependency.last_updated = released_at
     dependency.additional_info[RELEASE_DATE_SOURCE_KEY] = RELEASE_DATE_SOURCE_REGISTRY
+    dependency.record_field_source(
+        ProvenancedField.LAST_UPDATED, FieldSource.REGISTRY_RELEASE
+    )
 
 
 def apply_repository_activity_date(
-    dependency: DependencyMetadata, active_at: Optional[datetime]
+    dependency: DependencyMetadata,
+    active_at: Optional[datetime],
+    *,
+    source: FieldSource,
 ) -> None:
     """Fill the cadence date from repository activity, unless the registry answered.
 
@@ -129,9 +137,17 @@ def apply_repository_activity_date(
     consumers last received anything. Only the latter is what a dependency
     manifest actually pins.
 
+    "Repository activity" is two different measurements wearing one name, which
+    is why ``source`` is keyword-only and has no default: a clone's last commit
+    date is author-controlled and can be any value the committer typed, while
+    the API's ``pushed_at`` is asserted by the server. That difference is
+    exactly what #164 step 7 exists to stop collapsing, so the caller has to say
+    which one it holds rather than reaching a default by forgetting to.
+
     Args:
         dependency: Dependency metadata to update in place.
         active_at: Last commit or push timestamp, or None when unavailable.
+        source: Which acquisition path produced ``active_at``.
     """
     if active_at is None:
         return
@@ -142,6 +158,7 @@ def apply_repository_activity_date(
         return
     dependency.last_updated = active_at
     dependency.additional_info[RELEASE_DATE_SOURCE_KEY] = RELEASE_DATE_SOURCE_REPOSITORY
+    dependency.record_field_source(ProvenancedField.LAST_UPDATED, source)
 
 
 def record_source_repository(

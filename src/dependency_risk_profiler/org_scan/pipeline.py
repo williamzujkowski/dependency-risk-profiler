@@ -16,6 +16,7 @@ from ..models import CommunityMetrics, DependencyMetadata, DependencyRiskScore
 from ..popularity import GITHUB_REPOSITORY_ARCHIVED_KEY
 from ..release_dates import apply_repository_activity_date
 from ..scoring.risk_scorer import RiskScorer
+from ..signals import FieldSource, ProvenancedField
 from .github import RepoSignals
 from .models import DependencyKey, DependencyProfiler, canonical_ecosystem
 
@@ -245,11 +246,28 @@ class ExistingDependencyProfiler(DependencyProfiler):
             dependency.community_metrics = CommunityMetrics()
         if signals.star_count is not None:
             dependency.community_metrics.star_count = signals.star_count
+            # Overwrites the HTML scrape applied a few lines earlier by
+            # ``_apply_enhanced_metadata``. Both write paths are live in a
+            # single org scan; recording which one won is #164 step 7.
+            dependency.record_field_source(
+                ProvenancedField.STAR_COUNT, FieldSource.GITHUB_API_REPOSITORY
+            )
         if signals.commit_frequency is not None:
             dependency.community_metrics.commit_frequency = signals.commit_frequency
+            dependency.record_field_source(
+                ProvenancedField.COMMIT_FREQUENCY, FieldSource.GITHUB_API_COMMITS
+            )
         if signals.contributor_count is not None:
             dependency.community_metrics.contributor_count = signals.contributor_count
             dependency.maintainer_count = signals.contributor_count
+            dependency.record_field_source(
+                ProvenancedField.CONTRIBUTOR_COUNT,
+                FieldSource.GITHUB_API_CONTRIBUTORS,
+            )
+            dependency.record_field_source(
+                ProvenancedField.MAINTAINER_COUNT,
+                FieldSource.GITHUB_API_CONTRIBUTORS,
+            )
         if signals.archived is not None:
             dependency.additional_info[GITHUB_REPOSITORY_ARCHIVED_KEY] = (
                 "true" if signals.archived else "false"
@@ -259,11 +277,19 @@ class ExistingDependencyProfiler(DependencyProfiler):
         # from the API.
         # Repository activity is the fallback for cadence, not the primary: a
         # registry release date wins where the adapter found one (#146).
-        apply_repository_activity_date(dependency, signals.pushed_at)
+        apply_repository_activity_date(
+            dependency, signals.pushed_at, source=FieldSource.GITHUB_API_REPOSITORY
+        )
         if signals.has_tests is not None:
             dependency.has_tests = signals.has_tests
+            dependency.record_field_source(
+                ProvenancedField.HAS_TESTS, FieldSource.GITHUB_API_TREE
+            )
         if signals.has_ci is not None:
             dependency.has_ci = signals.has_ci
+            dependency.record_field_source(
+                ProvenancedField.HAS_CI, FieldSource.GITHUB_API_TREE
+            )
         return dependency
 
     def _github_owner_repo(self, repository_url: Optional[str]) -> Optional[str]:

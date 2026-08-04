@@ -231,8 +231,13 @@ def test_a_registry_release_date_outranks_repository_activity() -> None:
     assert published is not None
 
     from dependency_risk_profiler.release_dates import apply_repository_activity_date
+    from dependency_risk_profiler.signals import FieldSource
 
-    apply_repository_activity_date(dep, datetime(2026, 8, 3, tzinfo=timezone.utc))
+    apply_repository_activity_date(
+        dep,
+        datetime(2026, 8, 3, tzinfo=timezone.utc),
+        source=FieldSource.REPOSITORY_CLONE_HISTORY,
+    )
 
     assert dep.last_updated == published
 
@@ -240,6 +245,7 @@ def test_a_registry_release_date_outranks_repository_activity() -> None:
 def test_repository_activity_still_fills_a_registry_with_no_date() -> None:
     """Where the registry publishes nothing, a clone's commit date still counts."""
     from dependency_risk_profiler.release_dates import apply_repository_activity_date
+    from dependency_risk_profiler.signals import FieldSource
 
     payload = copy.deepcopy(NOSE_RESPONSE)
     payload["urls"] = []
@@ -250,7 +256,9 @@ def test_repository_activity_still_fills_a_registry_with_no_date() -> None:
     assert RELEASE_DATE_SOURCE_KEY not in dep.additional_info
 
     commit_date = datetime(2015, 7, 1, tzinfo=timezone.utc)
-    apply_repository_activity_date(dep, commit_date)
+    apply_repository_activity_date(
+        dep, commit_date, source=FieldSource.REPOSITORY_CLONE_HISTORY
+    )
 
     assert dep.last_updated == commit_date
 

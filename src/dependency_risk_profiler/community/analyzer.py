@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 
 from ..models import CommunityMetrics, DependencyMetadata
+from ..signals import FieldSource, ProvenancedField
 from ..utils import (
     extract_github_repo_info,
     fetch_url,
@@ -150,8 +151,21 @@ def analyze_github_community_metrics(
     if api_count is not None:
         dependency.maintainer_count = api_count
         community_metrics.contributor_count = api_count
+        dependency.record_field_source(
+            ProvenancedField.MAINTAINER_COUNT, FieldSource.GITHUB_API_CONTRIBUTORS
+        )
+        dependency.record_field_source(
+            ProvenancedField.CONTRIBUTOR_COUNT, FieldSource.GITHUB_API_CONTRIBUTORS
+        )
     elif dependency.maintainer_count:
         community_metrics.contributor_count = dependency.maintainer_count
+        # A copy, so it inherits the copied field's provenance rather than
+        # claiming one of its own. If nothing recorded a source for
+        # ``maintainer_count`` — an adapter this step has not reached — the
+        # copy stays unattributed, which is the honest answer.
+        copied = dependency.field_sources.get(ProvenancedField.MAINTAINER_COUNT)
+        if copied is not None:
+            dependency.record_field_source(ProvenancedField.CONTRIBUTOR_COUNT, copied)
 
     # Development cadence, for the same reason and by the same route. The clone
     # is shallow, so it can only supply this when someone hands us a full one;
@@ -160,11 +174,22 @@ def analyze_github_community_metrics(
     api_frequency = github_commit_frequency(dependency.repository_url, github_token)
     if api_frequency is not None:
         community_metrics.commit_frequency = api_frequency
+        dependency.record_field_source(
+            ProvenancedField.COMMIT_FREQUENCY, FieldSource.GITHUB_API_COMMITS
+        )
 
-    # Fetch repository HTML to extract the star count
+    # Fetch repository HTML and regex a star count out of it. The weakest source
+    # in the tool, and the one that motivated #164 step 7: in an org scan the
+    # authenticated API overwrites this a few lines later, and until now the
+    # payload gave a consumer no way to tell which of the two they were holding.
     html_content = fetch_url(f"https://github.com/{owner}/{repo}")
     if html_content:
-        community_metrics.star_count = extract_star_count(html_content)
+        scraped_stars = extract_star_count(html_content)
+        if scraped_stars is not None:
+            community_metrics.star_count = scraped_stars
+            dependency.record_field_source(
+                ProvenancedField.STAR_COUNT, FieldSource.GITHUB_HTML_SCRAPE
+            )
 
     # Set community metrics
     dependency.community_metrics = community_metrics
@@ -192,6 +217,12 @@ def analyze_npm_community_metrics(
         if isinstance(npm_data["maintainers"], list):
             dependency.maintainer_count = len(npm_data["maintainers"])
             dependency.community_metrics.contributor_count = dependency.maintainer_count
+            dependency.record_field_source(
+                ProvenancedField.MAINTAINER_COUNT, FieldSource.REGISTRY_METADATA
+            )
+            dependency.record_field_source(
+                ProvenancedField.CONTRIBUTOR_COUNT, FieldSource.REGISTRY_METADATA
+            )
 
     # Extract last release date
     if "time" in npm_data:

@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from ..models import DependencyMetadata
 from ..parsers.nuget_registry import CatalogEntry, NuGetRegistryClient, NuspecDocument
 from ..release_dates import record_source_repository
+from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
@@ -89,6 +90,10 @@ class NuGetAnalyzer(BaseAnalyzer):
                 if dep.maintainer_count is None and nuspec is not None:
                     if nuspec.authors:
                         dep.maintainer_count = len(nuspec.authors)
+                        dep.record_field_source(
+                            ProvenancedField.MAINTAINER_COUNT,
+                            FieldSource.REGISTRY_METADATA,
+                        )
             except Exception as exc:
                 logger.error("Error analyzing NuGet package %s: %s", name, exc)
 
@@ -151,7 +156,19 @@ class NuGetAnalyzer(BaseAnalyzer):
         # cadence a consumer of the package actually sees.
         if catalog is not None:
             if catalog.published is not None:
+                # Assigned directly rather than through
+                # ``apply_registry_release_date``, so unlike every other adapter
+                # this date does not claim the registry precedence that would
+                # stop repository activity overwriting it. Left as it is here:
+                # routing it through the helper would add a
+                # ``release_date_source`` key to this adapter's frozen v1
+                # ``additional_info`` payload, which is not this change's to
+                # make. The provenance record below is accurate either way,
+                # because whoever overwrites the date overwrites this too.
                 dep.last_updated = catalog.published
+                dep.record_field_source(
+                    ProvenancedField.LAST_UPDATED, FieldSource.REGISTRY_RELEASE
+                )
             if catalog.is_deprecated:
                 dep.is_deprecated = True
 

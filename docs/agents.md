@@ -86,6 +86,11 @@ parseable. Migrate.
     "maintained": { "state": "unmeasured", "value": null,
                     "reason": "source_repository_unreadable" }
   },
+  "field_sources": {                           // which path wrote each value
+    "star_count": "github:api/repository",
+    "maintainer_count": "registry:metadata",
+    "last_updated": "registry:release"
+  },
   "unknown_signals": ["maintained"],
   "measured_signal_count": 2,
   "total_signal_count": 3,
@@ -118,6 +123,41 @@ risk level at all, and `risk_level` is `UNKNOWN`.
 The signal names are ours and they are stable. `docs/signals.md` publishes the
 correspondence to OpenSSF Scorecard's checks, pinned to a Scorecard version,
 with every approximate row marked approximate.
+
+### `field_sources` — how much a value that *is* there is worth
+
+`signals` says whether a value exists and why it does not. `field_sources`
+answers the neighbouring question about the values that do: which acquisition
+path produced them.
+
+Seven fields have more than one. `star_count` is the sharp case: it is written
+from a regex over unauthenticated github.com HTML *and* from `stargazers_count`
+on the authenticated REST API, and in an org scan **both write it, in that
+order**, into the same integer. Those are not the same number with different
+latency — one is parsed out of markup that GitHub may restyle whenever it likes.
+
+| Key | Also written by |
+|---|---|
+| `star_count` | github.com HTML, GitHub REST |
+| `contributor_count` | GitHub REST, the registry's owner list |
+| `maintainer_count` | the registry, a clone's `git shortlog`, GitHub REST |
+| `commit_frequency` | a clone's `git rev-list`, GitHub REST |
+| `has_tests`, `has_ci` | a clone's working tree, GitHub's tree API |
+| `last_updated` | the registry's release table, repository activity |
+
+Values are sanitized logical locators from a closed vocabulary: `registry:…`,
+`clone:…`, `github:api/…`, `github:html`. They never carry a host, a URL, a
+query string, a token or a filesystem path, and there is no code path by which
+they could — both sides of the mapping are enums.
+
+**A key is absent when nobody recorded a source**, which is not the same as a
+source of "unknown". Same rule as the rest of this contract: nothing here
+invents a fact.
+
+Rough ordering of trust, for a consumer that wants one: `registry:*` and
+`github:api/*` are asserted by a server; `clone:git-history` is
+author-controlled and is worth much less from a shallow clone;
+`github:html` is a regex over a web page.
 
 ### `extensions` — path-specific blocks
 

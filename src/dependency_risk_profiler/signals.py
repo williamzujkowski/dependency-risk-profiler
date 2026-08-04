@@ -1,6 +1,6 @@
 """Stable signal names, the two-state measurement, and the reason table (#164).
 
-Three things live here, and they are one idea:
+Four things live here, and they are one idea:
 
 **1. The signal names are ours and they are stable.** The ratified design
 originally proposed renaming our signals to OpenSSF Scorecard's check names.
@@ -40,6 +40,21 @@ than an honest unknown. Note that this also rules out smuggling it back in as a
 *reason*: :class:`UnmeasuredReason` carries no "this signal does not apply to
 this ecosystem" member, and must not grow one. Every reason below is decided
 from a fact the scorer observed, not from a judgment about the package.
+
+**4. A field written by more than one acquisition path records which one wrote
+it.** ``star_count`` was written from an unauthenticated github.com HTML regex
+scrape *and* from the authenticated REST API, into the same unlabelled integer,
+so two very different trust levels arrived indistinguishable. :class:`FieldSource`
+names the path; :class:`ProvenancedField` names the seven fields that have more
+than one, which is the whole of the scope — the design amendment restricted
+provenance to exactly those, and ``testing/unit/test_field_provenance.py``
+re-derives the set from the source tree so it cannot quietly grow or rot.
+
+:class:`FieldSource` is an enum whose values *are* the sanitized logical
+locators the design's binding security condition requires. That is the point of
+making it an enum rather than a string: there is no code path that can put an
+authenticated URL, a clone directory, a query string or a header into a field
+whose only inhabitants are these ten members.
 """
 
 from dataclasses import dataclass
@@ -334,6 +349,87 @@ def transitive_is_measured(source: Optional[str]) -> bool:
         True only when something positively claimed to have resolved the tree.
     """
     return source is not None and source != TRANSITIVE_SOURCE_UNMEASURED
+
+
+# --- Field provenance ------------------------------------------------------
+
+
+class FieldSource(Enum):
+    """Which acquisition path wrote a field that has more than one.
+
+    The member values are **sanitized logical locators**: a closed vocabulary of
+    short, lowercase, host-free, credential-free strings naming *what kind of
+    thing answered*, never *the request that asked it*. An enum rather than a
+    string because the design's binding security condition — no absolute clone
+    paths, no authenticated URLs, no query strings, no headers — is then
+    structural rather than a rule someone has to remember at twenty-odd call
+    sites. ``testing/unit/test_field_provenance.py`` additionally holds every
+    value to a locator grammar, so a future member cannot smuggle one in.
+
+    The distinctions drawn here are the ones that change how much a value is
+    worth. A star count regex-scraped out of a web page and a star count read
+    from ``stargazers_count`` are not the same number with different latency;
+    one is parsed out of markup that GitHub may restyle at any time. A commit
+    cadence counted in a ``--depth 1`` clone is ~0.17/month for every repository
+    on earth (#166), which is why the clone and the API are separate members
+    rather than one ``repository`` bucket.
+    """
+
+    #: The ecosystem registry's own package document — PyPI's JSON, an npm
+    #: packument, crates.io, Packagist, a nuspec, RubyGems, a Maven POM.
+    REGISTRY_METADATA = "registry:metadata"
+    #: The registry's release or version table specifically, which is where a
+    #: publication timestamp comes from.
+    REGISTRY_RELEASE = "registry:release"
+    #: Git history in a clone of the package's source repository: ``git log``,
+    #: ``git shortlog``, ``git rev-list``. Worth much less when the clone is
+    #: shallow, which is why the callers that can be shallow abstain instead.
+    REPOSITORY_CLONE_HISTORY = "clone:git-history"
+    #: Files present in a clone's working tree.
+    REPOSITORY_CLONE_WORKTREE = "clone:worktree"
+    #: GitHub's REST repository object.
+    GITHUB_API_REPOSITORY = "github:api/repository"
+    #: GitHub's REST contributors listing.
+    GITHUB_API_CONTRIBUTORS = "github:api/contributors"
+    #: GitHub's REST commits listing.
+    GITHUB_API_COMMITS = "github:api/commits"
+    #: GitHub's REST git-tree listing.
+    GITHUB_API_TREE = "github:api/tree"
+    #: A regex over unauthenticated github.com HTML. The weakest source here,
+    #: and the one the design amendment was argued over.
+    GITHUB_HTML_SCRAPE = "github:html"
+
+
+class ProvenancedField(Enum):
+    """The model fields that more than one acquisition path writes.
+
+    This enum *is* the scope of the provenance work, and it is deliberately
+    seven members rather than the seventeen the original proposal wrapped. Four
+    voters rejected that as over-broad and the amendment restricted provenance
+    to "fields with more than one real write path"; these are those fields, and
+    :mod:`testing.unit.test_field_provenance` re-derives the set from a walk of
+    ``src/`` so the enum cannot drift from the code it describes.
+
+    Two fields qualify on write-path count and are deliberately *not* here:
+
+    * ``repository_url`` — an identity locator rather than a measured value,
+      and what a consumer actually needs to know about it (did the registry
+      declare a usable source, or is this a synthesized registry landing page)
+      is already answered by the typed ``source_repository_state`` from #189.
+    * ``transitive_dependencies`` — already carries ``transitive_source``
+      from #199, which is provenance under an older name.
+
+    The member values are the model attribute names, so the serialized block
+    reads as the fields it describes.
+    """
+
+    STAR_COUNT = "star_count"
+    CONTRIBUTOR_COUNT = "contributor_count"
+    COMMIT_FREQUENCY = "commit_frequency"
+    MAINTAINER_COUNT = "maintainer_count"
+    HAS_TESTS = "has_tests"
+    HAS_CI = "has_ci"
+    LAST_UPDATED = "last_updated"
 
 
 # --- The catalog -----------------------------------------------------------

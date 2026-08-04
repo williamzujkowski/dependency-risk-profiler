@@ -12,6 +12,7 @@ from ..release_dates import (
     parse_registry_timestamp,
     record_source_repository,
 )
+from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
@@ -102,6 +103,10 @@ class ComposerAnalyzer(BaseAnalyzer):
                 author_count = self._author_count(release)
                 if author_count is not None:
                     dep.maintainer_count = author_count
+                    dep.record_field_source(
+                        ProvenancedField.MAINTAINER_COUNT,
+                        FieldSource.REGISTRY_METADATA,
+                    )
             except Exception as exc:
                 logger.error("Error analyzing PHP package %s: %s", name, exc)
 

@@ -15,6 +15,7 @@ from .scorecard.dependency_update import check_dependency_update_tools
 from .scorecard.maintained import check_maintained_status
 from .scorecard.security_policy import check_security_policy
 from .scorecard.signed_commits import check_signed_commits
+from .signals import FieldSource, ProvenancedField
 from .utils import check_health_indicators, count_contributors, get_last_commit_date
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,9 @@ def analyze_repository(
             # We'll convert the ISO format string to datetime here
             try:
                 apply_repository_activity_date(
-                    dependency, datetime.fromisoformat(last_commit_date)
+                    dependency,
+                    datetime.fromisoformat(last_commit_date),
+                    source=FieldSource.REPOSITORY_CLONE_HISTORY,
                 )
             except ValueError:
                 logger.warning(f"Could not parse date format: {last_commit_date}")
@@ -54,6 +57,10 @@ def analyze_repository(
         contributor_count = count_contributors(repo_dir)
         if contributor_count:
             dependency.maintainer_count = contributor_count
+            dependency.record_field_source(
+                ProvenancedField.MAINTAINER_COUNT,
+                FieldSource.REPOSITORY_CLONE_HISTORY,
+            )
 
         # Development cadence, read from the clone we already have. Half of the
         # community score is supposed to be commits-per-month, and until #166 no
@@ -63,6 +70,10 @@ def analyze_repository(
             if dependency.community_metrics is None:
                 dependency.community_metrics = CommunityMetrics()
             dependency.community_metrics.commit_frequency = commit_frequency
+            dependency.record_field_source(
+                ProvenancedField.COMMIT_FREQUENCY,
+                FieldSource.REPOSITORY_CLONE_HISTORY,
+            )
 
         # Check for health indicators
         has_tests, has_ci, has_contribution_guidelines = check_health_indicators(
@@ -71,6 +82,12 @@ def analyze_repository(
         dependency.has_tests = has_tests
         dependency.has_ci = has_ci
         dependency.has_contribution_guidelines = has_contribution_guidelines
+        dependency.record_field_source(
+            ProvenancedField.HAS_TESTS, FieldSource.REPOSITORY_CLONE_WORKTREE
+        )
+        dependency.record_field_source(
+            ProvenancedField.HAS_CI, FieldSource.REPOSITORY_CLONE_WORKTREE
+        )
 
         # Check for security policy
         has_security_policy, security_policy_score, security_issues = (
