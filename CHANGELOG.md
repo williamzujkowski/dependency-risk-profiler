@@ -9,6 +9,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **NuGet projects using Central Package Management now resolve their versions.**
+  Modern .NET solutions declare each version once in a
+  `Directory.Packages.props` and leave the `PackageReference` bare — it is
+  Microsoft's recommended layout for a multi-project solution, and eShopOnWeb,
+  Microsoft's own reference application, uses it for all 18 of its packages. The
+  parser read only the inline `Version` attribute, so every one of them parsed
+  with an empty installed version, there was no drift to score, and the VERSION
+  column rendered as a bare arrow. Resolution now walks up from the project
+  directory to the nearest `Directory.Packages.props`, expands `$(Property)`
+  references against that file's own `<PropertyGroup>` elements, honours
+  `<ManagePackageVersionsCentrally>`, and lets a `VersionOverride` on the
+  reference win over the central declaration. Nothing is guessed: MSBuild
+  conditions are not evaluated, `<Import>` chains out of the props file are not
+  followed, and a floating `1.2.*` or an open-ended range names a version only a
+  restore could produce. Anything unresolved — including the common case of a
+  single `.csproj` fetched without its props file — is reported as `unmanaged`
+  and its version-drift signal is excluded from both numerator and denominator
+  rather than scored as zero drift.
+
+- **The NuGet analyzer now collects the signals every other ecosystem does.**
+  It read a latest version and stopped, so it never set a repository URL and
+  every repository-derived signal — staleness, health indicators, the five
+  OpenSSF-style checks, community, license — was permanently unmeasured for
+  every .NET dependency. Each package's own published `.nuspec` is now read for
+  `<repository>`, the license expression, the declared authors, and the
+  package's own dependencies, and the registration catalog is read for the
+  publication date and the deprecation / unlisted markers. `<repository>` is
+  preferred over `<projectUrl>` because a project URL is routinely a
+  documentation site rather than a repository. **.NET scans will now report risk
+  levels and scores where they previously reported `UNKNOWN`**, so a scan diff
+  across this version can show large movement without anything having changed
+  upstream. Measured against eShopOnWeb's `src/Web/Web.csproj`: 18 of 18
+  `UNKNOWN` at 2.0 of 14 measured signals becomes 18 scored (7 MEDIUM, 11 LOW)
+  at 13.9 of 14, with 18 of 18 versions resolved. The same manifest scanned
+  alone, without its props file, still scores 18 of 18 at 10.2 of 14 with every
+  version honestly reported as `unmanaged`.
+
+  Every nuget.org read is fenced the way #128's Maven Central reads are: https
+  and `api.nuget.org` only, redirects refused, ids and versions validated
+  against NuGet's grammar before they become a URL path, bodies streamed and
+  abandoned past 4 MiB, and a hard per-manifest fetch budget. The one URL that
+  arrives inside a payload — a registration index's overflow page — is
+  re-validated against the same host before it is fetched.
+  `DEPENDENCY_RISK_NO_REMOTE_POMS=1` disables remote reads for NuGet too.
+
 - **Maven dependencies that inherit their version now resolve it.** Java
   projects overwhelmingly declare a dependency without an inline `<version>`
   and inherit it from `<dependencyManagement>` — the project's own block, a

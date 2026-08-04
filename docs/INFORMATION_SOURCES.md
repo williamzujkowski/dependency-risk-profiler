@@ -97,8 +97,48 @@ Example API response structure:
 
 ### .NET (NuGet)
 
-- **Method**: JSON request to the flat-container index, `https://api.nuget.org/v3-flatcontainer/{id-lower}/index.json`
-- **Information Retrieved**: newest stable version (pre-releases deprioritized)
+- **Method**: three reads from nuget.org. The flat-container index
+  (`https://api.nuget.org/v3-flatcontainer/{id-lower}/index.json`) for the
+  version list; the package's own `.nuspec`
+  (`.../{id-lower}/{version}/{id-lower}.nuspec`) for everything the package
+  declares about itself; and the registration catalog
+  (`https://api.nuget.org/v3/registration5-semver1/{id-lower}/index.json`) for
+  the facts that exist nowhere else.
+- **Information Retrieved**: newest stable version (pre-releases deprioritized);
+  `<repository url>` source-repository URL, with `<projectUrl>` as a fallback;
+  the SPDX license expression (from `<license type="expression">` or a
+  `licenses.nuget.org` URL — a `type="file"` license names a file in the
+  package, not a license id, and is not reported as one); declared `<authors>`,
+  used only as a maintainer-count fallback; the package's own `<dependencies>`,
+  which is the transitive signal; and from the catalog, the publication date and
+  the deprecation / unlisted markers.
+
+`<repository>` is read before `<projectUrl>` deliberately: a package's project
+URL is routinely a documentation site (MediatR publishes `https://mediatr.io/`),
+which is not cloneable, and using it would cost the package every
+repository-derived signal.
+
+#### Centrally managed versions (Central Package Management)
+
+Modern .NET solutions declare each version once in a `Directory.Packages.props`
+and leave the `PackageReference` bare. Resolution walks up from the project
+directory to the nearest such file, expands `$(Property)` references against
+that file's own `<PropertyGroup>` elements, honours `<ManagePackageVersionsCentrally>`,
+and lets a `VersionOverride` on the reference win over the central declaration.
+MSBuild `Condition` attributes are not evaluated, `<Import>` chains out of the
+props file are not followed, and floating versions (`1.2.*`) and open-ended
+ranges are not guessed at — each of those resolves to `unmanaged` instead.
+
+Every nuget.org read is fenced the same way the Maven Central reads are: https
+and `api.nuget.org` only, redirects refused, package ids and versions validated
+against NuGet's own grammar before they become a URL path, response bodies
+streamed and abandoned past 4 MiB, and a hard per-manifest fetch budget. The one
+URL that arrives inside a payload — a registration index's overflow page — is
+re-validated against the same host and scheme before it is fetched.
+
+Set `DEPENDENCY_RISK_NO_REMOTE_POMS=1` to disable remote reads; the adapter then
+degrades to what the manifest itself proves, with everything else honestly
+unmeasured.
 
 ### Java (Maven)
 

@@ -8,16 +8,27 @@ from .base import BaseParser
 from .maven_central import MavenCentralClient
 from .maven_versions import ManagedVersionResolver, ResolvedPom
 from .pom_model import PomDocument, is_resolved, read_pom, resolve_properties
+from .version_sources import (
+    VERSION_SOURCE_DECLARED,
+    VERSION_SOURCE_KEY,
+    VERSION_SOURCE_MANAGED,
+    VERSION_SOURCE_UNMANAGED,
+)
 from .xml_utils import read_xml_root
 
 logger = logging.getLogger(__name__)
 
 # Recorded on each dependency so downstream consumers can tell a pinned version
-# from an inherited one from one we could not establish at all.
-VERSION_SOURCE_KEY = "version_source"
-VERSION_SOURCE_DECLARED = "declared"
-VERSION_SOURCE_MANAGED = "dependency-management"
-VERSION_SOURCE_UNMANAGED = "unmanaged"
+# from an inherited one from one we could not establish at all. Re-exported from
+# the shared vocabulary in ``version_sources`` (#129 gave NuGet the same
+# problem), so existing importers of these names keep working.
+__all__ = [
+    "MavenPomParser",
+    "VERSION_SOURCE_DECLARED",
+    "VERSION_SOURCE_KEY",
+    "VERSION_SOURCE_MANAGED",
+    "VERSION_SOURCE_UNMANAGED",
+]
 
 
 class MavenPomParser(BaseParser):

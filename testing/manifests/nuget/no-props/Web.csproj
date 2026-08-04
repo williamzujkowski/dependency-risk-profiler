@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The bare-manifest case: a centrally managed project fetched on its own,
+         with no Directory.Packages.props anywhere above it. -->
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Serilog" />
+  </ItemGroup>
+</Project>
