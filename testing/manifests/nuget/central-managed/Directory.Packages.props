@@ -1,0 +1,29 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <AspNetVersion>8.0.2</AspNetVersion>
+    <SerilogVersion>$(BaseSerilogVersion)</SerilogVersion>
+    <BaseSerilogVersion>3.1.1</BaseSerilogVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- A plain literal version: the ordinary case. -->
+    <PackageVersion Include="MediatR" Version="12.0.1" />
+    <!-- A property reference, which is how every real props file pins a family
+         of packages to one version. -->
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="$(AspNetVersion)" />
+    <!-- A property that resolves through another property. -->
+    <PackageVersion Include="Serilog" Version="$(SerilogVersion)" />
+    <!-- The project overrides this one with VersionOverride. -->
+    <PackageVersion Include="Newtonsoft.Json" Version="12.0.3" />
+    <!-- A version range with an inclusive lower bound: restore installs 4.0.1. -->
+    <PackageVersion Include="Ardalis.GuardClauses" Version="[4.0.1,5.0.0)" />
+    <!-- A floating version, which only a restore can resolve. -->
+    <PackageVersion Include="Azure.Identity" Version="1.10.*" />
+    <!-- A property that is never defined anywhere. -->
+    <PackageVersion Include="Polly" Version="$(PollyVersion)" />
+    <!-- Version as a child element rather than an attribute. -->
+    <PackageVersion Include="AutoMapper">
+      <Version>12.0.1</Version>
+    </PackageVersion>
+  </ItemGroup>
+</Project>

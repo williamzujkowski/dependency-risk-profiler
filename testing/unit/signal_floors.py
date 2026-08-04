@@ -41,9 +41,15 @@ from dependency_risk_profiler.transitive.analyzer_enhanced import (
 )
 
 # Minimum signals an ecosystem must measure from registry metadata alone.
+#
+# nuget sits one above the rest because its registry publishes one more thing:
+# a package's ``.nuspec`` states the package's own dependencies, so the
+# transitive signal is genuinely measured rather than absent (#129). The other
+# three have no per-package dependency document to read and leave it unmeasured.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "cargo": 7,
     "composer": 7,
+    "nuget": 8,
     "rubygems": 7,
 }
 
