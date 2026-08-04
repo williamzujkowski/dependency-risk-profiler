@@ -58,9 +58,9 @@ PACKAGE = "dependency_risk_profiler"
 # overrides stripped out (see `_strip_first_party_ignore_errors`).
 MAX_ERRORS_PER_EXEMPT_MODULE: Dict[str, int] = {}
 
-# The test tree mypy actually reads. `testing/projects/` is a vendored upstream
-# checkout used as parser input, so it stays excluded in pyproject.toml; every
-# other Python file under `testing/` is checked.
+# The test tree mypy actually reads. Every Python file under `testing/` is
+# checked; the one exclusion, `testing/projects/`, went with the directory in
+# #231.
 TESTING_PATHS = ("testing/unit", "testing/integration", "testing/fixtures")
 TESTING_FILES = ("testing/conftest.py",)
 

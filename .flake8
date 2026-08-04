@@ -21,6 +21,4 @@ exclude =
     testing/integration/test_phase2.py,
     testing/unit/test_comprehensive_vulnerability_aggregator.py,
     testing/unit/test_comprehensive_risk_scorer.py,
-    testing/unit/test_vulnerability_aggregator_with_cache.py,
-    # Exclude test projects completely - they are external code samples
-    testing/projects/*
+    testing/unit/test_vulnerability_aggregator_with_cache.py

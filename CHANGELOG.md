@@ -7,7 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **`testing/projects/` is gone: 4.4 MB of vendored Flask, Express and Gin that
+  no test has ever opened, exempted by name in nine places, costing 35 standing
+  Dependabot alerts.** It was described everywhere as the scan corpus — pinned
+  old on purpose so the tests would exercise version drift, advisory matching
+  and staleness. Nothing referenced it. Not a test, not a fixture loader, not a
+  script, not a workflow. The one documented way to use it,
+  `testing/projects/README.md`, gave commands against `test-projects/`, a path
+  that stopped existing when the testing tree was consolidated. The real corpus
+  is `testing/manifests/`, `testing/fixtures/`, and manifest text written to a
+  temp file by `testing/conftest.py`; none of it moved, and the suite reports
+  the same 1644 passed / 7 skipped at the same 83.64% before and after.
+
+  Being unread did not make it free. It was excluded by name in
+  `pyproject.toml` twice (mypy, ruff), in `.flake8`, and in six
+  `.pre-commit-config.yaml` hooks — nine exemptions whose only job was to hold
+  back a directory nobody read. None of them reached the one place that
+  mattered: GitHub's dependency graph, which took the fixtures at face value
+  and produced 35 of this repository's 65 noise alerts, plus a Dependabot PR
+  every few weeks.
+
+  The claim that its pins were deliberate does not survive the log either.
+  Seven merged Dependabot PRs — #8, #10, #12, #13, #14, #15, #16 — already
+  bumped these files through 2025 and 2026. The corpus that was too precious to
+  update had been updated seven times, silently, by a bot. That it made no
+  difference to any test is the whole point: nothing was watching, because
+  nothing was reading.
+
+  `git log -- testing/projects` if it is ever wanted back. Cloning upstream at a
+  pinned tag would be the better way to want it.
+
 ### Changed
+
+- **`examples/manifests/package-lock.json` declared four versions and hashed
+  four different ones.** The `packages` half said express 4.18.2, lodash
+  4.17.21, react 18.2.0, axios 1.6.5. The legacy `dependencies` half repeated
+  those version strings and then pointed `resolved` and `integrity` at
+  express-4.17.1, lodash-4.17.20, react-17.0.2 and axios-0.21.1 — genuine
+  tarballs, genuine hashes, wrong releases. `npm ci` against that file installs
+  the downgrades and the integrity check passes, because the hashes are correct
+  for what they actually name. The fifth hash, `packages/node_modules/axios`,
+  matched no tarball at all. A lockfile exists to make exactly this impossible,
+  and this one had been shipping as the worked example since 2025.
+
+  Now current — express 5.2.1, lodash 4.18.1, react 19.2.8, axios 1.19.0 — with
+  both halves in agreement and all eight integrity values verified by
+  downloading the tarball and computing the digest, not by copying them from a
+  registry response. That clears the 30 open alerts (27 axios, 3 lodash) this
+  file was carrying.
+
+  The directory's stated policy went with them. `examples/manifests/README.md`
+  said its manifests were "intentionally outdated" so the profiler would have
+  something to find; that was true of one file out of three, by neglect rather
+  than design — `requirements.txt` carried current pins and `go.mod` declares no
+  dependencies at all. These are documentation. A reader copies them. A tool
+  that scores other projects on dependency risk does not get to hand out a
+  worked example with 30 open advisories in it, and the profiler has plenty to
+  say about a current manifest anyway: staleness, maintainer count, deprecation
+  and repository health are scored whether or not an advisory happens to be open
+  today.
+
+- **`.github/dependabot.yml` told its reader the trap was disarmed while four
+  PRs were sitting in the queue proving otherwise.** The header claimed
+  `directory: "/"` enrolled only root manifests and therefore kept the scan
+  fixtures out of scope. `directory:` does not scope security updates at all —
+  those are a repository setting (`automated-security-fixes` -> `enabled`) that
+  reads the entire dependency graph, and no key in this file can subtract a path
+  from it. #17, #18 and #19 were opened against the fixtures while this file was
+  syntactically invalid and no version update could run; they never needed it.
+
+  Both halves are now written down as observations rather than readings of the
+  documentation. `directory: "/"` does not recurse: #195 bumped the aiohttp
+  range in the root `pyproject.toml` and left every pip manifest under
+  `examples/` and `testing/` alone. Security updates do reach everything: #241
+  targeted `testing/projects/flask/requirements`, which no entry in this file
+  comes near. The same false exclusion claim was repeated in `SECURITY.md`,
+  `docs/security/SECURITY.md` and `docs/security/DEPENDENCY_SECURITY.md` — the
+  last of which also named a `/dependabot_check/` directory that has not existed
+  for the life of the document — and all four now say what is true: nothing here
+  is excluded from Dependabot, and the only way to keep a file out of its way is
+  to keep it out of the dependency graph.
+
+  The `npm` and `gomod` entries are removed. There is no `package.json` and no
+  `go.mod` at the repository root, so both enrolled nothing and had never once
+  produced a PR. They were coverage-shaped and empty. Two more exclusions in
+  the same condition went with them: `**/test_projects/**` and
+  `**/test-projects/**` in the CodeQL path filter, naming a directory renamed
+  years ago, and `dependabot_check/` in six pre-commit hooks, naming one that
+  has never existed in this repository at all. Nothing mechanically checks that
+  an exclusion points at something real; #252 proposes that it should.
 
 - **The `aiohttp` cap in the dev extra was tested instead of trusted, and it
   survived.** `"aiohttp>=3.8.6,<3.14",  # Keep aioresponses mocks compatible in

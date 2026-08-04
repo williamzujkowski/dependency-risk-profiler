@@ -9,12 +9,11 @@ This document provides an overview of the Dependency Risk Profiler project struc
 - `samples/` - Sample data files for testing and demonstration
 - `scripts/` - Installation and utility scripts
 - `src/` - Main source code directory
-- `testing/` - Tests, test fixtures, and test projects
+- `testing/` - Tests and test fixtures
   - `unit/` - Unit tests for individual components
   - `integration/` - Integration tests for multi-component functionality
   - `fixtures/` - Test fixtures and mock data
   - `manifests/` - Sample dependency manifests for testing
-  - `projects/` - Complete project copies for testing
 
 ## Additional Files
 

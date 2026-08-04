@@ -63,13 +63,21 @@ The Dependency Risk Profiler project employs several security measures for its o
 
 ### Security in Testing
 
-Our project contains intentionally outdated dependencies and vulnerability examples in the following directories:
-- `/examples/`
-- `/testing/projects/`
+Nothing in this repository is deliberately vulnerable, and nothing in it is
+excluded from Dependabot.
 
-These files are used for testing and demonstration purposes of the tool's capabilities and are excluded from security scanning to avoid false positives.
+Both halves of that used to be claimed here and neither was true. Dependabot
+security updates are a repository-level setting; they read the whole dependency
+graph and no `.github/dependabot.yml` key can subtract a path from it. So the
+outdated pins that lived under `/examples/manifests/` and `/testing/projects/`
+were not excluded from anything — they produced 65 standing alerts that buried
+the repository's real ones. #231 removed the cause rather than the symptom: the
+vendored `/testing/projects/` checkout, which no test read, is gone, and
+`/examples/manifests/` is kept current.
 
-**⚠️ WARNING: The demonstration dependencies in test and example code should not be used in production environments.**
+Test inputs that must hold specific versions live in `/testing/manifests/` and
+`/testing/fixtures/` as fragments too small for the dependency graph to treat
+as installable manifests.
 
 ## Security Updates
 
