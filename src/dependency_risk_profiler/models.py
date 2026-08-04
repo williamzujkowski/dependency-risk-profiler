@@ -44,9 +44,6 @@ class CommunityMetrics:
     star_count: Optional[int] = None  # GitHub stars or equivalent
     fork_count: Optional[int] = None  # Fork count
     contributor_count: Optional[int] = None  # Total contributors
-    open_issues_count: Optional[int] = None  # Open issues
-    closed_issues_count: Optional[int] = None  # Closed issues
-    issue_close_time_days: Optional[float] = None  # Average days to close issues
     commit_frequency: Optional[float] = None  # Commits per month
     last_release_date: Optional[datetime] = None  # Date of last release
     # Publication date of the *installed* version. Paired with last_release_date
@@ -55,7 +52,6 @@ class CommunityMetrics:
     installed_release_date: Optional[datetime] = None
     releases_count: Optional[int] = None  # Number of releases
     downloads_count: Optional[int] = None  # Number of downloads
-    dependent_repos_count: Optional[int] = None  # Number of dependent repositories
 
 
 @dataclass
@@ -86,9 +82,6 @@ class SecurityMetrics:
     applicability_unknown_reasons: Dict[str, int] = field(default_factory=dict)
     max_vulnerability_severity: Optional[str] = None
     vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
-    average_time_to_fix_days: Optional[float] = (
-        None  # Average days to fix vulnerabilities
-    )
     has_recent_security_update: Optional[bool] = (
         None  # Whether there was a recent security update
     )

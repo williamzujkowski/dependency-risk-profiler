@@ -257,8 +257,6 @@ def test_total_score_calculation_with_all_metrics() -> None:
 
     community_metrics = CommunityMetrics(
         star_count=50,
-        open_issues_count=100,
-        closed_issues_count=10,
         commit_frequency=0.5,
     )
 
@@ -831,8 +829,6 @@ def test_scoring_performance_sla() -> None:
         ),
         community_metrics=CommunityMetrics(
             star_count=5000,
-            open_issues_count=100,
-            closed_issues_count=900,
             commit_frequency=10,
         ),
         transitive_dependencies={"dep1", "dep2", "dep3", "dep4", "dep5"},
@@ -974,8 +970,6 @@ def test_risk_factor_determination_performance_sla() -> None:
         ),
         community_metrics=CommunityMetrics(
             star_count=50,
-            open_issues_count=100,
-            closed_issues_count=10,
             commit_frequency=0.5,
         ),
         transitive_dependencies={

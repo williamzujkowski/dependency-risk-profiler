@@ -203,8 +203,6 @@ def test_full_data_scoring_is_unchanged() -> None:
         ),
         community_metrics=CommunityMetrics(
             star_count=1000,
-            open_issues_count=20,
-            closed_issues_count=80,
             commit_frequency=5.0,
         ),
         transitive_dependencies={"a", "b", "c", "d", "e"},
@@ -226,7 +224,7 @@ def test_full_data_scoring_is_unchanged() -> None:
     assert score.version_score == 0.5
     assert round(score.health_indicators_score or 0.0, 2) == 0.67
     assert score.license_score == 0.0
-    assert round(score.community_score or 0.0, 2) == 0.17
+    assert round(score.community_score or 0.0, 2) == 0.25
     assert score.transitive_score == 0.25
     assert score.security_policy_score == 0.0
     assert score.dependency_update_score == 0.0
