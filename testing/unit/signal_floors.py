@@ -125,7 +125,7 @@ MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "composer": 8,
     "golang": 6,
     "maven": 8,
-    "nuget": 8,
+    "nuget": 9,
     "nodejs": 7,
     "python": 8,
     "rubygems": 8,
@@ -137,9 +137,17 @@ MIN_MEASURED_SIGNALS: Dict[str, int] = {
 # The membership differences are real registry differences, not oversights:
 # cargo, composer, python and rubygems answer a maintainer count and report
 # whether a source repository is declared; nuget serves per-package
-# dependencies in its ``.nuspec`` and so measures ``transitive``, but reports
-# nothing either way about a source repository; npm publishes no cheap
-# maintainer count.
+# dependencies in its ``.nuspec`` and so measures ``transitive`` on top of
+# that, which is why it is the only ecosystem floored at nine; npm publishes no
+# cheap maintainer count.
+#
+# nuget used to be the odd one out for a second, worse reason: it resolved a
+# repository off the nuspec and then recorded nothing about whether one was
+# declared, so it alone measured 15 signals where the rest measured 16 and the
+# absence read as though nuget.org had said nothing either way. It does say
+# something — the nuspec either carries ``<repository>`` or it does not — so
+# the floor moved 8 -> 9 with the signal added here in the same change (#183,
+# #158).
 _REGISTRY_CORE: FrozenSet[str] = frozenset(
     {
         "staleness",
@@ -155,7 +163,7 @@ REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "composer": _REGISTRY_CORE | {"maintainer", "source_repository"},
     "golang": (_REGISTRY_CORE - {"license"}) | {"source_repository"},
     "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
-    "nuget": _REGISTRY_CORE | {"maintainer", "transitive"},
+    "nuget": _REGISTRY_CORE | {"maintainer", "transitive", "source_repository"},
     "nodejs": _REGISTRY_CORE | {"source_repository"},
     "python": _REGISTRY_CORE | {"maintainer", "source_repository"},
     "rubygems": _REGISTRY_CORE | {"maintainer", "source_repository"},

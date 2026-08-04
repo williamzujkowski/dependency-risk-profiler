@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<metadata modelVersion=\"1.1.0\">\n  <groupId>log4j</groupId>\n  <artifactId>log4j</artifactId>\n  <versioning>\n    <latest>1.2.17</latest>\n    <release>1.2.17</release>\n    <versions>\n      <version>1.1.3</version>\n      <version>1.2.4</version>\n      <version>1.2.5</version>\n      <version>1.2.6</version>\n      <version>1.2.7</version>\n      <version>1.2.8</version>\n      <version>1.2.9</version>\n      <version>1.2.11</version>\n      <version>1.2.12</version>\n      <version>1.2.13</version>\n      <version>1.2.14</version>\n      <version>1.2.15</version>\n      <version>1.2.16</version>\n      <version>1.2.17</version>\n    </versions>\n    <lastUpdated>20140318154402</lastUpdated>\n  </versioning>\n</metadata>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/log4j/log4j/maven-metadata.xml",
+    "trimming": []
+  }
+}

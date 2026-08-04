@@ -33,6 +33,7 @@ from adapter_conformance import (
     assert_case_conforms,
     assert_non_default_branches_are_proven,
     assert_polarized_signals_are_registered,
+    assert_source_repository_states_are_pinned,
     converted_ecosystems,
     score_case,
     unproven_branches,
@@ -44,7 +45,11 @@ from registry_fixtures import (
     load_fixture,
     replay_fetcher,
 )
-from signal_floors import MIN_MEASURED_SIGNALS, SCORES_FROM_REGISTRY_ALONE
+from signal_floors import (
+    MIN_MEASURED_SIGNALS,
+    REGISTRY_MEASURED_SIGNALS,
+    SCORES_FROM_REGISTRY_ALONE,
+)
 
 from dependency_risk_profiler.analyzers.golang import deprecation_notice
 
@@ -422,6 +427,85 @@ def test_a_maven_licence_declared_only_in_the_parent_pom_stays_unmeasured() -> N
     assert score.dependency.license_info is None
     assert score.license_score is None
     assert "license" in score.unknown_signals
+
+
+def test_two_maven_artifacts_of_the_same_era_report_different_source_states() -> None:
+    """#176's acceptance, pinned against the two POMs Maven Central serves.
+
+    ``log4j:log4j:1.2.17`` declares ``<scm>`` and every spelling of it is
+    Subversion; ``commons-collections:commons-collections:3.1`` carries no
+    ``<scm>`` element at all. Both used to record UNDECLARED and score 1.0, so
+    "this project published its provenance and the host was decommissioned" and
+    "this project never said where its source lived" were the same fact.
+
+    Both halves are asserted: the fixtures' shape (one declares SVN, the other
+    declares nothing) and the resulting values (0.75 against 1.0). Collapse the
+    two states back together and this is the test that goes red.
+    """
+    log4j = load_fixture("maven", "log4j.pom").payload
+    assert isinstance(log4j, str)
+    assert "<scm>" in log4j
+    assert "scm:svn:http://svn.apache.org/repos/asf/logging/log4j" in log4j
+    assert "github.com" not in log4j
+
+    collections = load_fixture("maven", "commons-collections.pom").payload
+    assert isinstance(collections, str)
+    assert "scm" not in collections, (
+        "commons-collections:3.1 grew an <scm> element; if Maven Central "
+        "really started serving one, this comparison needs a different pair "
+        "rather than deleting"
+    )
+
+    declared_svn = score_case(next(c for c in CASES if c.slug == "maven/log4j.pom"))
+    declared_nothing = score_case(
+        next(c for c in CASES if c.slug == "maven/commons-collections.pom")
+    )
+
+    assert declared_svn.source_repository_score == 0.75
+    assert declared_nothing.source_repository_score == 1.0
+    assert (
+        declared_svn.source_repository_score != declared_nothing.source_repository_score
+    )
+    assert (
+        "Declares a source repository that is not a reachable git forge"
+        in declared_svn.factors
+    )
+    assert "Declares no source repository" in declared_nothing.factors
+
+    # Both are unreadable, so both still explain the same eight quiet signals
+    # rather than counting them as independent gaps (#146).
+    for score in (declared_svn, declared_nothing):
+        assert score.insufficient_data is False
+        assert "health_indicators" in score.unknown_signals
+
+
+def test_every_source_repository_state_is_pinned_by_value() -> None:
+    """Three states, three captured fixtures; none of them decided by omission."""
+    assert_source_repository_states_are_pinned()
+
+
+def test_the_nuget_source_repository_signal_is_measured_at_all() -> None:
+    """#183: nuget resolved a repository and reported nothing either way.
+
+    ``_repository_url`` read ``<repository url>`` off the nuspec, set
+    ``dep.repository_url``, and never recorded the answer, so
+    ``_calculate_source_repository_score`` returned None and the signal left
+    ``weighted_scores`` entirely. nuget was the only ecosystem scoring 15 where
+    the rest scored 16.
+    """
+    fixture = load_fixture("nuget", "newtonsoft.json.nuspec")
+    nuspec = fixture.payload
+    assert isinstance(nuspec, str)
+    assert "<repository" in nuspec
+
+    score = score_case(
+        next(c for c in CASES if c.slug == "nuget/newtonsoft.json.nuspec")
+    )
+
+    assert score.source_repository_score == 0.0
+    assert "source_repository" not in score.unknown_signals
+    assert "source_repository" in REGISTRY_MEASURED_SIGNALS["nuget"]
+    assert MIN_MEASURED_SIGNALS["nuget"] == len(REGISTRY_MEASURED_SIGNALS["nuget"])
 
 
 def test_the_packagist_abandoned_marker_names_its_successor() -> None:

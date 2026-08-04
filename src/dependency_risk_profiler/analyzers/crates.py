@@ -133,7 +133,13 @@ class CratesIOAnalyzer(BaseAnalyzer):
         repository_url = self._repository_url(metadata)
         if repository_url:
             dep.repository_url = repository_url
-        record_source_repository(dep, repository_url)
+        # ``repository`` is Cargo's designated source pointer and is read raw
+        # here: a crate declaring a repository nobody can clone is a different
+        # fact from one declaring none (#176). ``homepage`` stays a resolution
+        # fallback and is not a declaration of source.
+        record_source_repository(
+            dep, repository_url, declared=self._string_value(metadata, "repository")
+        )
 
         # The newest release date is the publication cadence a consumer of the
         # crate actually sees, and it now wins over a clone's last commit

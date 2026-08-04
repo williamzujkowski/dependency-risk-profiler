@@ -104,6 +104,26 @@
           "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/2.1.0-alpha1/slf4j-api-2.1.0-alpha1.pom",
           "reducer": "none",
           "format": "text"
+        },
+        "log4j.metadata": {
+          "url": "https://repo1.maven.org/maven2/log4j/log4j/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "log4j.pom": {
+          "url": "https://repo1.maven.org/maven2/log4j/log4j/1.2.17/log4j-1.2.17.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "commons-collections.metadata": {
+          "url": "https://repo1.maven.org/maven2/commons-collections/commons-collections/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "commons-collections.pom": {
+          "url": "https://repo1.maven.org/maven2/commons-collections/commons-collections/3.1/commons-collections-3.1.pom",
+          "reducer": "none",
+          "format": "text"
         }
       }
     },

@@ -99,7 +99,14 @@ class RubyGemsAnalyzer(BaseAnalyzer):
         repo = self._repository_url(info)
         if repo:
             dep.repository_url = repo
-        record_source_repository(dep, repo)
+        # ``source_code_uri`` is RubyGems' designated source pointer, read raw
+        # so a gem naming a repository nobody can clone stays distinguishable
+        # from one naming none (#176). ``homepage_uri`` remains a resolution
+        # fallback: hpricot's is code.whytheluckystiff.net, a dead host that was
+        # never a declaration of source in the first place.
+        record_source_repository(
+            dep, repo, declared=self._declared_source_code_uri(info)
+        )
 
         # RubyGems dates the latest release, not the repository; it is the
         # release cadence a consumer of the gem actually sees, and it now wins
@@ -169,6 +176,26 @@ class RubyGemsAnalyzer(BaseAnalyzer):
             return False
         lowered = description.lower()
         return any(term in lowered for term in _DESCRIPTION_DEPRECATION_TERMS)
+
+    @staticmethod
+    def _declared_source_code_uri(info: Dict[str, object]) -> Optional[str]:
+        """Return the gem's raw ``source_code_uri``, or None when it has none.
+
+        RubyGems publishes it both at the top level and inside ``metadata``;
+        either spelling is a declaration.
+
+        Args:
+            info: The ``/gems/<name>.json`` payload.
+
+        Returns:
+            The declared source URL as published, or None.
+        """
+        metadata = info.get("metadata")
+        nested: Dict[str, object] = metadata if isinstance(metadata, dict) else {}
+        for candidate in (info.get("source_code_uri"), nested.get("source_code_uri")):
+            if isinstance(candidate, str) and candidate.strip():
+                return candidate
+        return None
 
     def _repository_url(self, info: Dict[str, object]) -> Optional[str]:
         """Return the gem's repository root, or None when it publishes none.

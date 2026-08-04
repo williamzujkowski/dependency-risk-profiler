@@ -128,7 +128,9 @@ class PythonAnalyzer(BaseAnalyzer):
         # Recorded off the registry answer, not off dep.repository_url: the
         # requirements parser pre-fills that with the package's pypi.org
         # project page, which is a landing page, not a source repository.
-        record_source_repository(dep, repository_url)
+        record_source_repository(
+            dep, repository_url, declared=self._declared_source(info_map)
+        )
 
         # PyPI dates every uploaded file. The newest upload across all releases
         # is when the project last shipped anything — for `distribute` that is
@@ -175,6 +177,35 @@ class PythonAnalyzer(BaseAnalyzer):
             return False
         lowered = summary.lower()
         return any(term in lowered for term in _SUMMARY_DEPRECATION_TERMS)
+
+    @staticmethod
+    def _declared_source(info_map: Mapping[str, object]) -> Optional[str]:
+        """Return the raw project URL labelled as source, or None when none is.
+
+        A declaration is a value under a label that names source — ``Source``,
+        ``Repository``, ``Code``. ``Homepage`` and ``home_page`` are resolution
+        fallbacks rather than declarations, so a package whose only link is a
+        dead docs site still reads as declaring no source, which is what it did
+        (#176).
+
+        Args:
+            info_map: The payload's ``info`` object.
+
+        Returns:
+            The declared source URL as published, or None.
+        """
+        project_urls = info_map.get("project_urls")
+        urls: Mapping[str, object] = (
+            project_urls if isinstance(project_urls, Mapping) else {}
+        )
+        for wanted in _SOURCE_URL_KEYS:
+            for key, value in urls.items():
+                if not isinstance(key, str) or wanted not in key.lower():
+                    continue
+                declared = _string_or_none(value)
+                if declared:
+                    return declared
+        return None
 
     @staticmethod
     def _repository_url(info_map: Mapping[str, object]) -> Optional[str]:

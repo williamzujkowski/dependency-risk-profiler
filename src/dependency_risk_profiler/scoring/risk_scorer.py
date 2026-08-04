@@ -25,6 +25,8 @@ from ..release_dates import (
     SOURCE_REPOSITORY_DECLARED,
     SOURCE_REPOSITORY_KEY,
     SOURCE_REPOSITORY_UNDECLARED,
+    SOURCE_REPOSITORY_UNREADABLE,
+    SOURCE_REPOSITORY_UNUSABLE,
 )
 from ..transitive.analyzer_enhanced import (
     TRANSITIVE_SOURCE_KEY,
@@ -66,6 +68,13 @@ REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
 COMMUNITY_SIGNALS: FrozenSet[str] = frozenset(
     {"community_popularity", "community_activity"}
 )
+
+# What "declared a source repository that is not a reachable git forge" scores.
+# Deliberately near the undeclared end: the auditable consequence is the same
+# (no source to read), and the discount is for the declaration itself, which is
+# real evidence about the package's publishing hygiene and its era. See
+# ``_calculate_source_repository_score`` for the argument (#176).
+SOURCE_REPOSITORY_UNUSABLE_SCORE = 0.75
 
 
 class RiskScorer:
@@ -287,6 +296,7 @@ class RiskScorer:
         # registry's answer has not measured it, and #74's rule is that an
         # unavailable signal leaves both the numerator and the denominator
         # rather than being assumed either way.
+        source_repository_state = dependency.additional_info.get(SOURCE_REPOSITORY_KEY)
         source_repository_score = self._calculate_source_repository_score(dependency)
         if source_repository_score is not None:
             weighted_scores.append(
@@ -316,7 +326,7 @@ class RiskScorer:
         unknown_signals = self._determine_unknown_signals(weighted_scores)
         measured_signal_count = len(weighted_scores) - len(unknown_signals)
         insufficient_data = (
-            self._unexplained_unknown_count(unknown_signals, source_repository_score)
+            self._unexplained_unknown_count(unknown_signals, source_repository_state)
             > measured_signal_count
         )
 
@@ -345,8 +355,12 @@ class RiskScorer:
             branch_protection_score,
             maintained_score,
         )
-        if source_repository_score == 1.0:
+        if source_repository_state == SOURCE_REPOSITORY_UNDECLARED:
             risk_factors.append("Declares no source repository")
+        elif source_repository_state == SOURCE_REPOSITORY_UNUSABLE:
+            risk_factors.append(
+                "Declares a source repository that is not a reachable git forge"
+            )
         if insufficient_data:
             risk_factors.insert(0, "Insufficient data for confident risk level")
 
@@ -451,20 +465,35 @@ class RiskScorer:
     def _calculate_source_repository_score(
         dependency: DependencyMetadata,
     ) -> Optional[float]:
-        """Score whether the registry declares a source repository.
+        """Score what the registry said about the package's source repository.
+
+        Three answers, three scores. The middle one is a judgment call and it is
+        made here rather than by omission: a package that declares a Subversion
+        URL on a decommissioned host has told you *something* — it published its
+        provenance, in the idiom of its era — where a package that declares
+        nothing has not. That is worth a discount, and only a discount. The
+        operative consequence is identical either way: nobody can read the
+        source, so the eight repository-derived signals stay dark and no auditor
+        can check the package against what it claims to be. So
+        :data:`SOURCE_REPOSITORY_UNUSABLE_SCORE` sits near the undeclared end
+        rather than midway, and a package that declares a *live* forge is the
+        only one that scores clean (#176).
 
         Args:
             dependency: Dependency metadata, carrying the adapter's record of
                 what the registry answered.
 
         Returns:
-            0.0 when a usable repository is declared, 1.0 when the registry
-            answered and declares none, or None when this ecosystem's adapter
-            reports nothing either way.
+            0.0 when a usable repository is declared, ``SOURCE_REPOSITORY_
+            UNUSABLE_SCORE`` when what is declared is not a reachable git forge,
+            1.0 when the registry answered and declares none, or None when this
+            ecosystem's adapter reports nothing either way.
         """
         declared = dependency.additional_info.get(SOURCE_REPOSITORY_KEY)
         if declared == SOURCE_REPOSITORY_DECLARED:
             return 0.0
+        if declared == SOURCE_REPOSITORY_UNUSABLE:
+            return SOURCE_REPOSITORY_UNUSABLE_SCORE
         if declared == SOURCE_REPOSITORY_UNDECLARED:
             return 1.0
         return None
@@ -472,7 +501,7 @@ class RiskScorer:
     @staticmethod
     def _unexplained_unknown_count(
         unknown_signals: Sequence[str],
-        source_repository_score: Optional[float],
+        source_repository_state: Optional[str],
     ) -> int:
         """Count unmeasured signals that are not explained by a measured fact.
 
@@ -486,15 +515,19 @@ class RiskScorer:
         is one absent community record, not two independent gaps. Every other
         unmeasured signal still counts in full.
 
+        The collapse keys off the recorded *state*, not off the score, because
+        "declared an unusable repository" explains the same eight gaps as
+        "declared none" while deliberately scoring lower than it (#176).
+
         Args:
             unknown_signals: Names of the signals that came back unmeasured.
-            source_repository_score: The source-repository score, when the
-                ecosystem reports one.
+            source_repository_state: The adapter's record of what the registry
+                answered, or None when it reports nothing either way.
 
         Returns:
             The number of unmeasured signals that remain unexplained.
         """
-        if source_repository_score == 1.0:
+        if source_repository_state in SOURCE_REPOSITORY_UNREADABLE:
             remaining = [
                 name
                 for name in unknown_signals

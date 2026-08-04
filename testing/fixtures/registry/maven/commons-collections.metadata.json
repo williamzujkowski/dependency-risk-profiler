@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<metadata modelVersion=\"1.1.0\">\n  <groupId>commons-collections</groupId>\n  <artifactId>commons-collections</artifactId>\n  <versioning>\n    <latest>20040616</latest>\n    <release>20040616</release>\n    <versions>\n      <version>1.0</version>\n      <version>2.0</version>\n      <version>2.0.20020914.015953</version>\n      <version>2.0.20020914.020746</version>\n      <version>2.0.20020914.020858</version>\n      <version>2.1</version>\n      <version>2.1.1</version>\n      <version>3.0</version>\n      <version>3.0-dev2</version>\n      <version>3.1</version>\n      <version>3.2</version>\n      <version>3.2.1</version>\n      <version>3.2.2</version>\n      <version>20030418.083655</version>\n      <version>20031027.000000</version>\n      <version>20040102.233541</version>\n      <version>20040616</version>\n    </versions>\n    <lastUpdated>20151114100154</lastUpdated>\n  </versioning>\n</metadata>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/commons-collections/commons-collections/maven-metadata.xml",
+    "trimming": []
+  }
+}

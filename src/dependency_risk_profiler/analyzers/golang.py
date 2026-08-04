@@ -151,16 +151,25 @@ class GoAnalyzer(BaseAnalyzer):
                 # (#146).
                 apply_registry_release_date(dep, released)
 
-                repository = self.resolver.resolve(name)
+                # Go is the one ecosystem with no separate repository field: the
+                # import path *is* the declaration, so a Go module is never
+                # UNDECLARED. Either the path resolves to a forge this tool can
+                # read, or it names something it cannot — go.googlesource.com, a
+                # private vanity host, a path with no repository in it — which
+                # is the declared-but-unusable state (#176, #137).
+                resolution = self.resolver.resolve_module(name)
+                if resolution.lookup_failed:
+                    # The vanity host did not answer. Nobody measured anything,
+                    # so nothing is recorded (#182).
+                    logger.debug("Source repository lookup failed for %s", name)
+                    continue
+                repository = resolution.repository
                 if repository is None:
                     logger.debug("No source repository resolved for %s", name)
-                    # A module path that resolves to no repository is a measured
-                    # answer, not silence; recording it is what lets the scorer
-                    # tell "we did not look" from "there is nothing there".
-                    record_source_repository(dep, None)
+                    record_source_repository(dep, None, declared=name)
                     continue
                 dep.repository_url = repository.url
-                record_source_repository(dep, repository.url)
+                record_source_repository(dep, repository.url, declared=repository.url)
                 if repository.subdirectory:
                     # Many modules can share one repository; record where this
                     # one lives so a shared repository URL is not confusing.

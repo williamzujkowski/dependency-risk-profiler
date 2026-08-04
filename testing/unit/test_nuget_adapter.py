@@ -48,6 +48,11 @@ from dependency_risk_profiler.parsers.version_sources import (
     VERSION_SOURCE_DECLARED,
     VERSION_SOURCE_KEY,
 )
+from dependency_risk_profiler.release_dates import (
+    SOURCE_REPOSITORY_DECLARED,
+    SOURCE_REPOSITORY_KEY,
+    SOURCE_REPOSITORY_UNUSABLE,
+)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
@@ -511,6 +516,81 @@ def test_a_package_with_no_repository_stays_honestly_unmeasured() -> None:
     # projectUrl is https://mediatr.io/, which is not a repository at all.
     assert score.dependency.repository_url is None
     assert "health_indicators" in score.unknown_signals
+
+
+def test_the_nuspec_repository_declaration_is_a_measured_signal() -> None:
+    """#183: nuget resolved a repository and reported nothing about it.
+
+    Every other ecosystem records whether the registry declares a source; nuget
+    did not, so ``_calculate_source_repository_score`` returned None and the
+    signal was dropped from ``weighted_scores`` entirely. nuget alone scored 15
+    signals where the rest scored 16, and the absence read as though nuget.org
+    had said nothing either way. It says plenty: the nuspec either carries
+    ``<repository>`` or it does not.
+    """
+    score = _score_offline()
+
+    assert (
+        score.dependency.additional_info[SOURCE_REPOSITORY_KEY]
+        == SOURCE_REPOSITORY_DECLARED
+    )
+    assert score.source_repository_score == 0.0
+    assert "source_repository" not in score.unknown_signals
+
+
+def test_a_nuspec_declaring_no_repository_declares_none() -> None:
+    """A projectUrl is a docs site on MediatR, not a source declaration.
+
+    A ``projectUrl`` is a resolution fallback, not a declaration of source, so
+    stripping ``<repository>`` leaves the package genuinely undeclared rather
+    than promoting a documentation host to a broken repository.
+    """
+    nuspec = NUSPEC.replace(
+        '<repository type="git" url="https://github.com/jbogard/MediatR" '
+        'commit="cbb16f9" />',
+        "",
+    )
+
+    score = _score_offline(_recorded_responses(nuspec=nuspec))
+
+    assert score.source_repository_score == 1.0
+    assert "Declares no source repository" in score.factors
+
+
+def test_a_nuspec_repository_on_a_non_forge_host_is_declared_but_unusable() -> None:
+    """#176's middle state on .NET: an internal Azure DevOps or TFS remote.
+
+    Plenty of .NET packages publish a ``<repository>`` pointing at a host this
+    tool cannot read. The package said where its source lives; the answer is
+    not reachable. That is not the same as saying nothing.
+    """
+    nuspec = NUSPEC.replace(
+        'url="https://github.com/jbogard/MediatR"',
+        'url="https://tfs.internal.example/tfs/DefaultCollection/_git/MediatR"',
+    )
+
+    score = _score_offline(_recorded_responses(nuspec=nuspec))
+
+    assert (
+        score.dependency.additional_info[SOURCE_REPOSITORY_KEY]
+        == SOURCE_REPOSITORY_UNUSABLE
+    )
+    assert score.source_repository_score == 0.75
+
+
+def test_an_unanswered_nuget_lookup_leaves_the_source_signal_unmeasured() -> None:
+    """#182's rule applied here too: no nuspec and no catalog is no answer.
+
+    A package id nuget.org has never heard of, or a registry that is simply
+    unreachable, must not be recorded as declaring no source repository.
+    """
+    dep, _ = _analyze_offline({})
+
+    score = RiskScorer().score_dependency(dep)
+
+    assert SOURCE_REPOSITORY_KEY not in dep.additional_info
+    assert score.source_repository_score is None
+    assert "source_repository" not in score.unknown_signals
 
 
 def test_a_package_declaring_no_author_leaves_the_maintainer_count_unknown() -> None:

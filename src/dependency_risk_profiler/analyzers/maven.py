@@ -95,12 +95,19 @@ class MavenAnalyzer(BaseAnalyzer):
                 # — the signal the tool exists for — could only ever come from a
                 # clone (#73).
                 apply_registry_release_date(dep, last_updated)
-                self._collect_artifact_metadata(name, dep, latest)
-                # Whether the POM declares a source repository is a measured
-                # fact either way; without this the source_repository signal was
-                # reported as "this ecosystem says nothing" rather than as an
-                # answer (#146).
-                record_source_repository(dep, dep.repository_url)
+                document = self._collect_artifact_metadata(name, dep, latest)
+                # What the POM says about its source is a measured fact, and it
+                # has three answers rather than two. The discriminator is not
+                # whether <scm> is present but whether what it names is a git
+                # forge: across 25 sampled artifacts, 9 declared no <scm> at
+                # all, 12 named a Subversion or CVS host, and 4 named a forge
+                # and all 4 resolved (#176). Recorded only when a POM was
+                # actually read — an artifact whose POM could not be fetched is
+                # unmeasured, not undeclared (#182).
+                if document is not None:
+                    record_source_repository(
+                        dep, dep.repository_url, declared=document.scm_url
+                    )
             except Exception as exc:
                 logger.error("Error analyzing Maven package %s: %s", name, exc)
 
@@ -114,16 +121,20 @@ class MavenAnalyzer(BaseAnalyzer):
         name: str,
         dep: DependencyMetadata,
         latest: Optional[str],
-    ) -> None:
+    ) -> Optional[PomDocument]:
         """Read the artifact's published POM for repo, license, and deps.
 
         The installed version is preferred so the metadata describes what the
         project actually uses; the latest version is the fallback for artifacts
         whose version is managed somewhere we could not reach.
+
+        Returns:
+            The POM that was read, or None when no candidate version answered —
+            which is a failed lookup, not a statement about the artifact.
         """
         group_id, _, artifact_id = name.partition(":")
         if not group_id or not artifact_id:
-            return
+            return None
 
         for version in self._candidate_versions(dep, latest):
             document = self.client.fetch_pom(
@@ -132,7 +143,8 @@ class MavenAnalyzer(BaseAnalyzer):
             if document is None:
                 continue
             self._apply_artifact_metadata(name, dep, document)
-            return
+            return document
+        return None
 
     @staticmethod
     def _candidate_versions(

@@ -22,6 +22,11 @@ from dependency_risk_profiler.models import (
     RiskLevel,
 )
 from dependency_risk_profiler.parsers.composer import ComposerLockParser
+from dependency_risk_profiler.release_dates import (
+    SOURCE_REPOSITORY_DECLARED,
+    SOURCE_REPOSITORY_KEY,
+    SOURCE_REPOSITORY_UNUSABLE,
+)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
@@ -262,6 +267,82 @@ def test_a_dist_only_package_is_scored_rather_than_shrugged_at() -> None:
     assert score.insufficient_data is False
     assert score.risk_level is not RiskLevel.UNKNOWN
     assert "Declares no source repository" in score.factors
+
+
+def test_a_failed_packagist_lookup_leaves_the_source_signal_unmeasured() -> None:
+    """#182: a 404 is not "this package declares no source repository".
+
+    ``_get_latest_release`` swallows a connection error, a non-200 and a body
+    that is not JSON alike, and the record used to be written outside the guard
+    — so all three came out as a confident 1.0, the highest score the signal
+    has. Nobody asked Packagist anything. #146 then made that stamp
+    load-bearing: it collapses eight repository-derived signals into one
+    explained gap, so a fabricated UNDECLARED also changes whether the package
+    reaches a verdict at all.
+
+    The conformance harness cannot prove this — the capture script records only
+    200s, on purpose — so it is a synthetic fixture, which is what synthetic
+    fixtures are legitimately for.
+    """
+    analyzer = ComposerAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name="acme/unreachable", installed_version="1.0.0")
+
+    with mock.patch.object(analyzer, "_get_latest_release", return_value=None):
+        analyzed = analyzer.analyze({"acme/unreachable": dep})["acme/unreachable"]
+
+    score = RiskScorer().score_dependency(mark_transitive_unmeasured(analyzed))
+
+    assert SOURCE_REPOSITORY_KEY not in analyzed.additional_info
+    assert score.source_repository_score is None
+    assert "source_repository" not in score.unknown_signals
+    assert "Declares no source repository" not in score.factors
+
+
+def test_a_lock_declared_source_is_recorded_even_when_packagist_is_silent() -> None:
+    """composer.lock's own source.url is a declaration whatever the registry did.
+
+    The other half of #182: leaving the key unset on every failed lookup would
+    throw away a fact the manifest under analysis states outright.
+    """
+    analyzer = ComposerAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(
+        name="acme/private",
+        installed_version="1.0.0",
+        repository_url="git@github.com:acme/private.git",
+    )
+
+    with mock.patch.object(analyzer, "_get_latest_release", return_value=None):
+        analyzed = analyzer.analyze({"acme/private": dep})["acme/private"]
+
+    assert analyzed.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
+
+
+def test_a_non_forge_source_url_is_declared_but_unusable() -> None:
+    """#176's middle state in a second ecosystem, not just in maven.
+
+    A package whose ``source.url`` names a self-hosted SVN or a private Gitea
+    has said where its source lives. Nobody can read it, and that is a
+    different fact from saying nothing.
+    """
+    release = copy.deepcopy(CONSOLE_RELEASE)
+    source = release["source"]
+    assert isinstance(source, dict)
+    source["url"] = "https://svn.example.org/repos/console/trunk"
+
+    score = _score_package_offline(release)
+
+    assert (
+        score.dependency.additional_info[SOURCE_REPOSITORY_KEY]
+        == SOURCE_REPOSITORY_UNUSABLE
+    )
+    assert score.source_repository_score == 0.75
+    assert "Declares no source repository" not in score.factors
+    assert (
+        "Declares a source repository that is not a reachable git forge"
+        in score.factors
+    )
 
 
 def test_package_without_declared_authors_leaves_maintainers_unmeasured() -> None:

@@ -15,6 +15,7 @@ from dependency_risk_profiler.release_dates import (
     SOURCE_REPOSITORY_DECLARED,
     SOURCE_REPOSITORY_KEY,
     SOURCE_REPOSITORY_UNDECLARED,
+    SOURCE_REPOSITORY_UNUSABLE,
     apply_registry_release_date,
     apply_repository_activity_date,
     newest_timestamp,
@@ -119,12 +120,16 @@ def test_newest_timestamp_of_nothing_is_none() -> None:
 def test_a_declared_repository_is_recorded_only_when_it_is_one() -> None:
     """A docs site or a project landing page is not a source repository."""
     declared = _dependency()
-    record_source_repository(declared, "https://github.com/psf/requests")
+    record_source_repository(
+        declared,
+        "https://github.com/psf/requests",
+        declared="https://github.com/psf/requests",
+    )
     assert declared.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
 
     for not_a_repo in (None, "", "http://readthedocs.org/docs/nose/"):
         dep = _dependency()
-        record_source_repository(dep, not_a_repo)
+        record_source_repository(dep, not_a_repo, declared=None)
         assert (
             dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNDECLARED
         )
@@ -134,6 +139,53 @@ def test_a_tagged_subpath_still_counts_as_a_declared_repository() -> None:
     """Registries point inside repositories; the root is what matters here."""
     dep = _dependency()
 
-    record_source_repository(dep, "https://github.com/tzinfo/tzinfo/tree/v2.0.6")
+    record_source_repository(
+        dep,
+        "https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+        declared="https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+    )
+
+    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
+
+
+def test_declaring_an_unusable_repository_is_its_own_state() -> None:
+    """#176: "named a dead SVN host" is not "named nothing".
+
+    ``log4j:log4j:1.2.17`` declares ``<scm>`` and it is Subversion, so no git
+    repository exists behind it; ``commons-collections:3.1`` declares no
+    ``<scm>`` at all. Both used to record UNDECLARED, which threw away the only
+    thing distinguishing an artifact of 2012 from one that never said where its
+    source lived.
+    """
+    for unusable in (
+        "scm:svn:http://svn.apache.org/repos/asf/logging/log4j/tags/v1_2_17",
+        "http://svn.apache.org/viewvc/logging/log4j/tags/v1_2_17",
+        "https://go.googlesource.com/tools",
+        "not a url at all",
+    ):
+        dep = _dependency()
+        record_source_repository(dep, None, declared=unusable)
+        assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNUSABLE
+
+
+def test_a_blank_declaration_is_no_declaration() -> None:
+    """An empty <scm> or an all-whitespace source URL states nothing."""
+    for blank in (None, "", "   ", "\n\t"):
+        dep = _dependency()
+        record_source_repository(dep, None, declared=blank)
+        assert (
+            dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNDECLARED
+        )
+
+
+def test_a_resolvable_declaration_wins_over_its_own_raw_spelling() -> None:
+    """The declared text only decides the state the resolved URL cannot."""
+    dep = _dependency()
+
+    record_source_repository(
+        dep,
+        "https://github.com/tzinfo/tzinfo",
+        declared="scm:git:git@github.com:tzinfo/tzinfo.git",
+    )
 
     assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
