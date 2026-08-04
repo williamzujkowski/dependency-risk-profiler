@@ -70,3 +70,13 @@ site/
 
 # Test projects with embedded git repositories
 test-projects/
+
+# Generated scan output. These are the CLI's default --output-html/--output-json
+# paths for scan-org / scan-user (cli/typer_cli.py), so running the tool from the
+# repo root drops them here. They are output, not fixtures.
+dependency-risk-org-report.html
+dependency-risk-org-report.json
+dependency-risk-org-report.csv
+dependency-risk-user-report.html
+dependency-risk-user-report.json
+dependency-risk-user-report.csv
