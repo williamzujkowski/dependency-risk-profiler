@@ -88,26 +88,26 @@ class EcosystemRegistry:
         Returns:
             An instance of the appropriate parser, or None if no parser matches.
         """
-        file_path = Path(file_path)
+        path = Path(file_path)
 
         # Check if file exists
-        if not file_path.exists() or not file_path.is_file():
-            logger.warning(f"File not found or not a file: {file_path}")
+        if not path.exists() or not path.is_file():
+            logger.warning(f"File not found or not a file: {path}")
             return None
 
         # Try to match the file to an ecosystem
-        ecosystem_name = cls.detect_ecosystem(file_path)
+        ecosystem_name = cls.detect_ecosystem(path)
 
         if ecosystem_name:
             parser_class = cls._parsers.get(ecosystem_name)
             if parser_class:
                 try:
-                    return parser_class(str(file_path))
+                    return parser_class(str(path))
                 except Exception as e:
                     logger.error(f"Error creating parser for {ecosystem_name}: {e}")
                     return None
 
-        logger.warning(f"No parser found for file: {file_path}")
+        logger.warning(f"No parser found for file: {path}")
         return None
 
     @classmethod

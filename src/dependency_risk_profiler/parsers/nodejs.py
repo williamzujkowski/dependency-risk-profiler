@@ -20,7 +20,7 @@ class NodeJSParser(BaseParser):
             with open(self.manifest_path, "r", encoding="utf-8") as f:
                 lockfile_data = json.load(f)
 
-            dependencies = {}
+            dependencies: Dict[str, DependencyMetadata] = {}
 
             # Handle different package-lock.json formats (v1 vs v2+)
             if "dependencies" in lockfile_data:

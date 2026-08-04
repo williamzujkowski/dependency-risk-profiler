@@ -434,7 +434,10 @@ class TomlParser(BaseParser):
             return version_info
         elif isinstance(version_info, dict):
             if "version" in version_info:
-                return version_info["version"]
+                # TOML types the value, so `version = 1.0` arrives as a float.
+                # Coerce, as _extract_generic_version already does, rather than
+                # handing a non-string back from a `-> str` function.
+                return str(version_info["version"])
             elif "git" in version_info:
                 return f"git:{version_info['git']}"
             elif "path" in version_info:
@@ -457,7 +460,8 @@ class TomlParser(BaseParser):
             return version_info
         elif isinstance(version_info, dict):
             if "version" in version_info:
-                return version_info["version"]
+                # See _extract_poetry_version: TOML may parse this as a number.
+                return str(version_info["version"])
             elif "git" in version_info:
                 git_info = version_info["git"]
                 if "tag" in version_info:

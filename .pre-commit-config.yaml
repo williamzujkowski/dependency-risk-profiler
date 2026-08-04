@@ -42,9 +42,14 @@ repos:
     rev: v1.9.0
     hooks:
     -   id: mypy
-        # `packaging` is a real runtime dependency; the hook runs in its own
-        # isolated env, so it needs it too or `scoring` fails import resolution.
-        additional_dependencies: [types-PyYAML, types-requests, packaging>=23.2]
+        # `packaging` and `tomli` are real runtime dependencies; the hook runs
+        # in its own isolated env, so it needs them too or `scoring` fails
+        # import resolution and `parsers.toml` degrades to `Any`.
+        additional_dependencies:
+        -   types-PyYAML
+        -   types-requests
+        -   packaging>=23.2
+        -   tomli>=2.0.1
         args: [src]
         exclude: ^(testing/|venv/|build/|dist/|setup.py)
         pass_filenames: false

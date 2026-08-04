@@ -96,11 +96,13 @@ class PythonParser(BaseParser):
                         "<" + parts[1].strip().split(";")[0].strip()
                     )  # Remove environment markers
 
-                # Format: package[extras]
-                elif "[" in line and "]" in line:
+                # Format: package[extras]. Matching the bracket pair rather than
+                # testing for both characters keeps a line such as `foo]bar[baz`
+                # out of this branch; it used to enter and then crash on the
+                # unmatched `re.search(...).group(1)`.
+                elif (extras_match := re.search(r"\[(.*?)\]", line)) is not None:
                     name = line.split("[")[0].strip()
-                    extras = re.search(r"\[(.*?)\]", line).group(1)
-                    version = "with extras [" + extras + "]"
+                    version = "with extras [" + extras_match.group(1) + "]"
 
                 # Format: package
                 else:

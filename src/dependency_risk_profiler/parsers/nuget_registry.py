@@ -540,6 +540,7 @@ def _read_catalog_fields(entry: Dict[str, object]) -> CatalogEntry:
         published is not None and published.year <= 1900
     )
     project_url = entry.get("projectUrl")
+    authors = entry.get("authors")
     license_expression = entry.get("licenseExpression")
     if not isinstance(license_expression, str) or not license_expression:
         license_url = entry.get("licenseUrl")
@@ -553,9 +554,7 @@ def _read_catalog_fields(entry: Dict[str, object]) -> CatalogEntry:
         is_deprecated=bool(entry.get("deprecation")) or unlisted,
         license_expression=license_expression or None,
         project_url=project_url if isinstance(project_url, str) else None,
-        authors=split_authors(
-            entry.get("authors") if isinstance(entry.get("authors"), str) else None
-        ),
+        authors=split_authors(authors if isinstance(authors, str) else None),
     )
 
 
