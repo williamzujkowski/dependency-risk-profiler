@@ -1,7 +1,7 @@
 """Risk scoring for dependencies."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Collection, Dict, List, Optional, Sequence, Tuple
 
 from packaging import version
@@ -49,6 +49,7 @@ class RiskScorer:
         dependency_update_weight: float = 0.2,
         signed_commits_weight: float = 0.2,
         branch_protection_weight: float = 0.15,
+        maintained_weight: float = 0.20,
         popularity_high_stars: float = float(POPULARITY_HIGH_STARS_DEFAULT),
         popularity_high_contributors: float = float(
             POPULARITY_HIGH_CONTRIBUTORS_DEFAULT
@@ -72,6 +73,9 @@ class RiskScorer:
             transitive_weight: Weight for transitive dependency risk score.
             security_policy_weight: Weight for security policy risk score.
             dependency_update_weight: Weight for dependency update tools risk score.
+            maintained_weight: Weight for the maintained-status risk score. Kept
+                independent from branch_protection_weight so the two OpenSSF
+                signals contribute at their own, separately tunable weights.
             popularity_high_stars: Star threshold for treating stale release cadence
                 as mature stability instead of abandonment.
             popularity_high_contributors: Contributor threshold for the same
@@ -96,6 +100,7 @@ class RiskScorer:
         self.dependency_update_weight = dependency_update_weight
         self.signed_commits_weight = signed_commits_weight
         self.branch_protection_weight = branch_protection_weight
+        self.maintained_weight = maintained_weight
         self.popularity_high_stars = max(0, int(popularity_high_stars))
         self.popularity_high_contributors = max(
             0,
@@ -198,7 +203,7 @@ class RiskScorer:
                 branch_protection_score,
                 self.branch_protection_weight,
             ),
-            ("maintained", maintained_score, self.branch_protection_weight),
+            ("maintained", maintained_score, self.maintained_weight),
         ]
 
         # Cross-ecosystem score normalization (#74): an unmeasured component is
@@ -358,12 +363,14 @@ class RiskScorer:
         if last_updated is None:
             return None
 
-        # Ensure both datetimes are timezone-naive for comparison
-        if last_updated.tzinfo:
-            # Convert timezone-aware to naive by replacing tzinfo
-            last_updated = last_updated.replace(tzinfo=None)
+        # Compare in UTC so staleness is independent of the host's local tz.
+        # Naive inputs are assumed to already be UTC.
+        if last_updated.tzinfo is None:
+            last_updated = last_updated.replace(tzinfo=timezone.utc)
+        else:
+            last_updated = last_updated.astimezone(timezone.utc)
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         days_since_update = (now - last_updated).days
 
         # Scoring thresholds for staleness
@@ -497,7 +504,7 @@ class RiskScorer:
 
         try:
             # Handle version ranges and non-standard version strings
-            if any(op in installed_version for op in ["<", ">", "~", "^", "-"]):
+            if any(op in installed_version for op in ["<", ">", "~", "^"]):
                 return 0.25  # Assume minimal risk for version ranges
 
             # Try to parse as standard versions
@@ -869,12 +876,16 @@ class RiskScorer:
 
         if staleness_score and staleness_score > 0.5:
             if dependency.last_updated:
-                # Ensure both datetimes are timezone-naive for comparison
+                # Compare in UTC so staleness is independent of the host's tz.
+                # Naive inputs are assumed to already be UTC.
                 last_updated = dependency.last_updated
-                if last_updated.tzinfo:
-                    last_updated = last_updated.replace(tzinfo=None)
+                if last_updated.tzinfo is None:
+                    last_updated = last_updated.replace(tzinfo=timezone.utc)
+                else:
+                    last_updated = last_updated.astimezone(timezone.utc)
 
-                days_since_update = (datetime.now() - last_updated).days
+                now = datetime.now(timezone.utc)
+                days_since_update = (now - last_updated).days
                 factors.append(f"Not updated in {days_since_update} days")
             else:
                 factors.append("Update date unknown")

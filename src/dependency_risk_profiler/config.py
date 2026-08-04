@@ -397,6 +397,7 @@ class Config:
             "dependency_update_weight": weights.get("dependency_update", 0.2),
             "signed_commits_weight": weights.get("signed_commits", 0.2),
             "branch_protection_weight": weights.get("branch_protection", 0.15),
+            "maintained_weight": weights.get("maintained", 0.20),
             "popularity_high_stars": weights.get("popularity_high_stars", 2000),
             "popularity_high_contributors": weights.get(
                 "popularity_high_contributors",
