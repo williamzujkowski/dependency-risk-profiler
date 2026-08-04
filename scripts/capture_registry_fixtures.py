@@ -20,6 +20,27 @@ any request it has no recording for. Run it by hand (or from the
 What to capture is declared in ``testing/fixtures/registry/manifest.json``,
 which the harness reads too, so the two cannot drift.
 
+JSON is not the only registry document
+--------------------------------------
+Four of the eight ecosystems do not answer with JSON at all. Maven Central
+serves ``maven-metadata.xml`` and the artifact's own ``.pom``; nuget.org serves
+the ``.nuspec`` beside its JSON registration hive; the Go module proxy serves a
+module's ``go.mod`` as plain text next to a JSON ``@latest``. A fixture entry
+may therefore declare ``"format": "text"``, in which case the body is recorded
+verbatim as a JSON string and replayed to the adapter as bytes. Text payloads
+are never string-truncated — a truncated POM is a *parse* difference, not a
+volume difference, and the trimming rule below forbids it.
+
+Version-pinned URLs
+-------------------
+Some of those documents are addressed by version: a POM lives at
+``.../<version>/<artifact>-<version>.pom`` and a ``go.mod`` at
+``.../@v/<version>.mod``. The manifest pins the version that was current at
+capture time. When the artifact releases again, the adapter asks for a URL no
+fixture records and the replay fetcher raises — loudly, by design. Re-capturing
+those fixtures means editing the manifest URL first, which is the same review
+step every other refresh gets.
+
 Trimming rule
 -------------
 Reducers may remove **volume** and must never remove **key diversity**. Dropping
@@ -86,6 +107,18 @@ REDACTED = "[redacted-by-capture]"
 # How many entries of npm's ``users`` (who starred the package) to keep.
 _USERS_SAMPLE = 5
 
+# How many Packagist p2 release entries to keep from the head of the list. The
+# adapter reads the head; the two behind it are kept so the minified format's
+# "only the head is complete" property stays visible in the fixture.
+_P2_HEAD_SAMPLE = 3
+
+# How many Packagist advisory entries to keep. The adapter reads none of them;
+# the key is retained so the decision not to read it stays visible.
+_ADVISORY_SAMPLE = 3
+
+# How many registration leaves to keep off a NuGet registration page.
+_REGISTRATION_LEAF_SAMPLE = 3
+
 # Value shapes that look like credentials wherever they appear.
 SECRET_VALUE_PATTERNS: Tuple[re.Pattern, ...] = (
     re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}"),
@@ -133,27 +166,31 @@ def fixture_path(ecosystem: str, name: str) -> Path:
     return path
 
 
-def fetch(url: str, allowed_hosts: List[str]) -> object:
+def fetch(url: str, allowed_hosts: List[str], text: bool = False) -> object:
     """Fetch one registry document.
 
     Args:
         url: Absolute ``https`` URL from the manifest.
         allowed_hosts: Hosts the capture is permitted to contact.
+        text: Record the body verbatim as a string rather than decoding JSON.
+            XML (a POM, a nuspec) and plain text (a ``go.mod``) are captured
+            this way.
 
     Returns:
-        The decoded JSON document.
+        The decoded JSON document, or the body as a string when ``text``.
 
     Raises:
-        CaptureError: On a disallowed URL, a non-200, an oversized body, or a
-            body that is not JSON.
+        CaptureError: On a disallowed URL, a non-200, an oversized body, a body
+            that is not UTF-8, or a body that is not JSON when JSON was wanted.
     """
     parsed = urlparse(url)
     if parsed.scheme != "https" or parsed.hostname not in allowed_hosts:
         raise CaptureError(f"refusing to fetch {url!r}: not an allowlisted https host")
 
+    accept = "*/*" if text else "application/json"
     response = requests.get(
         url,
-        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        headers={"User-Agent": USER_AGENT, "Accept": accept},
         timeout=REQUEST_TIMEOUT,
         stream=True,
     )
@@ -164,8 +201,14 @@ def fetch(url: str, allowed_hosts: List[str]) -> object:
     if len(body) > MAX_RESPONSE_BYTES:
         raise CaptureError(f"{url} exceeded the {MAX_RESPONSE_BYTES}-byte read cap")
     try:
-        return json.loads(body.decode("utf-8"))
-    except (UnicodeDecodeError, ValueError) as exc:
+        decoded = body.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise CaptureError(f"{url} is not UTF-8: {exc}") from exc
+    if text:
+        return decoded
+    try:
+        return json.loads(decoded)
+    except ValueError as exc:
         raise CaptureError(f"{url} did not answer JSON: {exc}") from exc
 
 
@@ -439,11 +482,133 @@ def reduce_crates_io(payload: object, limit: int) -> Tuple[object, List[str]]:
     return result, notes
 
 
+def reduce_packagist_p2(payload: object, limit: int) -> Tuple[object, List[str]]:
+    """Sample a Packagist p2 document's per-package version list down to size.
+
+    symfony/console publishes 766 release entries in 360 KB. The p2 format is
+    *minified* (``"minified": "composer/2.0"``): the head entry is complete and
+    every later one carries only the fields that changed from its predecessor,
+    which is why the adapter reads the head and nothing else. So the retained
+    set is the head — the entry the adapter actually resolves against — plus the
+    two behind it and the oldest, which keeps the "only the head is complete"
+    property visible in the fixture rather than asserting it in a comment.
+
+    Order is preserved, every retained entry keeps all of its keys, and every
+    top-level key survives — ``security-advisories`` included, which the adapter
+    deliberately does not read because OSV already answers that question with a
+    real severity model.
+
+    Args:
+        payload: Decoded ``repo.packagist.org/p2/<vendor>/<package>.json``.
+        limit: Maximum characters to keep in any single string.
+
+    Returns:
+        The reduced document and human-readable notes about what was dropped.
+    """
+    if not isinstance(payload, dict):
+        return payload, []
+
+    packages = payload.get("packages")
+    notes: List[str] = []
+    reduced = dict(payload)
+
+    if isinstance(packages, dict):
+        sampled: Dict[str, object] = {}
+        for name, versions in packages.items():
+            if not isinstance(versions, list) or len(versions) <= _P2_HEAD_SAMPLE + 1:
+                sampled[name] = versions
+                continue
+            kept = list(versions[:_P2_HEAD_SAMPLE]) + [versions[-1]]
+            notes.append(
+                f"packages[{name}]: kept the newest {_P2_HEAD_SAMPLE} release "
+                f"entries and the oldest, dropped "
+                f"{len(versions) - len(kept)} others (volume only; retained "
+                f"entries keep every key and their original order)"
+            )
+            sampled[name] = kept
+        reduced["packages"] = sampled
+
+    advisories = payload.get("security-advisories")
+    if isinstance(advisories, list) and len(advisories) > _ADVISORY_SAMPLE:
+        notes.append(
+            f"security-advisories: kept {_ADVISORY_SAMPLE} of "
+            f"{len(advisories)} entries (volume only; the key is retained)"
+        )
+        reduced["security-advisories"] = advisories[:_ADVISORY_SAMPLE]
+
+    counter = [0]
+    result = truncate_strings(reduced, limit, counter)
+    if counter[0]:
+        notes.append(f"truncated {counter[0]} string values to {limit} characters")
+    return result, notes
+
+
+def reduce_nuget_registration(payload: object, limit: int) -> Tuple[object, List[str]]:
+    """Sample a NuGet registration index down to the page the adapter reads.
+
+    Newtonsoft.Json's registration index is 361 KB of leaves. The client reads
+    exactly one page — ``items[-1]``, the newest — and inside it picks the leaf
+    whose ``catalogEntry.version`` matches the version being reported, falling
+    back to the last. So the retained set is the newest page, sampled down to
+    its newest few leaves plus its oldest; every earlier page is dropped whole.
+
+    Both shapes the index takes are preserved. A page that inlines its leaves
+    keeps them (sampled); a page that publishes only an ``@id`` keeps that
+    ``@id``, because the client's second-fetch path is a real branch and a
+    fixture that flattened it would hide the branch rather than exercise it.
+
+    Args:
+        payload: Decoded ``registration5-gz-semver2/<id>/index.json``.
+        limit: Maximum characters to keep in any single string.
+
+    Returns:
+        The reduced index and human-readable notes about what was dropped.
+    """
+    if not isinstance(payload, dict):
+        return payload, []
+
+    pages = payload.get("items")
+    if not isinstance(pages, list) or not pages:
+        return payload, []
+
+    notes: List[str] = []
+    reduced = dict(payload)
+    newest = pages[-1]
+    if len(pages) > 1:
+        notes.append(
+            f"items: kept the newest of {len(pages)} registration pages, "
+            f"dropped {len(pages) - 1} older ones (volume only; the client "
+            f"reads items[-1] and never walks back)"
+        )
+    reduced["items"] = [newest]
+
+    if isinstance(newest, dict):
+        leaves = newest.get("items")
+        if isinstance(leaves, list) and len(leaves) > _REGISTRATION_LEAF_SAMPLE + 1:
+            kept = [leaves[0]] + list(leaves[-_REGISTRATION_LEAF_SAMPLE:])
+            notes.append(
+                f"items[-1].items: kept the oldest leaf and the newest "
+                f"{_REGISTRATION_LEAF_SAMPLE}, dropped {len(leaves) - len(kept)} "
+                f"others (volume only; retained leaves keep every key)"
+            )
+            page = dict(newest)
+            page["items"] = kept
+            reduced["items"] = [page]
+
+    counter = [0]
+    result = truncate_strings(reduced, limit, counter)
+    if counter[0]:
+        notes.append(f"truncated {counter[0]} string values to {limit} characters")
+    return result, notes
+
+
 REDUCERS = {
     "none": reduce_none,
     "npm-packument": reduce_npm_packument,
     "pypi-project": reduce_pypi_project,
     "crates-io": reduce_crates_io,
+    "packagist-p2": reduce_packagist_p2,
+    "nuget-registration": reduce_nuget_registration,
 }
 
 
@@ -472,7 +637,19 @@ def capture_one(
     if reducer is None:
         raise CaptureError(f"unknown reducer {spec['reducer']!r} for {name}")
 
-    raw = fetch(spec["url"], manifest["allowed_hosts"])
+    fmt = spec.get("format", "json")
+    if fmt not in ("json", "text"):
+        raise CaptureError(f"unknown format {fmt!r} for {ecosystem}/{name}")
+    if fmt == "text" and spec["reducer"] != "none":
+        # Shortening a POM or a go.mod changes how it parses, which is a key
+        # difference wearing a volume costume. Text documents are small; keep
+        # them whole or do not keep them.
+        raise CaptureError(
+            f"{ecosystem}/{name}: text fixtures may not be reduced; a truncated "
+            f"document parses differently, which the trimming rule forbids"
+        )
+
+    raw = fetch(spec["url"], manifest["allowed_hosts"], text=fmt == "text")
     payload, notes = reducer(redact(raw), manifest["max_string_chars"])
 
     document = {
@@ -481,6 +658,7 @@ def capture_one(
             "captured_at": dt.datetime.now(dt.timezone.utc).date().isoformat(),
             "captured_by": "scripts/capture_registry_fixtures.py",
             "reducer": spec["reducer"],
+            "format": fmt,
             "trimming": notes,
         },
         "payload": payload,

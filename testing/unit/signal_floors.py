@@ -34,13 +34,30 @@ is how a conformance gate differs from a smoke test. The collapse arithmetic
 itself is still worth documenting, so it lives in ``test_signal_floors.py`` as
 its own assertion instead of masquerading as the floor.
 
-Where the numbers come from: crates.io, Packagist, PyPI, RubyGems and NuGet
-each answer eight signals unaided; npm answers seven, landing one short of the
-insufficient-data bar because it publishes no cheap maintainer count.
-:data:`SCORES_FROM_REGISTRY_ALONE` records that difference rather than papering
-over it. PyPI was in npm's column until #171: it publishes a top-level
+Where the numbers come from: crates.io, Packagist, PyPI, RubyGems, NuGet and
+Maven Central each answer eight signals unaided; npm answers seven, landing one
+short of the insufficient-data bar because it publishes no cheap maintainer
+count. :data:`SCORES_FROM_REGISTRY_ALONE` records that difference rather than
+papering over it. PyPI was in npm's column until #171: it publishes a top-level
 ``ownership`` object the adapter had never read, and reading it moved python
 from seven to eight.
+
+The Go module proxy is the outlier at six, and its floor is set where it is on
+purpose. ``proxy.golang.org`` publishes a version, a release date and a
+``go.mod``; it publishes no licence and no owner list, because Go has neither
+concept at the module level. Six is what golang measures today and therefore
+what it is floored at — the number was read off the conformance fixtures rather
+than rounded up to match its neighbours, because a floor above measured
+coverage is a test that fails for a reason nobody can fix, and a floor below it
+is a permission slip (#158). Go modules do not clear the insufficient-data bar
+from proxy metadata alone, and that is recorded rather than papered over too.
+
+maven's floor is the newest of the eight and it did not exist before #73's
+conformance capture: #141 had left the ecosystem with no entry in this table at
+all. Both readings behind it were found by the same capture —
+``maven-metadata.xml`` states ``<lastUpdated>`` and nothing read it, and the
+adapter never recorded whether the POM declares a source repository — so the
+floor is eight rather than the six it would have been.
 
 :data:`REGISTRY_MEASURED_SIGNALS` names the signals behind each count, because
 a count cannot see a swap: an ecosystem that loses one signal and gains another
@@ -59,22 +76,24 @@ below rather than restating them, adds per-signal *value* assertions against
 provenance-dated payloads captured from the live registries, and enforces the
 rule the npm case generalizes to: every signal whose read collapses to a fixed
 default when its key is absent needs at least one fixture where the correct
-answer is the non-default value. Four of the eight ecosystems are converted;
-``adapter_conformance.CONVERSION_STATUS`` lists all eight with what each of the
-remaining four still needs.
+answer is the non-default value. All eight ecosystems are now converted;
+``adapter_conformance.CONVERSION_STATUS`` carries the ledger, and
+``unproven_branches()`` names every polarized branch no captured payload can
+reach, with the reason.
 
 :func:`assert_abandoned_package_is_scored` pins the same property from the
 other direction, for #146: a package abandoned a decade ago must still produce
 a measured release cadence and a risk verdict, because that is the population
 the maintenance-cadence signal exists to flag and the one it used to fail on.
 
-Refresh cadence: for the converted ecosystems the payloads are captured files
-under ``testing/fixtures/registry/``, each carrying its source URL and capture
-date, refreshed with ``scripts/capture_registry_fixtures.py`` — see
-``registry_fixtures`` for the cadence and who owns it. The unconverted
-ecosystems still keep hand-trimmed payloads next to their adapter tests with the
-``curl`` that produced each one; re-record those once a release cycle. A floor
-is only as honest as the fixture underneath it.
+Refresh cadence: every floor here is now backed by payloads captured from the
+live registry into ``testing/fixtures/registry/``, each carrying its source URL
+and capture date, refreshed with ``scripts/capture_registry_fixtures.py`` — see
+``registry_fixtures`` for the cadence and who owns it. Adapters keep their own
+hand-written fixtures for the paths a captured payload cannot reach (a fallback
+that depends on trimmed volume, an error branch); those are legitimate uses of a
+synthetic fixture and are not floors. A floor is only as honest as the fixture
+underneath it.
 """
 
 from datetime import datetime, timezone
@@ -104,6 +123,8 @@ from dependency_risk_profiler.transitive.analyzer_enhanced import (
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "cargo": 8,
     "composer": 8,
+    "golang": 6,
+    "maven": 8,
     "nuget": 8,
     "nodejs": 7,
     "python": 8,
@@ -132,6 +153,8 @@ _REGISTRY_CORE: FrozenSet[str] = frozenset(
 REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "cargo": _REGISTRY_CORE | {"maintainer", "source_repository"},
     "composer": _REGISTRY_CORE | {"maintainer", "source_repository"},
+    "golang": (_REGISTRY_CORE - {"license"}) | {"source_repository"},
+    "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
     "nuget": _REGISTRY_CORE | {"maintainer", "transitive"},
     "nodejs": _REGISTRY_CORE | {"source_repository"},
     "python": _REGISTRY_CORE | {"maintainer", "source_repository"},
@@ -155,6 +178,8 @@ REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
 SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "cargo": True,
     "composer": True,
+    "golang": False,
+    "maven": True,
     "nodejs": False,
     "nuget": True,
     "python": True,
@@ -207,13 +232,23 @@ def mark_transitive_unmeasured(dependency: DependencyMetadata) -> DependencyMeta
     lockfile or a Python requirement set, so an offline adapter test that skips
     it would credit the ecosystem with a signal it never measures.
 
+    It also leaves an adapter's own record alone, and so does this: nuget reads
+    its ``.nuspec`` dependencies and maven its POM's ``<dependencies>``, both of
+    which are real measurements the adapter stamps with its own source. An empty
+    ``<dependencies>`` block on an artifact that declares none is a measured
+    zero, not an unmeasured one, and overwriting the stamp here would report it
+    as the second while the pipeline reports the first (see
+    ``transitive.analyzer_enhanced``, which skips dependencies that already
+    carry a source).
+
     Args:
         dependency: Dependency metadata to mark in place.
 
     Returns:
         The same dependency, for chaining.
     """
-    dependency.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_UNMEASURED
+    if not dependency.additional_info.get(TRANSITIVE_SOURCE_KEY):
+        dependency.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_UNMEASURED
     return dependency
 
 

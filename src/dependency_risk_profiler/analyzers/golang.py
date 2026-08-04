@@ -2,15 +2,81 @@
 
 import logging
 import re
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 from ..analysis_helpers import analyze_repository
 from ..go_modules import GoModuleResolver
 from ..models import DependencyMetadata
+from ..release_dates import (
+    apply_registry_release_date,
+    parse_registry_timestamp,
+    record_source_repository,
+)
 from .base import BaseAnalyzer
-from .common import cloned_repo, fetch_json
+from .common import cloned_repo, fetch_json, fetch_url
 
 logger = logging.getLogger(__name__)
+
+# Go states a module's own retirement in its ``go.mod``: a ``// Deprecated:``
+# comment attached to the ``module`` directive, which is what ``go list -m -u``
+# reports and what pkg.go.dev renders as the retirement banner
+# (https://go.dev/ref/mod#go-mod-file-module). The module proxy serves that file
+# verbatim at ``@v/<version>.mod``, so it is one cheap read away — and until
+# #73's conformance capture, nothing read it. ``is_deprecated`` was therefore
+# False for every Go module ever scanned: measured, and measured wrong, which is
+# #142's shape exactly.
+_DEPRECATED_COMMENT = re.compile(r"^\s*//\s*Deprecated:\s*(?P<notice>.*)$")
+
+# The proxy escapes uppercase letters in a module path — and in a version — as
+# "!<lower>", so that its storage is case-insensitive-safe.
+_UPPERCASE = re.compile(r"[A-Z]")
+
+# Go's version grammar, tightened. The version is pasted into a URL path, and
+# it arrives from a registry response rather than from the manifest, so it is
+# validated before it becomes a path segment rather than trusted because the
+# proxy sent it.
+_MODULE_VERSION = re.compile(r"^v[0-9][A-Za-z0-9.\-+]{0,127}$")
+
+
+def _escape_module_path(value: str) -> str:
+    """Return a module path or version in the proxy's escaped spelling."""
+    return _UPPERCASE.sub(lambda match: "!" + match.group(0).lower(), value)
+
+
+def deprecation_notice(go_mod: str) -> Optional[str]:
+    """Return the module-level deprecation notice in a ``go.mod``, or None.
+
+    Go attaches the notice to the ``module`` directive as a block of
+    ``// Deprecated:`` comment lines immediately above it. Only that block
+    counts: a ``// Deprecated:`` comment sitting above a ``require`` line is
+    about the *dependency*, not about this module, and reading it would flag
+    every consumer of a retired package as retired itself.
+
+    Args:
+        go_mod: The contents of a ``go.mod`` file.
+
+    Returns:
+        The notice text (possibly empty), or None when the module is not
+        deprecated.
+    """
+    notice: Optional[str] = None
+    for line in go_mod.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            # A blank line detaches a comment block from what follows it.
+            notice = None
+            continue
+        match = _DEPRECATED_COMMENT.match(line)
+        if match is not None:
+            notice = match.group("notice").strip()
+            continue
+        if stripped.startswith("//"):
+            continue
+        if stripped.split()[0] == "module":
+            return notice
+        return None
+    return None
 
 
 class GoAnalyzer(BaseAnalyzer):
@@ -67,7 +133,7 @@ class GoAnalyzer(BaseAnalyzer):
                 # Get latest version from proxy.golang.org. This uses the full
                 # module path, major-version suffix included — that is what the
                 # module proxy is keyed on.
-                latest_version = self._get_latest_version(name)
+                latest_version, released = self._get_latest(name)
                 if latest_version:
                     dep.latest_version = latest_version
                     # Store minimal metadata in cache
@@ -75,12 +141,26 @@ class GoAnalyzer(BaseAnalyzer):
                         "name": name,
                         "latest_version": latest_version,
                     }
+                    if self._is_deprecated(name, latest_version):
+                        dep.is_deprecated = True
+
+                # ``@latest`` dates the release it names. Nothing read that
+                # field, so a Go module's cadence was unmeasured unless the
+                # scan cloned its repository — and an abandoned module is
+                # exactly the one whose repository has been archived or renamed
+                # (#146).
+                apply_registry_release_date(dep, released)
 
                 repository = self.resolver.resolve(name)
                 if repository is None:
                     logger.debug("No source repository resolved for %s", name)
+                    # A module path that resolves to no repository is a measured
+                    # answer, not silence; recording it is what lets the scorer
+                    # tell "we did not look" from "there is nothing there".
+                    record_source_repository(dep, None)
                     continue
                 dep.repository_url = repository.url
+                record_source_repository(dep, repository.url)
                 if repository.subdirectory:
                     # Many modules can share one repository; record where this
                     # one lives so a shared repository URL is not confusing.
@@ -127,15 +207,54 @@ class GoAnalyzer(BaseAnalyzer):
         Returns:
             The latest version string, or None if fetching failed.
         """
+        return self._get_latest(package_name)[0]
+
+    def _get_latest(
+        self, package_name: str
+    ) -> Tuple[Optional[str], Optional[datetime]]:
+        """Return the module's latest version and the date that version shipped.
+
+        Args:
+            package_name: Go module path.
+
+        Returns:
+            The version string and the parsed publication timestamp, either of
+            which is None when the proxy does not answer with it.
+        """
         # Query the Go module proxy's JSON endpoint instead of scraping HTML —
         # it is stable and version-correct (pseudo-versions, +incompatible).
-        # The proxy escapes uppercase letters in the module path as "!<lower>".
-        escaped = re.sub(
-            r"[A-Z]", lambda match: "!" + match.group(0).lower(), package_name
+        data = fetch_json(
+            f"https://proxy.golang.org/{_escape_module_path(package_name)}/@latest",
+            self.timeout,
         )
-        data = fetch_json(f"https://proxy.golang.org/{escaped}/@latest", self.timeout)
-        if isinstance(data, dict):
-            version = data.get("Version")
-            if isinstance(version, str) and version:
-                return version
-        return None
+        if not isinstance(data, dict):
+            return None, None
+        version = data.get("Version")
+        if not isinstance(version, str) or not version:
+            return None, None
+        return version, parse_registry_timestamp(data.get("Time"))
+
+    def _is_deprecated(self, package_name: str, version: str) -> bool:
+        """Return True when the module's own ``go.mod`` retires it.
+
+        Args:
+            package_name: Go module path.
+            version: The version whose ``go.mod`` to read.
+
+        Returns:
+            True when a ``// Deprecated:`` comment precedes the ``module``
+            directive. False also covers "the proxy did not answer", which is
+            the honest reading: a marker nobody could read is not a marker that
+            says the module is fine, but the flag has nowhere else to go.
+        """
+        if not _MODULE_VERSION.match(version):
+            logger.debug("Refusing malformed Go module version: %r", version)
+            return False
+        url = (
+            f"https://proxy.golang.org/{_escape_module_path(package_name)}"
+            f"/@v/{_escape_module_path(version)}.mod"
+        )
+        body = fetch_url(url, self.timeout)
+        if not isinstance(body, str) or not body:
+            return False
+        return deprecation_notice(body) is not None

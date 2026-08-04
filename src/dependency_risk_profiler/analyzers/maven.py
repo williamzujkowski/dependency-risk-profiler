@@ -3,7 +3,8 @@
 import logging
 import re
 import xml.etree.ElementTree as ElementTree
-from typing import Dict, List, Optional
+from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import requests
@@ -13,6 +14,7 @@ from ..models import DependencyMetadata
 from ..parsers.maven_central import MavenCentralClient
 from ..parsers.pom_model import PomCoordinate, PomDocument
 from ..parsers.xml_utils import local_name
+from ..release_dates import apply_registry_release_date, record_source_repository
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, cloned_repo, is_cloneable_repo_url
 
@@ -20,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 # maven-metadata.xml is small; cap the download to bound parse cost.
 _MAX_METADATA_BYTES = 2 * 1024 * 1024
+
+# Maven Central's <lastUpdated> spelling: yyyyMMddHHmmss, UTC, no separators.
+_LAST_UPDATED_FORMAT = "%Y%m%d%H%M%S"
 
 # Scopes that describe what actually ships with the artifact. "test" and
 # "provided" dependencies are not part of a consumer's runtime surface, so they
@@ -81,10 +86,21 @@ class MavenAnalyzer(BaseAnalyzer):
             dep.additional_info["ecosystem"] = "maven"
 
             try:
-                latest = self._get_latest_version(name)
+                latest, last_updated = self._get_versioning(name)
                 if latest:
                     dep.latest_version = latest
+                # maven-metadata.xml states when the artifact last shipped, in
+                # <versioning><lastUpdated>. Nothing read it, so the release
+                # cadence was unmeasured for every Maven artifact and staleness
+                # — the signal the tool exists for — could only ever come from a
+                # clone (#73).
+                apply_registry_release_date(dep, last_updated)
                 self._collect_artifact_metadata(name, dep, latest)
+                # Whether the POM declares a source repository is a measured
+                # fact either way; without this the source_repository signal was
+                # reported as "this ecosystem says nothing" rather than as an
+                # answer (#146).
+                record_source_repository(dep, dep.repository_url)
             except Exception as exc:
                 logger.error("Error analyzing Maven package %s: %s", name, exc)
 
@@ -195,8 +211,22 @@ class MavenAnalyzer(BaseAnalyzer):
 
     def _get_latest_version(self, coordinate: str) -> Optional[str]:
         """Return the release (or latest) version for a groupId:artifactId."""
+        return self._get_versioning(coordinate)[0]
+
+    def _get_versioning(
+        self, coordinate: str
+    ) -> Tuple[Optional[str], Optional[datetime]]:
+        """Return the latest version and last-publication date for a coordinate.
+
+        Args:
+            coordinate: ``groupId:artifactId``.
+
+        Returns:
+            The release (or latest) version and the ``<lastUpdated>`` timestamp,
+            either of which is None when maven-metadata.xml does not state it.
+        """
         if ":" not in coordinate:
-            return None
+            return None, None
         group, artifact = coordinate.split(":", 1)
         group_path = group.replace(".", "/")
         url = (
@@ -208,17 +238,17 @@ class MavenAnalyzer(BaseAnalyzer):
             response = requests.get(url, headers=headers, timeout=self.timeout)
         except requests.RequestException as exc:
             logger.debug("Maven Central lookup failed for %s: %s", coordinate, exc)
-            return None
+            return None, None
         if response.status_code != 200:
-            return None
+            return None, None
         content = response.content
         if len(content) > _MAX_METADATA_BYTES:
-            return None
+            return None, None
         try:
             root = ElementTree.fromstring(content)
         except ElementTree.ParseError:
-            return None
-        return self._latest_from_metadata(root)
+            return None, None
+        return self._latest_from_metadata(root), self._last_updated(root)
 
     @staticmethod
     def _latest_from_metadata(root: ElementTree.Element) -> Optional[str]:
@@ -237,6 +267,37 @@ class MavenAnalyzer(BaseAnalyzer):
                 elif local_name(child.tag) == "latest":
                     latest = text
             return release or latest
+        return None
+
+    @staticmethod
+    def _last_updated(root: ElementTree.Element) -> Optional[datetime]:
+        """Return ``<versioning><lastUpdated>`` as a UTC timestamp, or None.
+
+        Maven Central writes it as a bare ``yyyyMMddHHmmss`` in UTC — no
+        separators and no zone marker, which is why it needs its own parse
+        rather than the shared ISO-8601 one.
+
+        Args:
+            root: Root element of a ``maven-metadata.xml``.
+
+        Returns:
+            The publication timestamp, or None when the document omits it or
+            spells it in a shape this cannot read. None means unmeasured, never
+            "now".
+        """
+        for versioning in root:
+            if local_name(versioning.tag) != "versioning":
+                continue
+            for child in versioning:
+                if local_name(child.tag) != "lastUpdated":
+                    continue
+                text = (child.text or "").strip()
+                try:
+                    stamp = datetime.strptime(text, _LAST_UPDATED_FORMAT)
+                except ValueError:
+                    logger.debug("Unparseable maven-metadata lastUpdated: %r", text)
+                    return None
+                return stamp.replace(tzinfo=timezone.utc)
         return None
 
 

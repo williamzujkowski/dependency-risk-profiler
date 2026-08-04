@@ -1,0 +1,20 @@
+{
+  "payload": {
+    "Origin": {
+      "Hash": "b61f268f75b6ff134a62cd62aee1095fa12e8d2e",
+      "Ref": "refs/tags/v1.9.4",
+      "URL": "https://github.com/sirupsen/logrus",
+      "VCS": "git"
+    },
+    "Time": "2025-10-23T12:47:52Z",
+    "Version": "v1.9.4"
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "none",
+    "source_url": "https://proxy.golang.org/github.com/sirupsen/logrus/@latest",
+    "trimming": []
+  }
+}

@@ -11,8 +11,11 @@ so none of the eight repository-derived signals; no license; no release date
   package's own ``<dependencies>``. This is the one that matters: a package's
   ``projectUrl`` is frequently a docs site (MediatR publishes
   ``https://mediatr.io/``) while ``<repository>`` is the actual source.
-* ``registration5-semver1/<id>/index.json`` — the catalog, which is the only
-  place the publication date and the deprecation marker live.
+* ``registration5-gz-semver2/<id>/index.json`` — the catalog, which is the only
+  place the publication date and the deprecation marker live. The SemVer2 hive
+  specifically: the SemVer1 one answers with the same entries minus their
+  ``deprecation`` blocks, which made the deprecation signal unreachable for
+  every .NET package until the conformance capture caught it (#73).
 
 Every fetch is fenced the same way #141 fenced Maven Central:
 
@@ -55,7 +58,23 @@ logger = logging.getLogger(__name__)
 NUGET_API_HOST = "api.nuget.org"
 NUGET_API_BASE = f"https://{NUGET_API_HOST}"
 FLAT_CONTAINER_BASE = f"{NUGET_API_BASE}/v3-flatcontainer"
-REGISTRATION_BASE = f"{NUGET_API_BASE}/v3/registration5-semver1"
+
+# The SemVer2 registration hive, not the SemVer1 one. nuget.org publishes the
+# same catalog entries in both, with one difference that matters: **the
+# ``deprecation`` block exists only in SemVer2**. #129 read
+# ``registration5-semver1``, whose entries carry no ``deprecation`` key at all,
+# so ``CatalogEntry.is_deprecated`` could only ever be reached through the
+# unlisted-package fallback and nuget.org's explicit deprecation marker was
+# unreachable for every package in the feed. Captured proof, both hives, same
+# package and version (Microsoft.Azure.ServiceBus 5.2.0, deprecated in favour of
+# Azure.Messaging.ServiceBus):
+#
+#     registration5-semver1     catalogEntry has no "deprecation" key
+#     registration5-gz-semver2  "deprecation": {"reasons": ["Other"], ...}
+#
+# The hive is gzip-*encoded*, not gzip-*named*: ``requests`` decodes
+# Content-Encoding transparently, so this is a base-URL change and nothing else.
+REGISTRATION_BASE = f"{NUGET_API_BASE}/v3/registration5-gz-semver2"
 
 # nuget.org's own limits: ids are at most 100 characters of letters, digits and
 # the three separators. Versions are SemVer 2 plus NuGet's legacy fourth part.
