@@ -6,7 +6,8 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, Iterator, List, Mapping, Optional, Protocol
+from pathlib import PurePosixPath
+from typing import Iterator, List, Mapping, Optional, Protocol
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -15,6 +16,7 @@ from ..manifest_guidance import (
     is_recognized_unreadable_name,
     is_vendored_relative_path,
 )
+from ..parsers.registry import EcosystemRegistry
 from .models import RepositoryManifestListing, RepositoryRef
 
 logger = logging.getLogger(__name__)
@@ -247,7 +249,6 @@ class GitHubOrgClient:
     def list_manifest_paths(
         self,
         repo: RepositoryRef,
-        supported_names: Iterable[str],
     ) -> RepositoryManifestListing:
         """List a repository's manifests, split into what we read and what we don't.
 
@@ -260,9 +261,15 @@ class GitHubOrgClient:
         classify it would multiply the scanner's retained memory by the size of
         the largest monorepo in the account.
 
+        The readable half is decided by
+        :meth:`EcosystemRegistry.match_ecosystem_by_path` — the same matchers
+        that decide what ``analyze`` parses. It used to be a tuple of exact
+        file names maintained beside the registry, which is why no org scan
+        ever fetched a ``.csproj``: NuGet's primary manifest is registered as
+        an extension, and an exact-name list cannot hold one (#265).
+
         Args:
             repo: The repository to list.
-            supported_names: Manifest file names the parsers read.
 
         Returns:
             The supported and recognized-but-unreadable paths, each sorted.
@@ -285,7 +292,6 @@ class GitHubOrgClient:
         if not isinstance(raw_items, list):
             return RepositoryManifestListing(supported=[], unreadable=[])
 
-        supported_lookup = {name.lower() for name in supported_names}
         supported: List[str] = []
         unreadable: List[str] = []
         for item in raw_items:
@@ -296,7 +302,8 @@ class GitHubOrgClient:
             if item_type != "blob" or not isinstance(path, str):
                 continue
             leaf = path.rsplit("/", 1)[-1]
-            if leaf.lower() in supported_lookup:
+            ecosystem = EcosystemRegistry.match_ecosystem_by_path(PurePosixPath(path))
+            if ecosystem is not None:
                 supported.append(path)
             elif is_vendored_relative_path(path):
                 # Committed installed dependencies. Without this a repo that

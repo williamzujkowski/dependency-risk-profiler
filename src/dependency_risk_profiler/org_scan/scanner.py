@@ -39,27 +39,18 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_MANIFEST_NAMES = (
-    "requirements.txt",
-    "Pipfile.lock",
-    "pyproject.toml",
-    "package-lock.json",
-    "go.mod",
-    "Cargo.toml",
-    "Gemfile.lock",
-    "composer.lock",
-    "packages.lock.json",
-    "pom.xml",
-    # Gradle scripts are fetched one file at a time, so the version catalog
-    # beside them is out of reach and catalog-declared versions come back
-    # unmanaged. That is the honest answer rather than a reason to skip the
-    # repository: the dependency set, the advisories and every registry signal
-    # are still measured, and only version drift is reported as unmeasured
-    # (#101).
-    "build.gradle",
-    "build.gradle.kts",
-)
-
+# There is no list of supported manifest names here any more. There was one —
+# a tuple of thirteen exact file names — and it disagreed with the parser
+# registry it was supposed to mirror: the registry expresses NuGet's primary
+# manifest as an extension matcher (``*.csproj``), which an exact-name tuple
+# cannot hold. So no org scan ever fetched a ``.csproj``, and after #262 every
+# .NET repository was reported as ``coverage: no_manifests`` — "the tree listed
+# and holds no manifest this tool recognizes" — about a repository holding a
+# manifest ``analyze`` reads fine (#265).
+#
+# The fix is not a second list kept in sync by a test. It is asking the
+# registry, which is what ``GitHubOrgClient.list_manifest_paths`` now does via
+# ``EcosystemRegistry.match_ecosystem_by_path``.
 
 ProgressCallback = Callable[[str], None]
 RepositoryLister = Callable[[str, bool, Optional[int]], List[RepositoryRef]]
@@ -96,7 +87,6 @@ class GitHubDiscoveryClient(Protocol):
     def list_manifest_paths(
         self,
         repo: RepositoryRef,
-        supported_names: Iterable[str],
     ) -> RepositoryManifestListing:
         """List a repository's manifests, split into readable and unreadable."""
         raise NotImplementedError
@@ -115,7 +105,12 @@ class OrgScanOptions:
     repository_lister: Optional[RepositoryLister] = None
     include_archived: bool = False
     max_repos: Optional[int] = None
-    manifest_globs: Tuple[str, ...] = SUPPORTED_MANIFEST_NAMES
+    # A user-supplied narrowing of what gets scored, or None for "everything
+    # the registry recognizes". It used to default to the scanner's own copy of
+    # the supported names, which made the default run look like a filter and
+    # meant deleting that copy needed a real default rather than a synonym for
+    # "no filter" (#265).
+    manifest_globs: Optional[Tuple[str, ...]] = None
     concurrency: int = 8
 
 
@@ -271,7 +266,7 @@ class OrgScanRunner:
             The fetched manifests and the recognized-but-unreadable ones. The
             second list is never fetched, so it adds no requests.
         """
-        listing = self.github_client.list_manifest_paths(repo, SUPPORTED_MANIFEST_NAMES)
+        listing = self.github_client.list_manifest_paths(repo)
         selected_paths = [
             path
             for path in listing.supported
@@ -777,7 +772,15 @@ class OrgScanRunner:
     def _matches_manifest_globs(
         self, manifest_path: str, options: OrgScanOptions
     ) -> bool:
-        """Return whether a manifest path matches user-selected globs."""
+        """Return whether a manifest path matches user-selected globs.
+
+        No globs means no narrowing: everything the registry recognized is
+        scored. ``--manifest-glob`` subtracts from that set and never adds to
+        it, because a glob the registry has no parser for could only produce a
+        fetch nobody can read.
+        """
+        if options.manifest_globs is None:
+            return True
         for pattern in options.manifest_globs:
             if fnmatch.fnmatch(manifest_path, pattern) or fnmatch.fnmatch(
                 Path(manifest_path).name, pattern

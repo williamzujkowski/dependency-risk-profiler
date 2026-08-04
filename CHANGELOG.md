@@ -548,6 +548,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`scan-org` never fetched a `.csproj`, so every .NET repository in an
+  account was reported as holding no dependency manifests at all.** The org
+  scanner decided what to fetch from `SUPPORTED_MANIFEST_NAMES`, a tuple of
+  thirteen exact file names kept beside the parser registry it was meant to
+  mirror. The registry expresses NuGet's primary manifest as an *extension*
+  matcher, `*.csproj`, and an exact-name tuple has no way to hold one. So the
+  file was never matched, never fetched, and never scored, while `analyze` read
+  the same file without complaint.
+
+  After #262 gave every repository a coverage state, that silence acquired a
+  name — the wrong one. A .NET project came back as `no_manifests`, which
+  #262 defines as "the tree listed and holds no manifest this tool recognizes".
+  That is a stronger and falser claim than the `unreadable` state the same
+  release added: `unreadable` says "I saw something I could not read";
+  `no_manifests` says there was nothing there.
+
+  Measured before and after on real public accounts, counting every GitHub
+  request the discovery pass made:
+
+  | account | tree listings | manifest fetches | coverage |
+  |---|---|---|---|
+  | `ghostvectoracademy` before | 1 | 0 | `no_manifests` |
+  | `ghostvectoracademy` after | 1 | 1 | `read` (5 dependencies) |
+  | `virtualglobebook` before | 2 | 0 | `unreadable` |
+  | `virtualglobebook` after | 2 | 42 | `partially_read` |
+
+  Tree listings are unchanged, which is the claim worth checking: matching is
+  done over the recursive tree the scan already paid for, so the only new
+  requests are fetches of manifests that are really there.
+  `virtualglobebook/OpenGlobe` is a 42-project solution that also carries three
+  `.vbproj` files the tool does not read, so `partially_read` is the honest
+  answer for it and `unreadable` — its state before, when the only NuGet files
+  the scan could see were the three it cannot read — was not.
+
+  **The fix is not a second list, and not a test asserting two lists agree.**
+  `SUPPORTED_MANIFEST_NAMES` is deleted. `GitHubOrgClient.list_manifest_paths`
+  now asks `EcosystemRegistry.match_ecosystem_by_path()`, which runs the same
+  matchers `detect_ecosystem` runs for a local file, minus the ones that need
+  bytes. Two lists is what produced this defect, and a test that they agree
+  would still leave two lists.
+
+  Deriving a glob list from the registry's published `get_ecosystem_details()`
+  labels would have been worse than the tuple. That API renders npm's second
+  matcher as `File extension: .json` and Python's as `File extension: .txt`,
+  and drops the qualifying function that restricts them to `package-lock` and
+  `requirements` — so a scan built from those labels would fetch every JSON and
+  text file in every repository in the account. The registry has to *decide*;
+  it cannot be asked for a list to copy.
+
+  No cap on a large solution. A cap that stops after N projects reports a
+  prefix while claiming `coverage: read`, which is #262 rebuilt; `OpenGlobe`'s
+  42 fetches are 42 requests out of an authenticated hourly budget of 5000, and
+  an operator who wants less can say so with `--manifest-glob`. That option now
+  defaults to no narrowing at all rather than to the deleted tuple, so it only
+  ever subtracts from what the registry recognizes.
+
 - **`scan-org` counted a repository it could not read as a repository with
   nothing in it.** The tree listing was filtered against the manifest names the
   parsers accept *before* anything was fetched, so a repository whose only

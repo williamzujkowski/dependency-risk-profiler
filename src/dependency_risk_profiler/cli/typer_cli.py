@@ -1892,14 +1892,17 @@ def _vulnerability_options(config: Config, token: str) -> VulnerabilityOptions:
     )
 
 
-def _manifest_globs(manifest_glob: Optional[List[str]]) -> Tuple[str, ...]:
-    """Resolve user-provided manifest globs or the built-in defaults."""
+def _manifest_globs(manifest_glob: Optional[List[str]]) -> Optional[Tuple[str, ...]]:
+    """Resolve the user's manifest globs, or None when they gave none.
+
+    None means "no narrowing", not "the built-in list". This used to return the
+    scanner's hand-written copy of the supported manifest names, which was the
+    same list that could not express ``*.csproj`` and so hid every .NET
+    repository from every org scan (#265).
+    """
     if manifest_glob:
         return tuple(manifest_glob)
-
-    from ..org_scan.scanner import SUPPORTED_MANIFEST_NAMES
-
-    return SUPPORTED_MANIFEST_NAMES
+    return None
 
 
 def _repository_lister(

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Protocol, cast
 
 import requests
+from org_tree_fixture import tree_client
 from typer.testing import CliRunner
 
 from dependency_risk_profiler.cli.typer_cli import app
@@ -138,28 +139,17 @@ class FixtureGitHubClient(GitHubDiscoveryClient):
     def list_manifest_paths(
         self,
         repo: RepositoryRef,
-        supported_names: Iterable[str],
     ) -> RepositoryManifestListing:
-        """Split fixture manifest paths the way the real client does.
+        """Split fixture manifest paths through the production classifier.
 
-        The classification is the real one — ``is_recognized_unreadable_name``
-        and the vendored-directory table — so a fixture repository holding only
-        a ``package.json`` behaves here exactly as it does against GitHub.
+        Delegated to a real ``GitHubOrgClient`` over a canned git tree rather
+        than reimplemented here: a fixture that classifies its own trees agrees
+        with whatever the scanner does, including when the scanner is wrong
+        (#265).
         """
-        supported_lookup = {name.lower() for name in supported_names}
-        supported: List[str] = []
-        unreadable: List[str] = []
-        for path in self.manifests.get(repo.full_name, {}):
-            leaf = path.rsplit("/", 1)[-1]
-            if leaf.lower() in supported_lookup:
-                supported.append(path)
-            elif is_vendored_relative_path(path):
-                continue
-            elif is_recognized_unreadable_name(leaf):
-                unreadable.append(path)
-        return RepositoryManifestListing(
-            supported=sorted(supported), unreadable=sorted(unreadable)
-        )
+        return tree_client(
+            {name: list(tree) for name, tree in self.manifests.items()}
+        ).list_manifest_paths(repo)
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return fixture manifest content."""

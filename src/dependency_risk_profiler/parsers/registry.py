@@ -2,7 +2,7 @@
 
 import logging
 import re
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple, Type
 
 from .base import BaseParser
@@ -120,25 +120,17 @@ class EcosystemRegistry:
         Returns:
             The ecosystem name, or None if no ecosystem matches.
         """
-        file_name = file_path.name.lower()
-        file_ext = file_path.suffix.lower()
-
         # Try to match each ecosystem's file patterns
         for ecosystem, matchers in cls._file_matchers.items():
             for matcher_type, pattern, matcher_fn in matchers:
                 match = False
 
-                # Match based on file name
-                if matcher_type == "filename" and isinstance(pattern, str):
-                    match = file_name == pattern.lower()
-
-                # Match based on file extension
-                elif matcher_type == "extension" and isinstance(pattern, str):
-                    match = file_ext == pattern.lower()
-
-                    # Apply additional matcher function if provided
-                    if match and matcher_fn:
-                        match = matcher_fn(str(file_path).lower())
+                # Match on the path alone (file name / extension). Shared with
+                # `match_ecosystem_by_path` so the two answers cannot diverge.
+                if matcher_type in {"filename", "extension"}:
+                    match = cls._path_matcher_hits(
+                        matcher_type, pattern, matcher_fn, file_path
+                    )
 
                 # Match based on file content pattern
                 elif matcher_type == "content" and isinstance(pattern, Pattern):
@@ -163,6 +155,85 @@ class EcosystemRegistry:
                     return ecosystem
 
         return None
+
+    @classmethod
+    def match_ecosystem_by_path(cls, file_path: PurePath) -> Optional[str]:
+        """Detect the ecosystem for a path, from the path alone.
+
+        The name-and-extension half of :meth:`detect_ecosystem`, and literally
+        the same matchers: both run :meth:`_path_matcher_hits` over
+        ``_file_matchers`` in registration order, so a caller that has bytes
+        and one that has only a name cannot disagree about what a file is.
+
+        This exists because an org scan holds a *remote* git tree. It has file
+        names and no bytes, so the content matchers cannot run and the custom
+        matchers must not — a custom matcher is handed a ``Path`` and may go to
+        the filesystem, which for a repository-relative name would resolve
+        against the operator's working directory. Skipping them here is
+        conservative in the safe direction: a path this returns an ecosystem
+        for is one ``detect_ecosystem`` also accepts.
+
+        It replaced a hand-written tuple of exact file names in the org
+        scanner. That tuple had no ``*.csproj`` entry, because the registry
+        expresses NuGet's primary manifest as an extension matcher and a
+        second list has no way to know that — so every .NET repository in every
+        org scan was reported as holding no manifests at all (#265). A test
+        asserting the two lists agree would have caught it, and would still
+        have left two lists.
+
+        Args:
+            file_path: The path to classify. Never opened, never stat-ed, and
+                need not exist.
+
+        Returns:
+            The ecosystem name, or None when no name-based matcher accepts it.
+        """
+        cls._ensure_parsers_registered()
+        for ecosystem, matchers in cls._file_matchers.items():
+            for matcher_type, pattern, matcher_fn in matchers:
+                if matcher_type not in {"filename", "extension"}:
+                    continue
+                if cls._path_matcher_hits(matcher_type, pattern, matcher_fn, file_path):
+                    return ecosystem
+        return None
+
+    @classmethod
+    def _path_matcher_hits(
+        cls,
+        matcher_type: str,
+        pattern: object,
+        matcher_fn: Optional[Callable],
+        file_path: PurePath,
+    ) -> bool:
+        """Return whether one name-or-extension matcher accepts a path.
+
+        Opens nothing. ``matcher_fn`` on an extension matcher is what keeps
+        npm's ``.json`` matcher from claiming every JSON file in a repository,
+        so it is applied here rather than dropped — dropping it is what makes a
+        derived pattern list dangerous.
+        """
+        if not isinstance(pattern, str):
+            return False
+        if matcher_type == "filename":
+            return file_path.name.lower() == pattern.lower()
+        if matcher_type != "extension":
+            return False
+        if file_path.suffix.lower() != pattern.lower():
+            return False
+        if matcher_fn is None:
+            return True
+        return bool(matcher_fn(str(file_path).lower()))
+
+    @classmethod
+    def _ensure_parsers_registered(cls) -> None:
+        """Register the built-in parsers if nothing has yet.
+
+        Without this an early caller gets a confident "no ecosystem matches"
+        from an empty registry, which is the reassuring answer and the wrong
+        one. ``BaseParser.get_parser_for_file`` has always done the same thing.
+        """
+        if not cls._parsers:
+            BaseParser._initialize_registry()
 
     @classmethod
     def get_available_ecosystems(cls) -> List[str]:
