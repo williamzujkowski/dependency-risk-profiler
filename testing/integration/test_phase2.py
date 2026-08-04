@@ -7,11 +7,11 @@ import sys
 
 # Add the parent directory to the path to make imports work
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from dependency_risk_profiler.analyzers.common import clone_repo
 from dependency_risk_profiler.models import DependencyMetadata, SecurityMetrics
 from dependency_risk_profiler.scorecard.branch_protection import check_branch_protection
 from dependency_risk_profiler.scorecard.signed_commits import check_signed_commits
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.utils import clone_repo
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

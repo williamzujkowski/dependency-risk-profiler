@@ -999,45 +999,16 @@ def analyze(
                             )
 
                         except ImportError as e:
+                            # aiohttp and httpx are hard dependencies, so this
+                            # only fires on a broken install. The sync
+                            # aggregator used to be retried here as a
+                            # "fallback", but it read ``api_keys``, which is
+                            # bound after the import that just failed - so the
+                            # fallback raised UnboundLocalError instead of
+                            # falling back (#82).
                             logger.warning(
                                 "Async vulnerability aggregation not " f"available: {e}"
                             )
-                            # Fall back to synchronous implementation
-                            try:
-                                from ..vulnerabilities.aggregator import (
-                                    aggregate_vulnerability_data,
-                                )
-
-                                # Process each dependency
-                                for name, dep in dependencies.items():
-                                    try:
-                                        logger.debug(
-                                            "Checking vulnerability data for " f"{name}"
-                                        )
-                                        dependencies[name], vulns = (
-                                            aggregate_vulnerability_data(
-                                                dep,
-                                                api_keys,
-                                                vuln_config.get(
-                                                    "minimum_severity_for_scoring",
-                                                    "LOW",
-                                                ),
-                                            )
-                                        )
-                                        logger.debug(
-                                            "Found "
-                                            f"{len(vulns)} vulnerabilities for "
-                                            f"{name}"
-                                        )
-                                    except Exception as e:
-                                        logger.warning(
-                                            "Error aggregating vulnerability "
-                                            f"data for {name}: {e}"
-                                        )
-                            except ImportError as e:
-                                logger.warning(
-                                    f"Vulnerability aggregation not available: {e}"
-                                )
 
                 except ImportError as e:
                     logger.warning(f"Enhanced analyzers not available: {e}")

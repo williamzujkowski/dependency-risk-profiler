@@ -11,7 +11,6 @@ from .models import (
 )
 from .supply_chain import (
     analyze_historical_trends,
-    analyze_supply_chain_risk,
     generate_dependency_graph,
     generate_trend_visualization,
     save_historical_profile,
@@ -26,7 +25,6 @@ __all__ = [
     "DependencyRiskScore",
     "ProjectRiskProfile",
     "RiskLevel",
-    "analyze_supply_chain_risk",
     "generate_dependency_graph",
     "save_historical_profile",
     "analyze_historical_trends",

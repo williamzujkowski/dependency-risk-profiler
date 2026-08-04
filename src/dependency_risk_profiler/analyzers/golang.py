@@ -14,8 +14,8 @@ from ..release_dates import (
     record_source_repository,
 )
 from ..transitive.analyzer_enhanced import record_transitive_source
+from ..utils import cloned_repo, fetch_json, fetch_url
 from .base import BaseAnalyzer
-from .common import cloned_repo, fetch_json, fetch_url
 
 logger = logging.getLogger(__name__)
 
