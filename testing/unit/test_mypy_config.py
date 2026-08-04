@@ -40,8 +40,10 @@ MAX_ERRORS_PER_EXEMPT_MODULE: Dict[str, int] = {
     "analyzers": 3,
     "cli": 22,
     "config": 77,
-    "parsers": 8,
-    "scorecard": 45,
+    # 9, not 8: #148 landed `parsers/nuget_registry.py:557`, an `arg-type`
+    # passing `object` to `split_authors(str | None)`. Recorded as the baseline
+    # because it predates this ratchet, not because it is acceptable.
+    "parsers": 9,
     "vulnerabilities": 16,
 }
 

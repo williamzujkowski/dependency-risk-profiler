@@ -4,7 +4,7 @@ import logging
 import subprocess  # nosec B404
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata
 
@@ -69,7 +69,7 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
             )
 
             if earlier == 0:
-                trend = 0  # No earlier activity to compare
+                trend = 0.0  # No earlier activity to compare
             else:
                 trend = (recent - earlier) / earlier
 
@@ -237,7 +237,19 @@ def analyze_release_cadence(
     return result
 
 
-def analyze_issue_activity(repo_path: str) -> Dict[str, float]:
+class IssueActivity(TypedDict, total=False):
+    """Repository-local signals that issues are actively triaged.
+
+    Every key is optional: when the analysis raises, callers must still be able
+    to tell "not checked" apart from "checked and absent".
+    """
+
+    has_issue_templates: bool
+    has_codeowners: bool
+    has_maintainership_info: bool
+
+
+def analyze_issue_activity(repo_path: str) -> IssueActivity:
     """Analyze issue activity to determine project responsiveness.
 
     Args:
@@ -246,7 +258,7 @@ def analyze_issue_activity(repo_path: str) -> Dict[str, float]:
     Returns:
         Dictionary with issue activity metrics.
     """
-    result = {}
+    result: IssueActivity = {}
 
     # This would typically require API access to GitHub/GitLab/etc.
     # For a complete implementation, you would need to use the GitHub API
@@ -301,7 +313,7 @@ def analyze_issue_activity(repo_path: str) -> Dict[str, float]:
 def calculate_maintained_score(
     commit_data: Dict[str, float],
     release_data: Dict[str, float],
-    issue_data: Dict[str, float],
+    issue_data: IssueActivity,
 ) -> float:
     """Calculate an overall maintained score from various metrics.
 

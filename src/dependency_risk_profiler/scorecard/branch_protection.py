@@ -4,14 +4,38 @@ import logging
 import re
 import subprocess  # nosec B404
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
 
 logger = logging.getLogger(__name__)
 
 
-def check_github_branch_protection_config(repo_dir: str) -> Dict[str, bool]:
+class GitHubBranchProtection(TypedDict):
+    """Branch protection declared in a repository's GitHub configuration."""
+
+    has_branch_protection: bool
+    protection_type: Optional[str]
+    protection_details: List[str]
+
+
+class BranchProtectionIndicators(TypedDict):
+    """Indirect signals that a repository protects its branches."""
+
+    has_protected_branches: bool
+    protected_branches: List[str]
+    has_code_owners: bool
+    has_codeql: bool
+
+
+class PullRequestPatterns(TypedDict):
+    """Evidence that changes land through pull requests."""
+
+    uses_pull_requests: bool
+    has_pull_request_template: bool
+
+
+def check_github_branch_protection_config(repo_dir: str) -> GitHubBranchProtection:
     """Check for GitHub branch protection configuration.
 
     Args:
@@ -20,7 +44,7 @@ def check_github_branch_protection_config(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with branch protection configuration status.
     """
-    result = {
+    result: GitHubBranchProtection = {
         "has_branch_protection": False,
         "protection_type": None,
         "protection_details": [],
@@ -99,7 +123,9 @@ def check_github_branch_protection_config(repo_dir: str) -> Dict[str, bool]:
     return result
 
 
-def check_common_branch_protection_indicators(repo_dir: str) -> Dict[str, bool]:
+def check_common_branch_protection_indicators(
+    repo_dir: str,
+) -> BranchProtectionIndicators:
     """Check for common indicators of branch protection.
 
     Args:
@@ -108,7 +134,7 @@ def check_common_branch_protection_indicators(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with branch protection indicators.
     """
-    result = {
+    result: BranchProtectionIndicators = {
         "has_protected_branches": False,
         "protected_branches": [],
         "has_code_owners": False,
@@ -173,7 +199,7 @@ def check_common_branch_protection_indicators(repo_dir: str) -> Dict[str, bool]:
     return result
 
 
-def check_pull_request_patterns(repo_dir: str) -> Dict[str, bool]:
+def check_pull_request_patterns(repo_dir: str) -> PullRequestPatterns:
     """Check for pull request patterns that indicate branch protection.
 
     Args:
@@ -182,7 +208,7 @@ def check_pull_request_patterns(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with pull request pattern analysis results.
     """
-    result = {
+    result: PullRequestPatterns = {
         "uses_pull_requests": False,
         "has_pull_request_template": False,
     }
@@ -211,9 +237,9 @@ def check_pull_request_patterns(repo_dir: str) -> Dict[str, bool]:
 
 
 def calculate_branch_protection_score(
-    github_protection: Dict[str, bool],
-    protection_indicators: Dict[str, bool],
-    pr_patterns: Dict[str, bool],
+    github_protection: GitHubBranchProtection,
+    protection_indicators: BranchProtectionIndicators,
+    pr_patterns: PullRequestPatterns,
 ) -> float:
     """Calculate an overall branch protection score.
 
@@ -259,9 +285,9 @@ def calculate_branch_protection_score(
 
 
 def identify_branch_protection_issues(
-    github_protection: Dict[str, bool],
-    protection_indicators: Dict[str, bool],
-    pr_patterns: Dict[str, bool],
+    github_protection: GitHubBranchProtection,
+    protection_indicators: BranchProtectionIndicators,
+    pr_patterns: PullRequestPatterns,
 ) -> List[str]:
     """Identify issues with branch protection configuration.
 
@@ -357,12 +383,11 @@ def check_branch_protection(
             )
 
             # Store results in additional info
-            protection_info = {}
+            protection_info: Dict[str, str] = {}
 
-            if github_protection["has_branch_protection"]:
-                protection_info["protection_type"] = github_protection[
-                    "protection_type"
-                ]
+            protection_type = github_protection["protection_type"]
+            if github_protection["has_branch_protection"] and protection_type:
+                protection_info["protection_type"] = protection_type
 
             if protection_indicators["has_protected_branches"]:
                 protection_info["protected_branches"] = str(

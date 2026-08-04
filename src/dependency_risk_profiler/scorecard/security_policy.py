@@ -3,14 +3,54 @@
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
 
 logger = logging.getLogger(__name__)
 
 
-def check_security_file_existence(repo_dir: str) -> Dict[str, bool]:
+class _SecurityFileLocation(TypedDict, total=False):
+    """Where the security policy lives, once one has been found."""
+
+    security_file_path: str
+
+
+class SecurityFileExistence(_SecurityFileLocation):
+    """Whether a repository ships a security policy file."""
+
+    has_security_file: bool
+
+
+class SecurityPolicyContent(TypedDict):
+    """What a security policy file actually covers."""
+
+    has_vulnerability_reporting: bool
+    has_supported_versions: bool
+    has_security_update_process: bool
+    has_private_reporting: bool
+    has_pgp_key: bool
+    policy_quality_score: float
+
+
+class _SecurityIndicatorDetails(TypedDict, total=False):
+    """Detail keys recorded only when the corresponding signal is present."""
+
+    security_workflow_count: int
+    security_workflows: List[str]
+    security_tool_count: int
+    security_tools: List[str]
+
+
+class OtherSecurityIndicators(_SecurityIndicatorDetails):
+    """Security signals outside the policy file itself."""
+
+    has_security_workflows: bool
+    has_security_tools: bool
+    has_github_secrets_config: bool
+
+
+def check_security_file_existence(repo_dir: str) -> SecurityFileExistence:
     """Check for the existence of security policy files in a repository.
 
     Args:
@@ -19,7 +59,7 @@ def check_security_file_existence(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with results of security file checks.
     """
-    result = {}
+    result: SecurityFileExistence = {"has_security_file": False}
 
     try:
         repo_path = Path(repo_dir)
@@ -61,7 +101,7 @@ def check_security_file_existence(repo_dir: str) -> Dict[str, bool]:
     return result
 
 
-def analyze_security_file_content(file_path: str) -> Dict[str, bool]:
+def analyze_security_file_content(file_path: str) -> SecurityPolicyContent:
     """Analyze the content of a security policy file.
 
     Args:
@@ -70,7 +110,7 @@ def analyze_security_file_content(file_path: str) -> Dict[str, bool]:
     Returns:
         Dictionary with security policy content analysis results.
     """
-    result = {
+    result: SecurityPolicyContent = {
         "has_vulnerability_reporting": False,
         "has_supported_versions": False,
         "has_security_update_process": False,
@@ -163,7 +203,7 @@ def analyze_security_file_content(file_path: str) -> Dict[str, bool]:
     return result
 
 
-def check_other_security_indicators(repo_dir: str) -> Dict[str, bool]:
+def check_other_security_indicators(repo_dir: str) -> OtherSecurityIndicators:
     """Check for other security indicators in the repository.
 
     Args:
@@ -172,7 +212,11 @@ def check_other_security_indicators(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with other security indicator check results.
     """
-    result = {}
+    result: OtherSecurityIndicators = {
+        "has_security_workflows": False,
+        "has_security_tools": False,
+        "has_github_secrets_config": False,
+    }
 
     try:
         repo_path = Path(repo_dir)
@@ -245,9 +289,9 @@ def check_other_security_indicators(repo_dir: str) -> Dict[str, bool]:
 
 
 def calculate_security_policy_score(
-    file_existence: Dict[str, bool],
-    file_content: Optional[Dict[str, bool]] = None,
-    other_indicators: Optional[Dict[str, bool]] = None,
+    file_existence: SecurityFileExistence,
+    file_content: Optional[SecurityPolicyContent] = None,
+    other_indicators: Optional[OtherSecurityIndicators] = None,
 ) -> float:
     """Calculate an overall security policy score.
 
@@ -293,7 +337,8 @@ def calculate_security_policy_score(
 
 
 def identify_security_policy_issues(
-    file_existence: Dict[str, bool], file_content: Optional[Dict[str, bool]] = None
+    file_existence: SecurityFileExistence,
+    file_content: Optional[SecurityPolicyContent] = None,
 ) -> List[str]:
     """Identify issues with the security policy.
 

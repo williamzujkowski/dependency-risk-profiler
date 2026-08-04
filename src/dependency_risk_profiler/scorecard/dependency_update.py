@@ -3,14 +3,50 @@
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
 
 logger = logging.getLogger(__name__)
 
 
-def check_dependabot_configuration(repo_dir: str) -> Dict[str, bool]:
+class _WithConfigurationPath(TypedDict, total=False):
+    """Path to the config file, recorded only once one is found."""
+
+    configuration_path: str
+
+
+class DependabotConfiguration(_WithConfigurationPath):
+    """Dependabot setup discovered in a repository."""
+
+    has_dependabot: bool
+    configuration_type: Optional[str]
+    ecosystems_covered: List[str]
+
+
+class RenovateConfiguration(_WithConfigurationPath):
+    """Renovate setup discovered in a repository."""
+
+    has_renovate: bool
+    configuration_type: Optional[str]
+    package_managers: List[str]
+
+
+class PyUpConfiguration(_WithConfigurationPath):
+    """PyUp.io setup discovered in a repository."""
+
+    has_pyup: bool
+    configuration_type: Optional[str]
+
+
+class DependencyUpdateWorkflows(TypedDict):
+    """GitHub Actions workflows that look like they update dependencies."""
+
+    has_update_actions: bool
+    update_workflows: List[str]
+
+
+def check_dependabot_configuration(repo_dir: str) -> DependabotConfiguration:
     """Check for Dependabot configuration in a repository.
 
     Args:
@@ -19,7 +55,7 @@ def check_dependabot_configuration(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with results of Dependabot configuration checks.
     """
-    result = {
+    result: DependabotConfiguration = {
         "has_dependabot": False,
         "configuration_type": None,
         "ecosystems_covered": [],
@@ -59,7 +95,7 @@ def check_dependabot_configuration(repo_dir: str) -> Dict[str, bool]:
     return result
 
 
-def check_renovate_configuration(repo_dir: str) -> Dict[str, bool]:
+def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
     """Check for Renovate configuration in a repository.
 
     Args:
@@ -68,7 +104,7 @@ def check_renovate_configuration(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with results of Renovate configuration checks.
     """
-    result = {
+    result: RenovateConfiguration = {
         "has_renovate": False,
         "configuration_type": None,
         "package_managers": [],
@@ -120,7 +156,7 @@ def check_renovate_configuration(repo_dir: str) -> Dict[str, bool]:
     return result
 
 
-def check_pyup_configuration(repo_dir: str) -> Dict[str, bool]:
+def check_pyup_configuration(repo_dir: str) -> PyUpConfiguration:
     """Check for PyUp.io configuration in a repository.
 
     Args:
@@ -129,7 +165,7 @@ def check_pyup_configuration(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with results of PyUp.io configuration checks.
     """
-    result = {
+    result: PyUpConfiguration = {
         "has_pyup": False,
         "configuration_type": None,
     }
@@ -160,7 +196,9 @@ def check_pyup_configuration(repo_dir: str) -> Dict[str, bool]:
     return result
 
 
-def check_github_actions_dependency_updates(repo_dir: str) -> Dict[str, bool]:
+def check_github_actions_dependency_updates(
+    repo_dir: str,
+) -> DependencyUpdateWorkflows:
     """Check for GitHub Actions that update dependencies.
 
     Args:
@@ -169,7 +207,7 @@ def check_github_actions_dependency_updates(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with results of GitHub Actions checks.
     """
-    result = {
+    result: DependencyUpdateWorkflows = {
         "has_update_actions": False,
         "update_workflows": [],
     }
@@ -218,10 +256,10 @@ def check_github_actions_dependency_updates(repo_dir: str) -> Dict[str, bool]:
 
 
 def calculate_dependency_update_score(
-    dependabot_results: Dict[str, bool],
-    renovate_results: Dict[str, bool],
-    pyup_results: Dict[str, bool],
-    github_actions_results: Dict[str, bool],
+    dependabot_results: DependabotConfiguration,
+    renovate_results: RenovateConfiguration,
+    pyup_results: PyUpConfiguration,
+    github_actions_results: DependencyUpdateWorkflows,
 ) -> float:
     """Calculate an overall dependency update tools score.
 
@@ -274,10 +312,10 @@ def calculate_dependency_update_score(
 
 
 def identify_dependency_update_issues(
-    dependabot_results: Dict[str, bool],
-    renovate_results: Dict[str, bool],
-    pyup_results: Dict[str, bool],
-    github_actions_results: Dict[str, bool],
+    dependabot_results: DependabotConfiguration,
+    renovate_results: RenovateConfiguration,
+    pyup_results: PyUpConfiguration,
+    github_actions_results: DependencyUpdateWorkflows,
 ) -> List[str]:
     """Identify issues with dependency update tools.
 
