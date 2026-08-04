@@ -11,6 +11,7 @@ from ..release_dates import (
     parse_registry_timestamp,
     record_source_repository,
 )
+from ..signals import FieldSource, ProvenancedField
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -78,6 +79,10 @@ class RubyGemsAnalyzer(BaseAnalyzer):
                 owner_count = self._get_owner_count(name)
                 if owner_count is not None:
                     dep.maintainer_count = owner_count
+                    dep.record_field_source(
+                        ProvenancedField.MAINTAINER_COUNT,
+                        FieldSource.REGISTRY_METADATA,
+                    )
             except Exception as exc:
                 logger.error("Error analyzing Ruby gem %s: %s", name, exc)
 

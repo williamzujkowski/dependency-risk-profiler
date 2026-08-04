@@ -10,6 +10,7 @@ from ..release_dates import (
     newest_timestamp,
     record_source_repository,
 )
+from ..signals import FieldSource, ProvenancedField
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals, fetch_json
 
@@ -144,6 +145,9 @@ class PythonAnalyzer(BaseAnalyzer):
         maintainer_count = _maintainer_count(pypi_data)
         if maintainer_count is not None:
             dep.maintainer_count = maintainer_count
+            dep.record_field_source(
+                ProvenancedField.MAINTAINER_COUNT, FieldSource.REGISTRY_METADATA
+            )
 
         # A yanked release is PyPI's explicit "do not use this" marker, the
         # same field RubyGems and crates.io publish and this adapter never read.

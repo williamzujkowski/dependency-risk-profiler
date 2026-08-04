@@ -65,6 +65,7 @@ SHARED_KEYS = {
     "transitive_dependency_count",
     "advisories",
     "signals",
+    "field_sources",
     "unknown_signals",
     "measured_signal_count",
     "total_signal_count",

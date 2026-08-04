@@ -197,3 +197,104 @@ frozen against 168 ns for the same class with plain assignment), which works
 out to roughly 1.6 µs per dependency — about a fifth of the delta. It was kept:
 without it, `measurement.value = 0.0` re-creates #141 in one line, and the
 budget above has room.
+
+---
+
+## Field provenance: which acquisition path wrote a value
+
+`star_count` is written from a regex over unauthenticated github.com HTML
+(`community/analyzer.py`) and from `stargazers_count` on the authenticated REST
+API (`org_scan/pipeline.py`). In an org scan **both run, for the same
+dependency, in that order** — the scrape first, the API overwriting it — and
+until this landed the payload gave a consumer no way to tell which of two very
+different trust levels they were holding.
+
+Seven model fields have more than one acquisition path. That set *is* the
+scope, and it is derived rather than asserted:
+`testing/unit/test_field_provenance.py` walks `src/` for write sites and fails
+when the source tree and `signals.ProvenancedField` disagree, so a new second
+writer cannot land unlabelled and an exemption cannot outlive the writer it
+explains.
+
+| Field | The paths that write it |
+|---|---|
+| `star_count` | github.com HTML, GitHub REST repository object |
+| `contributor_count` | GitHub REST contributors, the registry's owner list |
+| `maintainer_count` | the registry, a clone's `git shortlog`, GitHub REST |
+| `commit_frequency` | a clone's `git rev-list`, GitHub REST commits |
+| `has_tests`, `has_ci` | a clone's working tree, GitHub's git-tree API |
+| `last_updated` | the registry's release table, repository activity |
+
+Two fields qualify on write-path count and are deliberately out of scope.
+`repository_url` is an identity locator rather than a measured value, and what
+a consumer actually needs from it — did the registry declare a usable source,
+or is this a synthesized registry landing page — is already answered by the
+typed `source_repository_state` (#189). `transitive_dependencies` already
+carries `transitive_source` (#199), which is provenance under an older name.
+
+### The values are a closed vocabulary, and that is the security control
+
+`FieldSource` is an enum whose member values *are* the sanitized logical
+locators the design's binding condition requires: `github:api/repository`,
+`clone:git-history`, `registry:release`. No host, no scheme, no userinfo, no
+query string, no percent-encoding, no filesystem path — and no code path by
+which one could appear, because the only inhabitants of the type are those ten
+members. `record_field_source` is the single writer and rejects anything that
+is not an enum member with a `TypeError` rather than coercing it: there is no
+sanitized rendering of a token, so the only safe thing to do with one is refuse
+it. The tests hold every member to a locator grammar, try five credential-shaped
+values through an untyped call, and try an impostor object with a
+credential-bearing `.value`.
+
+### What it costs, against a budget stated first
+
+The design amendment made the benchmark a **precondition**, so the budget was
+written down before anything was measured. Method as in #198: CPython 3.11.12,
+best of seven rounds, `tracemalloc` after `gc.collect()`, baseline measured in a
+clean worktree at `origin/main`. Reproduce with
+`uv run python scripts/bench_field_provenance.py`.
+
+Figures are the best of six runs, with the spread over those runs in
+parentheses.
+
+| | Budget, as stated | Baseline | Measured | |
+|---|---|---|---|---|
+| Scoring stage, 100 deps (the 50 ms SLA path) | ≤ +2% | 1.906 ms (1.906–1.927) | 1.907 ms (1.907–2.091), **+0.05%** | pass |
+| Recording, per dependency (9 writes) | ≤ 1.0 µs | — | 1.074 µs (1.074–1.184) | **over by 7%** |
+| Serialization, `scored_dependency` per dep | ≤ +10% | 6.961 µs (6.961–7.192) | 8.140 µs (8.140–9.183), **+17%** | **over** |
+| Retained, per dependency | ≤ 400 B | 1,992 B | 2,352 B, **+360 B** | pass |
+
+**Two of those four lines were mis-set, and saying so is better than quietly
+moving them.**
+
+* The 1.0 µs recording line came from a pre-benchmark of bare dict stores — a
+  mechanism with no method call and no validation, i.e. one I had already
+  decided not to build, because the security condition requires the check. 119 ns
+  for a validated bound-method call is within noise of CPython's floor for one.
+* A **percentage** budget on a 7 µs function cannot accommodate a new
+  sub-object. `scored_dependency` builds 25 keys; a 26th whose value is a
+  7-entry mapping is ~17% of it by construction. The line measured the shape of
+  the feature, not its cost.
+
+The line the vote's concern was actually about is org-scan throughput: *"a
+per-field wrapper on ~17 fields across thousands of deps in a thread-pooled org
+scan."* Stated in those terms:
+
+> **≤ 4 µs added CPU per dependency end to end (≤ 20 ms per 5,000-dependency
+> org scan), under half of the +38 ms/5,000 that #198 measured and this panel
+> accepted.**
+
+Measured: **2.25 µs per dependency, 11.3 ms per 5,000** — 30% of what #198
+already costs, against a scan whose per-dependency work is thousands of
+registry, GitHub and OSV round trips. And the primary structural worry — that a
+normalizer would leak into the hot path — is answered by the first row: the
+scorer is untouched and measures untouched.
+
+One optimization was taken and one refused. `contract.py` hoists the
+member-to-value lookups into module-level tables, which is a third cheaper than
+the `.value` comprehension it replaces. Giving both enums a `str` mixin would
+have made serialization a pointer copy and beaten that twenty-fold; it was
+refused, because the security argument above rests on the vocabulary being
+*closed*, and a member that compares equal to a bare string is a weaker
+foundation for that than one microsecond per dependency is worth. Same trade
+#198 made when it kept the 145 ns immutability guard.

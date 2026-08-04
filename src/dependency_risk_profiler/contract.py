@@ -31,6 +31,11 @@ What v2 fixes beyond the renames
   the scorer; v1 flattened it back to a bare ``null`` on the way out, which is
   indistinguishable from "the key exists and happens to be null". A consumer
   can now tell not only *that* a signal is missing but *why*.
+* **``field_sources`` says which acquisition path wrote a field that has more
+  than one.** ``star_count`` is written from an unauthenticated github.com HTML
+  regex scrape and from the authenticated REST API — both live in a single org
+  scan, in that order — into one unlabelled integer. Seven fields collapse two
+  or more trust levels this way; v2 labels them (#164 step 7).
 
 What v2 deletes
 ---------------
@@ -68,7 +73,7 @@ from .models import (
     LicenseInfo,
     SecurityMetrics,
 )
-from .signals import Measurement, MeasurementState
+from .signals import FieldSource, Measurement, MeasurementState, ProvenancedField
 
 #: The schema this module emits. Bump only for a breaking change to the shape.
 SCHEMA_VERSION = 2
@@ -384,6 +389,51 @@ def measurement_to_dict(measurement: Measurement) -> Dict[str, object]:
     }
 
 
+#: Member-to-value lookups, built once. ``Enum.value`` is a descriptor call,
+#: and this block is built per dependency across thousands of them in an org
+#: scan, so the lookup is hoisted out of the loop. Measured at a third of the
+#: cost of the ``.value`` comprehension it replaces; see ``docs/signals.md``.
+#:
+#: A ``str`` mixin on the enums would make this a pointer copy and beat both,
+#: and it was rejected: the design's security condition rests on the vocabulary
+#: being *closed*, and a member that compares equal to a bare string is a
+#: weaker foundation for that argument than one microsecond per dependency is
+#: worth.
+_FIELD_NAMES: Mapping[ProvenancedField, str] = {
+    field_name: field_name.value for field_name in ProvenancedField
+}
+_SOURCE_NAMES: Mapping[FieldSource, str] = {
+    source: source.value for source in FieldSource
+}
+
+
+def field_sources_to_dict(metadata: DependencyMetadata) -> Dict[str, str]:
+    """Serialize which acquisition path wrote each multiply-written field.
+
+    v2-only, and the reason the provenance work was worth doing at all: a
+    ``star_count`` regex-scraped out of github.com HTML and one read from the
+    authenticated REST API arrived in the same key with nothing to tell them
+    apart, and in an org scan *both* write it, in that order. Seven fields have
+    more than one acquisition path; see :class:`~.signals.ProvenancedField`.
+
+    Only fields something actually wrote appear. An absent key means nobody
+    recorded a source, which is distinct from a source of "unknown" — the same
+    rule the rest of this contract follows about not inventing measurements.
+
+    Args:
+        metadata: The dependency's metadata.
+
+    Returns:
+        Mapping of field name to its sanitized logical locator. Both sides are
+        closed vocabularies, so nothing here can carry a credential, a host, a
+        query string or a filesystem path.
+    """
+    return {
+        _FIELD_NAMES[field_name]: _SOURCE_NAMES[source]
+        for field_name, source in metadata.field_sources.items()
+    }
+
+
 def signals_to_dict(
     measurements: Mapping[str, Measurement],
 ) -> Dict[str, object]:
@@ -538,6 +588,11 @@ def scored_dependency(
         "transitive_dependency_count": len(metadata.transitive_dependencies),
         "advisories": advisories_to_dict(metadata.security_metrics),
         "signals": signals_to_dict(score.measurements),
+        # Which acquisition path wrote each field that has more than one (#164
+        # step 7). Sits beside ``signals`` because it answers the neighbouring
+        # question: ``signals`` says whether a value exists and why not, this
+        # says how much the value that does exist is worth.
+        "field_sources": field_sources_to_dict(metadata),
         "unknown_signals": list(score.unknown_signals),
         # ``unknown_signal_count`` is gone: it is ``len(unknown_signals)``.
         # These two are not, because they count the signals that entered the

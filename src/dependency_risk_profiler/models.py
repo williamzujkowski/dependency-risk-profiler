@@ -8,7 +8,9 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 from .signals import (
     SIGNAL_SOURCE_REPOSITORY,
     SOURCE_REPOSITORY_UNREADABLE,
+    FieldSource,
     Measurement,
+    ProvenancedField,
     SourceRepositoryState,
     unmeasured_reason_for,
 )
@@ -129,7 +131,55 @@ class DependencyMetadata:
     # nothing (#199).
     transitive_source: Optional[str] = None
 
+    # Which acquisition path last wrote each of the seven fields that have more
+    # than one (#164 step 7). Written only through ``record_field_source``,
+    # which is what keeps the values a closed vocabulary rather than free text.
+    # Empty means nobody recorded anything, which is honest: this mapping never
+    # claims a source for a field it did not see written.
+    field_sources: Dict[ProvenancedField, FieldSource] = field(default_factory=dict)
+
     additional_info: Dict[str, str] = field(default_factory=dict)
+
+    def record_field_source(
+        self, field_name: ProvenancedField, source: FieldSource
+    ) -> None:
+        """Record which acquisition path wrote one multiply-written field.
+
+        The only writer of :attr:`field_sources`, for the same reason
+        ``unmeasured_reason_for`` is the only classifier of unmeasured signals:
+        one enforcement point beats twenty-odd call sites each remembering the
+        rule. Last write wins, matching the fields themselves — the value and
+        its recorded source are set together, so they cannot disagree about who
+        won.
+
+        The ``isinstance`` checks are the runtime half of the design's binding
+        security condition. Types already forbid a string here, but mypy does
+        not run in production and an untyped caller (a plugin, a REPL, a test
+        fixture) would otherwise be one assignment away from putting an
+        authenticated URL or a clone path into a field documented as a
+        sanitized locator. Failing loudly is cheap; a leaked credential is not.
+
+        Args:
+            field_name: Which field was written.
+            source: Which acquisition path wrote it.
+
+        Raises:
+            TypeError: If either argument is not the enum member it claims to
+                be. Never coerced: a value that is not in the closed vocabulary
+                has no sanitized rendering, so there is nothing to record.
+        """
+        if not isinstance(field_name, ProvenancedField):
+            raise TypeError(
+                "field_name must be a ProvenancedField member, not "
+                f"{type(field_name).__name__}"
+            )
+        if not isinstance(source, FieldSource):
+            raise TypeError(
+                "source must be a FieldSource member, not "
+                f"{type(source).__name__}: field provenance is a closed "
+                "vocabulary of sanitized logical locators, never free text"
+            )
+        self.field_sources[field_name] = source
 
 
 @dataclass

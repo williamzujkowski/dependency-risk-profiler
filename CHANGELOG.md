@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Schema v2 carries `field_sources`: which acquisition path wrote each field
+  that has more than one.** `star_count` is written from a regex over
+  unauthenticated github.com HTML *and* from `stargazers_count` on the
+  authenticated REST API — in an org scan both run, for the same dependency, in
+  that order — into one unlabelled integer, so two very different trust levels
+  arrived indistinguishable. Seven fields collapse two or more paths this way:
+  `star_count`, `contributor_count`, `maintainer_count`, `commit_frequency`,
+  `has_tests`, `has_ci` and `last_updated`.
+
+  Sources are sanitized logical locators from a closed vocabulary —
+  `registry:release`, `clone:git-history`, `github:api/repository`,
+  `github:html` — and never carry a host, a URL, a query string, a token or a
+  filesystem path. A key is absent when nobody recorded a source, which is not
+  the same as a source of "unknown".
+
+  Additive: v2 gains a key and `--schema v1` output is unchanged, verified byte
+  for byte against the previous release rather than assumed. Scope is derived
+  rather than declared — `testing/unit/test_field_provenance.py` walks `src/`
+  for write sites and fails when the source tree and the enumerated set
+  disagree — and the cost was benchmarked against a budget stated first, with
+  the numbers and the two budget lines that were mis-set written up in
+  `docs/signals.md`.
+
 ### Changed
 
 - **BREAKING CHANGE: `analyze --output json` and `scan-org` now emit one

@@ -18,7 +18,11 @@ from dependency_risk_profiler.release_dates import (
     parse_registry_timestamp,
     record_source_repository,
 )
-from dependency_risk_profiler.signals import SourceRepositoryState
+from dependency_risk_profiler.signals import (
+    FieldSource,
+    ProvenancedField,
+    SourceRepositoryState,
+)
 
 REGISTRY_DATE = datetime(2015, 6, 2, tzinfo=timezone.utc)
 COMMIT_DATE = datetime(2026, 8, 3, tzinfo=timezone.utc)
@@ -34,10 +38,16 @@ def test_registry_date_wins_over_later_repository_activity() -> None:
     dep = _dependency()
 
     apply_registry_release_date(dep, REGISTRY_DATE)
-    apply_repository_activity_date(dep, COMMIT_DATE)
+    apply_repository_activity_date(
+        dep, COMMIT_DATE, source=FieldSource.REPOSITORY_CLONE_HISTORY
+    )
 
     assert dep.last_updated == REGISTRY_DATE
     assert dep.additional_info[RELEASE_DATE_SOURCE_KEY] == RELEASE_DATE_SOURCE_REGISTRY
+    # The typed record agrees with the legacy string one, and is more specific.
+    assert (
+        dep.field_sources[ProvenancedField.LAST_UPDATED] is FieldSource.REGISTRY_RELEASE
+    )
 
 
 def test_repository_activity_fills_a_registry_that_published_nothing() -> None:
@@ -45,11 +55,19 @@ def test_repository_activity_fills_a_registry_that_published_nothing() -> None:
     dep = _dependency()
 
     apply_registry_release_date(dep, None)
-    apply_repository_activity_date(dep, COMMIT_DATE)
+    apply_repository_activity_date(
+        dep, COMMIT_DATE, source=FieldSource.REPOSITORY_CLONE_HISTORY
+    )
 
     assert dep.last_updated == COMMIT_DATE
     assert (
         dep.additional_info[RELEASE_DATE_SOURCE_KEY] == RELEASE_DATE_SOURCE_REPOSITORY
+    )
+    # "repository" covers a clone's author-controlled commit date and the API's
+    # server-asserted push date. The typed record says which one this was.
+    assert (
+        dep.field_sources[ProvenancedField.LAST_UPDATED]
+        is FieldSource.REPOSITORY_CLONE_HISTORY
     )
 
 
@@ -58,20 +76,30 @@ def test_no_date_from_either_source_leaves_the_signal_unmeasured() -> None:
     dep = _dependency()
 
     apply_registry_release_date(dep, None)
-    apply_repository_activity_date(dep, None)
+    apply_repository_activity_date(
+        dep, None, source=FieldSource.REPOSITORY_CLONE_HISTORY
+    )
 
     assert dep.last_updated is None
     assert RELEASE_DATE_SOURCE_KEY not in dep.additional_info
+    # No date means no provenance either: a source recorded for a field nobody
+    # wrote is the same fabrication as a value nobody measured.
+    assert ProvenancedField.LAST_UPDATED not in dep.field_sources
 
 
 def test_repository_activity_can_be_refined_by_a_later_registry_read() -> None:
     """Order of calls must not matter: the registry answer is authoritative."""
     dep = _dependency()
 
-    apply_repository_activity_date(dep, COMMIT_DATE)
+    apply_repository_activity_date(
+        dep, COMMIT_DATE, source=FieldSource.REPOSITORY_CLONE_HISTORY
+    )
     apply_registry_release_date(dep, REGISTRY_DATE)
 
     assert dep.last_updated == REGISTRY_DATE
+    assert (
+        dep.field_sources[ProvenancedField.LAST_UPDATED] is FieldSource.REGISTRY_RELEASE
+    )
 
 
 def test_timestamps_parse_across_the_spellings_registries_publish() -> None:
