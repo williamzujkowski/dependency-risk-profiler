@@ -420,11 +420,13 @@ def _methodology_footer(report: OrgScanReport) -> str:
   <p>
     <b>How to read this.</b> Risk levels are heuristic signals, not verdicts.
     <b>Unknown</b> stays unknown — a dependency we couldn't measure is shown as
-    its own state, never rounded to low or high. Informational, withdrawn, and
-    low-confidence advisories are counted but <b>filtered out of the score</b>
-    (shown as "filtered"), so a single noisy advisory can't inflate a
-    dependency's risk. Blast radius counts direct occurrences across scanned
-    manifests.
+    its own state, never rounded to low or high. Advisories that don't affect
+    the installed version — along with informational, withdrawn, and
+    low-confidence ones — are <b>filtered out of the score</b> (shown as
+    "filtered"), so neither a patched-long-ago advisory nor a single noisy one
+    can inflate a dependency's risk. Where an advisory carries no version range
+    or the pin can't be parsed, it is counted and the reason recorded. Blast
+    radius counts direct occurrences across scanned manifests.
   </p>
   <p>
     <b>Known-vulnerable</b> is a separate axis from the risk level. The risk

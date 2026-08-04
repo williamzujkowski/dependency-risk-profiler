@@ -20,6 +20,13 @@ DEFAULT_CACHE_DIR = Path.home() / ".dependency_risk_profiler" / "vuln_cache"
 # Default cache expiry time in seconds (24 hours)
 DEFAULT_CACHE_EXPIRY = 24 * 60 * 60
 
+# Shape of a cached advisory record. Bump whenever normalization starts
+# emitting a field that scoring depends on, so an upgrade does not spend a
+# whole expiry window scoring against records that predate it. Version 2 adds
+# ``affected_versions``, without which every advisory reads as applying to
+# every installed version (#61).
+CACHE_SCHEMA_VERSION = 2
+
 
 class VulnerabilityCache:
     """Disk-based cache for vulnerability data."""
@@ -96,6 +103,13 @@ class VulnerabilityCache:
                 )
                 return None
 
+            if cache_data.get("schema_version") != CACHE_SCHEMA_VERSION:
+                logger.info(
+                    f"Discarding cache entry for {package_name} ({ecosystem}): "
+                    "written by an older advisory schema"
+                )
+                return None
+
             # Check if the cache is still valid
             timestamp = cache_data["timestamp"]
             if time.time() - timestamp > self.expiry:
@@ -138,6 +152,7 @@ class VulnerabilityCache:
                 "timestamp": time.time(),
                 "package": package_name,
                 "ecosystem": ecosystem,
+                "schema_version": CACHE_SCHEMA_VERSION,
             }
 
             with open(cache_path, "w", encoding="utf-8") as f:

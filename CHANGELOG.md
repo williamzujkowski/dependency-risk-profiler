@@ -113,6 +113,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Advisories are now matched against the installed version.** OSV is queried
+  by package name, and every advisory it returned was counted toward
+  `known_vulnerable` and scoring regardless of whether the installed version
+  was in its affected range — the `affected` block was fetched and then
+  discarded, so `affected_versions` was `None` on every advisory and no
+  version filtering existed at all. A pin of Django 4.2 was counted for 153
+  advisories including ones fixed in 1.3.4, 1.4.14, 2.0.3 and 4.0.4, and the
+  CRITICAL driving its `max_counted_severity` and `has_known_exploits` flag had
+  been fixed in 4.0.4, two minor releases earlier. Upgrading a package did not
+  change its reading, which inverted the point of the tool.
+
+  Affected ranges are now read from OSV's `affected[].ranges` event stream and
+  `affected[].versions` enumeration and from GitHub Advisory's
+  `vulnerableVersionRange`, and evaluated with **ecosystem-correct version
+  ordering** — PEP 440, SemVer, RubyGems, Maven and NuGet each get their own
+  comparator, because they order differently and a string or tuple comparison
+  would quietly reintroduce the bug (`"1.10" < "1.9"` lexically; Maven sorts
+  `1.0-alpha` below `1.0` but `1.0-foo` above it). Advisories ruled out carry
+  the new `does not affect installed version` filter reason. Entries belonging
+  to other packages in a multi-package advisory no longer bound this package's
+  version.
+
+  **Advisory counts drop sharply and `known_vulnerable` totals fall with
+  them**, so a scan diff across this version will show large reductions
+  without anything having changed upstream. On OWASP PyGoat: Django 4.2
+  153 → 43 counted, Pillow 9.4.0 76 → 18, urllib3 1.26.9 19 → 8 (max severity
+  CRITICAL → HIGH), cryptography 39.0.1 24 → 13. A fully patched pin now
+  reports `has_known_exploits: false` instead of CRITICAL.
+
+  Where applicability cannot be decided — no range in the advisory, no
+  installed version, or a pin the ecosystem cannot parse — the advisory is
+  still **counted**, and the reason is reported in the new
+  `applicability_unknown` / `applicability_unknown_reasons` fields rather than
+  being resolved by assumption in either direction (#74). The advisory disk
+  cache carries a schema version, so entries written before this change are
+  discarded on read instead of being scored for another day.
 - **Calendar-versioned packages are no longer scored as SemVer.** A leading
   four-digit year in a date shape (`certifi 2022.12.7`, `pytz 2020.1`,
   `tzdata`, Go `vYYYY.MM.DD` tags) is now detected before version distance is

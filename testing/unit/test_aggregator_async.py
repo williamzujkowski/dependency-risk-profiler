@@ -111,7 +111,11 @@ class TestAsyncVulnerabilitySources:
         # Assert
         assert vulnerabilities == expected_result
         mock_post.assert_called_once()
-        mock_normalize.assert_called_once_with(mock_response["vulns"])
+        # The package identity travels with the payload so a multi-package
+        # advisory cannot bound this package's version with another's ranges (#61).
+        mock_normalize.assert_called_once_with(
+            mock_response["vulns"], package_name, "npm"
+        )
 
     @async_test
     @patch(
