@@ -152,10 +152,18 @@ def run_pipdeptree(python_path: str) -> Optional[List[Dict]]:
             return None
 
         try:
-            return json.loads(result.stdout)
+            tree = json.loads(result.stdout)
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing pipdeptree output: {e}")
             return None
+
+        if not isinstance(tree, list):
+            logger.error(
+                "Unexpected pipdeptree output: expected a JSON array, got %s",
+                type(tree).__name__,
+            )
+            return None
+        return [node for node in tree if isinstance(node, dict)]
     except Exception as e:
         logger.error(f"Error running pipdeptree: {e}")
         return None
@@ -218,7 +226,7 @@ def analyze_python_transitive_dependencies(
                 return {}
 
             # Parse dependency tree
-            dependency_map = {}
+            dependency_map: Dict[str, Set[str]] = {}
             for package in dependency_tree:
                 pkg_name = package.get("package", {}).get("key", "").lower()
                 if not pkg_name:

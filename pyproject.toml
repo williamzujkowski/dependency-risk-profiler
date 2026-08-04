@@ -151,7 +151,9 @@ ignore_missing_imports = true
 module = ["pytest", "pytest.*", "_pytest.*"]
 follow_imports = "skip"
 
-# Ignore specific modules with too many type issues
+# Modules still awaiting type cleanup. Every entry here is a debt, not a policy:
+# testing/unit/test_mypy_config.py ratchets the per-module error counts down and
+# fails if any of them grows. Delete entries as modules are cleaned; do not add new ones.
 [[tool.mypy.overrides]]
 module = "dependency_risk_profiler.config"
 ignore_errors = true
@@ -161,19 +163,7 @@ module = "dependency_risk_profiler.vulnerabilities.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = "dependency_risk_profiler.transitive.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.supply_chain.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = "dependency_risk_profiler.scorecard.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.scoring.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
@@ -185,15 +175,7 @@ module = "dependency_risk_profiler.analyzers.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = "dependency_risk_profiler.community.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = "dependency_risk_profiler.cli.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.secure_release.*"
 ignore_errors = true
 
 [tool.pytest.ini_options]

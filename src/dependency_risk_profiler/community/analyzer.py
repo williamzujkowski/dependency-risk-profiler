@@ -334,7 +334,7 @@ def analyze_pypi_community_metrics(
 
 def analyze_community_metrics(
     dependency: DependencyMetadata,
-    metadata: Dict = None,
+    metadata: Optional[Dict] = None,
     github_token: Optional[str] = None,
 ) -> DependencyMetadata:
     """Analyze community metrics for a dependency.

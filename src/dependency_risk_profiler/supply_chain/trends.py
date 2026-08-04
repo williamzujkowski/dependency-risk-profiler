@@ -147,7 +147,7 @@ class HistoricalTrendAnalyzer:
         # Extract trend data
         overall_scores = []
         risk_distribution = []
-        dependency_trends = {}
+        dependency_trends: Dict[str, List[Dict[str, Any]]] = {}
 
         for ts in reversed(timestamps):  # Reverse to show oldest to newest
             scan = history["scans"][ts]
@@ -424,10 +424,18 @@ class HistoricalTrendAnalyzer:
 
         try:
             with open(history_path, "r") as f:
-                return json.load(f)
+                history = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             logger.error(f"Error loading history file {history_path}: {e}")
             return {}
+
+        if not isinstance(history, dict):
+            logger.error(
+                "History file %s does not contain a JSON object; ignoring it.",
+                history_path,
+            )
+            return {}
+        return history
 
     def _format_timestamp(self, timestamp: str) -> str:
         """Format an ISO timestamp for display.

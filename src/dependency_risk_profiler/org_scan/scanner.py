@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Protocol, Set, Tuple
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 from ..parsers.base import BaseParser
@@ -54,8 +54,14 @@ RepositoryLister = Callable[[str, bool, Optional[int]], List[RepositoryRef]]
 PackageIdentity = Tuple[str, str]
 
 
-class GitHubDiscoveryClient:
-    """Protocol-like base for GitHub discovery clients."""
+class GitHubDiscoveryClient(Protocol):
+    """Structural protocol for GitHub discovery clients.
+
+    ``GitHubOrgClient`` and the test fixtures satisfy this by shape rather than
+    by inheritance, which is the whole point: this was a plain base class, so
+    mypy rejected every caller that passed a real client, and the mypy gate was
+    masked hard enough that nobody saw it.
+    """
 
     def list_org_repositories(
         self,
