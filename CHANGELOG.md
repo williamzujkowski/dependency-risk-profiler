@@ -64,6 +64,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   attestations (which were already enabled). Past releases carrying `.sig` files
   should be treated as unsigned. (#174)
 
+### Security
+
+- **The `?go-get=1` vanity lookup validated the hostname, not the address it
+  resolved to.** A module path in a scanned `go.mod` names a host we then fetch
+  from. Every check that fetch made was on the name — https, no credentials, no
+  port, public host, no IP literal — and a name an attacker registers is free
+  to resolve to `169.254.169.254`. That is DNS rebinding, it defeated all of
+  them, and `scan-org` walks every repository in an organization, so one hostile
+  repository in scope was enough to aim a request from the scanning host at its
+  own metadata service. Fetching now resolves the host itself, refuses the host
+  outright if **any** returned address is private, loopback, link-local,
+  reserved, multicast or a known cloud-metadata endpoint, and connects to a
+  validated address rather than to the name — while still presenting the
+  hostname for SNI, the `Host` header and certificate verification, so TLS is
+  unweakened. Redirects are followed by us rather than by the HTTP client
+  precisely so that every hop is re-resolved and re-validated: a 302 to a
+  rebinding host is refused exactly like a first hop would be.
+
+  The control lives in a new `dependency_risk_profiler.secure_http`, not in
+  `go_modules`, because #136 consolidates package-to-repository resolution
+  across every ecosystem and each one turns a third-party registry string into
+  an outbound request. Go is the first caller of this, not the owner of it.
+  (#138)
+
 ### Fixed
 
 - **The `source_repository` signal has three states, and was recording two of

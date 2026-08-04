@@ -42,14 +42,16 @@ repos:
     rev: v1.9.0
     hooks:
     -   id: mypy
-        # `packaging` and `tomli` are real runtime dependencies; the hook runs
-        # in its own isolated env, so it needs them too or `scoring` fails
-        # import resolution and `parsers.toml` degrades to `Any`.
+        # `packaging`, `tomli` and `certifi` are real runtime dependencies; the
+        # hook runs in its own isolated env, so it needs them too or `scoring`
+        # fails import resolution, `parsers.toml` degrades to `Any`, and
+        # `secure_http` cannot resolve the CA bundle it pins TLS against.
         additional_dependencies:
         -   types-PyYAML
         -   types-requests
         -   packaging>=23.2
         -   tomli>=2.0.1
+        -   certifi>=2024.7.4
         args: [src]
         exclude: ^(testing/|venv/|build/|dist/|setup.py)
         pass_filenames: false
