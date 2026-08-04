@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
+from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,12 @@ def check_recent_commit_signature_status(
 
     Returns:
         Dictionary with signature status counts.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result = {
         "total_commits": 0,
@@ -76,6 +83,7 @@ def check_recent_commit_signature_status(
 
     except Exception as e:
         logger.error(f"Error checking commit signatures: {e}")
+        raise
 
     return result
 
@@ -91,6 +99,12 @@ def check_release_signature_status(
 
     Returns:
         Dictionary with signature status counts.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result = {
         "total_tags": 0,
@@ -136,6 +150,7 @@ def check_release_signature_status(
 
     except Exception as e:
         logger.error(f"Error checking tag signatures: {e}")
+        raise
 
     return result
 
@@ -155,6 +170,12 @@ def check_commit_signing_requirement(repo_dir: str) -> CommitSigningRequirement:
 
     Returns:
         Dictionary with commit signing requirement status.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: CommitSigningRequirement = {
         "requires_commit_signing": False,
@@ -181,9 +202,9 @@ def check_commit_signing_requirement(repo_dir: str) -> CommitSigningRequirement:
                                 f"GitHub Actions workflow: {workflow_file.name}"
                             )
                             break
-                except Exception as e:  # nosec B112
+                except Exception as e:
                     logger.debug(f"Error reading workflow file {workflow_file}: {e}")
-                    continue
+                    raise
 
         # Check for GitHub branch protection settings in .github/settings.yml
         settings_file = repo_path / ".github" / "settings.yml"
@@ -194,12 +215,13 @@ def check_commit_signing_requirement(repo_dir: str) -> CommitSigningRequirement:
                     if re.search(r"require_signed_commits\s*:\s*true", content):
                         result["requires_commit_signing"] = True
                         result["commit_signing_mechanism"] = "GitHub settings.yml"
-            except Exception as e:  # nosec B110
+            except Exception as e:
                 logger.debug(f"Error reading settings file {settings_file}: {e}")
-                # Continue without settings file info
+                raise
 
     except Exception as e:
         logger.error(f"Error checking commit signing requirement: {e}")
+        raise
 
     return result
 
@@ -313,7 +335,7 @@ def identify_signed_commits_issues(
 
 def check_signed_commits(
     dependency: DependencyMetadata, repo_dir: Optional[str] = None
-) -> Tuple[bool, float, List[str]]:
+) -> Tuple[Optional[bool], Optional[float], List[str]]:
     """Check if a dependency verifies commits and releases with signatures.
 
     Args:
@@ -321,11 +343,15 @@ def check_signed_commits(
         repo_dir: Optional path to cloned repository.
 
     Returns:
-        Tuple of (has_signed_commits, signed_commits_score, list of issues).
+        Tuple of (has_signed_commits, signed_commits_score, list of issues). The
+        first two are None when the signal could not be measured — no repository
+        to read, or a git read that raised — and the issue list says which of the
+        two it was. ``False`` means the history was read and nothing in it is
+        signed, which is a finding; ``None`` is not (#218).
     """
-    has_signed_commits = False
-    signed_commits_score = 0.0
-    issues = []
+    has_signed_commits: Optional[bool] = None
+    signed_commits_score: Optional[float] = None
+    issues: List[str] = []
 
     if repo_dir:
         try:
@@ -401,9 +427,13 @@ def check_signed_commits(
                 logger.info(f"Signed commits issue for {dependency.name}: {issue}")
 
         except Exception as e:
+            # The read failed part-way through. Whatever was gathered before it
+            # failed is not an answer, so nothing is returned as one.
             logger.error(f"Error checking signed commits: {e}")
-            issues.append(f"Error checking signed commits: {str(e)}")
+            has_signed_commits = None
+            signed_commits_score = None
+            issues.append(read_failed_issue("Signed commits", e))
     else:
-        issues.append("No repository information available for signed commits analysis")
+        issues.append(no_repository_issue("Signed commits"))
 
     return has_signed_commits, signed_commits_score, issues

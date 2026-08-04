@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata
+from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,12 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
 
     Returns:
         Dictionary with monthly commit frequencies and trend indicators.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result = {}
 
@@ -89,6 +96,7 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
 
     except Exception as e:
         logger.error(f"Error analyzing commit frequency: {e}")
+        raise
 
     return result
 
@@ -128,6 +136,12 @@ def analyze_release_cadence(
 
     Returns:
         Dictionary with release cadence metrics.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result = {}
 
@@ -233,6 +247,7 @@ def analyze_release_cadence(
 
     except Exception as e:
         logger.error(f"Error analyzing release cadence: {e}")
+        raise
 
     return result
 
@@ -257,6 +272,12 @@ def analyze_issue_activity(repo_path: str) -> IssueActivity:
 
     Returns:
         Dictionary with issue activity metrics.
+
+    Raises:
+        Exception: Whatever the repository read raised. A read that failed
+            is not a read that found nothing (#218), so the failure now
+            propagates to the single caller, which records the signal as
+            unmeasured instead of as a confident negative finding.
     """
     result: IssueActivity = {}
 
@@ -306,6 +327,7 @@ def analyze_issue_activity(repo_path: str) -> IssueActivity:
 
     except Exception as e:
         logger.error(f"Error analyzing issue activity: {e}")
+        raise
 
     return result
 
@@ -418,7 +440,7 @@ def check_maintained_status(
     dependency: DependencyMetadata,
     repo_dir: Optional[str] = None,
     package_data: Optional[Dict] = None,
-) -> Tuple[bool, float, List[str]]:
+) -> Tuple[Optional[bool], Optional[float], List[str]]:
     """Check if a dependency is actively maintained.
 
     Args:
@@ -428,11 +450,15 @@ def check_maintained_status(
 
     Returns:
         Tuple of (is_maintained, maintained_score, list of maintenance issues).
+        The first two are None when the signal could not be measured — no
+        repository to read, or a git read that raised — and the issue list says
+        which of the two it was. This check used to open on a default score of
+        0.5, from which ``is_maintained = score > 0.6`` derived a confident
+        ``False`` that no repository had been read to produce (#218).
     """
-    maintenance_issues = []
+    maintenance_issues: List[str] = []
 
-    # Default maintenance score
-    maintained_score = 0.5
+    maintained_score: Optional[float] = None
 
     if repo_dir:
         try:
@@ -484,13 +510,19 @@ def check_maintained_status(
                 logger.info(f"Maintenance issue for {dependency.name}: {issue}")
 
         except Exception as e:
+            # The read failed part-way through. Whatever was gathered before it
+            # failed is not an answer, so nothing is returned as one. This path
+            # used to log and say nothing at all, leaving the caller with the
+            # default score and no way to tell it apart from a measurement.
             logger.error(f"Error checking maintained status: {e}")
+            maintained_score = None
+            maintenance_issues.append(read_failed_issue("Maintained status", e))
     else:
-        maintenance_issues.append(
-            "No repository information available for maintenance analysis"
-        )
+        maintenance_issues.append(no_repository_issue("Maintained status"))
 
-    # Consider a package maintained if score is greater than 0.6
-    is_maintained = maintained_score > 0.6
+    # Consider a package maintained if score is greater than 0.6. An unmeasured
+    # score yields an unmeasured verdict rather than a threshold comparison
+    # against a number nobody produced.
+    is_maintained = None if maintained_score is None else maintained_score > 0.6
 
     return is_maintained, maintained_score, maintenance_issues
