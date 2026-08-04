@@ -181,7 +181,33 @@ markers = [
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "--cov=src --cov-report=xml --cov-report=html"
-cov_fail_under = 90
+
+# The coverage floor lives here, not in `[tool.pytest.ini_options]`. That
+# section carried `cov_fail_under = 90` from 2025-04 to #228 — not a pytest
+# option, not a pytest-cov option, not a coverage option. pytest warned
+# `Unknown config option: cov_fail_under` on every run, CI ran plain
+# `pytest --cov=src` with no `--cov-fail-under`, and nothing anywhere read the
+# key. The 90% bar was never enforced; real coverage was 82.8%.
+#
+# `fail_under` below is the honest measured number, floored to leave room for
+# cross-version drift. Measured on the CI matrix at #228:
+#
+#   3.9  82.86%   (1951 of 11384 statements missed)
+#   3.10 82.89%   (1949 of 11388)
+#   3.11 82.81%   (1958 of 11388)  <- the minimum; the floor is set from this
+#   3.12 82.82%   (1957 of 11388)
+#
+# Spread is 0.08pt, so 82.5 gives ~0.3pt of headroom: enough that a normal run
+# cannot flake below it, tight enough that deleting a covered module fails CI.
+# `precision = 2` makes the comparison mean what it says — at the default
+# precision of 0 a floor of "83" is really a floor of 82.5 via rounding, which
+# is how a bar ends up stricter or looser than anyone wrote down.
+#
+# **The target is 90% (#235).** This floor is a ratchet and it only tightens:
+# raise it as coverage rises, never lower it to make a red build green.
+[tool.coverage.report]
+fail_under = 82.5
+precision = 2
 
 [tool.setuptools]
 packages = {find = {where = ["src"]}}
@@ -211,32 +237,10 @@ per-file-ignores = {"src/dependency_risk_profiler/cli/typer_cli.py" = ["B008"]}
 [tool.ruff.lint.isort]
 known-first-party = ["dependency_risk_profiler"]
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203"]
-exclude = [
-    ".git",
-    "__pycache__",
-    "build",
-    "dist",
-    "venv",
-    ".venv",
-    ".tox",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".eggs",
-    "*.egg",
-    # Exclude test files with intentional issues
-    "tests/integration/test_security_policy.py",
-    "tests/integration/test_dependency_update.py",
-    "tests/integration/test_phase2.py",
-    "tests/test_comprehensive_vulnerability_aggregator.py",
-    "tests/test_comprehensive_risk_scorer.py",
-    "tests/test_vulnerability_aggregator_with_cache.py"
-]
-per-file-ignores = [
-    # Allow assert statements in tests
-    "tests/*:S101,F401,W293,E501,E302,E303,F811,F841,W292",
-    # Allow import * in __init__.py files
-    "__init__.py:F401,F403"
-]
+# There is deliberately no `[tool.flake8]` section. flake8 has no pyproject.toml
+# support, so such a section is read by nothing unless the flake8-pyproject
+# plugin is installed, which it is not. One lived here from 2025-04 to #228,
+# complete with six exclusions pointing through the `tests` symlink — and every
+# line of it was inert. `.flake8` is the live config; CI
+# runs `flake8 --config=.flake8`. testing/unit/test_ci_configs.py fails the
+# build if a `[tool.flake8]` section reappears without the plugin to read it.

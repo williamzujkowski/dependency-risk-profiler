@@ -30,11 +30,13 @@ isort .
 flake8
 mypy .
 
-# Run all tests
+# Run all tests (coverage is on by default and enforces the floor in
+# pyproject.toml's [tool.coverage.report])
 pytest
 
-# Run a single test
-pytest testing/unit/test_file.py::test_function_name
+# Run a single test. --no-cov because a subset run cannot reach the coverage
+# floor and would fail on it; the floor is a whole-suite measurement.
+pytest --no-cov testing/unit/test_file.py::test_function_name
 
 # Run tests with coverage
 pytest --cov=src

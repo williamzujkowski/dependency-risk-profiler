@@ -16,11 +16,13 @@ This directory contains integration tests for the Dependency Risk Profiler that 
 From the project root directory:
 
 ```bash
-# Run all integration tests
-pytest tests/integration/
+# Run all integration tests. --no-cov throughout: the coverage floor in
+# pyproject.toml is a whole-suite measurement, and any subset run fails it
+# (integration alone covers 30%).
+pytest --no-cov testing/integration/
 
 # Run a specific integration test
-pytest tests/integration/test_trends.py
+pytest --no-cov testing/integration/test_trends.py
 ```
 
 These tests are slower than unit tests as they test multiple components working together.

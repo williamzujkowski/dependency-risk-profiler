@@ -18,8 +18,8 @@ The test suite follows the five categories specified in the testing standards:
 
 Two primary test files were created:
 
-- `tests/test_comprehensive_vulnerability_aggregator.py` - Tests for the vulnerability aggregation component
-- `tests/test_comprehensive_risk_scorer.py` - Tests for the risk scoring system
+- `testing/unit/test_comprehensive_vulnerability_aggregator.py` - Tests for the vulnerability aggregation component
+- `testing/unit/test_comprehensive_risk_scorer.py` - Tests for the risk scoring system
 
 ### 1. Hypothesis Tests for Behavior Validation
 
@@ -107,7 +107,7 @@ Added to support the test suite:
 python -m pytest
 
 # Run only the comprehensive tests
-python -m pytest tests/test_comprehensive_vulnerability_aggregator.py tests/test_comprehensive_risk_scorer.py
+python -m pytest testing/unit/test_comprehensive_vulnerability_aggregator.py testing/unit/test_comprehensive_risk_scorer.py
 
 # Run benchmark tests
 python -m pytest -m benchmark

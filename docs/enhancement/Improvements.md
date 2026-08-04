@@ -13,6 +13,11 @@ Prompt: Refactor the repository to consolidate all configuration into a single `
 - Configure Black, isort, Flake8, and Mypy under `[tool.black]`, `[tool.isort]`, `[tool.flake8]`, and `[tool.mypy]`.
 ```
 
+> **Do not follow the Flake8 half of that prompt.** flake8 does not read
+> `pyproject.toml`; a `[tool.flake8]` section is inert without the
+> flake8-pyproject plugin. This prompt was run once and produced exactly that —
+> a section nothing read for a year (#228). flake8 config belongs in `.flake8`.
+
 ---
 
 ### 2. Remove Legacy Configuration Files

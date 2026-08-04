@@ -66,5 +66,5 @@ repos:
     hooks:
     -   id: bandit
         args: ["-r", "src/", "-c", ".bandit.yml"]
-        exclude: ^(testing/|tests/|venv/|build/|dist/)
+        exclude: ^(testing/|venv/|build/|dist/)
         pass_filenames: false

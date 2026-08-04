@@ -249,6 +249,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   three signals report unmeasured and the verdict is UNKNOWN. The two checks
   that read only files are unaffected in both runs, and the readable control
   run is byte-identical before and after.
+- **The 90% coverage bar was never enforced, by anything, at any point.**
+  `pyproject.toml` carried `cov_fail_under = 90` under
+  `[tool.pytest.ini_options]`. That is not a pytest option, not a pytest-cov
+  option, and not a coverage option — pytest printed
+  `PytestConfigWarning: Unknown config option: cov_fail_under` on every single
+  run for a year while the number sat there looking like a policy. There was no
+  `[tool.coverage.report]` section for coverage itself to read, and CI ran
+  `pytest --cov=src` with no `--cov-fail-under`, so the run that would have
+  failed the bar exited 0 and uploaded the shortfall to Codecov.
+
+  Real coverage is **82.81%**, not 90: 1958 of 11388 statements missed on
+  Python 3.11, and 82.86 / 82.89 / 82.82 on 3.9 / 3.10 / 3.12.
+
+  The floor is now `fail_under = 82.5` in `[tool.coverage.report]`, which
+  pytest-cov reads and enforces on the CI command with no workflow change — the
+  measured minimum with ~0.3pt of headroom against a 0.07pt cross-version
+  spread. `precision = 2` is set so the comparison means what it says: at the
+  default precision of 0, a floor written as "83" is really a floor of 82.5 via
+  rounding, which is how a bar ends up looser than anyone wrote down. Verified
+  by raising it to 95 and confirming the CI command exits 1 with all 1594 tests
+  passing.
+
+  **The number was not moved to fit; it was measured and written down.** 90
+  remains the target and is now tracked with acceptance criteria in #235, where
+  the missing 820 statements are broken out by module. The floor is a ratchet:
+  it only tightens.
+
+  The pytest warning is gone, which is the smaller half of the fix and the half
+  that had been visible on every run since 2025-04.
 
 - **An advisory source that failed read exactly like one that found nothing.**
   `get_vulnerabilities` returned the empty list for a connection failure, a
@@ -480,6 +509,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `src/` found no second instance: the rest sum over lists, or sum integers.
 
 ### Removed
+
+- **The `tests` symlink, which pointed at one developer's home directory and,
+  inside a git worktree, ran the wrong checkout's tests.** It was committed as
+  `tests -> /home/william/git/dependency-risk-profiler/testing`, an absolute
+  path. On every other machine it dangles, so anything that followed it did
+  nothing and said nothing. In a worktree it is worse than broken: it resolves,
+  to the *main* checkout, so `pytest tests/unit` from a feature worktree runs a
+  different tree's test files than the ones you are editing and reports them
+  green.
+
+  Measured before deleting it, from a worktree with a marker test added to that
+  worktree's `testing/unit/`: `pytest tests/unit` collected 1546 tests and the
+  marker was not among them; `pytest testing/unit` collected 1578 and it was.
+  The two trees had already drifted by 32 tests without either run complaining.
+
+  Every reference that pointed through it now names `testing/` directly:
+  `.pre-commit-config.yaml`'s bandit exclusion, two `tests/` entries in the
+  CodeQL config, `PROJECT_STRUCTURE.md`, both copies of `CONTRIBUTING.md`,
+  `testing/integration/README.md`, and `TESTING_IMPLEMENTATION.md`.
+
+  This is the same defect as the `uv run`-without-`uv sync` trap in AGENTS.md
+  rule 7, one layer down: the environment substitutes a different source than
+  the one under test, and the substitution is silent and green.
+
+- **The inert `[tool.flake8]` section in `pyproject.toml`, and the two tests
+  that made it look alive.** flake8 has no pyproject.toml support; without the
+  flake8-pyproject plugin, which is not installed, the section was read by
+  nothing. Confirmed empirically rather than assumed: with `.flake8` moved
+  aside, flake8 fell back to its built-in default of 79 columns rather than the
+  88 the section specifies. Every line of it was dead, including six exclusions
+  that pointed through the `tests` symlink at files that have lived in
+  `testing/unit/` since the migration. `.flake8` is and always was the live
+  config — CI runs `flake8 --config=.flake8` — and it already carries every
+  setting the dead section named, so nothing needed porting.
+
+  `test_flake8_config_valid` asserted that `flake8 --version` exits 0, under a
+  comment reading *"the pyproject.toml path where flake8 config is now stored"*.
+  `test_flake8_ignores_are_effective` passed the ignore list on the command line
+  and then checked that flake8 honoured it — a test of flake8, not of this
+  repository. Neither could fail, and between them they gave the dead section a
+  green tick for a year.
+
+  They are replaced by two that bite.
+  `test_dot_flake8_is_the_config_flake8_actually_reads` runs the same
+  single-fault file twice, once with the repo config and once with
+  `--isolated`, and requires opposite verdicts, so a pass cannot come from
+  flake8 having nothing to complain about.
+  `test_pyproject_carries_no_inert_flake8_section` fails if a `[tool.flake8]`
+  section reappears without the plugin that would read it. Both were verified
+  to fail before landing, by reintroducing a specimen of the defect: a re-added
+  section, and an `extend-ignore` with `F401` removed.
+
+  `docs/enhancement/Improvements.md` — the prompt file whose "configure Flake8
+  under `[tool.flake8]`" instruction produced the section in the first place —
+  now carries a note saying not to.
 
 - **BREAKING CHANGE: four fields are gone from the JSON output** rather than
   carried into the frozen contract, all still available under `--schema v1`:

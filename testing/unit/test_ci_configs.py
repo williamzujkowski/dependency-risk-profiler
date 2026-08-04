@@ -3,6 +3,8 @@
 These tests verify that our CI/CD configuration files are valid and work as expected.
 """
 
+import importlib.util
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -10,76 +12,75 @@ from pathlib import Path
 import pytest
 import yaml
 
+ROOT_DIR = Path(__file__).parent.parent.parent
 
-def test_flake8_config_valid() -> None:
-    """Test that the flake8 configuration is valid and works as expected."""
-    # Get the pyproject.toml path where flake8 config is now stored
-    root_dir = Path(__file__).parent.parent.parent
-    pyproject_path = root_dir / "pyproject.toml"
+# An unused import. F401 is in `.flake8`'s `extend-ignore` and is *not* ignored
+# by flake8's defaults, which is what makes it a usable probe for "did the repo
+# config apply".
+PROBE_SOURCE = "import os\n"
 
-    # Verify the file exists
-    assert pyproject_path.exists(), "pyproject.toml file should exist"
 
-    # Run flake8 with the pyproject file for configuration
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "flake8",
-            "--version",
-        ],
+def test_dot_flake8_is_the_config_flake8_actually_reads(tmp_path: Path) -> None:
+    """`.flake8` is the config flake8 loads when run from the repo root.
+
+    Asserted on behaviour, not on file contents. The probe is a file whose only
+    fault is F401: `.flake8` ignores it, flake8's defaults do not. If the repo
+    config is loaded the probe passes; run with `--isolated` — same flake8, same
+    file, no config — it must fail. Two runs, opposite verdicts, so a pass here
+    cannot come from flake8 simply having nothing to complain about.
+
+    The predecessor of this test asserted that `flake8 --version` exits 0, under
+    a comment claiming the config lived in `pyproject.toml`. It could not fail,
+    and the config it named was never read (#228).
+    """
+    assert (ROOT_DIR / ".flake8").exists(), ".flake8 is the live flake8 config"
+
+    probe = tmp_path / "probe.py"
+    probe.write_text(PROBE_SOURCE)
+
+    with_repo_config = subprocess.run(
+        [sys.executable, "-m", "flake8", str(probe)],
         capture_output=True,
         text=True,
+        cwd=ROOT_DIR,
+    )
+    isolated = subprocess.run(
+        [sys.executable, "-m", "flake8", "--isolated", str(probe)],
+        capture_output=True,
+        text=True,
+        cwd=ROOT_DIR,
     )
 
-    # We should get a successful result
-    assert result.returncode == 0, f"flake8 configuration is invalid: {result.stderr}"
+    assert "F401" in isolated.stdout, (
+        "the probe must be a genuine flake8 error without config, otherwise the "
+        f"assertion below proves nothing: {isolated.stdout!r}"
+    )
+    assert with_repo_config.returncode == 0, (
+        "flake8 did not load the repo config from the root — it flagged an error "
+        f"that .flake8 ignores: {with_repo_config.stdout!r}"
+    )
 
 
-def test_flake8_ignores_are_effective() -> None:
-    """Test that flake8 ignores are properly configured."""
-    # Get the root directory
-    root_dir = Path(__file__).parent.parent.parent
+def test_pyproject_carries_no_inert_flake8_section() -> None:
+    """A `[tool.flake8]` section may only exist if something can read it.
 
-    # Create a temp file with common errors that should be ignored
-    temp_file = root_dir / "temp_flake8_test.py"
-    try:
-        with open(temp_file, "w") as f:
-            f.write(
-                """
-# This file has long lines but should be ignored due to E501 in extend-ignore
-very_long_line = (
-    "This is a very long line that should normally trigger an E501 error but "
-    "we have configured flake8 to ignore line length errors across the "
-    "codebase so this should pass"
-)
+    flake8 has no pyproject.toml support. Without the flake8-pyproject plugin
+    such a section is read by nothing, and it does not announce that: it just
+    sits there looking like configuration. This repo carried one for a year,
+    including six exclusions that pointed through a dangling `tests` symlink
+    (#228). If a future change wants the section, it has to install the plugin
+    that makes it real.
+    """
+    has_section = re.search(
+        r"^\[tool\.flake8\]", (ROOT_DIR / "pyproject.toml").read_text(), re.MULTILINE
+    )
+    plugin_available = importlib.util.find_spec("flake8_pyproject") is not None
 
-# This has no blank line at the end (W292) but should be ignored
-# This has trailing whitespace (W291) but should be ignored
-"""
-            )
-
-        # Run flake8 on the temp file with explicit configuration
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "flake8",
-                str(temp_file),
-                "--max-line-length=88",
-                "--extend-ignore=E203,E501,W291,W292,W293",
-            ],
-            capture_output=True,
-            text=True,
-        )
-
-        # We should get a successful result despite the errors
-        assert result.returncode == 0, f"flake8 ignores aren't working: {result.stdout}"
-
-    finally:
-        # Clean up the temp file
-        if temp_file.exists():
-            temp_file.unlink()
+    assert not has_section or plugin_available, (
+        "pyproject.toml has a [tool.flake8] section but flake8-pyproject is not "
+        "installed, so flake8 reads none of it. Put the settings in .flake8, or "
+        "add flake8-pyproject to the dev extra so the section is real."
+    )
 
 
 def test_pre_commit_config_valid() -> None:
