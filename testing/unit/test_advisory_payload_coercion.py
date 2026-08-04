@@ -11,13 +11,33 @@ from typing import Any, Dict, List
 
 import pytest
 
+from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.vulnerabilities.aggregator import (
     GitHubAdvisorySource,
     NVDSource,
     OSVSource,
+    _update_dependency_with_vulnerabilities,
     annotate_vulnerabilities_for_scoring,
     normalize_cvss_score,
 )
+
+
+class _StubResponse:
+    """The two attributes the sources touch on a `requests` response."""
+
+    def __init__(self, payload: object) -> None:
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> object:
+        return self._payload
+
+
+def _raise_shape_error(*args: object, **kwargs: object) -> List[Dict[str, Any]]:
+    """Stand in for a normalizer meeting a field of the wrong type."""
+    raise TypeError("a field arrived as something no normalizer can read")
 
 
 def _filter_reasons(annotated: Dict[str, object]) -> List[str]:
@@ -252,3 +272,153 @@ class TestWrongTypedTextFields:
         )
 
         assert normalized["summary"] == "No summary available"
+
+
+class TestGitHubZeroCvssSentinel:
+    """GitHub's non-nullable `cvss` block answers 0.0 when it has no vector.
+
+    Live example: lodash's GHSA-p6mc-m468-83gg is severity HIGH with
+    `{"score": 0, "vectorString": null}`. Copied out verbatim that is a
+    high-severity advisory claiming the bottom of the CVSS scale — a sentinel
+    wearing the type of a measurement (#217).
+    """
+
+    def test_a_zero_without_a_vector_is_unmeasured(self) -> None:
+        """No vector means nobody scored it, whatever the score field says."""
+        (normalized,) = GitHubAdvisorySource(api_token="token")._normalize_results(
+            [
+                {
+                    "severity": "HIGH",
+                    "advisory": {
+                        "id": "GHSA-p6mc-m468-83gg",
+                        "cvss": {"score": 0, "vectorString": None},
+                    },
+                }
+            ]
+        )
+
+        assert normalized["cvss_score"] is None
+        # The severity string is an independent claim and still stands.
+        assert normalized["normalized_severity"] == "HIGH"
+
+    def test_a_zero_with_a_vector_is_a_measurement(self) -> None:
+        """A vector means somebody scored it; 0.0 is then the answer."""
+        (normalized,) = GitHubAdvisorySource(api_token="token")._normalize_results(
+            _github_payload(
+                cvss={
+                    "score": 0.0,
+                    "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N",
+                }
+            )
+        )
+
+        assert normalized["cvss_score"] == 0.0
+
+    def test_a_real_score_is_untouched(self) -> None:
+        """The guard is narrow: only a bare zero is read as the sentinel."""
+        (normalized,) = GitHubAdvisorySource(api_token="token")._normalize_results(
+            _github_payload(
+                cvss={
+                    "score": 8.1,
+                    "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                }
+            )
+        )
+
+        assert normalized["cvss_score"] == 8.1
+
+
+class TestMaximumCvssDistinguishesZeroFromUnmeasured:
+    """`max_cvss if max_cvss > 0 else None` was the falsy read one line down.
+
+    #216 fixed the per-advisory guard (`if cvss_score:` -> `is not None`) and
+    left the accumulator that publishes the maximum, which started at 0.0 and
+    could not tell a measured bottom-of-scale answer from never having read
+    one (#217).
+    """
+
+    def test_a_counted_advisory_always_publishes_a_maximum(self) -> None:
+        """The lodash shape: HIGH, no CVSS, still a statement about severity."""
+        dependency = _update_dependency_with_vulnerabilities(
+            DependencyMetadata(name="lodash", installed_version="4.17.15"),
+            [
+                {
+                    "id": "GHSA-p6mc-m468-83gg",
+                    "source": "GitHub Advisory",
+                    "severity": "HIGH",
+                    "normalized_severity": "HIGH",
+                    "cvss_score": None,
+                }
+            ],
+        )
+
+        assert dependency.security_metrics is not None
+        assert dependency.security_metrics.max_cvss_score == 8.0
+        assert dependency.security_metrics.max_vulnerability_severity == "HIGH"
+
+    def test_an_unreadable_advisory_leaves_the_maximum_unmeasured(self) -> None:
+        """Nothing counted means nothing to take a maximum over."""
+        dependency = _update_dependency_with_vulnerabilities(
+            DependencyMetadata(name="pkg", installed_version="1.0.0"),
+            [{"id": "X-1", "source": "OSV", "cvss_score": True}],
+        )
+
+        assert dependency.security_metrics is not None
+        assert dependency.security_metrics.counted_vulnerability_count == 0
+        assert dependency.security_metrics.max_cvss_score is None
+
+
+class TestAShapeErrorIsNotNoAdvisories:
+    """A broad `except Exception` around a fetch must not cover the parse.
+
+    #216's `severity.upper()` raised into exactly such a handler and the
+    package came back with no advisories at all. The normalizers are hardened,
+    so this pins the *structure*: normalization runs outside the handler, and a
+    failure there propagates instead of being reported as a clean package.
+    """
+
+    def test_osv_does_not_report_a_parse_failure_as_a_clean_package(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A normalizer that raises is a bug to surface, not an empty result."""
+        source = OSVSource()
+        monkeypatch.setattr(
+            source, "_normalize_results", _raise_shape_error, raising=True
+        )
+        monkeypatch.setattr(
+            "dependency_risk_profiler.vulnerabilities.aggregator.requests.post",
+            lambda *args, **kwargs: _StubResponse({"vulns": [{"id": "OSV-1"}]}),
+        )
+
+        with pytest.raises(TypeError):
+            source.get_vulnerabilities("pkg", "python")
+
+    def test_github_does_not_report_a_parse_failure_as_a_clean_package(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same structure, same seam, in the second advisory source."""
+        source = GitHubAdvisorySource(api_token="token")
+        monkeypatch.setattr(
+            source, "_normalize_results", _raise_shape_error, raising=True
+        )
+        monkeypatch.setattr(
+            "dependency_risk_profiler.vulnerabilities.aggregator.requests.post",
+            lambda *args, **kwargs: _StubResponse(
+                {"data": {"securityVulnerabilities": {"nodes": [{"severity": "HIGH"}]}}}
+            ),
+        )
+
+        with pytest.raises(TypeError):
+            source.get_vulnerabilities("pkg", "python")
+
+    def test_a_payload_of_the_wrong_shape_still_yields_no_advisories(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Moving the parse out must not turn a junk body into a crash."""
+        source = OSVSource()
+        monkeypatch.setattr(
+            "dependency_risk_profiler.vulnerabilities.aggregator.requests.post",
+            lambda *args, **kwargs: _StubResponse(["not", "a", "mapping"]),
+        )
+
+        assert source.get_vulnerabilities("pkg", "python") == []

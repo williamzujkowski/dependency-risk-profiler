@@ -144,6 +144,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A package npm removed for malware read as current and undeprecated.** npm's
+  security team does not delete a package it pulls; it republishes the name as
+  a placeholder described `security holding package` at a version carrying a
+  `-security` prerelease tag, and repoints `dist-tags.latest` at it. `crossenv`,
+  pulled for stealing environment variables, answers `0.0.2-security`.
+
+  Read as a release, that inverts the finding: an installed `6.1.1` scores as
+  *ahead* of the registry, so the drift signal reports no drift, and the
+  placeholder carries no `deprecated` notice, so nothing else in the payload
+  flags it either. It is cargo's `"0.0.0"` in npm's dialect — a parseable semver
+  of exactly the right type that is not a release of the package at all.
+
+  The placeholder is now recognized (both markers required: the description and
+  the `-security` suffix, so a legitimate out-of-band security release is not
+  caught) and nothing downstream reads it as a release. `latest_version` stays
+  unmeasured, its empty manifest is not read as a measured zero dependency
+  count, and the dependency is marked deprecated, which is where the finding
+  belongs. `additional_info.npm_security_holding_package` records why.
+
+- **GitHub answers `cvss.score: 0` for an advisory it never scored.** The
+  GraphQL `cvss` block is non-nullable, so an advisory with no CVSS vector
+  still returns a score, and the score it returns is `0.0` — lodash's
+  `GHSA-p6mc-m468-83gg` is severity HIGH with `{"score": 0, "vectorString":
+  null}`. Copied out verbatim, a high-severity advisory claimed the bottom of
+  the scale in every payload that carried the record. `vectorString` is the
+  tell — null exactly when no vector was assigned — so a zero without one is
+  now unmeasured, and a zero *with* one is kept as the real (if unusual) score
+  it is.
+
+- **A measured maximum CVSS of 0.0 was published as "no CVSS measured".** #216
+  fixed the per-advisory falsy read (`if cvss_score:` → `is not None`) and left
+  the accumulator one line down, which started at `0.0` and emitted
+  `max_cvss if max_cvss > 0 else None`. It now starts unmeasured and takes a
+  maximum over the advisories that actually stated a severity, so `null` in
+  `max_counted_cvss_score` means nobody scored them and `0.0` means somebody
+  did. An advisory whose severity is UNKNOWN contributes nothing rather than
+  fabricating a measured zero.
+
+- **A contributor count of zero was thrown away as though nobody had looked.**
+  `count_contributors` answers `None` for a count it could not take (a shallow
+  clone, a git failure) and an int for one it did, and the analyze path guarded
+  it with `if contributor_count:` — so a measured zero left
+  `maintainer_count` unset and unattributed, in the one field where "none" and
+  "unknown" point opposite ways for the maintainer-concentration score. The
+  same falsy read in the community pass dropped a zero on the way to
+  `contributor_count`. Both guard on `None` now, as the commit-cadence read
+  beside them already did.
+
+- **A shape error in an advisory payload could still be reported as "this
+  package has no advisories".** #216 hardened what the OSV and GitHub Advisory
+  normalizers do with a wrong-typed field, but left them running *inside* the
+  `except Exception` that wraps the fetch, so any residual parse failure was
+  still caught by a handler whose answer is an empty advisory list — the
+  fail-open that turned `severity.upper()` on a boolean into a clean bill of
+  health. Both sources now decode the body inside the handler and normalize
+  outside it, so a fetch failure still degrades quietly and a parse failure
+  surfaces instead of masquerading as a clean package.
+
 - **The advisory cache served one package's advisories for another.** Cache
   filenames were built by sanitizing the package name, and sanitizing loses
   information, so two distinct packages could land on one entry — in either

@@ -270,6 +270,15 @@ class OSVSource(VulnerabilitySource):
         max_retries = 3
         backoff_factor = 0.5
 
+        # Holds the decoded body once a request succeeds. Normalization runs
+        # after the loop, deliberately outside the broad ``except Exception``
+        # below: a shape error while reading an advisory is not a fetch
+        # failure, and letting the handler catch it turns "this payload is
+        # unreadable" into "this package has no advisories" — the fail-open
+        # #216 hit when a boolean severity made ``.upper()`` raise (#217).
+        payload: object = None
+        answered = False
+
         for retry in range(max_retries + 1):
             try:
                 if retry > 0:
@@ -288,10 +297,9 @@ class OSVSource(VulnerabilitySource):
                     timeout=self.timeout,
                 )
                 response.raise_for_status()
-                data = response.json()
-
-                vulns = data.get("vulns", [])
-                return self._normalize_results(vulns, package_name, osv_ecosystem)
+                payload = response.json()
+                answered = True
+                break
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
@@ -330,7 +338,11 @@ class OSVSource(VulnerabilitySource):
                 )
                 return []
 
-        return []
+        if not answered:
+            return []
+
+        vulns = _payload_sequence(_payload_mapping(payload).get("vulns"))
+        return self._normalize_results(vulns, package_name, osv_ecosystem)
 
     def _normalize_ecosystem(self, ecosystem: str) -> str:
         """Normalize ecosystem names to OSV format.
@@ -687,6 +699,12 @@ class GitHubAdvisorySource(VulnerabilitySource):
             "Content-Type": "application/json",
         }
 
+        # See OSVSource.get_vulnerabilities: the decoded body is normalized
+        # after the loop so a shape error in an advisory cannot be caught by
+        # the broad handler below and reported as "no advisories" (#217).
+        payload: object = None
+        answered = False
+
         for retry in range(max_retries + 1):
             try:
                 if retry > 0:
@@ -707,8 +725,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 response.raise_for_status()
                 data = response.json()
 
-                if "errors" in data:
-                    error_message = str(data.get("errors", []))
+                body = _payload_mapping(data)
+                if "errors" in body:
+                    error_message = str(body.get("errors", []))
                     logger.debug(f"GraphQL errors: {error_message}")
 
                     # Check for rate limiting errors
@@ -718,13 +737,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
 
                     return []
 
-                # Extract vulnerability data
-                vulnerabilities = (
-                    data.get("data", {})
-                    .get("securityVulnerabilities", {})
-                    .get("nodes", [])
-                )
-                return self._normalize_results(vulnerabilities)
+                payload = data
+                answered = True
+                break
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
@@ -764,7 +779,17 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 )
                 return []
 
-        return []
+        if not answered:
+            return []
+
+        vulnerabilities = _payload_sequence(
+            _payload_mapping(
+                _payload_mapping(_payload_mapping(payload).get("data")).get(
+                    "securityVulnerabilities"
+                )
+            ).get("nodes")
+        )
+        return self._normalize_results(vulnerabilities)
 
     def _normalize_ecosystem(self, ecosystem: str) -> str:
         """Normalize ecosystem names to GitHub's format.
@@ -797,9 +822,7 @@ class GitHubAdvisorySource(VulnerabilitySource):
             # Extract CVSS score. Normalized here, not just at annotation time:
             # GitHub's `cvss.score` is a payload field like any other, and a
             # `true` in it read as 1.0 anywhere the raw record was consumed.
-            cvss_score = normalize_cvss_score(
-                _payload_mapping(advisory.get("cvss")).get("score")
-            )
+            cvss_score = _github_cvss_score(advisory.get("cvss"))
 
             # Extract fixed version
             fixed_versions = []
@@ -843,6 +866,33 @@ class GitHubAdvisorySource(VulnerabilitySource):
             )
 
         return normalized
+
+
+def _github_cvss_score(cvss: object) -> Optional[float]:
+    """Return an advisory's CVSS base score, or None when GitHub assigned none.
+
+    GitHub's GraphQL ``cvss`` block is non-nullable, so an advisory with no
+    CVSS vector still answers with a ``score``, and the score it answers with
+    is ``0.0``. That is a sentinel wearing the type of a measurement: the
+    lodash advisory GHSA-p6mc-m468-83gg is severity HIGH with
+    ``{"score": 0, "vectorString": null}``, and copied out verbatim it says a
+    high-severity advisory was scored at the bottom of the scale.
+
+    ``vectorString`` is the tell — it is null exactly when no vector was
+    assigned — so a zero without one is unmeasured, and a zero with one is a
+    real (if unusual) score and is kept.
+
+    Args:
+        cvss: The advisory's raw ``cvss`` block.
+
+    Returns:
+        The base score, or None when GitHub published no CVSS for the advisory.
+    """
+    block = _payload_mapping(cvss)
+    score = normalize_cvss_score(block.get("score"))
+    if score == 0.0 and not _payload_str(block.get("vectorString")).strip():
+        return None
+    return score
 
 
 def _payload_str(value: object, default: str = "") -> str:
@@ -1410,20 +1460,28 @@ def _update_dependency_with_vulnerabilities(
         _count_applicability_reasons(undecided_vulnerabilities)
     )
 
-    # Find maximum CVSS score
-    max_cvss = 0.0
+    # Find maximum CVSS score. ``None`` is the unmeasured state and 0.0 is a
+    # measurement: a CVSS of 0.0 and an INFO/NONE tier are both real answers
+    # about how bad the counted advisories are. The accumulator used to start
+    # at 0.0 and publish ``max_cvss if max_cvss > 0 else None``, so those
+    # answers came out as "no CVSS was measured" — the same falsy-vs-absent
+    # read #216 fixed one line above, in the guard on the per-advisory score
+    # (#217). Only an advisory whose severity this code cannot read at all
+    # leaves the maximum unmeasured.
+    max_cvss: Optional[float] = None
     max_severity = None
     for vuln in counted_vulnerabilities:
-        cvss_score = vuln.get("cvss_score")
-        if cvss_score is not None:
-            normalized_score = normalize_cvss_score(cvss_score)
-            if normalized_score is not None and normalized_score > max_cvss:
-                max_cvss = normalized_score
-        else:
-            # If no CVSS score, try to derive from severity
-            severity_score = severity_to_score(_get_string(vuln, "normalized_severity"))
-            if severity_score > max_cvss:
-                max_cvss = severity_score
+        candidate = normalize_cvss_score(vuln.get("cvss_score"))
+        if candidate is None:
+            # No CVSS: derive from the tier, but only from a tier that is a
+            # statement about severity. ``severity_to_score`` answers 0.0 both
+            # for NONE and for anything it does not recognize, so UNKNOWN would
+            # otherwise fabricate a measured zero.
+            tier = _get_string(vuln, "normalized_severity")
+            if tier in SEVERITY_ORDER:
+                candidate = severity_to_score(tier)
+        if candidate is not None:
+            max_cvss = candidate if max_cvss is None else max(max_cvss, candidate)
         severity = _get_string(vuln, "normalized_severity")
         if severity and (
             max_severity is None
@@ -1431,7 +1489,7 @@ def _update_dependency_with_vulnerabilities(
         ):
             max_severity = severity
 
-    dependency.security_metrics.max_cvss_score = max_cvss if max_cvss > 0 else None
+    dependency.security_metrics.max_cvss_score = max_cvss
     dependency.security_metrics.max_vulnerability_severity = max_severity
 
     dependency.has_known_exploits = bool(counted_vulnerabilities)
