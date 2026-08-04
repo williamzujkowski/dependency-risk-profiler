@@ -1,0 +1,56 @@
+{
+  "payload": [
+    {
+      "handle": "nicksieger",
+      "id": 3118,
+      "role": "owner"
+    },
+    {
+      "handle": "olabini",
+      "id": 1543,
+      "role": "owner"
+    },
+    {
+      "handle": "sleeper",
+      "id": 42180,
+      "role": "owner"
+    },
+    {
+      "handle": "wmorgan",
+      "id": 42140,
+      "role": "owner"
+    },
+    {
+      "handle": "why",
+      "id": 42837,
+      "role": "owner"
+    },
+    {
+      "handle": "mental",
+      "id": 2664,
+      "role": "owner"
+    },
+    {
+      "handle": "mazirian",
+      "id": 34770,
+      "role": "owner"
+    },
+    {
+      "handle": "pvtilburg",
+      "id": 41316,
+      "role": "owner"
+    },
+    {
+      "handle": "joshbuddy",
+      "id": 336,
+      "role": "owner"
+    }
+  ],
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "none",
+    "source_url": "https://rubygems.org/api/v1/gems/hpricot/owners.json",
+    "trimming": []
+  }
+}

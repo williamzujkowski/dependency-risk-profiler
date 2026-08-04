@@ -1,0 +1,68 @@
+# Captured registry fixtures
+
+Live registry payloads, recorded so the adapter-conformance harness can replay
+them offline. Every file here was fetched by
+`scripts/capture_registry_fixtures.py` and carries the URL it came from and the
+date it was taken.
+
+**Do not hand-edit these files.** A hand-written fixture encodes the same
+assumption the parser makes — the key the adapter looks for is present in the
+fixture and absent from the registry — and that is exactly how five dead reads
+survived (#145). If a fixture is wrong, re-capture it.
+
+## Layout
+
+```
+manifest.json                 what to capture, and the shared limits
+<ecosystem>/<name>.json       {"provenance": {...}, "payload": <registry document>}
+```
+
+`manifest.json` is read by both the capture script and the test harness, so
+what CI replays and what a refresh fetches cannot drift apart.
+
+## Refreshing
+
+```bash
+python scripts/capture_registry_fixtures.py --check      # ages only, no network
+python scripts/capture_registry_fixtures.py              # re-capture everything
+python scripts/capture_registry_fixtures.py --ecosystem nodejs
+```
+
+Review the diff before committing. **A changed key shape in that diff is the
+finding, not the noise** — it is the registry telling you an adapter's
+assumption just expired.
+
+Cadence: every release cycle, and always after an adapter changes what it
+reads. Owner: whoever is on the adapter rotation for the release, the
+repository maintainer by default. The suite warns past `warn_after_days` and
+fails past `fail_after_days` (both in `manifest.json`), so the refresh has a
+trigger rather than depending on memory.
+
+## The trimming rule
+
+Reducers may remove **volume**. They may never remove **key diversity**.
+
+- Dropping 285 of express's 288 release manifests is volume.
+- Capping a 40 KB `readme` string at 2000 characters is volume; the key stays.
+- Dropping a key the adapter does not parse yet is **not allowed**. Those are
+  precisely the keys that reveal the next dead read — `versions[<latest>]
+  .deprecated` was one of them until #142 went looking for it.
+
+One honest consequence: a reduced fixture cannot exercise a fallback path that
+depends on the dropped volume. Those paths keep their synthetic tests next to
+the adapter, which is what synthetic fixtures are legitimately for.
+
+## Security
+
+Captured payloads are untrusted data (#160's security conditions).
+
+- Capture only fetches `https` URLs whose host is in the manifest allowlist,
+  and caps how much of a response it will read.
+- Values under credential-shaped keys are redacted at capture; every fixture is
+  re-scanned for credential-shaped values on load.
+- Fixture and ecosystem ids are validated and the resolved path is
+  containment-checked before any file is opened. Nothing inside a payload ever
+  becomes a filesystem path or a URL.
+- Each file is refused above `max_fixture_bytes`.
+- The test suite never touches the network: the replay fetcher raises on any
+  URL it has no recording for.

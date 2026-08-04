@@ -103,7 +103,9 @@ def test_composer_ecosystem_routes_to_packagist() -> None:
 
 # --- Signal coverage (#132) -------------------------------------------------
 #
-# A recorded Packagist p2 release entry, trimmed to the keys the adapter reads.
+# A recorded Packagist p2 release entry, trimmed to the keys the adapter reads
+# — a shape probe, not coverage evidence, which is why composer is still
+# PENDING in adapter_conformance.CONVERSION_STATUS.
 # Refresh with:
 #   curl https://repo.packagist.org/p2/symfony/console.json
 # The shapes are the point: the license is a *list*, the repository lives under

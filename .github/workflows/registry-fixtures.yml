@@ -1,0 +1,62 @@
+name: Registry fixtures
+
+# Re-captures the adapter-conformance fixtures from the live registries.
+#
+# Dispatch only, never on push or PR. Per-PR capture would put registry flake
+# on the critical path of every build and would silently rewrite the recordings
+# a regression is measured against — #160 made "capture is a dispatch job, not
+# per-PR" a condition of the ratified plan.
+#
+# This job does not commit anything. It uploads the refreshed fixtures and
+# prints the diff, so a human reads the key-shape changes before they land. A
+# changed key shape in that diff is the finding, not the noise.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ecosystem:
+        description: 'Single ecosystem to capture (blank = all)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip 'setuptools==69.0.2' 'wheel>=0.42.0'
+        pip install -e ".[dev]"
+
+    - name: Report current fixture ages
+      run: python scripts/capture_registry_fixtures.py --check
+
+    - name: Capture
+      run: |
+        if [ -n "${{ inputs.ecosystem }}" ]; then
+          python scripts/capture_registry_fixtures.py --ecosystem "${{ inputs.ecosystem }}"
+        else
+          python scripts/capture_registry_fixtures.py
+        fi
+
+    - name: Show what changed
+      run: git --no-pager diff --stat -- testing/fixtures/registry
+
+    - name: Replay the refreshed fixtures through the conformance harness
+      run: pytest testing/unit/test_adapter_conformance.py -q --no-cov
+
+    - name: Upload refreshed fixtures
+      uses: actions/upload-artifact@v4
+      with:
+        name: registry-fixtures
+        path: testing/fixtures/registry
