@@ -2,7 +2,6 @@ name: "Dependency Risk Profiler CodeQL Configuration"
 
 paths-ignore:
   - "**/testing/**"
-  - "**/tests/**"
   - "**/examples/**"
   - "**/test_projects/**"
   - "**/test_dirs/**"
@@ -24,9 +23,6 @@ query-filters:
   - exclude:
       id: py/path-injection-taint-tracking
       path-source: testing/
-  - exclude:
-      id: py/path-injection-taint-tracking
-      path-source: tests/
   - exclude:
       id: py/path-injection-taint-tracking
       path-source: examples/

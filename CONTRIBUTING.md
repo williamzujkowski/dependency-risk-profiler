@@ -72,8 +72,9 @@ pre-commit install
 # Run all tests
 pytest
 
-# Run specific tests
-pytest tests/test_parsers.py
+# Run specific tests. --no-cov because coverage is on by default and a subset
+# run cannot clear the whole-suite floor in pyproject.toml.
+pytest --no-cov testing/unit/test_parsers.py
 
 # Run tests with coverage
 pytest --cov=src

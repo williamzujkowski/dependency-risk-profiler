@@ -15,7 +15,6 @@ This document provides an overview of the Dependency Risk Profiler project struc
   - `fixtures/` - Test fixtures and mock data
   - `manifests/` - Sample dependency manifests for testing
   - `projects/` - Complete project copies for testing
-- `tests/` - Symlink to testing/ for backward compatibility
 
 ## Additional Files
 
