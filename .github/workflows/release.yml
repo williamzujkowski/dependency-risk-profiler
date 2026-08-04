@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       with:
         fetch-depth: 0  # We need the full history for the changelog
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -70,7 +70,7 @@ jobs:
         cd dist && sha256sum *.tar.gz *.whl > SHA256SUMS.txt
 
     - name: Create Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
       with:
         name: Release v${{ env.VERSION }}
         body_path: RELEASE_NOTES.md
@@ -82,7 +82,7 @@ jobs:
           dist/SHA256SUMS.txt
 
     - name: Publish package to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2 (head of release/v1)
       with:
         # Use trusted publishing (OIDC) instead of token authentication
         # No need for user/password with trusted publishing
@@ -99,7 +99,7 @@ jobs:
         mkdocs build
 
     - name: Deploy docs
-      uses: JamesIves/github-pages-deploy-action@v4
+      uses: JamesIves/github-pages-deploy-action@d92aa235d04922e8f08b40ce78cc5442fcfbfa2f # v4.8.0
       with:
         folder: site
         branch: gh-pages

@@ -50,3 +50,26 @@ updates:
           - "test_projects/**"
           - "test_dirs/**"
           - "test-projects/**"
+
+  # Keeps the commit-SHA pins in .github/workflows/ current (#186). Pinning to a
+  # SHA without an updater trades a mutable-tag risk for a frozen-pin risk; this
+  # entry is the half that makes the pins maintained rather than merely frozen.
+  #
+  # Deliberately carries no `ignore` block. The three entries above use
+  # `ignore: - dependency-name: "*" / paths:` to exclude the scan fixtures and
+  # it does not work — Dependabot still opens PRs against testing/projects/**
+  # (#167). Do not copy that shape. Nothing needs excluding here anyway:
+  # `github-actions` only ever reads `.github/workflows/`, which holds no
+  # fixtures.
+  #
+  # Verify by observation, not by reading the docs — the #167 config *looks*
+  # correct and isn't. After this merges, check the repo's Dependabot job log
+  # (Insights -> Dependency graph -> Dependabot) for a "github-actions" entry
+  # with a successful last-run timestamp, then wait for an upstream action to
+  # publish a release and confirm a PR appears rewriting both the SHA and its
+  # trailing version comment. A green job log with no PR while an upstream tag
+  # has demonstrably advanced means this entry is not doing its job.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
