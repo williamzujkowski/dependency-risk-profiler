@@ -52,7 +52,12 @@ from signal_floors import (
     SCORES_FROM_REGISTRY_ALONE,
 )
 
-from dependency_risk_profiler.analyzers.golang import deprecation_notice
+from dependency_risk_profiler.analyzers.golang import (
+    TRANSITIVE_UNMEASURED_REASON,
+    deprecation_notice,
+)
+from dependency_risk_profiler.parsers.python import runtime_requirement_names
+from dependency_risk_profiler.signals import TRANSITIVE_SOURCE_UNMEASURED
 
 CASE_IDS = [case.slug for case in CASES]
 
@@ -635,6 +640,199 @@ def test_a_composer_vendor_that_looks_like_a_platform_prefix_still_counts() -> N
     assert "php-http/discovery" in score.dependency.transitive_dependencies
     assert len(score.dependency.transitive_dependencies) == 6
     assert score.transitive_score == 0.25
+
+
+# --- 1b. #204: the other five ecosystems, and the trap in each -------------
+
+
+def test_the_npm_version_manifest_states_dependencies_and_the_adapter_reads_them() -> (
+    None
+):
+    """#204: the list was in the packument the adapter already fetched.
+
+    Two absences that look alike from outside and are not. ``indexof`` ships
+    ``"dependencies": {}`` — a manifest that is there, declaring nothing, which
+    is a measured zero. A packument missing the latest version's manifest
+    entirely is nobody having read a list, and stays unmeasured. Conflating
+    them would put #141's fabricated zero back through a new door, which is why
+    the two are asserted side by side.
+    """
+    payload = load_fixture("nodejs", "express").payload
+    assert isinstance(payload, Mapping)
+    assert "dependencies" not in payload, "the packument has no top-level list (#142)"
+    manifest = payload["versions"]["5.2.1"]
+    assert len(manifest["dependencies"]) == 28
+    assert len(manifest["devDependencies"]) == 16
+
+    express = score_case(next(c for c in CASES if c.slug == "nodejs/express"))
+
+    assert len(express.dependency.transitive_dependencies) == 28
+    assert "mocha" not in express.dependency.transitive_dependencies
+    assert express.transitive_score == 0.5
+
+    empty = load_fixture("nodejs", "indexof").payload
+    assert isinstance(empty, Mapping)
+    assert empty["versions"]["0.0.1"]["dependencies"] == {}
+
+    indexof = score_case(next(c for c in CASES if c.slug == "nodejs/indexof"))
+
+    assert indexof.dependency.transitive_dependencies == set()
+    assert indexof.transitive_score == 0.0
+    assert "transitive" not in indexof.unknown_signals
+
+
+def test_a_python_requirement_gated_behind_an_extra_is_not_a_runtime_one() -> None:
+    """#204's #190-shaped trap, in the ecosystem where it bites.
+
+    requests publishes six ``requires_dist`` entries, two of them extras-gated.
+    Four scores 0.1 and six scores 0.25, so the filter is visible in the value.
+
+    The trap is *how* the filter is written. ``extras`` is a real, installable
+    PyPI project — testtools depends on it — and so are ``pytest-extra`` and
+    ``sphinx-extras``. A substring sweep for ``extra`` over the requirement
+    string deletes every one of them, exactly the way a Composer platform check
+    matching on ``php-`` would delete ``php-http/discovery`` (#190). So the
+    marker section is severed at the semicolon first, and flask proves the
+    other half: an ordinary environment marker is *not* an extra and stays.
+    """
+    payload = load_fixture("python", "requests").payload
+    assert isinstance(payload, Mapping)
+    requires = payload["info"]["requires_dist"]
+    assert len(requires) == 6
+    assert sum("extra ==" in entry for entry in requires) == 2
+
+    requests = score_case(next(c for c in CASES if c.slug == "python/requests"))
+
+    assert requests.dependency.transitive_dependencies == {
+        "certifi",
+        "charset_normalizer",
+        "idna",
+        "urllib3",
+    }
+    assert requests.transitive_score == 0.1, (
+        "runtime requirements only; the six-entry total that includes the "
+        "extras scores 0.25"
+    )
+
+    # The name-shaped filter this one has to survive.
+    assert runtime_requirement_names(
+        ["extras>=1.0.0", 'pytest-extra; extra == "t"']
+    ) == {"extras"}
+
+    flask = score_case(next(c for c in CASES if c.slug == "python/flask"))
+
+    assert "importlib-metadata" in flask.dependency.transitive_dependencies, (
+        "'; python_version < \"3.10\"' is a runtime marker, not an extra — a "
+        "consumer on 3.9 really does install it"
+    )
+    assert "asgiref" not in flask.dependency.transitive_dependencies
+
+
+def test_a_null_requires_dist_is_not_a_measured_zero() -> None:
+    """#204's fail-closed half for python, and the reason it is not optional.
+
+    PyPI sends ``requires_dist: null`` whenever the newest release publishes no
+    ``Requires-Dist`` metadata at all. That is true of ``six`` and ``certifi``,
+    which genuinely have no dependencies — and equally true of ``carbon`` and
+    ``graphite-web``, sdist-only uploads that declare real ``install_requires``
+    in their ``setup.py``. Null is therefore "PyPI cannot tell you", and reading
+    it as an empty list would score a confident 0.0 across the whole sdist-only
+    population.
+    """
+    payload = load_fixture("python", "sklearn").payload
+    assert isinstance(payload, Mapping)
+    assert payload["info"]["requires_dist"] is None
+
+    score = score_case(next(c for c in CASES if c.slug == "python/sklearn"))
+
+    assert score.dependency.transitive_source is None
+    assert score.transitive_score is None
+    assert "transitive" in score.unknown_signals
+
+
+def test_the_rubygems_dependency_object_is_keyed_by_scope_not_counted() -> None:
+    """#204's shape trap: the value is an object, and counting it says two.
+
+    ``/gems/<name>.json`` publishes ``dependencies`` as
+    ``{"development": [...], "runtime": [...]}``. Something that counted the
+    value would report exactly two dependencies for every gem on rubygems.org
+    forever — and two is a thoroughly plausible number, so nothing but a value
+    assertion catches it. tzinfo has one runtime dependency and hpricot has
+    none, and both would read as two.
+    """
+    payload = load_fixture("rubygems", "tzinfo").payload
+    assert isinstance(payload, Mapping)
+    assert sorted(payload["dependencies"]) == ["development", "runtime"]
+
+    tzinfo = score_case(next(c for c in CASES if c.slug == "rubygems/tzinfo"))
+
+    assert tzinfo.dependency.transitive_dependencies == {"concurrent-ruby"}
+    assert tzinfo.transitive_score == 0.1
+
+    hpricot = score_case(next(c for c in CASES if c.slug == "rubygems/hpricot"))
+
+    assert hpricot.dependency.transitive_dependencies == set()
+    assert hpricot.transitive_score == 0.0
+    assert "transitive" not in hpricot.unknown_signals
+
+
+def test_cargo_counts_normal_dependencies_once_and_dev_ones_never() -> None:
+    """#204's cargo trap, and it is two traps in one document.
+
+    acid-store 0.14.2 publishes 42 dependency entries: 32 ``normal`` and 10
+    ``dev``. Counting the array is wrong by the ten, and wrong again because
+    ``rand`` and ``tempfile`` each appear TWICE — once under each kind. 42, 40
+    and 32 all land in the same 20-49 score bucket, so only the set catches it.
+
+    ``optional`` is deliberately not a third exclusion: it is a feature gate
+    inside ``[dependencies]``, not a scope. 18 of acid-store's 32 are optional
+    backends and are counted as the declared runtime dependencies they are.
+    """
+    payload = load_fixture("cargo", "acid-store.dependencies").payload
+    assert isinstance(payload, Mapping)
+    entries = payload["dependencies"]
+    assert len(entries) == 42
+    assert sum(entry["kind"] == "dev" for entry in entries) == 10
+    assert sum(entry["crate_id"] == "rand" for entry in entries) == 2
+
+    score = score_case(next(c for c in CASES if c.slug == "cargo/acid-store"))
+
+    assert len(score.dependency.transitive_dependencies) == 32
+    assert "criterion" not in score.dependency.transitive_dependencies
+    assert "rand" in score.dependency.transitive_dependencies
+    assert "redis" in score.dependency.transitive_dependencies, (
+        "an optional feature-gated backend is still a declared runtime "
+        "dependency, the same way maven counts <optional>true</optional>"
+    )
+    assert score.transitive_score == 0.5
+
+
+def test_golang_abstains_on_transitive_and_says_so() -> None:
+    """#204: the one ecosystem that cannot answer, recorded rather than silent.
+
+    The go.mod is fetched and the require block is right there. What is not
+    there is a scope: ``go mod tidy`` writes a module's test-only requirements
+    into the same direct block as its runtime ones, and logrus is the ordinary
+    case — testify beside golang.org/x/sys, with nothing to tell them apart.
+    Counting the block would report two where a consumer is exposed to one,
+    for every module that tests with testify.
+    """
+    go_mod = load_fixture("golang", "logrus.mod").payload
+    assert isinstance(go_mod, str)
+    assert "github.com/stretchr/testify" in go_mod
+    assert "golang.org/x/sys" in go_mod
+    assert "// indirect" in go_mod, "depth is marked; scope is not"
+
+    score = score_case(next(c for c in CASES if c.slug == "golang/logrus.latest"))
+
+    assert score.dependency.transitive_source == TRANSITIVE_SOURCE_UNMEASURED, (
+        "golang must record UNMEASURED positively rather than inheriting it by "
+        "staying quiet — an audited abstention and an unaudited adapter are "
+        "different facts (#204)"
+    )
+    assert score.transitive_score is None
+    assert "transitive" in score.unknown_signals
+    assert TRANSITIVE_UNMEASURED_REASON, "the abstention carries its reason"
 
 
 # --- 2. The non-default-branch rule ----------------------------------------

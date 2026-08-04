@@ -6,12 +6,14 @@ from typing import Dict, List, Optional, Sequence
 import requests
 
 from ..models import DependencyMetadata
+from ..parsers.ruby import runtime_dependency_names
 from ..release_dates import (
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
 )
 from ..signals import FieldSource, ProvenancedField
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -19,6 +21,12 @@ logger = logging.getLogger(__name__)
 
 RUBYGEMS_API_BASE = "https://rubygems.org/api/v1"
 _USER_AGENT = "dependency-risk-profiler (metadata lookup)"
+
+# Recorded so the transitive signal is treated as measured rather than as an
+# assumed-empty set (#141, #204). The gem's runtime dependency list is already
+# in the ``/gems/<name>.json`` payload this adapter fetches, at no extra
+# request; ``development`` is a separate list and is not read.
+TRANSITIVE_SOURCE_RUBYGEMS = "rubygems-runtime-dependencies"
 
 # The words a maintainer uses when the gem's own blurb is the retirement
 # notice. Same list the PyPI adapter sweeps its one-line summary for, because
@@ -100,6 +108,16 @@ class RubyGemsAnalyzer(BaseAnalyzer):
         latest = info.get("version")
         if isinstance(latest, str) and latest:
             dep.latest_version = latest
+
+        # The payload's ``dependencies`` object splits the gemspec's declared
+        # dependencies by scope. Only ``runtime`` is what installing the gem
+        # pulls in; ``development`` is the build/test set and is not read, for
+        # composer's ``require-dev`` reason. See the parser for the shape trap:
+        # this value is an object, not a list.
+        shipped = runtime_dependency_names(info.get("dependencies"))
+        if shipped is not None:
+            dep.transitive_dependencies = shipped - {dep.name}
+            record_transitive_source(dep, source=TRANSITIVE_SOURCE_RUBYGEMS)
 
         repo = self._repository_url(info)
         if repo:

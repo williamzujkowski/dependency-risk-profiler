@@ -1,10 +1,76 @@
-"""Parser for Node.js package-lock.json files."""
+"""Readers for Node.js documents: a package-lock and a registry version manifest."""
 
 import json
-from typing import Dict
+import logging
+from typing import Dict, Optional, Set
 
 from ..models import DependencyMetadata
 from .base import BaseParser
+
+logger = logging.getLogger(__name__)
+
+# The other dependency objects a published package.json can carry. None of them
+# is what installing the package pulls in, which is the line nuget's runtime
+# ``<dependencies>``, maven's scope filter and composer's ``require`` all draw.
+# Named so the exclusion is legible; nothing reads them.
+NON_RUNTIME_DEPENDENCY_KEYS = (
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+    "bundleDependencies",
+    "bundledDependencies",
+)
+
+
+def runtime_dependency_names(manifest: object) -> Optional[Set[str]]:
+    """Return the packages an npm version manifest declares as runtime deps.
+
+    Two absences that look identical from the outside and are not:
+
+    * **No manifest.** ``versions[<latest>]`` is missing — a mirror that
+      answered the packument without the version, a ``latest`` resolved from
+      the ``/latest`` document rather than from ``dist-tags``. Nobody read a
+      dependency list, so the answer is None and the signal stays unmeasured.
+    * **A manifest with no ``dependencies`` key.** That is a *measured zero*.
+      The registry stores the published package.json verbatim, and npm's own
+      tooling omits the key when the author declares nothing: lodash, ms,
+      react, chalk and escape-html all ship without it, while indexof and
+      isarray ship ``"dependencies": {}``. Both spellings mean the same thing
+      and both are a real answer.
+
+    The distinction matters because the field this feeds fails closed (#199):
+    returning an empty set for the first case would be #141's fabricated zero
+    arriving through a new door.
+
+    Note also where this does *not* read. The packument has no top-level
+    ``dependencies`` key and never has — checked against twelve live packuments
+    — so a top-level read would be #142's dead read a second time, in the same
+    adapter, against the same document.
+
+    Args:
+        manifest: A ``versions[<version>]`` entry from an npm packument, or
+            None/anything else when no such entry exists.
+
+    Returns:
+        The declared runtime dependency names, or None when no manifest was
+        read at all.
+    """
+    if not isinstance(manifest, dict):
+        return None
+    dependencies = manifest.get("dependencies")
+    if dependencies is None:
+        # The author declared none. See the docstring: this is the common
+        # spelling for a zero-dependency package, not a missing document.
+        return set()
+    if not isinstance(dependencies, dict):
+        logger.debug(
+            "npm version manifest carries a non-object 'dependencies': %r",
+            type(dependencies).__name__,
+        )
+        return set()
+    return {
+        name.strip() for name in dependencies if isinstance(name, str) and name.strip()
+    }
 
 
 class NodeJSParser(BaseParser):

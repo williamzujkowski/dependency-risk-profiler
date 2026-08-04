@@ -13,6 +13,11 @@ that: an unset marker now reads as unmeasured. The tests at the bottom of this
 file are the ones that fail if the default is ever flipped back — including the
 one that matters most, where a brand-new adapter records nothing at all and
 must not thereby claim a measured zero for every package in its ecosystem.
+
+#204 then filled the gap from the other side: eight of the nine adapters now
+read their registry's own dependency list and record it positively. That makes
+these tests *more* load-bearing rather than less, because the population they
+protect is no longer "most of the adapters" but "the next one".
 """
 
 import inspect
@@ -88,11 +93,14 @@ def test_measured_empty_transitive_still_scores_zero() -> None:
 
 
 class SilentAnalyzer(BaseAnalyzer):
-    """The ninth adapter, written by someone who never heard of this field.
+    """The tenth adapter, written by someone who never heard of this field.
 
     It collects whatever its registry answers and says nothing about transitive
-    dependencies, because its registry does not publish them — which is the
-    normal case for five of the eight adapters that exist today.
+    dependencies. Since #204 no adapter in the tree is in that position — eight
+    read a dependency list and golang records UNMEASURED on purpose — which is
+    exactly why this one is written here rather than borrowed from the tree.
+    The property under test is that *silence* cannot fabricate a measurement,
+    and it has to keep holding for the adapter that does not exist yet.
     """
 
     def analyze(

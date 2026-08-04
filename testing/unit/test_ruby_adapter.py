@@ -124,6 +124,12 @@ TZINFO_GEM_RESPONSE: Dict[str, object] = {
         "converted using time zone rules."
     ),
     "licenses": ["MIT"],
+    # An object keyed by scope, which is the shape trap: counting this value
+    # reports two dependencies for every gem in the registry (#204).
+    "dependencies": {
+        "development": [],
+        "runtime": [{"name": "concurrent-ruby", "requirements": "~> 1.0"}],
+    },
     "metadata": {
         "homepage_uri": "https://tzinfo.github.io",
         "source_code_uri": "https://github.com/tzinfo/tzinfo/tree/v2.0.6",

@@ -1,0 +1,536 @@
+{
+  "payload": {
+    "dependencies": [
+      {
+        "crate_id": "anyhow",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591386,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.0.65",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "bitflags",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "serde"
+        ],
+        "id": 9591388,
+        "kind": "normal",
+        "optional": false,
+        "req": "^2.3.3",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "blake3",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "traits-preview"
+        ],
+        "id": 9591389,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.3.1",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "bytesize",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591414,
+        "kind": "dev",
+        "optional": false,
+        "req": "^1.0.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "cdchunking",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591390,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.0.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "criterion",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591415,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.3.1",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "digest",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591391,
+        "kind": "normal",
+        "optional": false,
+        "req": "^0.10.5",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "dotenv",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591416,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.15.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "maplit",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591417,
+        "kind": "dev",
+        "optional": false,
+        "req": "^1.0.2",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "once_cell",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591396,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.5.2",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rand",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "small_rng"
+        ],
+        "id": 9591418,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.8.5",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rmp",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591400,
+        "kind": "normal",
+        "optional": false,
+        "req": "^0.8.8",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rmp-serde",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591401,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.1.1",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rstest",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591419,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.10.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rstest_reuse",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591420,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.1.3",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "secrecy",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591404,
+        "kind": "normal",
+        "optional": false,
+        "req": "^0.8.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "serde",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "derive",
+          "rc"
+        ],
+        "id": 9591405,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.0.103",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "serial_test",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591421,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.4.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "spectral",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591422,
+        "kind": "dev",
+        "optional": false,
+        "req": "^0.6.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "static_assertions",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591408,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.1.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "tempfile",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591423,
+        "kind": "dev",
+        "optional": false,
+        "req": "^3.1.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "thiserror",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591410,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.0.9",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "uuid",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "serde",
+          "v4"
+        ],
+        "id": 9591411,
+        "kind": "normal",
+        "optional": false,
+        "req": "^1.4.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "weak-table",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591413,
+        "kind": "normal",
+        "optional": false,
+        "req": "^0.2.3",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "bimap",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591387,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.6.1",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "exacl",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591424,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.6.0",
+        "target": "cfg(unix)",
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "filetime",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591392,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.2.8",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "fuser",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591393,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.11.1",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "hole-punch",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591394,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.0.3",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "lz4",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591395,
+        "kind": "normal",
+        "optional": true,
+        "req": "^1.23.1",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "nix",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591425,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.20.2",
+        "target": "cfg(unix)",
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rand",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591397,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.8.5",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "redis",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591398,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.21.6",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "relative-path",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591399,
+        "kind": "normal",
+        "optional": true,
+        "req": "^1.8.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rusqlite",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "bundled"
+        ],
+        "id": 9591402,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.23.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "rust-s3",
+        "default_features": false,
+        "downloads": 0,
+        "features": [
+          "sync-rustls-tls"
+        ],
+        "id": 9591403,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.32.3",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "sodiumoxide",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591406,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.2.7",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "ssh2",
+        "default_features": true,
+        "downloads": 0,
+        "features": [
+          "vendored-openssl"
+        ],
+        "id": 9591407,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.8.2",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "tempfile",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591409,
+        "kind": "normal",
+        "optional": true,
+        "req": "^3.1.0",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "users",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591426,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.11.0",
+        "target": "cfg(unix)",
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "walkdir",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591412,
+        "kind": "normal",
+        "optional": true,
+        "req": "^2.2.9",
+        "target": null,
+        "version_id": 1070885
+      },
+      {
+        "crate_id": "xattr",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 9591427,
+        "kind": "normal",
+        "optional": true,
+        "req": "^0.2.2",
+        "target": "cfg(unix)",
+        "version_id": 1070885
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "none",
+    "source_url": "https://crates.io/api/v1/crates/acid-store/0.14.2/dependencies",
+    "trimming": []
+  }
+}

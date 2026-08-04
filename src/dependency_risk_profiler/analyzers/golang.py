@@ -13,6 +13,7 @@ from ..release_dates import (
     parse_registry_timestamp,
     record_source_repository,
 )
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import cloned_repo, fetch_json, fetch_url
 
@@ -37,6 +38,33 @@ _UPPERCASE = re.compile(r"[A-Z]")
 # validated before it becomes a path segment rather than trusted because the
 # proxy sent it.
 _MODULE_VERSION = re.compile(r"^v[0-9][A-Za-z0-9.\-+]{0,127}$")
+
+# Go is the one ecosystem of the nine that abstains on the transitive signal,
+# and it abstains on purpose rather than by omission (#204).
+#
+# The data is there: the ``go.mod`` this adapter already fetches for the
+# ``// Deprecated:`` marker carries the module's ``require`` block. What it does
+# not carry is a **scope**. Every other ecosystem publishes the runtime/test
+# line the signal is defined on — nuget's nuspec states runtime
+# ``<dependencies>``, maven filters by scope, composer splits ``require`` from
+# ``require-dev``, npm from ``devDependencies``, cargo by ``kind`` — and go.mod
+# has no such split. ``go mod tidy`` writes the test-only requirements of a
+# module's own packages into the same direct ``require`` block as its runtime
+# ones, and sirupsen/logrus is the ordinary case rather than a corner: two
+# direct requires, of which ``github.com/stretchr/testify`` is test-only. The
+# ``// indirect`` marker does not help; it separates depth, not scope.
+#
+# Counting the block anyway would report roughly double for the large fraction
+# of Go modules that test with testify, systematically, and would make Go
+# modules look uniformly riskier than the ecosystems they are compared against —
+# which is the *opposite* of the like-for-like comparison #204 exists to
+# restore. So the signal is recorded as UNMEASURED, positively, with this as
+# the reason.
+TRANSITIVE_UNMEASURED_REASON = (
+    "go.mod states no dependency scope: a module's test-only requirements sit "
+    "in the same require block as its runtime ones, so the block cannot answer "
+    "'runtime dependencies' without over-counting."
+)
 
 
 def _escape_module_path(value: str) -> str:
@@ -128,6 +156,13 @@ class GoAnalyzer(BaseAnalyzer):
             # module paths that happen to contain a "go" token, so packages
             # like github.com/sirupsen/logrus would otherwise misroute to PyPI.
             dep.additional_info["ecosystem"] = "golang"
+
+            # Said out loud rather than left to the fail-closed default. The
+            # read is the same either way; the difference is that #204's audit
+            # of this ecosystem is now recorded at the call site instead of
+            # being indistinguishable from an adapter nobody has looked at.
+            # See TRANSITIVE_UNMEASURED_REASON.
+            record_transitive_source(dep, source=None)
 
             try:
                 # Get latest version from proxy.golang.org. This uses the full

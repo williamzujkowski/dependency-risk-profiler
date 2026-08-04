@@ -10,22 +10,33 @@ metadata never reached the fields the scorer reads.
 Each floor below is what its ecosystem must be able to measure from **registry
 metadata alone** — no repository clone, no GitHub token — which is the weakest
 environment the tool runs in and the one a regression shows up in first.
-Transitive resolution is not among those signals for most ecosystems: it only
-understands npm lockfiles and Python requirement sets, and a lockfile is not
-registry metadata. Nothing in the harness marks that absence any more —
-:func:`mark_transitive_unmeasured` existed to reproduce the pipeline's marker
-here (#141) and was deleted with #199, which made an unset marker read as
-unmeasured everywhere. Five adapters therefore say nothing and are scored as
-unmeasured *because* they said nothing, which is the property
-``adapter_conformance.assert_transitive_is_recorded_not_assumed`` pins. Three
-registries are the exception, because each publishes the package's own
-dependency list beside it: nuget in the ``.nuspec`` (#129), maven in the POM's
-``<dependencies>``, and — since #180 — composer in the p2 entry's ``require``
-block, minus the platform constraints (``php``, ``ext-*``) that are runtimes
-rather than packages. gradle inherits maven's exception rather than earning its
-own; it reaches the same POM through the same analyzer, and it is listed
-explicitly in ``TRANSITIVE_RECORDING_ECOSYSTEMS`` so that the route going quiet
-fails there instead of passing as a plausible ``None``.
+
+Transitive resolution used to be excluded from that for most ecosystems, on the
+grounds that it understood only npm lockfiles and Python requirement sets and a
+lockfile is not registry metadata. That was never the whole story, and #204
+retired it: eight of the nine registries publish the package's own dependency
+list beside it, and now eight of the nine adapters read it. nuget from the
+``.nuspec`` (#129), maven from the POM's scope-filtered ``<dependencies>``,
+composer from the p2 ``require`` block minus platform constraints (#180), and —
+new in #204 — nodejs from ``versions[<latest>].dependencies``, python from
+``info.requires_dist``, rubygems from ``dependencies.runtime``, and cargo from
+the per-version dependencies endpoint, which is the one of the four that costs
+a request rather than reading a payload already in hand. gradle inherits
+maven's read rather than earning its own; it reaches the same POM through the
+same analyzer, and it is listed explicitly in
+``TRANSITIVE_RECORDING_ECOSYSTEMS`` so that the route going quiet fails there
+instead of passing as a plausible ``None``.
+
+golang is the one abstainer, and it says so out loud rather than staying quiet:
+``go.mod`` states no dependency scope, so a module's test-only requirements sit
+in the same direct ``require`` block as its runtime ones and the block cannot
+answer the question the signal asks. Nothing in the harness marks any of this
+on an adapter's behalf — :func:`mark_transitive_unmeasured` existed to
+reproduce the pipeline's marker here (#141) and was deleted with #199, which
+made an unset marker read as unmeasured everywhere. So golang is scored as
+unmeasured *because its adapter said so*, which is the property
+``adapter_conformance.assert_transitive_is_recorded_not_assumed`` pins from
+both directions.
 
 **The floor sits at the measured value, not below it.** Every number here was
 read off the offline adapter test it guards, and it is the exact count that
@@ -44,18 +55,23 @@ is how a conformance gate differs from a smoke test. The collapse arithmetic
 itself is still worth documenting, so it lives in ``test_signal_floors.py`` as
 its own assertion instead of masquerading as the floor.
 
-Where the numbers come from: crates.io, PyPI, RubyGems, NuGet and Maven Central
-each answer eight signals unaided and Packagist answers nine; npm answers seven,
-landing one short of the insufficient-data bar because it publishes no cheap
-maintainer count. :data:`SCORES_FROM_REGISTRY_ALONE` records that difference
-rather than papering over it. PyPI was in npm's column until #171: it publishes
-a top-level ``ownership`` object the adapter had never read, and reading it
-moved python from seven to eight.
+Where the numbers come from: crates.io, PyPI, RubyGems, Packagist and NuGet each
+answer nine signals unaided, Maven Central answers eight and npm answers eight,
+which is exactly the insufficient-data bar. :data:`SCORES_FROM_REGISTRY_ALONE`
+records where each lands rather than papering over it. PyPI was one short until
+#171: it publishes a top-level ``ownership`` object the adapter had never read.
+npm was one short until #204, which is the change that retired the last ``False``
+in that table — npm still publishes no cheap maintainer count, and the
+dependency list in its version manifest is the signal that replaces it. It
+clears the bar by nothing at all, eight measured against eight unmeasured, so
+losing any one signal puts express back to UNKNOWN. That is a true statement
+about npm rather than a comfortable one.
 
-Packagist is the highest of the eight for the same reason: #180 found the p2
-entry's ``require`` block unread, which is the only registry document that
-answers a maintainer count *and* a dependency list, so composer measures
-everything nuget does plus everything cargo does. maven's floor did not move
+Packagist used to be the highest of the eight on its own: #180 found the p2
+entry's ``require`` block unread, which made it the only registry document that
+answered a maintainer count *and* a dependency list. #204 closed that gap from
+the other side, so cargo, python and rubygems now sit level with it at nine.
+maven's floor did not move
 when #178 closed the parent-POM gap, and that is not an oversight — maven was
 already floored at everything Maven Central can answer, and the artifacts the
 fix rescues (guava, slf4j-api: licence and repository declared only in a parent)
@@ -78,7 +94,11 @@ build script rather than handing the analyzer a coordinate by hand (#101).
 The Go module proxy is the outlier at six, and its floor is set where it is on
 purpose. ``proxy.golang.org`` publishes a version, a release date and a
 ``go.mod``; it publishes no licence and no owner list, because Go has neither
-concept at the module level. Six is what golang measures today and therefore
+concept at the module level, and the ``go.mod``'s ``require`` block states no
+scope, so it cannot answer a runtime dependency count either (#204). Six is the
+number that survived #204 unchanged for that reason, and it is a real registry
+difference rather than an unfinished adapter. Six is what golang measures today
+and therefore
 what it is floored at — the number was read off the conformance fixtures rather
 than rounded up to match its neighbours, because a floor above measured
 coverage is a test that fails for a reason nobody can fix, and a floor below it
@@ -138,34 +158,38 @@ from dependency_risk_profiler.models import DependencyRiskScore, RiskLevel
 # at what each one measures today. Raising these is a normal part of improving
 # an adapter; lowering one is a regression that needs a reason in the commit.
 #
-# npm sits one below the rest because it publishes no maintainer count without
-# a clone. PyPI used to sit beside it and no longer does: it publishes the
-# project's role assignments in a top-level ``ownership`` object the adapter
-# had never read (#171), found by capturing a live payload for the conformance
-# harness. Everything above that line clears the insufficient-data bar by
-# exactly one signal, which is why the identity table below matters as much as
-# these counts do — except composer, which since #180 clears it by two.
+# npm still sits below the registries that publish a maintainer count, and it
+# still publishes none without a clone; what moved it 7 -> 8 is #204's read of
+# the version manifest's dependency list. PyPI, RubyGems and crates.io moved
+# 8 -> 9 in the same change, and cargo's nine is the only one of the four that
+# costs an extra request to reach.
+#
+# Everything at nine clears the insufficient-data bar by one signal. npm clears
+# it by none — eight measured against eight unmeasured — which is recorded here
+# rather than rounded away, because it means npm is the ecosystem where losing
+# any single signal returns every package to UNKNOWN.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
-    "cargo": 8,
+    "cargo": 9,
     "composer": 9,
     "golang": 6,
     "gradle": 8,
     "maven": 8,
     "nuget": 9,
-    "nodejs": 7,
-    "python": 8,
-    "rubygems": 8,
+    "nodejs": 8,
+    "python": 9,
+    "rubygems": 9,
 }
 
 # Which signals make up each count. Asserted by name so that losing one signal
 # and gaining another fails instead of passing under an unchanged total (#145).
 #
-# The membership differences are real registry differences, not oversights:
-# cargo, composer, python and rubygems answer a maintainer count and report
-# whether a source repository is declared; nuget serves per-package
-# dependencies in its ``.nuspec`` and so measures ``transitive`` on top of
-# that, which is why it is the only ecosystem floored at nine; npm publishes no
-# cheap maintainer count.
+# The membership differences are real registry differences, not oversights.
+# Since #204 the transitive signal is the near-universal one: every registry
+# here publishes the package's own dependency list somewhere, and every adapter
+# but golang's reads it. What still separates the ecosystems is the maintainer
+# count — npm publishes none cheaply, and Go has no module-level owner concept
+# at all — plus Go's missing licence field and its scopeless ``go.mod``, which
+# is why golang is short by three rather than by one.
 #
 # nuget used to be the odd one out for a second, worse reason: it resolved a
 # repository off the nuspec and then recorded nothing about whether one was
@@ -185,38 +209,45 @@ _REGISTRY_CORE: FrozenSet[str] = frozenset(
     }
 )
 REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
-    "cargo": _REGISTRY_CORE | {"maintainer", "source_repository"},
+    "cargo": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
     "composer": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
     "golang": (_REGISTRY_CORE - {"license"}) | {"source_repository"},
     "gradle": _REGISTRY_CORE | {"transitive", "source_repository"},
     "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
     "nuget": _REGISTRY_CORE | {"maintainer", "transitive", "source_repository"},
-    "nodejs": _REGISTRY_CORE | {"source_repository"},
-    "python": _REGISTRY_CORE | {"maintainer", "source_repository"},
-    "rubygems": _REGISTRY_CORE | {"maintainer", "source_repository"},
+    "nodejs": _REGISTRY_CORE | {"source_repository", "transitive"},
+    "python": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
+    "rubygems": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
 }
 
 # Whether that floor is on its own enough to clear the insufficient-data bar.
-# crates.io, Packagist, PyPI and RubyGems each answer a maintainer count (an
-# owners endpoint, a role list, or the package's declared authors); npm
-# publishes no cheap equivalent, so it lands one signal short without a clone.
-# That is a real difference between registries and it is recorded here rather
-# than papered over with a guessed maintainer count.
 #
 # python moved to True when #171 was settled against a live payload: PyPI's
 # top-level ``ownership`` object lists every account holding a role on the
 # project. The honest caveat is captured rather than hidden — a project
 # transferred to a PyPI organization reports ``roles: []`` and its maintainer
-# count stays unmeasured, so it lands back at seven and does not reach a
-# verdict. ``adapter_conformance``'s ``python/flask`` case is that package, and
-# the floor here is what a project PyPI does answer for must measure.
+# count stays unmeasured. ``adapter_conformance``'s ``python/flask`` case is
+# that package, and the floor here is what a project PyPI does answer for must
+# measure.
+#
+# nodejs moved to True with #204 and is the last entry to have moved. npm still
+# publishes no cheap maintainer count, so the signal that got it over the bar
+# is the dependency list in ``versions[<latest>]``, which was in the packument
+# the adapter already fetched the whole time. It clears by zero margin: eight
+# measured, eight unmeasured, and ``unmeasured > measured`` is what the bar
+# tests. Losing any one signal puts every npm package back to UNKNOWN, which is
+# worth knowing rather than smoothing over.
+#
+# golang is the only False left, and it is a registry fact rather than an
+# unfinished adapter: proxy.golang.org publishes no licence, no owner list, and
+# a ``go.mod`` with no dependency scope in it (#204).
 SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "cargo": True,
     "composer": True,
     "golang": False,
     "gradle": True,
     "maven": True,
-    "nodejs": False,
+    "nodejs": True,
     "nuget": True,
     "python": True,
     "rubygems": True,

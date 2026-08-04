@@ -15,6 +15,18 @@ The tool retrieves package information from the npm registry's public API:
   - Repository URL
   - Release dates
   - Maintainer information (partial)
+  - The latest release's `dependencies`, which is the transitive signal
+
+Both the deprecation notice and the dependency list live in
+`versions[<dist-tags.latest>]`, the published `package.json` as npm stores it,
+and neither has ever existed at the top level of a packument. `devDependencies`,
+`peerDependencies` and `optionalDependencies` are not what installing the
+package pulls in and are not counted.
+
+A manifest with no `dependencies` key is a **measured zero** — that is how npm's
+own tooling spells "declares none", and lodash, ms, react and chalk all ship
+that way. A packument with no manifest for the latest version at all is a
+different thing: nobody read a dependency list, and the signal stays unmeasured.
 
 Example API response structure:
 ```json
@@ -46,6 +58,23 @@ The tool uses PyPI's JSON API to retrieve package metadata:
   - Project URLs (including repository)
   - Description (checked for deprecation indicators)
   - Release history
+  - `info.requires_dist`, which is the transitive signal
+
+Requirements gated behind an extra (`PySocks; extra == "socks"`) are optional
+tooling and are dropped; requirements gated behind an ordinary environment
+marker (`importlib-metadata; python_version < "3.10"`) are runtime on the
+interpreters they name and are kept. The test is the marker section after the
+semicolon, never a substring of the requirement — `extras`, `pytest-extra` and
+`sphinx-extras` are real, installable projects.
+
+**`requires_dist: null` is not zero dependencies.** PyPI sends null whenever the
+newest release publishes no `Requires-Dist` metadata, which is true both of
+packages that genuinely have none (`six`, `certifi`, `pytz`) and of sdist-only
+uploads predating metadata 2.1 that have plenty (`carbon` and `graphite-web`
+both report null and both declare real `install_requires`). Null therefore
+leaves the signal unmeasured. The cost is real: the zero-dependency packages
+lose a signal they could have had, and that is preferred to a confident wrong
+number for the sdist population.
 
 Example API response structure:
 ```json
@@ -83,18 +112,55 @@ Example API response structure:
   rather than to the name, so a public-looking vanity domain cannot rebind onto an internal
   one. Every redirect hop repeats the whole check. A module that does not resolve keeps its
   repository-derived signals unmeasured rather than scored.
+- **Transitive dependencies: not measured, on purpose.** The module's `go.mod`
+  is already fetched (for the `// Deprecated:` marker) and its `require` block
+  is right there, but Go states no dependency **scope**: `go mod tidy` writes a
+  module's test-only requirements into the same direct `require` block as its
+  runtime ones. `github.com/sirupsen/logrus` requires `github.com/stretchr/testify`
+  beside `golang.org/x/sys`, and the `// indirect` marker separates depth rather
+  than scope, so nothing in the file distinguishes them. Counting the block
+  would report roughly double for the large share of Go modules that test with
+  testify — systematically, and in the direction that makes Go look riskier than
+  the ecosystems it is compared against. The adapter therefore records the
+  signal as UNMEASURED explicitly rather than staying silent about it.
 
 ### Rust (crates.io)
 
-- **Method**: JSON request to `https://crates.io/api/v1/crates/{crate}`
-- **Information Retrieved**: latest version, repository URL, description
+- **Method**: three JSON requests. `https://crates.io/api/v1/crates/{crate}`
+  for the crate document, `.../{crate}/owners` for the maintainer count, and
+  `.../{crate}/{version}/dependencies` for the dependency list.
+- **Information Retrieved**: latest version, repository URL, description, owner
+  count, and the crate's `kind: "normal"` dependencies, which is the transitive
+  signal.
+
+crates.io is the only registry here whose package document does not carry the
+dependency list — it publishes a `versions[].links.dependencies` pointer
+instead — so this signal costs a request rather than being read out of a
+payload already in hand. That is a deliberate trade: without it crates.io is
+the one registry ecosystem that cannot answer a dependency count, and
+cross-ecosystem comparisons stop being like-for-like.
+
+`[dev-dependencies]` and `[build-dependencies]` are excluded. `optional = true`
+is **not** excluded: it is a feature gate inside `[dependencies]`, not a scope,
+and resolving which ones a default build enables would need Cargo's feature
+closure rather than a read. A crate can name the same dependency under two
+kinds — `acid-store` names `rand` and `tempfile` as both `dev` and optional
+`normal` — so names are collected into a set after the kind filter.
 
 ### Ruby (RubyGems)
 
 - **Method**: JSON request to `https://rubygems.org/api/v1/gems/{gem}.json`,
   plus `.../gems/{gem}/owners.json` for the maintainer count.
 - **Information Retrieved**: latest version, release date, source/homepage URL,
-  license list, owner count, description.
+  license list, owner count, description, and `dependencies.runtime`, which is
+  the transitive signal.
+
+`dependencies` is an **object keyed by scope**, not a list:
+`{"development": [...], "runtime": [...]}`. Only `runtime` is what installing
+the gem pulls in. A gemspec states its interpreter and toolchain floors in
+`required_ruby_version` and `required_rubygems_version`, which are separate
+fields this payload does not publish at all, so unlike Composer there is no
+platform construct to filter out of the runtime list.
 
 #### Yanks are removals, not tombstones
 

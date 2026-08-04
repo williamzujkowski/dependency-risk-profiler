@@ -1,0 +1,40 @@
+{
+  "payload": {
+    "dependencies": [
+      {
+        "crate_id": "serde_core",
+        "default_features": false,
+        "downloads": 0,
+        "features": [
+          "result"
+        ],
+        "id": 31200783,
+        "kind": "normal",
+        "optional": false,
+        "req": "=1.0.229",
+        "target": null,
+        "version_id": 2817185
+      },
+      {
+        "crate_id": "serde_derive",
+        "default_features": true,
+        "downloads": 0,
+        "features": [],
+        "id": 31200784,
+        "kind": "normal",
+        "optional": true,
+        "req": "^1",
+        "target": null,
+        "version_id": 2817185
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "none",
+    "source_url": "https://crates.io/api/v1/crates/serde/1.0.229/dependencies",
+    "trimming": []
+  }
+}

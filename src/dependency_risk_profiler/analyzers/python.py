@@ -5,16 +5,25 @@ import re
 from typing import Dict, Iterator, Mapping, Optional, Sequence
 
 from ..models import DependencyMetadata
+from ..parsers.python import runtime_requirement_names
 from ..release_dates import (
     apply_registry_release_date,
     newest_timestamp,
     record_source_repository,
 )
 from ..signals import FieldSource, ProvenancedField
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals, fetch_json
 
 logger = logging.getLogger(__name__)
+
+# Recorded so the transitive signal is treated as measured rather than as an
+# assumed-empty set (#141, #204). ``requires_dist`` states what installing the
+# distribution pulls in, and it is already in the payload this adapter fetches.
+# It is recorded only when PyPI actually published the list — see
+# ``parsers.python.runtime_requirement_names`` for why ``null`` is not a zero.
+TRANSITIVE_SOURCE_REQUIRES_DIST = "pypi-requires-dist"
 
 # project_urls keys that name a source repository, most explicit first. PyPI
 # lets a maintainer label the link anything, so the match is on the key, but
@@ -122,6 +131,24 @@ class PythonAnalyzer(BaseAnalyzer):
         latest_version = _string_or_none(info_map.get("version"))
         if latest_version:
             dep.latest_version = latest_version
+
+        # ``requires_dist`` names the distribution's own runtime requirements —
+        # the same fact nuget reads out of its ``.nuspec`` and maven out of the
+        # POM. Entries gated behind an extra (``PySocks; extra == "socks"``) are
+        # optional tooling and are dropped; entries gated behind an ordinary
+        # environment marker (``importlib-metadata; python_version < "3.10"``)
+        # are runtime and are kept. ``null`` is not a measured zero and leaves
+        # the signal unmeasured.
+        shipped = runtime_requirement_names(info_map.get("requires_dist"))
+        if shipped is not None:
+            dep.transitive_dependencies = shipped - {dep.name}
+            record_transitive_source(dep, source=TRANSITIVE_SOURCE_REQUIRES_DIST)
+        else:
+            logger.debug(
+                "PyPI published no requires_dist for %s; the transitive signal "
+                "stays unmeasured rather than reading null as zero",
+                dep.name,
+            )
 
         repository_url = self._repository_url(info_map)
         if repository_url:

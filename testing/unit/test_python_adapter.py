@@ -124,6 +124,16 @@ REQUESTS_RESPONSE: Dict[str, object] = {
             "Documentation": "https://requests.readthedocs.io",
             "Source": "https://github.com/psf/requests",
         },
+        # As PyPI publishes it: four runtime requirements and two behind
+        # extras. The captured payload carries the same six (#204).
+        "requires_dist": [
+            "charset_normalizer<4,>=2",
+            "idna<4,>=2.5",
+            "urllib3<3,>=1.26",
+            "certifi>=2023.5.7",
+            'PySocks!=1.5.7,>=1.5.6; extra == "socks"',
+            'chardet<8,>=3.0.2; extra == "use-chardet-on-py3"',
+        ],
     },
     "urls": [{"upload_time_iso_8601": "2026-05-14T19:25:27.735762Z"}],
     "releases": {

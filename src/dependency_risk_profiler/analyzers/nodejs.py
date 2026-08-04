@@ -6,18 +6,27 @@ from typing import Dict, List, Optional
 from urllib.parse import quote
 
 from ..models import DependencyMetadata
+from ..parsers.nodejs import runtime_dependency_names
 from ..release_dates import (
     apply_registry_release_date,
     newest_timestamp,
     parse_registry_timestamp,
     record_source_repository,
 )
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals, fetch_json
 
 logger = logging.getLogger(__name__)
 
 NPM_REGISTRY_BASE = "https://registry.npmjs.org"
+
+# Recorded so the transitive signal is treated as measured rather than as an
+# assumed-empty set (#141, #204). The latest version's own manifest states what
+# installing the package pulls in — the same fact nuget reads out of its
+# ``.nuspec`` and composer out of the p2 ``require`` block — and it comes out of
+# the packument this adapter already fetches, at no extra request.
+TRANSITIVE_SOURCE_NPM_MANIFEST = "npm-version-manifest"
 
 
 def npm_registry_path(package_name: str) -> str:
@@ -121,6 +130,18 @@ class NodeJSAnalyzer(BaseAnalyzer):
         if self._is_deprecated(npm_data, latest):
             dep.is_deprecated = True
 
+        # The latest release's own manifest names its runtime dependencies. The
+        # read is deliberately gated on the manifest existing rather than on the
+        # key: an absent 'dependencies' key means the author declared none and
+        # is a measured zero, while an absent *manifest* means nobody read a
+        # list at all and must stay unmeasured (#199). devDependencies,
+        # peerDependencies and optionalDependencies are not what installing the
+        # package pulls in and are not read.
+        shipped = runtime_dependency_names(self._version_manifest(npm_data, latest))
+        if shipped is not None:
+            dep.transitive_dependencies = shipped - {dep.name}
+            record_transitive_source(dep, source=TRANSITIVE_SOURCE_NPM_MANIFEST)
+
         repository_url = self._repository_url(npm_data)
         if repository_url:
             dep.repository_url = repository_url
@@ -207,8 +228,39 @@ class NodeJSAnalyzer(BaseAnalyzer):
         return None
 
     @staticmethod
-    def _is_deprecated(
+    def _version_manifest(
         npm_data: Dict[str, object], latest_version: Optional[str]
+    ) -> Optional[Dict[str, object]]:
+        """Return the packument's manifest for a version, or None.
+
+        The packument's ``versions`` map holds the published package.json of
+        every release, and it is where both the deprecation notice and the
+        dependency list live. Neither is at the top level and neither ever has
+        been (#142), so this is the single seam both reads go through.
+
+        None means the manifest is not in this packument — a mirror that
+        answered without it, or a ``latest`` resolved from the ``/latest``
+        document instead of from ``dist-tags``. Callers must treat that as
+        "nothing was read", not as "read, and it was empty".
+
+        Args:
+            npm_data: ``registry.npmjs.org/<package>`` packument.
+            latest_version: Latest version, when one resolved.
+
+        Returns:
+            The version manifest, or None when the packument has no such entry.
+        """
+        if not latest_version:
+            return None
+        versions = npm_data.get("versions")
+        if not isinstance(versions, dict):
+            return None
+        manifest = versions.get(latest_version)
+        return manifest if isinstance(manifest, dict) else None
+
+    @classmethod
+    def _is_deprecated(
+        cls, npm_data: Dict[str, object], latest_version: Optional[str]
     ) -> bool:
         """Return whether the package's current release is deprecated.
 
@@ -222,13 +274,8 @@ class NodeJSAnalyzer(BaseAnalyzer):
         Returns:
             True when the latest release carries a deprecation notice.
         """
-        if not latest_version:
-            return False
-        versions = npm_data.get("versions")
-        if not isinstance(versions, dict):
-            return False
-        manifest = versions.get(latest_version)
-        if not isinstance(manifest, dict):
+        manifest = cls._version_manifest(npm_data, latest_version)
+        if manifest is None:
             return False
         return bool(manifest.get("deprecated"))
 

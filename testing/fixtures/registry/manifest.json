@@ -26,12 +26,20 @@
           "url": "https://crates.io/api/v1/crates/acid-store/owners",
           "reducer": "none"
         },
+        "acid-store.dependencies": {
+          "url": "https://crates.io/api/v1/crates/acid-store/0.14.2/dependencies",
+          "reducer": "none"
+        },
         "serde": {
           "url": "https://crates.io/api/v1/crates/serde",
           "reducer": "crates-io"
         },
         "serde.owners": {
           "url": "https://crates.io/api/v1/crates/serde/owners",
+          "reducer": "none"
+        },
+        "serde.dependencies": {
+          "url": "https://crates.io/api/v1/crates/serde/1.0.229/dependencies",
           "reducer": "none"
         }
       }

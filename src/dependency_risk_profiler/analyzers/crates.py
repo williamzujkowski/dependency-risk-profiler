@@ -8,12 +8,14 @@ from typing import Dict, Optional, Sequence
 import requests
 
 from ..models import DependencyMetadata
+from ..parsers.crates import runtime_dependency_names
 from ..release_dates import (
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
 )
 from ..signals import FieldSource, ProvenancedField
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -21,6 +23,25 @@ logger = logging.getLogger(__name__)
 
 CRATES_API_BASE = "https://crates.io/api/v1/crates"
 _USER_AGENT = "dependency-risk-profiler (metadata lookup)"
+
+# Recorded so the transitive signal is treated as measured rather than as an
+# assumed-empty set (#141, #204).
+#
+# cargo is the one ecosystem of the five in #204 that costs a request for this.
+# The ``/crates/<name>`` document carries no dependency list — only a
+# ``links.dependencies`` pointer to the per-version endpoint — so unlike npm,
+# PyPI and RubyGems there is nothing already in hand to read. That is a real
+# cost in a thread-pooled org scan: it takes the adapter from two requests per
+# crate to three, +50%.
+#
+# Taken anyway, and the precedent is in this same adapter: ``_get_owner_count``
+# already spends a second request on the maintainer signal, for a signal of
+# comparable weight. Without it cargo is the only registry ecosystem that
+# cannot answer a dependency count at all, which is precisely the like-for-like
+# problem #204 exists to close. The failure semantics mirror the owners read —
+# a request that does not answer records nothing, so an unreachable endpoint
+# leaves the signal unmeasured rather than fabricating a zero.
+TRANSITIVE_SOURCE_CRATES_IO = "crates-io-dependencies"
 
 
 class CratesIOAnalyzer(BaseAnalyzer):
@@ -96,6 +117,11 @@ class CratesIOAnalyzer(BaseAnalyzer):
                 dep.additional_info["analysis_status"] = "analyzed"
                 self._apply_registry_metadata(dep, metadata)
 
+                # The dependency list is the one crates.io fact that is not in
+                # the crate document, so it costs a request. See
+                # TRANSITIVE_SOURCE_CRATES_IO for why that is spent.
+                self._apply_runtime_dependencies(dep, metadata)
+
                 # Repository-derived signals (last commit, tests/CI, the
                 # OpenSSF-style security checks) come from the source repo, the
                 # same way the Python/npm/Go/RubyGems analyzers collect them.
@@ -163,6 +189,45 @@ class CratesIOAnalyzer(BaseAnalyzer):
         description = self._string_value(metadata, "description")
         if description:
             dep.additional_info["description"] = description
+
+    def _apply_runtime_dependencies(
+        self, dep: DependencyMetadata, metadata: Mapping[str, object]
+    ) -> None:
+        """Read the crate's runtime dependencies and record them positively.
+
+        The endpoint is version-pinned, so this needs the version the crate
+        document actually resolved to — ``released_num``, with ``max_version``
+        behind it, exactly as the latest-version read does. A crate whose every
+        release is yanked answers ``max_version`` with the sentinel ``0.0.0``
+        and has no such document; the request 404s, ``runtime_dependency_names``
+        returns None, and the signal stays unmeasured rather than becoming a
+        confident zero.
+
+        ``[dev-dependencies]`` and ``[build-dependencies]`` are excluded; see
+        ``parsers.crates`` for why ``optional`` is not a third exclusion.
+
+        Args:
+            dep: Dependency metadata to update in place.
+            metadata: Merged crate summary and latest-release entry.
+        """
+        version = self._string_value(metadata, "released_num") or self._string_value(
+            metadata, "max_version"
+        )
+        if not version:
+            return
+        shipped = runtime_dependency_names(
+            self._get_json(f"{CRATES_API_BASE}/{dep.name}/{version}/dependencies")
+        )
+        if shipped is None:
+            logger.debug(
+                "crates.io answered no dependencies document for %s %s; the "
+                "transitive signal stays unmeasured",
+                dep.name,
+                version,
+            )
+            return
+        dep.transitive_dependencies = shipped - {dep.name}
+        record_transitive_source(dep, source=TRANSITIVE_SOURCE_CRATES_IO)
 
     def _repository_url(self, metadata: Mapping[str, object]) -> Optional[str]:
         """Return the crate's repository root, or None when it publishes none.

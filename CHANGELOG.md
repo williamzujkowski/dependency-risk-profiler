@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Four more ecosystems measure transitive dependencies, and the fifth says
+  why it cannot.** nodejs, python, cargo and rubygems never populated
+  `transitive_dependencies` at all. Since the fail-closed read landed, that
+  read as *unmeasured* rather than as a fabricated `0.0` — honest, but blind on
+  a signal three ecosystems already measured, so a Java artifact and an npm
+  package with identical risk profiles scored differently purely because one
+  adapter read a field.
+
+  Each now reads its registry's own statement of what installing the package
+  pulls in, and each draws the runtime line the way its registry draws it:
+  nodejs from `versions[<latest>].dependencies` (not `devDependencies`,
+  `peerDependencies` or `optionalDependencies`), python from
+  `info.requires_dist` (not the `extra ==` entries), rubygems from
+  `dependencies.runtime` (not `development`), and cargo from the per-version
+  dependencies endpoint filtered to `kind: "normal"` (not `dev` or `build`).
+  Three of the four cost no extra request — the data was already in a payload
+  the adapter fetched. cargo costs one: the crate document carries only a
+  pointer, so its request count per crate goes from two to three, taken for the
+  same reason the adapter already spends a request on the owner count.
+
+  golang abstains, and records UNMEASURED positively rather than staying
+  silent. `go.mod` states no dependency scope: `go mod tidy` writes a module's
+  test-only requirements into the same direct `require` block as its runtime
+  ones — logrus requires `testify` beside `golang.org/x/sys` — so counting the
+  block would over-report Go modules systematically, which is the opposite of
+  the like-for-like comparison this change exists to restore.
+
+  Two absences are kept distinguishable throughout: a payload that declares no
+  dependencies is a measured zero, a payload that declares nothing readable is
+  not. PyPI's `requires_dist: null` is the sharp case and is read as unmeasured
+  — `carbon` and `graphite-web` both report null and both declare real
+  `install_requires`, so null means "PyPI cannot tell you" rather than "none".
+
 - **Schema v2 carries `field_sources`: which acquisition path wrote each field
   that has more than one.** `star_count` is written from a regex over
   unauthenticated github.com HTML *and* from `stargazers_count` on the
@@ -33,6 +66,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/signals.md`.
 
 ### Changed
+
+- **Risk scores move for npm, PyPI, RubyGems and crates.io packages.** A signal
+  going from unmeasured to measured re-enters both the numerator and the
+  denominator, so every dependency in those four ecosystems is rescored. Some
+  cross a verdict boundary in the process: `express` and `request` were UNKNOWN
+  purely because npm sat one signal short of the insufficient-data bar and are
+  now LOW and MEDIUM, `flask` moves UNKNOWN -> LOW, and `hpricot` moves MEDIUM
+  -> LOW on a measured zero.
+
+  The per-ecosystem measured-signal floors are re-baselined upward to the new
+  measured value: cargo 8 -> 9, nodejs 7 -> 8, python 8 -> 9, rubygems 8 -> 9.
+  maven, gradle, nuget, composer and golang are unchanged. `nodejs` is the last
+  entry to leave `SCORES_FROM_REGISTRY_ALONE = False`: npm still publishes no
+  cheap maintainer count, and it clears the bar by exactly nothing — eight
+  measured against eight unmeasured — so losing any one signal returns every
+  npm package to UNKNOWN. golang is now the only ecosystem that cannot reach a
+  verdict from registry metadata alone.
 
 - **BREAKING CHANGE: `analyze --output json` and `scan-org` now emit one
   `ScoredDependency` shape (schema v2).** Both commands described the same
