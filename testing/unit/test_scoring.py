@@ -60,7 +60,7 @@ def test_scoring_system() -> None:
     medium_risk_score = scorer.score_dependency(medium_risk)
     # Missing enhanced metadata is excluded instead of scored as moderate risk.
     assert medium_risk_score.risk_level == RiskLevel.LOW
-    assert medium_risk_score.unknown_signal_count == 7
+    assert medium_risk_score.unknown_signal_count == 8
     assert medium_risk_score.total_score < 3.5
 
     # Test a high-risk dependency
@@ -151,7 +151,7 @@ def test_partial_data() -> None:
     assert score.total_score == 0.0
     assert score.risk_level == RiskLevel.UNKNOWN
     assert score.insufficient_data is True
-    assert score.unknown_signal_count == 11
+    assert score.unknown_signal_count == 12
     assert "staleness" in score.unknown_signals
     assert "maintainer" in score.unknown_signals
     assert "version" in score.unknown_signals
@@ -174,13 +174,62 @@ def test_all_missing_data_is_unknown_not_medium() -> None:
         "version",
         "health_indicators",
         "license",
-        "community",
+        "community_popularity",
+        "community_activity",
         "security_policy",
         "dependency_update",
         "signed_commits",
         "branch_protection",
         "maintained",
     ]
+
+
+def test_stars_alone_do_not_pass_as_a_measured_community_signal() -> None:
+    """Popularity without cadence is half a signal, and says so (#166).
+
+    ``community_score`` used to be the star bucket wearing a composite's name:
+    ``commit_frequency`` was never produced, so the cadence half silently
+    vanished and the remaining half carried the full community weight.
+    """
+    scorer = RiskScorer()
+    dep = DependencyMetadata(
+        name="popular-but-unclonable",
+        installed_version="1.0.0",
+        community_metrics=CommunityMetrics(star_count=50_000),
+    )
+
+    score = scorer.score_dependency(dep)
+
+    # The measured half is still reported — an unmeasurable cadence does not
+    # discard a known star count.
+    assert score.community_score == 0.0
+    assert "community_popularity" not in score.unknown_signals
+    # But the unmeasured half is named, not quietly averaged away.
+    assert "community_activity" in score.unknown_signals
+
+
+def test_measured_cadence_moves_the_community_score() -> None:
+    """A well-starred package with a dead commit log is not a 0.0 (#166)."""
+    scorer = RiskScorer()
+    popular = CommunityMetrics(star_count=50_000)
+    popular_and_dead = CommunityMetrics(star_count=50_000, commit_frequency=0.1)
+
+    assert scorer._calculate_popularity_score(popular) == 0.0
+    assert scorer._calculate_development_activity_score(popular) is None
+    assert scorer._calculate_development_activity_score(popular_and_dead) == 1.0
+
+    dep = DependencyMetadata(
+        name="starred-and-stalled",
+        installed_version="1.0.0",
+        community_metrics=popular_and_dead,
+    )
+    score = scorer.score_dependency(dep)
+
+    assert score.community_score == 0.5
+    assert "community_activity" not in score.unknown_signals
+    # The risk factor gates on the cadence half, not on the average, which
+    # lands on exactly 0.5 and would clear no `> 0.5` threshold.
+    assert "Low development activity (0.1 commits/month)" in score.factors
 
 
 def test_full_data_scoring_is_unchanged() -> None:
@@ -432,7 +481,7 @@ def test_aggregate_ignores_unknown_signals() -> None:
 
     score = scorer.score_dependency(dep)
 
-    assert score.unknown_signal_count == 9
+    assert score.unknown_signal_count == 10
     assert score.measured_signal_count == 5
     assert score.insufficient_data is True
     assert score.total_score == 5.0 * (1.0 + 1.0) / 5.0

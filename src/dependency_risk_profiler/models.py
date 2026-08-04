@@ -42,16 +42,16 @@ class CommunityMetrics:
     """Community health metrics for a dependency."""
 
     star_count: Optional[int] = None  # GitHub stars or equivalent
-    fork_count: Optional[int] = None  # Fork count
     contributor_count: Optional[int] = None  # Total contributors
-    commit_frequency: Optional[float] = None  # Commits per month
+    # Commits per month over the trailing six months, read from a clone in the
+    # analyze path and from the GitHub commits API in org scans. None means
+    # nobody could look, and the scorer reports that rather than guessing (#166).
+    commit_frequency: Optional[float] = None
     last_release_date: Optional[datetime] = None  # Date of last release
     # Publication date of the *installed* version. Paired with last_release_date
     # this measures elapsed-time drift for calendar-versioned packages, where
     # component distance carries no compatibility meaning (#126).
     installed_release_date: Optional[datetime] = None
-    releases_count: Optional[int] = None  # Number of releases
-    downloads_count: Optional[int] = None  # Number of downloads
 
 
 @dataclass
@@ -71,7 +71,6 @@ class SecurityMetrics:
 
     # Vulnerability metrics
     vulnerability_count: Optional[int] = None  # Number of known vulnerabilities
-    fixed_vulnerability_count: Optional[int] = None  # Number of fixed vulnerabilities
     max_cvss_score: Optional[float] = None  # Maximum CVSS score of vulnerabilities
     counted_vulnerability_count: Optional[int] = None
     filtered_vulnerability_count: Optional[int] = None
@@ -82,9 +81,6 @@ class SecurityMetrics:
     applicability_unknown_reasons: Dict[str, int] = field(default_factory=dict)
     max_vulnerability_severity: Optional[str] = None
     vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
-    has_recent_security_update: Optional[bool] = (
-        None  # Whether there was a recent security update
-    )
 
 
 @dataclass

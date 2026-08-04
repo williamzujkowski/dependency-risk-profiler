@@ -184,12 +184,10 @@ def _score_offline(
     """
     dep = _analyze(payload, installed_version)
     dep = analyze_license(dep, payload)
-    # Nested rather than parenthesized: this suite still runs on Python 3.9.
     with mock.patch.object(
         community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
     ):
-        with mock.patch.object(community_analyzer, "fetch_json", return_value=None):
-            dep = community_analyzer.analyze_community_metrics(dep, payload)
+        dep = community_analyzer.analyze_community_metrics(dep, payload)
     return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
 
 

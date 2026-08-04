@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Iterable, List, Mapping, Optional
 from urllib.parse import parse_qs, urlparse
 
@@ -24,6 +24,11 @@ _MAX_MANIFEST_BYTES = 5 * 1024 * 1024
 # Read the streamed body in bounded chunks so an oversized response is rejected
 # without materializing the whole thing in memory.
 _MANIFEST_CHUNK_BYTES = 64 * 1024
+
+# Trailing window for the commit-cadence signal, matching the git-clone
+# implementation in ``community.analyzer.calculate_commit_frequency`` so an org
+# scan and an analyze run answer the same question over the same period.
+_COMMIT_FREQUENCY_MONTHS = 6
 
 
 class GitHubRateLimitError(RuntimeError):
@@ -63,6 +68,11 @@ class RepoSignals:
 
     star_count: Optional[int] = None
     contributor_count: Optional[int] = None
+    # Commits per month over the trailing six months, counted through the
+    # commits endpoint's pagination rather than cloned. Org scans do not clone,
+    # so without this the cadence half of the community score would be
+    # permanently unmeasured there (#166).
+    commit_frequency: Optional[float] = None
     archived: Optional[bool] = None
     # `pushed_at` is the server-asserted last push (more trustworthy than a
     # shallow clone's author-controlled commit date). None = unknown.
@@ -281,10 +291,13 @@ class GitHubOrgClient:
                 contributors_response.headers.get("Link"),
             )
 
+            commit_frequency = self._commit_frequency(normalized)
+
             has_tests, has_ci = self._repo_health_from_tree(normalized, default_branch)
             return RepoSignals(
                 star_count=star_count,
                 contributor_count=contributor_count,
+                commit_frequency=commit_frequency,
                 archived=archived,
                 pushed_at=pushed_at,
                 has_tests=has_tests,
@@ -384,10 +397,62 @@ class GitHubOrgClient:
 
         return float(2**attempt)
 
+    def _commit_frequency(self, owner_repo: str) -> Optional[float]:
+        """Return commits per month over the trailing window, or None.
+
+        Counts commits the same way ``_contributor_count`` counts contributors:
+        ask for one item per page and read the last page number out of the Link
+        header, so the whole answer costs a single request no matter how busy
+        the repository is. ``/stats/commit_activity`` would be the obvious
+        alternative but replies 202-with-no-body while GitHub computes the
+        series, which would mean either a retry loop or a guessed zero.
+
+        Args:
+            owner_repo: Normalized ``owner/repo`` string.
+
+        Returns:
+            Average commits per month, or None when GitHub did not answer with
+            a countable page. An empty repository answers 409 and a repository
+            with no default branch answers 404; both leave cadence unmeasured
+            here rather than discarding the popularity signals fetched
+            alongside it. Rate-limit errors still propagate.
+        """
+        since = (
+            datetime.now(timezone.utc) - timedelta(days=30 * _COMMIT_FREQUENCY_MONTHS)
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        try:
+            response = self._request(
+                f"/repos/{owner_repo}/commits",
+                {"since": since, "per_page": "1"},
+                accept="application/vnd.github+json",
+            )
+            commit_count = self._paginated_total(
+                response.json(), response.headers.get("Link")
+            )
+        except (requests.HTTPError, ValueError) as exc:
+            logger.debug("Commit cadence unavailable for %s: %s", owner_repo, exc)
+            return None
+
+        if commit_count is None:
+            return None
+        return commit_count / _COMMIT_FREQUENCY_MONTHS
+
     def _contributor_count(
         self, payload: object, link_header: Optional[str]
     ) -> Optional[int]:
         """Return contributor count from GitHub pagination."""
+        return self._paginated_total(payload, link_header)
+
+    def _paginated_total(
+        self, payload: object, link_header: Optional[str]
+    ) -> Optional[int]:
+        """Return a collection's total size from a ``per_page=1`` response.
+
+        With one item per page the rel=last page number *is* the total, which
+        turns an unbounded listing into a single request. Falls back to the
+        returned page when GitHub sends no Link header (a single-page result).
+        """
         if link_header is not None:
             last_page = self._last_page_from_link_header(link_header)
             if last_page is not None:

@@ -687,6 +687,15 @@ def test_github_client_fetches_repository_signals_from_authenticated_api() -> No
                     )
                 },
             ),
+            _FixtureResponse(
+                [{"sha": "abc"}],
+                {
+                    "Link": (
+                        "<https://api.github.com/repos/pallets/jinja/commits"
+                        '?per_page=1&page=90>; rel="last"'
+                    )
+                },
+            ),
         ]
     )
     client = GitHubOrgClient(
@@ -699,11 +708,47 @@ def test_github_client_fetches_repository_signals_from_authenticated_api() -> No
     assert signals.star_count == 12345
     assert signals.contributor_count == 248
     assert signals.archived is False
+    # 90 commits over the six-month window: an org scan measures cadence from
+    # the API because it never clones (#166).
+    assert signals.commit_frequency == 15.0
     assert session.urls == [
         "https://api.github.com/repos/pallets/jinja",
         "https://api.github.com/repos/pallets/jinja/contributors",
+        "https://api.github.com/repos/pallets/jinja/commits",
     ]
     assert session.params[1] == {"per_page": "1", "anon": "true"}
+    assert session.params[2]["per_page"] == "1"
+    assert "since" in session.params[2]
+
+
+def test_github_client_leaves_cadence_unmeasured_when_commits_fail() -> None:
+    """An empty repo answers 409; cadence goes unmeasured, stars survive (#166)."""
+
+    class _EmptyRepoCommits(_FixtureResponse):
+        """A commits response that behaves like GitHub's 409 for an empty repo."""
+
+        def raise_for_status(self) -> None:
+            """Fail the way requests does for a 4xx."""
+            raise requests.HTTPError("409 Conflict: Git Repository is empty.")
+
+        def close(self) -> None:
+            """Absorb the close the client does before re-raising."""
+
+    session = SignalSession(
+        [
+            _FixtureResponse({"stargazers_count": 3, "archived": False}),
+            _FixtureResponse([{"login": "one"}], {}),
+            _EmptyRepoCommits([]),
+        ]
+    )
+    client = GitHubOrgClient(
+        token="fixture-token", session=cast(requests.Session, session)
+    )
+
+    signals = client.get_repository_signals("acme/empty")
+
+    assert signals.commit_frequency is None
+    assert signals.star_count == 3
 
 
 def test_github_client_derives_pushed_at_and_health_from_tree() -> None:
@@ -719,6 +764,7 @@ def test_github_client_derives_pushed_at_and_health_from_tree() -> None:
                 }
             ),
             _FixtureResponse([{"login": "one"}], {}),
+            _FixtureResponse([{"sha": "abc"}], {}),
             _FixtureResponse(
                 {
                     # Non-recursive root tree: top-level entries only. A
@@ -743,8 +789,8 @@ def test_github_client_derives_pushed_at_and_health_from_tree() -> None:
     assert signals.has_tests is True
     assert signals.has_ci is True
     # Non-recursive tree request (no ?recursive=1) keeps it cheap for monorepos.
-    assert session.urls[2] == "https://api.github.com/repos/acme/widget/git/trees/main"
-    assert session.params[2] == {}
+    assert session.urls[3] == "https://api.github.com/repos/acme/widget/git/trees/main"
+    assert session.params[3] == {}
 
 
 def test_github_client_reports_false_health_when_no_markers() -> None:
@@ -755,6 +801,7 @@ def test_github_client_reports_false_health_when_no_markers() -> None:
                 {"stargazers_count": 5, "default_branch": "main", "archived": False}
             ),
             _FixtureResponse([{"login": "one"}], {}),
+            _FixtureResponse([], {}),
             _FixtureResponse({"tree": [{"path": "src", "type": "tree"}]}),
         ]
     )

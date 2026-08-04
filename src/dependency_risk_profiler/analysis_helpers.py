@@ -7,7 +7,8 @@ helping to avoid circular imports.
 import logging
 from datetime import datetime
 
-from .models import DependencyMetadata, SecurityMetrics
+from .community.analyzer import calculate_commit_frequency
+from .models import CommunityMetrics, DependencyMetadata, SecurityMetrics
 from .release_dates import apply_repository_activity_date
 from .scorecard.branch_protection import check_branch_protection
 from .scorecard.dependency_update import check_dependency_update_tools
@@ -53,6 +54,15 @@ def analyze_repository(
         contributor_count = count_contributors(repo_dir)
         if contributor_count:
             dependency.maintainer_count = contributor_count
+
+        # Development cadence, read from the clone we already have. Half of the
+        # community score is supposed to be commits-per-month, and until #166 no
+        # caller ever produced it, so the "composite" was the star bucket alone.
+        commit_frequency = calculate_commit_frequency(repo_dir)
+        if commit_frequency is not None:
+            if dependency.community_metrics is None:
+                dependency.community_metrics = CommunityMetrics()
+            dependency.community_metrics.commit_frequency = commit_frequency
 
         # Check for health indicators
         has_tests, has_ci, has_contribution_guidelines = check_health_indicators(

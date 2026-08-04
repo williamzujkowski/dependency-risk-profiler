@@ -9,6 +9,7 @@ import subprocess  # nosec B404
 import tempfile
 import time
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Tuple
 from urllib.parse import urlparse
@@ -124,6 +125,76 @@ def github_contributor_count(
         return None
     if isinstance(payload, list):
         return len(payload)
+    return None
+
+
+def github_commit_frequency(
+    repository_url: Optional[str],
+    token: Optional[str],
+    months: int = 6,
+    timeout: int = 30,
+) -> Optional[float]:
+    """Return commits per month from the GitHub API, or ``None``.
+
+    The analyze path clones ``--depth 1``, and one reachable commit cannot
+    answer "how often is this maintained?" any better than it can answer "how
+    many people maintain it?" — so cadence comes from the API for the same
+    reason the contributor count does. Same single-request pagination trick:
+    one commit per page, and the last-page number is the total.
+
+    Args:
+        repository_url: Repository URL published by the registry.
+        token: GitHub token; without one the signal stays unknown.
+        months: Trailing window, matching ``calculate_commit_frequency``.
+        timeout: Per-request timeout in seconds.
+
+    Returns:
+        Average commits per month, or None when there is no token, the URL is
+        not a resolvable GitHub repo, or the API does not answer.
+    """
+    if not token or not repository_url:
+        return None
+    repo_info = extract_github_repo_info(repository_url)
+    if not repo_info:
+        return None
+    owner, repo = repo_info
+    since = (datetime.now(timezone.utc) - timedelta(days=30 * months)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {token}",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "dependency-risk-profiler",
+    }
+    try:
+        response = requests.get(
+            f"{_GITHUB_API_BASE}/repos/{owner}/{repo}/commits",
+            headers=headers,
+            params={"since": since, "per_page": "1"},
+            timeout=timeout,
+        )
+    except requests.RequestException as exc:
+        logger.debug("GitHub commit lookup failed for %s: %s", repository_url, exc)
+        return None
+    if response.status_code != 200:
+        logger.debug(
+            "GitHub commit lookup for %s returned HTTP %s",
+            repository_url,
+            response.status_code,
+        )
+        return None
+
+    last_page = _last_page_from_link_header(response.headers.get("Link"))
+    if last_page is not None:
+        return last_page / months
+    # No Link header means a single page: count what came back.
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    if isinstance(payload, list):
+        return len(payload) / months
     return None
 
 
@@ -429,7 +500,7 @@ def count_contributors(repo_dir: str) -> Optional[int]:
         # repository — a false "single maintainer" signal. Report unknown (None)
         # in that case rather than a misleading count; the real contributor count
         # comes from the GitHub API (see github_contributor_count).
-        if _is_shallow_clone(repo_dir):
+        if is_shallow_clone(repo_dir):
             logger.debug(
                 "Skipping contributor count in %s: shallow clone has no history",
                 repo_dir,
@@ -463,11 +534,12 @@ def count_contributors(repo_dir: str) -> Optional[int]:
         return None
 
 
-def _is_shallow_clone(repo_dir: str) -> bool:
+def is_shallow_clone(repo_dir: str) -> bool:
     """Return whether ``repo_dir`` is a shallow git clone.
 
-    A shallow clone cannot answer history questions (contributor count, full
-    log) accurately, so callers should treat those signals as unknown.
+    A shallow clone cannot answer history questions (contributor count, commit
+    cadence, full log) accurately, so callers should treat those signals as
+    unknown rather than reading a confident wrong number out of one commit.
     """
     try:
         result = subprocess.run(

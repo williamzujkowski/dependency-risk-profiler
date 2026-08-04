@@ -50,13 +50,21 @@ logger = logging.getLogger(__name__)
 REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
     {
         "health_indicators",
-        "community",
+        "community_popularity",
+        "community_activity",
         "security_policy",
         "dependency_update",
         "signed_commits",
         "branch_protection",
         "maintained",
     }
+)
+
+# The two halves of the community signal. Split apart so a measured popularity
+# cannot carry an unmeasured cadence (#166), but a package we have no community
+# data for at all is still one gap rather than two — the #146 rule.
+COMMUNITY_SIGNALS: FrozenSet[str] = frozenset(
+    {"community_popularity", "community_activity"}
 )
 
 
@@ -195,7 +203,18 @@ class RiskScorer:
 
         # Enhanced risk scores
         license_score = self._calculate_license_score(dependency.license_info)
-        community_score = self._calculate_community_score(dependency.community_metrics)
+        # Popularity and development cadence are weighed apart, not averaged
+        # into one confident number. `community_score` below is the reported
+        # summary of whichever halves were measured (#166).
+        popularity_score = self._calculate_popularity_score(
+            dependency.community_metrics
+        )
+        development_activity_score = self._calculate_development_activity_score(
+            dependency.community_metrics
+        )
+        community_score = self._combine_community_score(
+            popularity_score, development_activity_score
+        )
         transitive_score = self._calculate_transitive_score(
             dependency.transitive_dependencies,
             measured=dependency.additional_info.get(TRANSITIVE_SOURCE_KEY)
@@ -231,7 +250,16 @@ class RiskScorer:
             ("health_indicators", health_score, self.health_indicators_weight),
             # Enhanced risk factors
             ("license", license_score, self.license_weight),
-            ("community", community_score, self.community_weight),
+            # The community budget splits evenly across its two halves. When
+            # both are measured this is arithmetically identical to weighting
+            # their average; when only one is, the missing half drops out of the
+            # denominator instead of being silently carried by the other (#74).
+            ("community_popularity", popularity_score, self.community_weight / 2),
+            (
+                "community_activity",
+                development_activity_score,
+                self.community_weight / 2,
+            ),
             ("transitive", transitive_score, self.transitive_weight),
             (
                 "security_policy",
@@ -308,7 +336,8 @@ class RiskScorer:
             version_score,
             health_score,
             license_score,
-            community_score,
+            popularity_score,
+            development_activity_score,
             transitive_score,
             security_policy_score,
             dependency_update_score,
@@ -452,7 +481,9 @@ class RiskScorer:
         seven repository-derived signals, and that inability is not seven
         separate holes in the evidence — it is one thing we measured. Counting
         it seven times is what made an abandoned crypto library carrying two
-        CRITICAL advisories report "insufficient data" (#146). Every other
+        CRITICAL advisories report "insufficient data" (#146). The same rule
+        applies to the two community halves: when *neither* was measured, that
+        is one absent community record, not two independent gaps. Every other
         unmeasured signal still counts in full.
 
         Args:
@@ -463,11 +494,19 @@ class RiskScorer:
         Returns:
             The number of unmeasured signals that remain unexplained.
         """
-        if source_repository_score != 1.0:
-            return len(unknown_signals)
-        return sum(
-            1 for name in unknown_signals if name not in REPOSITORY_DERIVED_SIGNALS
-        )
+        if source_repository_score == 1.0:
+            remaining = [
+                name
+                for name in unknown_signals
+                if name not in REPOSITORY_DERIVED_SIGNALS
+            ]
+        else:
+            remaining = list(unknown_signals)
+
+        community_unknown = sum(1 for name in remaining if name in COMMUNITY_SIGNALS)
+        if community_unknown == len(COMMUNITY_SIGNALS):
+            return len(remaining) - (len(COMMUNITY_SIGNALS) - 1)
+        return len(remaining)
 
     def _calculate_staleness_score(
         self, last_updated: Optional[datetime]
@@ -792,48 +831,84 @@ class RiskScorer:
         else:
             return 0.5
 
-    def _calculate_community_score(
-        self, community_metrics: Optional[CommunityMetrics]
+    @staticmethod
+    def _calculate_popularity_score(
+        community_metrics: Optional[CommunityMetrics],
     ) -> Optional[float]:
-        """Calculate community health risk score.
+        """Score how much attention the project has (more stars = lower risk).
 
         Args:
             community_metrics: Community health metrics.
 
         Returns:
-            Community health risk score between 0.0 and 1.0.
+            Popularity risk score between 0.0 and 1.0, or None when the star
+            count could not be read.
         """
-        if community_metrics is None:
+        if community_metrics is None or community_metrics.star_count is None:
             return None
 
-        sub_scores: List[float] = []
+        if community_metrics.star_count >= 5000:
+            return 0.0  # Very popular project
+        if community_metrics.star_count >= 1000:
+            return 0.25  # Popular project
+        if community_metrics.star_count >= 100:
+            return 0.5  # Moderately popular
+        return 0.75  # Not very popular
 
-        # Star count score (more stars = lower risk)
-        if community_metrics.star_count is not None:
-            if community_metrics.star_count >= 5000:
-                sub_scores.append(0.0)  # Very popular project
-            elif community_metrics.star_count >= 1000:
-                sub_scores.append(0.25)  # Popular project
-            elif community_metrics.star_count >= 100:
-                sub_scores.append(0.5)  # Moderately popular
-            else:
-                sub_scores.append(0.75)  # Not very popular
+    @staticmethod
+    def _calculate_development_activity_score(
+        community_metrics: Optional[CommunityMetrics],
+    ) -> Optional[float]:
+        """Score development cadence from commits per month.
 
-        # Commit frequency score
-        if community_metrics.commit_frequency is not None:
-            if community_metrics.commit_frequency >= 10:
-                sub_scores.append(0.0)  # Very active development
-            elif community_metrics.commit_frequency >= 5:
-                sub_scores.append(0.25)  # Active development
-            elif community_metrics.commit_frequency >= 1:
-                sub_scores.append(0.5)  # Moderate development activity
-            else:
-                sub_scores.append(1.0)  # Low development activity
+        Args:
+            community_metrics: Community health metrics.
 
-        # Calculate final score (average of sub-scores)
-        if sub_scores:
-            return sum(sub_scores) / len(sub_scores)
-        return None
+        Returns:
+            Development activity risk score between 0.0 and 1.0, or None when
+            nothing could measure the cadence — no clone in the analyze path,
+            and no GitHub commits API answer in an org scan.
+        """
+        if community_metrics is None or community_metrics.commit_frequency is None:
+            return None
+
+        if community_metrics.commit_frequency >= 10:
+            return 0.0  # Very active development
+        if community_metrics.commit_frequency >= 5:
+            return 0.25  # Active development
+        if community_metrics.commit_frequency >= 1:
+            return 0.5  # Moderate development activity
+        return 1.0  # Low development activity
+
+    @staticmethod
+    def _combine_community_score(
+        popularity_score: Optional[float],
+        development_activity_score: Optional[float],
+    ) -> Optional[float]:
+        """Average the community components that were actually measured.
+
+        This is a reporting convenience only. The two components are weighted
+        independently in ``score_dependency`` so that an unmeasured half leaves
+        both the numerator and the denominator (#74); averaging them here would
+        otherwise let a half-measured composite pass as a whole one, which is
+        exactly what made ``community_score`` a star count wearing a cadence
+        label (#166).
+
+        Args:
+            popularity_score: Popularity component, or None if unmeasured.
+            development_activity_score: Cadence component, or None if unmeasured.
+
+        Returns:
+            Mean of the measured components, or None when neither was measured.
+        """
+        measured = [
+            score
+            for score in (popularity_score, development_activity_score)
+            if score is not None
+        ]
+        if not measured:
+            return None
+        return sum(measured) / len(measured)
 
     def _calculate_transitive_score(
         self, transitive_dependencies: Collection[str], measured: bool = True
@@ -999,7 +1074,8 @@ class RiskScorer:
         version_score: Optional[float],
         health_score: Optional[float],
         license_score: Optional[float],
-        community_score: Optional[float],
+        popularity_score: Optional[float],
+        development_activity_score: Optional[float],
         transitive_score: Optional[float],
         security_policy_score: Optional[float],
         dependency_update_score: Optional[float],
@@ -1018,7 +1094,8 @@ class RiskScorer:
             version_score: Version difference score.
             health_score: Health indicators score.
             license_score: License risk score.
-            community_score: Community health risk score.
+            popularity_score: Community popularity risk score.
+            development_activity_score: Development cadence risk score.
             transitive_score: Transitive dependency risk score.
             security_policy_score: Security policy risk score.
 
@@ -1112,21 +1189,27 @@ class RiskScorer:
                         f"Non-approved license ({dependency.license_info.license_id})"
                     )
 
-        # Community health risk factors
-        if community_score and community_score > 0.5:
-            if dependency.community_metrics:
-                if (
-                    dependency.community_metrics.star_count is not None
-                    and dependency.community_metrics.star_count < 100
-                ):
-                    star_count = dependency.community_metrics.star_count
-                    factors.append(f"Low popularity ({star_count} stars)")
+        # Community health risk factors. Each half gates on its own score: an
+        # averaged composite let a well-starred package with a dead commit log
+        # land on exactly 0.5 and report neither problem (#166).
+        if dependency.community_metrics:
+            if (
+                popularity_score is not None
+                and popularity_score > 0.5
+                and dependency.community_metrics.star_count is not None
+            ):
+                star_count = dependency.community_metrics.star_count
+                factors.append(f"Low popularity ({star_count} stars)")
 
-                if (
-                    dependency.community_metrics.commit_frequency is not None
-                    and dependency.community_metrics.commit_frequency < 1
-                ):
-                    factors.append("Low development activity")
+            if (
+                development_activity_score is not None
+                and development_activity_score > 0.5
+                and dependency.community_metrics.commit_frequency is not None
+            ):
+                commits_per_month = dependency.community_metrics.commit_frequency
+                factors.append(
+                    f"Low development activity ({commits_per_month:.1f} commits/month)"
+                )
 
         # Transitive dependency risk factors
         if transitive_score and transitive_score > 0.5:

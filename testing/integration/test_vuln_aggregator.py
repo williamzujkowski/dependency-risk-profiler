@@ -92,10 +92,9 @@ def vuln_aggregator_test_func(
         sm = updated_dep.security_metrics
         print("\nUpdated Security Metrics:")
         print(f"  Vulnerability Count: {sm.vulnerability_count}")
-        print(f"  Fixed Vulnerability Count: {sm.fixed_vulnerability_count}")
+        print(f"  Counted in Score: {sm.counted_vulnerability_count}")
         print(f"  Max CVSS Score: {sm.max_cvss_score}")
         print(f"  Has Known Exploits: {updated_dep.has_known_exploits}")
-        print(f"  Has Recent Security Update: {sm.has_recent_security_update}")
 
     except Exception as e:
         print(f"Error aggregating vulnerability data: {e}")

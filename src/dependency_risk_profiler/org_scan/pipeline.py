@@ -233,6 +233,7 @@ class ExistingDependencyProfiler(DependencyProfiler):
         if (
             signals.star_count is None
             and signals.contributor_count is None
+            and signals.commit_frequency is None
             and signals.archived is None
             and signals.pushed_at is None
             and signals.has_tests is None
@@ -244,6 +245,8 @@ class ExistingDependencyProfiler(DependencyProfiler):
             dependency.community_metrics = CommunityMetrics()
         if signals.star_count is not None:
             dependency.community_metrics.star_count = signals.star_count
+        if signals.commit_frequency is not None:
+            dependency.community_metrics.commit_frequency = signals.commit_frequency
         if signals.contributor_count is not None:
             dependency.community_metrics.contributor_count = signals.contributor_count
             dependency.maintainer_count = signals.contributor_count
@@ -252,7 +255,8 @@ class ExistingDependencyProfiler(DependencyProfiler):
                 "true" if signals.archived else "false"
             )
         # These replace what the per-dependency git clone used to provide, so an
-        # org scan gets maintenance cadence and test/CI presence from the API.
+        # org scan gets commit cadence, maintenance recency and test/CI presence
+        # from the API.
         # Repository activity is the fallback for cadence, not the primary: a
         # registry release date wins where the adapter found one (#146).
         apply_repository_activity_date(dependency, signals.pushed_at)
