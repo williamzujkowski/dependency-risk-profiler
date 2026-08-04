@@ -23,6 +23,13 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
         Dictionary with monthly commit frequencies and trend indicators.
 
     Raises:
+        ValueError: If ``git rev-list --count`` answered with something that is
+            not a count. A month git could not count is not a month with no
+            commits, and there is no way to leave a hole in this series: the
+            trend compares ``monthly_counts[:3]`` against ``[3:6]``, so dropping
+            an element slides the comparison windows onto the wrong months, and
+            filling it is the fabrication itself. The series is unanswerable, so
+            the caller records the signal as unmeasured (#236).
         Exception: Whatever the repository read raised. A read that failed
             is not a read that found nothing (#218), so the failure now
             propagates to the single caller, which records the signal as
@@ -58,9 +65,12 @@ def analyze_commit_frequency(repo_dir: str, months: int = 12) -> Dict[str, float
 
             try:
                 count = int(output)
-                monthly_counts.append(count)
-            except ValueError:
-                monthly_counts.append(0)
+            except ValueError as e:
+                raise ValueError(
+                    f"git rev-list --count answered {output!r} for "
+                    f"{start_date}..{end_date}, which is not a commit count"
+                ) from e
+            monthly_counts.append(count)
 
         # Calculate average commit frequency
         if monthly_counts:
@@ -125,6 +135,34 @@ def _parse_git_iso_date(value: str) -> Optional[datetime]:
     return parsed.astimezone(timezone.utc)
 
 
+def _require_git_iso_date(value: str, *, source: str) -> datetime:
+    """Parse a release date, or refuse to leave it out of the series.
+
+    :func:`_parse_git_iso_date` answers None for a value it cannot read, and
+    every caller used to drop those silently. The cadence series is sorted and
+    then differenced between adjacent entries, so a dropped date does not
+    shorten the series — it merges the two intervals either side of it into one
+    that never happened, and a project all of whose dates fail to parse reads as
+    a project that has never released (#236).
+
+    Args:
+        value: The date string as the source emitted it.
+        source: What produced it, so the failure names its own origin. Required
+            and keyword-only: an error that cannot say where the value came
+            from is most of the way back to silence.
+
+    Returns:
+        The parsed date as a tz-aware UTC datetime.
+
+    Raises:
+        ValueError: If the value cannot be parsed.
+    """
+    parsed = _parse_git_iso_date(value)
+    if parsed is None:
+        raise ValueError(f"{source} {value!r} is not a date this code can read")
+    return parsed
+
+
 def analyze_release_cadence(
     repo_dir: str, package_data: Optional[Dict] = None
 ) -> Dict[str, float]:
@@ -135,9 +173,20 @@ def analyze_release_cadence(
         package_data: Optional package metadata from registry.
 
     Returns:
-        Dictionary with release cadence metrics.
+        Dictionary with release cadence metrics. Empty means the sources were
+        read and this project has never tagged a release — a measurement, and
+        only reachable when a read actually succeeded.
 
     Raises:
+        ValueError: If a tag date could not be read. The cadence series is
+            ordered and adjacent-differenced, so a dropped element silently
+            merges two release intervals into one: a partial series is not a
+            partial measurement of the same quantity, it is a different and
+            wrong one. Dropping every unparseable date also made a project whose
+            dates git formats unexpectedly read as having no releases at all
+            (#236).
+        subprocess.SubprocessError: If git could not enumerate the tags and no
+            other source answered either.
         Exception: Whatever the repository read raised. A read that failed
             is not a read that found nothing (#218), so the failure now
             propagates to the single caller, which records the signal as
@@ -146,6 +195,16 @@ def analyze_release_cadence(
     result = {}
 
     try:
+        # Not swallowed any more. A git failure here used to fall straight
+        # through to the ``package_data`` fallback, and when that was absent —
+        # which is every call from ``analyze_repository``, which passes None —
+        # the empty ``result`` was returned as though the question had been
+        # settled, indistinguishable from a project that has never tagged a
+        # release. The fallback reads a genuinely different source, so it is
+        # still allowed to answer; what it may not do is cover for a failure
+        # with silence (#236).
+        tag_read_error: Optional[subprocess.SubprocessError] = None
+
         # Try to use tag information from git
         try:
             # Get tag dates
@@ -165,11 +224,9 @@ def analyze_release_cadence(
             ).stdout.strip()
 
             tag_dates = [
-                parsed
+                _require_git_iso_date(line.strip(), source="git tag date")
                 for line in output.split("\n")
                 if line.strip()
-                for parsed in (_parse_git_iso_date(line.strip()),)
-                if parsed is not None
             ]
 
             if tag_dates:
@@ -197,8 +254,9 @@ def analyze_release_cadence(
                     )
                     result["release_overdue_days"] = max(0, (now - expected_next).days)
 
-        except subprocess.SubprocessError:
-            logger.debug("Could not get tag information from git")
+        except subprocess.SubprocessError as e:
+            logger.debug("Could not get tag information from git: %s", e)
+            tag_read_error = e
 
         # Fall back to package data if available
         if package_data and not result:
@@ -209,9 +267,12 @@ def analyze_release_cadence(
                 release_dates = []
                 for version, timestamp in package_data["time"].items():
                     if version not in ["created", "modified"]:
-                        parsed = _parse_git_iso_date(timestamp.replace("Z", "+00:00"))
-                        if parsed is not None:
-                            release_dates.append(parsed)
+                        release_dates.append(
+                            _require_git_iso_date(
+                                timestamp.replace("Z", "+00:00"),
+                                source=f"registry release date for {version}",
+                            )
+                        )
 
                 if release_dates:
                     release_dates.sort(reverse=True)
@@ -244,6 +305,12 @@ def analyze_release_cadence(
                 # For PyPI-like registries
                 # Implementation would be specific to the PyPI data structure
                 pass
+
+        # Nothing answered. An empty result is only allowed to mean "read, and
+        # this project has never released" — if the read that would have said so
+        # failed, the caller gets the failure instead.
+        if not result and tag_read_error is not None:
+            raise tag_read_error
 
     except Exception as e:
         logger.error(f"Error analyzing release cadence: {e}")

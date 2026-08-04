@@ -1,11 +1,13 @@
 """Dependency update tool detection module for dependencies."""
 
+import json
 import logging
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple, TypedDict
+from typing import List, Optional, Set, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
+from ..signals import UnmeasuredReason
 from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
@@ -26,11 +28,20 @@ class DependabotConfiguration(_WithConfigurationPath):
 
 
 class RenovateConfiguration(_WithConfigurationPath):
-    """Renovate setup discovered in a repository."""
+    """Renovate setup discovered in a repository.
+
+    ``package_managers`` is ``Optional`` and the distinction is load-bearing:
+    ``[]`` means the configuration parsed and named no package managers, and
+    ``None`` means the configuration's contents were never established. Those
+    used to be the same empty list, so a ``renovate.json`` that did not parse
+    produced "Renovate configuration exists but package managers not clearly
+    defined" — a finding about a file's contents, from a file nobody read
+    (#236).
+    """
 
     has_renovate: bool
     configuration_type: Optional[str]
-    package_managers: List[str]
+    package_managers: Optional[List[str]]
 
 
 class PyUpConfiguration(_WithConfigurationPath):
@@ -103,8 +114,60 @@ def check_dependabot_configuration(repo_dir: str) -> DependabotConfiguration:
     return result
 
 
+def _renovate_package_managers(payload: object) -> Optional[List[str]]:
+    """Read the package managers a parsed Renovate configuration names.
+
+    Args:
+        payload: Whatever ``json.load`` produced for the configuration file.
+
+    Returns:
+        The sorted package managers the configuration names, ``[]`` when it
+        parsed and named none, or None when the payload is not shaped like a
+        Renovate configuration at all. ``[]`` and None are different answers:
+        the first is a measurement, the second is the absence of one, and
+        collapsing them is what let an unread file report a finding (#236).
+    """
+    if not isinstance(payload, dict):
+        return None
+
+    rules = payload.get("packageRules", [])
+    if not isinstance(rules, list):
+        return None
+
+    managers: Set[str] = set()
+    for rule in rules:
+        if not isinstance(rule, dict):
+            return None
+        for key in ("matchPackagePatterns", "matchManagers"):
+            values = rule.get(key)
+            if values is None:
+                continue
+            if not isinstance(values, list) or not all(
+                isinstance(value, str) for value in values
+            ):
+                return None
+            managers.update(values)
+    return sorted(managers)
+
+
 def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
     """Check for Renovate configuration in a repository.
+
+    The presence of a configuration file and the contents of that file are two
+    different measurements taken from two different reads, and they fail
+    independently. ``exists()`` establishes the first; only a successful parse
+    establishes the second. When the parse fails, the presence finding stands
+    and the contents stay unmeasured (``package_managers is None``) — the
+    ``AdvisoryLookupState.PARTIAL`` position: what was read is a floor, what
+    was not is reported as not read rather than as an absence.
+
+    This is deliberately *not* the whole-signal-unmeasured treatment that an
+    unreadable ``dependabot.yml`` gets. There, ``open()`` itself fails, which is
+    the filesystem refusing us the file and is grounds to distrust the
+    surrounding reads too. Here every byte was read successfully and only the
+    schema is unrecognised, which says nothing about the reads either side of
+    it, and discarding a confirmed "this project runs Renovate" over an
+    unparsed bonus field would lose a real finding.
 
     Args:
         repo_dir: Path to the git repository.
@@ -121,7 +184,7 @@ def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
     result: RenovateConfiguration = {
         "has_renovate": False,
         "configuration_type": None,
-        "package_managers": [],
+        "package_managers": None,
     }
 
     try:
@@ -147,21 +210,26 @@ def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
 
                 # Try to parse package managers
                 with open(file_path, "r", encoding="utf-8") as f:
-                    import json
-
                     try:
                         renovate_config = json.load(f)
-                        if "packageRules" in renovate_config:
-                            managers = set()
-                            for rule in renovate_config["packageRules"]:
-                                if "matchPackagePatterns" in rule:
-                                    managers.update(rule["matchPackagePatterns"])
-                                if "matchManagers" in rule:
-                                    managers.update(rule["matchManagers"])
-                            result["package_managers"] = list(managers)
-                    except json.JSONDecodeError:
-                        # If not valid JSON, just record that we found something
-                        pass
+                    except json.JSONDecodeError as e:
+                        # Left as None on purpose: the contents were not
+                        # established, and that is a different fact from
+                        # "established, and no package managers were named".
+                        # ``renovate.json5`` and ``.renovaterc`` may legally
+                        # carry comments and trailing commas that this parser
+                        # rejects, so this branch is a normal outcome and not
+                        # only a malformed-file one.
+                        logger.info(
+                            "Renovate configuration %s did not parse as JSON, so "
+                            "its package managers are unmeasured: %s",
+                            file_path,
+                            e,
+                        )
+                    else:
+                        result["package_managers"] = _renovate_package_managers(
+                            renovate_config
+                        )
                 break
 
     except Exception as e:
@@ -319,9 +387,12 @@ def calculate_dependency_update_score(
     if renovate_results.get("has_renovate", False):
         score += 0.7
 
-        # Bonus for multiple package managers
-        managers = renovate_results.get("package_managers", [])
-        if len(managers) >= 2:
+        # Bonus for multiple package managers. Awarded on read evidence only:
+        # when the configuration did not parse, ``package_managers`` is None and
+        # the score stays a floor rather than being topped up from a guess. The
+        # issue list says the read did not happen, so the floor is not silent.
+        managers = renovate_results.get("package_managers")
+        if managers is not None and len(managers) >= 2:
             score += 0.1
 
     # PyUp is more Python-specific
@@ -377,9 +448,18 @@ def identify_dependency_update_issues(
         if not dependabot_results.get("ecosystems_covered", []):
             issues.append("Dependabot configuration exists but no ecosystems specified")
 
-    # Check for potential issues with Renovate
+    # Check for potential issues with Renovate. The None case is reported as a
+    # failed read of the configuration, not as a finding about its contents:
+    # before #236 both arrived as "package managers not clearly defined", which
+    # for an unparsed file was a claim about bytes nobody had interpreted.
     if renovate_results.get("has_renovate", False):
-        if not renovate_results.get("package_managers", []):
+        managers = renovate_results.get("package_managers")
+        if managers is None:
+            issues.append(
+                "Renovate configuration found but could not be parsed, so its "
+                f"package managers are unmeasured ({UnmeasuredReason.SOURCE_LOOKUP_FAILED.value})"
+            )
+        elif not managers:
             issues.append(
                 "Renovate configuration exists but package managers not clearly defined"
             )
