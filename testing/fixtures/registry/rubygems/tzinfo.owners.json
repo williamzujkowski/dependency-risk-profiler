@@ -1,0 +1,16 @@
+{
+  "payload": [
+    {
+      "handle": "PhilRoss",
+      "id": 2981,
+      "role": "owner"
+    }
+  ],
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "none",
+    "source_url": "https://rubygems.org/api/v1/gems/tzinfo/owners.json",
+    "trimming": []
+  }
+}

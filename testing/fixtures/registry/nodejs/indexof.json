@@ -1,0 +1,78 @@
+{
+  "payload": {
+    "_id": "indexof",
+    "_rev": "8-06d1bb3134f26fa42c349da5ba876d51",
+    "description": "Microsoft sucks",
+    "dist-tags": {
+      "latest": "0.0.1"
+    },
+    "keywords": [
+      "index",
+      "array",
+      "indexOf"
+    ],
+    "maintainers": [
+      {
+        "email": "tj@vision-media.ca",
+        "name": "tjholowaychuk"
+      }
+    ],
+    "name": "indexof",
+    "readme": "\n# indexOf\n\n  Lame indexOf thing, thanks microsoft\n\n## Example\n\n```js\nvar index = require('indexof');\nindex(arr, obj);\n```\n\n## License\n\n  MIT",
+    "readmeFilename": "",
+    "time": {
+      "0.0.1": "2012-08-31T16:20:14.894Z",
+      "created": "2012-08-31T16:20:13.243Z",
+      "modified": "2023-07-12T21:25:20.977Z"
+    },
+    "users": {
+      "flumpus-dev": true,
+      "pnevares": true,
+      "synchronous": true
+    },
+    "versions": {
+      "0.0.1": {
+        "_id": "indexof@0.0.1",
+        "component": {
+          "scripts": {
+            "indexof/index.js": "index.js"
+          }
+        },
+        "dependencies": {},
+        "description": "Microsoft sucks",
+        "directories": {},
+        "dist": {
+          "integrity": "sha512-i0G7hLJ1z0DE8dsqJa2rycj9dBmNKgXBvotXtZYXakU9oivfB9Uj2ZBC27qqef2U58/ZLwalxa1X/RDCdkHtVg==",
+          "shasum": "82dc336d232b9062179d05ab3293a66059fd435d",
+          "signatures": [
+            {
+              "keyid": "SHA256:jl3bwswu80PjjokCgh0o2w5c2U4LhQAE57gj9cz1kzA",
+              "sig": "MEUCICo2liPuGr4+pb4+YixKw78CqAePeYgcfeeM41v4enEWAiEA8fAHhQJZkTlBelJ3L/9fDYYdDH/laM1zzmdZPx/ZGTg="
+            }
+          ],
+          "tarball": "https://registry.npmjs.org/indexof/-/indexof-0.0.1.tgz"
+        },
+        "keywords": [
+          "index",
+          "array",
+          "indexOf"
+        ],
+        "maintainers": [
+          {
+            "email": "tj@vision-media.ca",
+            "name": "tjholowaychuk"
+          }
+        ],
+        "name": "indexof",
+        "version": "0.0.1"
+      }
+    }
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "npm-packument",
+    "source_url": "https://registry.npmjs.org/indexof",
+    "trimming": []
+  }
+}

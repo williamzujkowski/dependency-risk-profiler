@@ -6,10 +6,21 @@ published as ``dist-tags.latest``. Reading ``version`` off the packument is why
 other signal worked, so these tests pin the response *shape*, not just the
 happy path.
 
-Recorded responses are trimmed to the keys the adapter reads. Refresh with:
-  curl https://registry.npmjs.org/express
-  curl https://registry.npmjs.org/@cypress%2Fxvfb
-  curl https://registry.npmjs.org/express/latest
+The payloads below are **synthetic shape probes**, not coverage evidence. They
+exist to drive paths a captured packument cannot reach: a mirror that omits
+``dist-tags``, a registry that answers nothing at all, a repository name with
+``.git`` inside it. Each one is deliberately minimal, and that is the whole
+point — you cannot describe a 404 with a recorded 200.
+
+They used to be described as "trimmed to the keys the adapter reads", and that
+sentence was the bug. A fixture trimmed to what the adapter reads cannot, by
+construction, contain the key the adapter *should* read and doesn't, which is
+the literal mechanism behind four of the five dead reads in #145. Coverage and
+per-signal value assertions now run against live-captured payloads in
+``test_adapter_conformance`` / ``testing/fixtures/registry/nodejs/``, which keep
+every key npm sends. Refresh those with
+``python scripts/capture_registry_fixtures.py --ecosystem nodejs``.
+
 No test here touches the network.
 """
 

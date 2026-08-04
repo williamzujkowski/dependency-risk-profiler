@@ -16,7 +16,10 @@ from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
-# Recorded crates.io responses, trimmed to the keys the adapter reads. Refresh
+# Recorded crates.io responses, trimmed to the keys the adapter reads — shape
+# probes, not coverage evidence, which is why cargo is still PENDING in
+# adapter_conformance.CONVERSION_STATUS (a payload cut down to what the parser
+# reads cannot reveal a key it should read but doesn't). Refresh
 # with:
 #   curl https://crates.io/api/v1/crates/anyhow
 #   curl https://crates.io/api/v1/crates/anyhow/owners

@@ -1,0 +1,51 @@
+{
+  "payload": {
+    "authors": "Philip Ross",
+    "bug_tracker_uri": "https://github.com/tzinfo/tzinfo/issues",
+    "changelog_uri": "https://github.com/tzinfo/tzinfo/blob/master/CHANGES.md",
+    "dependencies": {
+      "development": [],
+      "runtime": [
+        {
+          "name": "concurrent-ruby",
+          "requirements": "~> 1.0"
+        }
+      ]
+    },
+    "documentation_uri": "https://rubydoc.info/gems/tzinfo/2.0.6",
+    "downloads": 1290106338,
+    "funding_uri": null,
+    "gem_uri": "https://rubygems.org/gems/tzinfo-2.0.6.gem",
+    "homepage_uri": "https://tzinfo.github.io",
+    "info": "TZInfo provides access to time zone data and allows times to be converted using time zone rules.",
+    "licenses": [
+      "MIT"
+    ],
+    "mailing_list_uri": null,
+    "metadata": {
+      "bug_tracker_uri": "https://github.com/tzinfo/tzinfo/issues",
+      "changelog_uri": "https://github.com/tzinfo/tzinfo/blob/master/CHANGES.md",
+      "documentation_uri": "https://rubydoc.info/gems/tzinfo/2.0.6",
+      "homepage_uri": "https://tzinfo.github.io",
+      "source_code_uri": "https://github.com/tzinfo/tzinfo/tree/v2.0.6"
+    },
+    "name": "tzinfo",
+    "platform": "ruby",
+    "project_uri": "https://rubygems.org/gems/tzinfo",
+    "sha": "8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b",
+    "source_code_uri": "https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+    "spec_sha": "262f11a1d3dfa2d8092fd5efdb39f4bb498172d09b985b7fad52029f595f1142",
+    "version": "2.0.6",
+    "version_created_at": "2023-01-28T20:27:53.927Z",
+    "version_downloads": 489847851,
+    "wiki_uri": null,
+    "yanked": false
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "none",
+    "source_url": "https://rubygems.org/api/v1/gems/tzinfo.json",
+    "trimming": []
+  }
+}

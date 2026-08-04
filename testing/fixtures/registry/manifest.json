@@ -1,0 +1,49 @@
+{
+  "fixture_schema": 1,
+  "max_fixture_bytes": 262144,
+  "max_string_chars": 2000,
+  "warn_after_days": 180,
+  "fail_after_days": 545,
+  "allowed_hosts": [
+    "registry.npmjs.org",
+    "rubygems.org"
+  ],
+  "ecosystems": {
+    "nodejs": {
+      "fixtures": {
+        "express": {
+          "url": "https://registry.npmjs.org/express",
+          "reducer": "npm-packument"
+        },
+        "request": {
+          "url": "https://registry.npmjs.org/request",
+          "reducer": "npm-packument"
+        },
+        "indexof": {
+          "url": "https://registry.npmjs.org/indexof",
+          "reducer": "npm-packument"
+        }
+      }
+    },
+    "rubygems": {
+      "fixtures": {
+        "tzinfo": {
+          "url": "https://rubygems.org/api/v1/gems/tzinfo.json",
+          "reducer": "none"
+        },
+        "tzinfo.owners": {
+          "url": "https://rubygems.org/api/v1/gems/tzinfo/owners.json",
+          "reducer": "none"
+        },
+        "hpricot": {
+          "url": "https://rubygems.org/api/v1/gems/hpricot.json",
+          "reducer": "none"
+        },
+        "hpricot.owners": {
+          "url": "https://rubygems.org/api/v1/gems/hpricot/owners.json",
+          "reducer": "none"
+        }
+      }
+    }
+  }
+}

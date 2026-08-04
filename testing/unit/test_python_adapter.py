@@ -7,7 +7,11 @@ degraded exactly as the risk it measures increased: ``nose``, ``pycrypto``, and
 ``distribute`` each reported ``staleness=None`` and scored UNKNOWN, while
 ``pycrypto`` was carrying two CRITICAL advisories.
 
-Recorded responses are trimmed to the keys the adapter reads. Refresh with:
+Recorded responses are trimmed to the keys the adapter reads — which is why
+they are shape probes and not coverage evidence, and why python is still
+PENDING in ``adapter_conformance.CONVERSION_STATUS``. A payload cut down to
+what the parser already reads cannot reveal a key the parser *should* read; see
+``registry_fixtures`` for the captured alternative. Refresh with:
   curl https://pypi.org/pypi/nose/json
   curl https://pypi.org/pypi/pycrypto/json
   curl https://pypi.org/pypi/distribute/json

@@ -1,0 +1,550 @@
+{
+  "payload": {
+    "_id": "express",
+    "_rev": "4387-2c8578041fe72f1c6c5b1a2766e1751c",
+    "author": {
+      "email": "tj@vision-media.ca",
+      "name": "TJ Holowaychuk"
+    },
+    "bugs": {
+      "url": "https://github.com/expressjs/express/issues"
+    },
+    "contributors": [
+      {
+        "email": "aaron.heckmann+github@gmail.com",
+        "name": "Aaron Heckmann"
+      },
+      {
+        "email": "ciaranj@gmail.com",
+        "name": "Ciaran Jessup"
+      },
+      {
+        "email": "doug@somethingdoug.com",
+        "name": "Douglas Christopher Wilson"
+      },
+      {
+        "email": "rauchg@gmail.com",
+        "name": "Guillermo Rauch"
+      },
+      {
+        "email": "me@jongleberry.com",
+        "name": "Jonathan Ong"
+      },
+      {
+        "email": "shtylman+expressjs@gmail.com",
+        "name": "Roman Shtylman"
+      },
+      {
+        "email": "hanul@hanul.me",
+        "name": "Young Jae Sim"
+      }
+    ],
+    "description": "Fast, unopinionated, minimalist web framework",
+    "dist-tags": {
+      "latest": "5.2.1",
+      "latest-4": "4.22.2"
+    },
+    "homepage": "https://expressjs.com/",
+    "keywords": [
+      "express",
+      "framework",
+      "sinatra",
+      "web",
+      "http",
+      "rest",
+      "restful",
+      "router",
+      "app",
+      "api"
+    ],
+    "license": "MIT",
+    "maintainers": [
+      {
+        "email": "wes@wesleytodd.com",
+        "name": "wesleytodd"
+      },
+      {
+        "email": "npm@jonchurch.com",
+        "name": "jonchurch"
+      },
+      {
+        "email": "c@labsector.com",
+        "name": "ctcpip"
+      },
+      {
+        "email": "ulisesgascondev@gmail.com",
+        "name": "ulisesgascon"
+      },
+      {
+        "email": "jean.burellier@gmail.com",
+        "name": "sheplu"
+      }
+    ],
+    "name": "express",
+    "readme": "",
+    "readmeFilename": "",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/expressjs/express.git"
+    },
+    "time": {
+      "0.14.0": "2010-12-29T19:38:25.450Z",
+      "1.0.0beta": "2010-12-29T19:38:25.450Z",
+      "1.0.0beta2": "2010-12-29T19:38:25.450Z",
+      "1.0.0rc": "2010-12-29T19:38:25.450Z",
+      "1.0.0rc2": "2010-12-29T19:38:25.450Z",
+      "1.0.0rc3": "2010-12-29T19:38:25.450Z",
+      "1.0.0rc4": "2010-12-29T19:38:25.450Z",
+      "2.0.0-pre": "2011-02-21T21:46:44.987Z",
+      "2.0.0beta": "2011-03-04T00:19:22.568Z",
+      "2.0.0beta2": "2011-03-07T17:40:46.229Z",
+      "2.0.0beta3": "2011-03-09T23:46:02.495Z",
+      "2.0.0rc": "2011-03-14T22:01:43.971Z",
+      "2.0.0rc2": "2011-03-17T18:01:26.604Z",
+      "2.0.0rc3": "2011-03-17T20:02:05.880Z",
+      "3.0.0alpha1": "2012-04-20T01:52:04.759Z",
+      "3.0.0alpha2": "2012-04-28T23:49:44.341Z",
+      "3.0.0alpha3": "2012-05-08T00:59:57.918Z",
+      "3.0.0alpha4": "2012-05-11T00:11:58.696Z",
+      "3.0.0alpha5": "2012-05-30T23:48:32.953Z",
+      "3.0.0beta1": "2012-06-01T19:27:26.608Z",
+      "3.0.0beta2": "2012-06-06T21:47:02.734Z",
+      "3.0.0beta3": "2012-06-15T18:40:57.491Z",
+      "3.0.0beta4": "2012-06-27T20:42:23.155Z",
+      "3.0.0beta5": "2012-07-03T17:20:29.622Z",
+      "3.0.0beta6": "2012-07-13T16:19:35.230Z",
+      "3.0.0beta7": "2012-07-17T02:28:35.931Z",
+      "3.0.0rc1": "2012-07-24T20:33:00.953Z",
+      "3.0.0rc2": "2012-08-03T20:33:05.751Z",
+      "3.0.0rc3": "2012-08-14T03:24:13.107Z",
+      "3.0.0rc4": "2012-08-31T05:13:49.677Z",
+      "3.0.0rc5": "2012-10-09T15:44:52.115Z",
+      "4.22.2": "2026-05-11T18:50:00.007Z",
+      "5.2.1": "2025-12-01T20:49:43.268Z",
+      "created": "2010-12-29T19:38:25.450Z",
+      "modified": "2026-07-14T18:49:18.499Z"
+    },
+    "users": {
+      "0711levski": true,
+      "0x4c3p": true,
+      "13lank.null": true,
+      "22afdad": true,
+      "2bi2bit": true
+    },
+    "versions": {
+      "0.14.0": {
+        "_id": "express@0.14.0",
+        "_nodeSupported": true,
+        "_nodeVersion": "v0.3.1-pre",
+        "_npmVersion": "0.2.7-2",
+        "author": {
+          "email": "tj@vision-media.ca",
+          "name": "TJ Holowaychuk"
+        },
+        "contributors": [
+          {
+            "email": "tj@vision-media.ca",
+            "name": "TJ Holowaychuk"
+          },
+          {
+            "email": "aaron.heckmann+github@gmail.com",
+            "name": "Aaron Heckmann"
+          },
+          {
+            "email": "ciaranj@gmail.com",
+            "name": "Ciaran Jessup"
+          }
+        ],
+        "deprecated": "express 0.x series is deprecated",
+        "description": "Sinatra inspired web development framework",
+        "directories": {
+          "lib": "./lib"
+        },
+        "dist": {
+          "integrity": "sha512-ULazYLF3/YqOU5rzkviWJEd4TNZ0j77Nymuqa1+sQe0dhxcsDzKOQK8GemM9S3i8x2Q55GWXhnhRHwYaJIrM1g==",
+          "shasum": "7b33a9fb54c605a3be46c1d3dbbc821acf1d2efb",
+          "signatures": [
+            {
+              "keyid": "SHA256:jl3bwswu80PjjokCgh0o2w5c2U4LhQAE57gj9cz1kzA",
+              "sig": "MEYCIQCGihQqfDiARxIfslKVGe5vzfxCGOh+vhulZER4lO9oBQIhAO2VvApOYRVumT9XVDffvpYimysO/Hm1Qd59+KBublcM"
+            }
+          ],
+          "tarball": "https://registry.npmjs.org/express/-/express-0.14.0.tgz"
+        },
+        "engines": {
+          "node": ">= 0.1.98"
+        },
+        "keywords": [
+          "framework",
+          "sinatra",
+          "web",
+          "rest",
+          "restful"
+        ],
+        "name": "express",
+        "scripts": {
+          "test": "make test"
+        },
+        "version": "0.14.0"
+      },
+      "4.22.2": {
+        "_hasShrinkwrap": false,
+        "_id": "express@4.22.2",
+        "_nodeVersion": "24.11.1",
+        "_npmOperationalInternal": {
+          "host": "s3://npm-registry-packages-npm-production",
+          "tmp": "tmp/express_4.22.2_1778525399858_0.9405184218715412"
+        },
+        "_npmUser": {
+          "email": "npm@jonchurch.com",
+          "name": "jonchurch"
+        },
+        "_npmVersion": "11.12.1",
+        "author": {
+          "email": "tj@vision-media.ca",
+          "name": "TJ Holowaychuk"
+        },
+        "bugs": {
+          "url": "https://github.com/expressjs/express/issues"
+        },
+        "contributors": [
+          {
+            "email": "aaron.heckmann+github@gmail.com",
+            "name": "Aaron Heckmann"
+          },
+          {
+            "email": "ciaranj@gmail.com",
+            "name": "Ciaran Jessup"
+          },
+          {
+            "email": "doug@somethingdoug.com",
+            "name": "Douglas Christopher Wilson"
+          },
+          {
+            "email": "rauchg@gmail.com",
+            "name": "Guillermo Rauch"
+          },
+          {
+            "email": "me@jongleberry.com",
+            "name": "Jonathan Ong"
+          },
+          {
+            "email": "shtylman+expressjs@gmail.com",
+            "name": "Roman Shtylman"
+          },
+          {
+            "email": "hanul@hanul.me",
+            "name": "Young Jae Sim"
+          }
+        ],
+        "dependencies": {
+          "accepts": "~1.3.8",
+          "array-flatten": "1.1.1",
+          "body-parser": "~1.20.5",
+          "content-disposition": "~0.5.4",
+          "content-type": "~1.0.4",
+          "cookie": "[redacted-by-capture]",
+          "cookie-signature": "[redacted-by-capture]",
+          "debug": "2.6.9",
+          "depd": "2.0.0",
+          "encodeurl": "~2.0.0",
+          "escape-html": "~1.0.3",
+          "etag": "~1.8.1",
+          "finalhandler": "~1.3.1",
+          "fresh": "~0.5.2",
+          "http-errors": "~2.0.0",
+          "merge-descriptors": "1.0.3",
+          "methods": "~1.1.2",
+          "on-finished": "~2.4.1",
+          "parseurl": "~1.3.3",
+          "path-to-regexp": "~0.1.12",
+          "proxy-addr": "~2.0.7",
+          "qs": "~6.15.1",
+          "range-parser": "~1.2.1",
+          "safe-buffer": "5.2.1",
+          "send": "~0.19.0",
+          "serve-static": "~1.16.2",
+          "setprototypeof": "1.2.0",
+          "statuses": "~2.0.1",
+          "type-is": "~1.6.18",
+          "utils-merge": "1.0.1",
+          "vary": "~1.1.2"
+        },
+        "description": "Fast, unopinionated, minimalist web framework",
+        "devDependencies": {
+          "after": "0.8.2",
+          "connect-redis": "3.4.2",
+          "cookie-parser": "[redacted-by-capture]",
+          "cookie-session": "[redacted-by-capture]",
+          "ejs": "3.1.9",
+          "eslint": "8.47.0",
+          "express-session": "[redacted-by-capture]",
+          "hbs": "4.2.0",
+          "marked": "0.7.0",
+          "method-override": "3.0.0",
+          "mocha": "^6.2.2",
+          "morgan": "1.10.0",
+          "nyc": "^14.1.1",
+          "pbkdf2-password": "[redacted-by-capture]",
+          "supertest": "^6.1.6",
+          "vhost": "~3.0.2"
+        },
+        "directories": {},
+        "dist": {
+          "fileCount": 16,
+          "integrity": "sha512-IuL+Elrou2ZvCFHs18/CIzy2Nzvo25nZ1/D2eIZlz7c+QUayAcYoiM2BthCjs+EBHVpjYjcuLDAiCWgeIX3X1Q==",
+          "shasum": "c17ae0981e5efc24b22272f0e041c4662503b700",
+          "signatures": [
+            {
+              "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+              "sig": "MEQCIHCTK1O78pZ0zWmvu13sU2wP54nrzsTNFk/TMBbEcjLyAiAKzjzIkOJ+nqIu1ZkTO3mHpibeZWz4Qf7bmC4hK/ZGJg=="
+            }
+          ],
+          "tarball": "https://registry.npmjs.org/express/-/express-4.22.2.tgz",
+          "unpackedSize": 222519
+        },
+        "engines": {
+          "node": ">= 0.10.0"
+        },
+        "funding": {
+          "type": "opencollective",
+          "url": "https://opencollective.com/express"
+        },
+        "gitHead": "df0abc9333a3398b97b71f6ea7cd77d5ea3e9f97",
+        "homepage": "http://expressjs.com/",
+        "keywords": [
+          "express",
+          "framework",
+          "sinatra",
+          "web",
+          "http",
+          "rest",
+          "restful",
+          "router",
+          "app",
+          "api"
+        ],
+        "license": "MIT",
+        "maintainers": [
+          {
+            "email": "wes@wesleytodd.com",
+            "name": "wesleytodd"
+          },
+          {
+            "email": "npm@jonchurch.com",
+            "name": "jonchurch"
+          },
+          {
+            "email": "c@labsector.com",
+            "name": "ctcpip"
+          },
+          {
+            "email": "ulisesgascondev@gmail.com",
+            "name": "ulisesgascon"
+          },
+          {
+            "email": "jean.burellier@gmail.com",
+            "name": "sheplu"
+          }
+        ],
+        "name": "express",
+        "readmeFilename": "Readme.md",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/expressjs/express.git"
+        },
+        "scripts": {
+          "lint": "eslint .",
+          "test": "mocha --require test/support/env --reporter spec --bail --check-leaks test/ test/acceptance/",
+          "test-ci": "nyc --exclude examples --exclude test --exclude benchmarks --reporter=lcovonly --reporter=text npm test",
+          "test-cov": "nyc --exclude examples --exclude test --exclude benchmarks --reporter=html --reporter=text npm test",
+          "test-tap": "mocha --require test/support/env --reporter tap --check-leaks test/ test/acceptance/"
+        },
+        "version": "4.22.2"
+      },
+      "5.2.1": {
+        "_hasShrinkwrap": false,
+        "_id": "express@5.2.1",
+        "_nodeVersion": "20.19.5",
+        "_npmOperationalInternal": {
+          "host": "s3://npm-registry-packages-npm-production",
+          "tmp": "tmp/express_5.2.1_1764622183077_0.4726542587013707"
+        },
+        "_npmUser": {
+          "email": "npm@jonchurch.com",
+          "name": "jonchurch"
+        },
+        "_npmVersion": "10.8.2",
+        "author": {
+          "email": "tj@vision-media.ca",
+          "name": "TJ Holowaychuk"
+        },
+        "bugs": {
+          "url": "https://github.com/expressjs/express/issues"
+        },
+        "contributors": [
+          {
+            "email": "aaron.heckmann+github@gmail.com",
+            "name": "Aaron Heckmann"
+          },
+          {
+            "email": "ciaranj@gmail.com",
+            "name": "Ciaran Jessup"
+          },
+          {
+            "email": "doug@somethingdoug.com",
+            "name": "Douglas Christopher Wilson"
+          },
+          {
+            "email": "rauchg@gmail.com",
+            "name": "Guillermo Rauch"
+          },
+          {
+            "email": "me@jongleberry.com",
+            "name": "Jonathan Ong"
+          },
+          {
+            "email": "shtylman+expressjs@gmail.com",
+            "name": "Roman Shtylman"
+          },
+          {
+            "email": "hanul@hanul.me",
+            "name": "Young Jae Sim"
+          }
+        ],
+        "dependencies": {
+          "accepts": "^2.0.0",
+          "body-parser": "^2.2.1",
+          "content-disposition": "^1.0.0",
+          "content-type": "^1.0.5",
+          "cookie": "[redacted-by-capture]",
+          "cookie-signature": "[redacted-by-capture]",
+          "debug": "^4.4.0",
+          "depd": "^2.0.0",
+          "encodeurl": "^2.0.0",
+          "escape-html": "^1.0.3",
+          "etag": "^1.8.1",
+          "finalhandler": "^2.1.0",
+          "fresh": "^2.0.0",
+          "http-errors": "^2.0.0",
+          "merge-descriptors": "^2.0.0",
+          "mime-types": "^3.0.0",
+          "on-finished": "^2.4.1",
+          "once": "^1.4.0",
+          "parseurl": "^1.3.3",
+          "proxy-addr": "^2.0.7",
+          "qs": "^6.14.0",
+          "range-parser": "^1.2.1",
+          "router": "^2.2.0",
+          "send": "^1.1.0",
+          "serve-static": "^2.2.0",
+          "statuses": "^2.0.1",
+          "type-is": "^2.0.1",
+          "vary": "^1.1.2"
+        },
+        "description": "Fast, unopinionated, minimalist web framework",
+        "devDependencies": {
+          "after": "0.8.2",
+          "connect-redis": "^8.0.1",
+          "cookie-parser": "[redacted-by-capture]",
+          "cookie-session": "[redacted-by-capture]",
+          "ejs": "^3.1.10",
+          "eslint": "8.47.0",
+          "express-session": "[redacted-by-capture]",
+          "hbs": "4.2.0",
+          "marked": "^15.0.3",
+          "method-override": "3.0.0",
+          "mocha": "^10.7.3",
+          "morgan": "1.10.1",
+          "nyc": "^17.1.0",
+          "pbkdf2-password": "[redacted-by-capture]",
+          "supertest": "^6.3.0",
+          "vhost": "~3.0.2"
+        },
+        "directories": {},
+        "dist": {
+          "fileCount": 10,
+          "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
+          "shasum": "8f21d15b6d327f92b4794ecf8cb08a72f956ac04",
+          "signatures": [
+            {
+              "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+              "sig": "MEQCIFiG4BbRCfOtJiV9BkwAfmuZ6j6WDPSwLTUxm8z4HbwxAiBRQBV8eXLNJmyYnSS5oLT12Q44o71/CetyWd+uifoylA=="
+            }
+          ],
+          "tarball": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",
+          "unpackedSize": 75429
+        },
+        "engines": {
+          "node": ">= 18"
+        },
+        "funding": {
+          "type": "opencollective",
+          "url": "https://opencollective.com/express"
+        },
+        "gitHead": "dbac741a49a5a64336b70c06e85c2e2706e36336",
+        "homepage": "https://expressjs.com/",
+        "keywords": [
+          "express",
+          "framework",
+          "sinatra",
+          "web",
+          "http",
+          "rest",
+          "restful",
+          "router",
+          "app",
+          "api"
+        ],
+        "license": "MIT",
+        "maintainers": [
+          {
+            "email": "wes@wesleytodd.com",
+            "name": "wesleytodd"
+          },
+          {
+            "email": "npm@jonchurch.com",
+            "name": "jonchurch"
+          },
+          {
+            "email": "c@labsector.com",
+            "name": "ctcpip"
+          },
+          {
+            "email": "ulisesgascondev@gmail.com",
+            "name": "ulisesgascon"
+          },
+          {
+            "email": "jean.burellier@gmail.com",
+            "name": "sheplu"
+          }
+        ],
+        "name": "express",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/expressjs/express.git"
+        },
+        "scripts": {
+          "lint": "eslint .",
+          "lint:fix": "eslint . --fix",
+          "test": "mocha --require test/support/env --reporter spec --check-leaks test/ test/acceptance/",
+          "test-ci": "nyc --exclude examples --exclude test --exclude benchmarks --reporter=lcovonly --reporter=text npm test",
+          "test-cov": "nyc --exclude examples --exclude test --exclude benchmarks --reporter=html --reporter=text npm test",
+          "test-tap": "mocha --require test/support/env --reporter tap --check-leaks test/ test/acceptance/"
+        },
+        "version": "5.2.1"
+      }
+    }
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "npm-packument",
+    "source_url": "https://registry.npmjs.org/express",
+    "trimming": [
+      "versions: kept ['0.14.0', '4.22.2', '5.2.1'], dropped 285 other release manifests (volume only; retained manifests keep every key)",
+      "time: dropped 285 per-version timestamps for releases no longer present; created/modified retained",
+      "users: kept 5 of 2648 starrer entries (volume only; the key is retained)"
+    ]
+  }
+}

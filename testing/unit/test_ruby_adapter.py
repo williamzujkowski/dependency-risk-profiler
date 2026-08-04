@@ -101,12 +101,18 @@ def test_ruby_ecosystem_routes_to_rubygems_everywhere() -> None:
 
 # --- Signal coverage (#127) -------------------------------------------------
 #
-# Recorded rubygems.org responses, trimmed to the keys the adapter reads.
-# Refresh with:
-#   curl https://rubygems.org/api/v1/gems/tzinfo.json
-#   curl https://rubygems.org/api/v1/gems/tzinfo/owners.json
-# The shapes are the point: the license is a *list* under "licenses" (there is
-# no "license" key at all), and source_code_uri is pinned to the released tag.
+# A synthetic shape probe, kept minimal on purpose so a test can mutate one
+# field (see the yanked and missing-owner cases below) without re-capturing.
+# It is NOT coverage evidence: a payload cut down to the keys the adapter reads
+# cannot contain the key the adapter should read and doesn't, which is how four
+# of #145's five dead reads survived. Coverage and per-signal value assertions
+# for rubygems run against the live-captured payloads in
+# testing/fixtures/registry/rubygems/, via test_adapter_conformance. Refresh
+# those with:
+#   python scripts/capture_registry_fixtures.py --ecosystem rubygems
+# The shapes are still the point here: the license is a *list* under "licenses"
+# (there is no "license" key at all), and source_code_uri is pinned to the
+# released tag.
 TZINFO_GEM_RESPONSE: Dict[str, object] = {
     "name": "tzinfo",
     "downloads": 1290042037,

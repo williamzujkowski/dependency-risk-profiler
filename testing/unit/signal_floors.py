@@ -50,22 +50,29 @@ top-level ``deprecated`` key that npm has never sent, so no npm package could
 ever be flagged deprecated (#142) — would still pass here, because the
 deprecation score is computed from a boolean that defaults to False and is
 therefore always "measured", just always measured wrong. Catching that needs an
-assertion on a signal's *value* against a live-captured fixture, which is the
-rest of #145.
+assertion on a signal's *value* against a live-captured fixture.
+
+That half now exists, in ``adapter_conformance`` (#73). It consumes the tables
+below rather than restating them, adds per-signal *value* assertions against
+provenance-dated payloads captured from the live registries, and enforces the
+rule the npm case generalizes to: every signal whose read collapses to a fixed
+default when its key is absent needs at least one fixture where the correct
+answer is the non-default value. Two of the eight ecosystems are converted;
+``adapter_conformance.CONVERSION_STATUS`` lists all eight with what each of the
+remaining six still needs.
 
 :func:`assert_abandoned_package_is_scored` pins the same property from the
 other direction, for #146: a package abandoned a decade ago must still produce
 a measured release cadence and a risk verdict, because that is the population
 the maintenance-cadence signal exists to flag and the one it used to fail on.
 
-Refresh cadence: the recorded registry payloads these floors are read from live
-next to the adapter tests, each with the ``curl`` that produced it. Re-record
-them once a release cycle, or whenever an ecosystem's coverage changes; a floor
+Refresh cadence: for the converted ecosystems the payloads are captured files
+under ``testing/fixtures/registry/``, each carrying its source URL and capture
+date, refreshed with ``scripts/capture_registry_fixtures.py`` — see
+``registry_fixtures`` for the cadence and who owns it. The unconverted
+ecosystems still keep hand-trimmed payloads next to their adapter tests with the
+``curl`` that produced each one; re-record those once a release cycle. A floor
 is only as honest as the fixture underneath it.
-
-This module is the seam #73's adapter-conformance harness should grow into:
-when that lands, it should consume these tables rather than each adapter test
-restating the reasoning.
 """
 
 from datetime import datetime, timezone

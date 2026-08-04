@@ -1,0 +1,40 @@
+{
+  "payload": {
+    "authors": "why the lucky stiff",
+    "bug_tracker_uri": null,
+    "changelog_uri": null,
+    "dependencies": {
+      "development": [],
+      "runtime": []
+    },
+    "documentation_uri": null,
+    "downloads": 15395924,
+    "funding_uri": null,
+    "gem_uri": "https://rubygems.org/gems/hpricot-0.8.6.gem",
+    "homepage_uri": "http://code.whytheluckystiff.net/hpricot/",
+    "info": "a swift, liberal HTML parser with a fantastic library",
+    "licenses": null,
+    "mailing_list_uri": null,
+    "metadata": {
+      "homepage_uri": "http://code.whytheluckystiff.net/hpricot/"
+    },
+    "name": "hpricot",
+    "platform": "ruby",
+    "project_uri": "https://rubygems.org/gems/hpricot",
+    "sha": "dfe8f4b3414ba8377d7626030f3aa605caadee9de87cffbeadf8a50359eac8ca",
+    "source_code_uri": null,
+    "spec_sha": "58f31218ab0dacb91e53472ea8a0668014b8c0e3775636a3db767069d29f7800",
+    "version": "0.8.6",
+    "version_created_at": "2012-01-17T18:41:43.678Z",
+    "version_downloads": 13128643,
+    "wiki_uri": null,
+    "yanked": false
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "none",
+    "source_url": "https://rubygems.org/api/v1/gems/hpricot.json",
+    "trimming": []
+  }
+}
