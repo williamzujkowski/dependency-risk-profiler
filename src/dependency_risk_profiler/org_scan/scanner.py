@@ -422,7 +422,24 @@ class OrgScanRunner:
         parsed: _ParsedInventory,
         by_identity: Dict[PackageIdentity, AggregatedDependency],
     ) -> List[RepositoryRiskSummary]:
-        """Build repository aggregate risk summaries."""
+        """Build repository aggregate risk summaries.
+
+        The per-repository dependency list is built in sorted identity order,
+        not set order (#207). ``total_score`` below is a float sum, float
+        addition is not associative, and set iteration order for strings varies
+        with ``PYTHONHASHSEED`` — which CPython randomises per process. Summing
+        the same values in a different order therefore moved the last bit of
+        ``average_risk_score``, so two ``scan-org`` runs on identical input
+        produced different JSON. Sorting a set of at most a few thousand
+        ``(ecosystem, name)`` tuples costs nothing and makes the aggregate
+        order-independent in fact, not just in intent.
+
+        Worth knowing before concluding this is theoretical: CPython 3.12 gave
+        ``sum()`` Neumaier compensation, which hides the symptom on 3.12 for
+        values in this range. It is live on the 3.9-3.11 jobs in the CI matrix,
+        and relying on an interpreter's summation algorithm to keep a published
+        number stable is not a guarantee this tool should be making.
+        """
         repo_identities: Dict[str, Set[PackageIdentity]] = {
             repo.full_name: set() for repo in parsed.repositories
         }
@@ -437,7 +454,7 @@ class OrgScanRunner:
         for repo_full_name, identities in repo_identities.items():
             dependencies = [
                 by_identity[identity]
-                for identity in identities
+                for identity in sorted(identities)
                 if identity in by_identity
             ]
             total_score = sum(dep.risk_score.total_score for dep in dependencies)

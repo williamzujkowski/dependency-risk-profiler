@@ -56,9 +56,10 @@ removed in :data:`SCHEMA_V1_REMOVAL_VERSION`. The deprecation notice goes to
 stderr so stdout stays parseable.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Mapping, Optional, Sequence
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from .models import (
     CommunityMetrics,
@@ -167,9 +168,67 @@ class RemediationAction(Enum):
     UNCLASSIFIED = "unclassified"
 
 
+@dataclass(frozen=True)
+class Remediation:
+    """The supported action for one dependency, with both its renderings.
+
+    One structure, two views of it. :meth:`to_dict` is what the v2 JSON carries
+    and what an agent branches on; :meth:`sentence` is the prose a CSV cell or
+    a human-facing report shows. The sentence is *derived from* the structure
+    rather than classified again beside it: v1 had a separate prose generator
+    with its own precedence rules, which is how two descriptions of the same
+    dependency could disagree — and, worse, how a version string the structured
+    path refused as unsafe still reached the CSV. #205 collapsed three
+    hand-maintained English-string generators into one. This is not a fourth.
+    """
+
+    #: The classified action. Branch on this.
+    action: RemediationAction
+    #: Published fix versions that survived :func:`safe_version`, in the order
+    #: the advisories published them. **Untrusted registry data**: never
+    #: interpolate into a package-manager command line, pass as an argument.
+    fix_versions: Tuple[str, ...]
+    #: The single unambiguous upgrade target, or ``None`` when there is not
+    #: exactly one. **Untrusted registry data**, same rule as ``fix_versions``.
+    target_version: Optional[str]
+    #: Why this action, in one sentence. Never empty.
+    detail: str
+
+    def to_dict(self) -> Dict[str, object]:
+        """Serialize as the ``extensions.org_scan.remediation`` block.
+
+        Returns:
+            ``{"action", "fix_versions", "target_version", "detail"}``.
+        """
+        return {
+            "action": self.action.value,
+            "fix_versions": list(self.fix_versions),
+            "target_version": self.target_version,
+            "detail": self.detail,
+        }
+
+    def sentence(self) -> str:
+        """Render the one-line prose form, for terminal, HTML and CSV reports.
+
+        Reads the structure; it does not re-derive the action. Returns the
+        empty string for :attr:`RemediationAction.NO_ACTION` so a report can
+        leave the cell blank rather than print a sentence saying nothing.
+
+        Returns:
+            The sentence, or ``""`` when no action is called for.
+        """
+        if self.action is RemediationAction.NO_ACTION:
+            return ""
+        if self.target_version is not None:
+            return f"{self.detail} Target: {self.target_version}."
+        if self.fix_versions:
+            return f"{self.detail} Published fixes: {', '.join(self.fix_versions)}."
+        return self.detail
+
+
 def remediation(
     metadata: DependencyMetadata, *, fix_versions: Sequence[object]
-) -> Dict[str, object]:
+) -> Remediation:
     """Describe the supported action for one dependency.
 
     Precedence follows what the data supports, worst first: scored advisories,
@@ -185,7 +244,7 @@ def remediation(
             through :func:`safe_version`.
 
     Returns:
-        ``{"action", "fix_versions", "target_version", "detail"}``.
+        The classified :class:`Remediation`.
     """
     safe_fixes: List[str] = []
     for candidate in fix_versions:
@@ -256,7 +315,7 @@ def _remediation(
     fix_versions: Optional[List[str]] = None,
     target_version: Optional[str] = None,
     detail: str,
-) -> Dict[str, object]:
+) -> Remediation:
     """Build one remediation block.
 
     Args:
@@ -268,12 +327,12 @@ def _remediation(
     Returns:
         The remediation block.
     """
-    return {
-        "action": action.value,
-        "fix_versions": fix_versions or [],
-        "target_version": target_version,
-        "detail": detail,
-    }
+    return Remediation(
+        action=action,
+        fix_versions=tuple(fix_versions or ()),
+        target_version=target_version,
+        detail=detail,
+    )
 
 
 # --- Shared field definitions -----------------------------------------------
