@@ -23,7 +23,11 @@ def test_scoring_system() -> None:
     # Create a risk scorer with default weights
     scorer = RiskScorer()
 
-    # Test a low-risk dependency
+    # Test a low-risk dependency. Each fixture states that its tree *was*
+    # resolved and came back empty, which is what the pipeline records for a
+    # supported manifest. Before #199 the fixtures got that for free by saying
+    # nothing, and the free signal was load-bearing: it is what kept the
+    # low-risk case one measured signal clear of the insufficient-data bar.
     low_risk = DependencyMetadata(
         name="low-risk",
         installed_version="1.0.0",
@@ -35,6 +39,7 @@ def test_scoring_system() -> None:
         has_tests=True,
         has_ci=True,
         has_contribution_guidelines=True,
+        transitive_source="manifest",
     )
 
     low_risk_score = scorer.score_dependency(low_risk)
@@ -55,6 +60,7 @@ def test_scoring_system() -> None:
         has_tests=True,
         has_ci=False,
         has_contribution_guidelines=False,
+        transitive_source="manifest",
     )
 
     medium_risk_score = scorer.score_dependency(medium_risk)
@@ -75,6 +81,7 @@ def test_scoring_system() -> None:
         has_tests=False,
         has_ci=False,
         has_contribution_guidelines=False,
+        transitive_source="manifest",
     )
 
     high_risk_score = scorer.score_dependency(high_risk)
@@ -95,6 +102,7 @@ def test_scoring_system() -> None:
         has_tests=False,
         has_ci=False,
         has_contribution_guidelines=False,
+        transitive_source="manifest",
     )
 
     critical_risk_score = scorer.score_dependency(critical_risk)
@@ -151,8 +159,11 @@ def test_partial_data() -> None:
     assert score.total_score == 0.0
     assert score.risk_level == RiskLevel.UNKNOWN
     assert score.insufficient_data is True
-    assert score.unknown_signal_count == 12
+    # Thirteen since #199: transitive joins the unmeasured set for a
+    # dependency nothing resolved, instead of scoring a confident 0.0.
+    assert score.unknown_signal_count == 13
     assert "staleness" in score.unknown_signals
+    assert "transitive" in score.unknown_signals
     assert "maintainer" in score.unknown_signals
     assert "version" in score.unknown_signals
 
@@ -176,6 +187,9 @@ def test_all_missing_data_is_unknown_not_medium() -> None:
         "license",
         "community_popularity",
         "community_activity",
+        # Nothing resolved this dependency's tree, and since #199 saying
+        # nothing no longer counts as having looked.
+        "transitive",
         "security_policy",
         "dependency_update",
         "signed_commits",
@@ -255,6 +269,10 @@ def test_full_data_scoring_is_unchanged() -> None:
             commit_frequency=5.0,
         ),
         transitive_dependencies={"a", "b", "c", "d", "e"},
+        # Full data means every signal has provenance. A populated set with no
+        # source marker is data of unknown origin, and since #199 the scorer
+        # declines to score it rather than assuming someone looked.
+        transitive_source="manifest",
         security_metrics=SecurityMetrics(
             has_security_policy=True,
             has_dependency_update_tools=True,
@@ -481,10 +499,14 @@ def test_aggregate_ignores_unknown_signals() -> None:
 
     score = scorer.score_dependency(dep)
 
-    assert score.unknown_signal_count == 10
-    assert score.measured_signal_count == 5
+    # Four measured, not five: nothing resolved this dependency's tree, so
+    # transitive leaves the denominator instead of contributing a fabricated
+    # 0.0 (#199). Dropping that zero *raises* the reported risk from 2.0 to
+    # 2.5 — the same two risky signals, now over an honest denominator.
+    assert score.unknown_signal_count == 11
+    assert score.measured_signal_count == 4
     assert score.insufficient_data is True
-    assert score.total_score == 5.0 * (1.0 + 1.0) / 5.0
+    assert score.total_score == 5.0 * (1.0 + 1.0) / 4.0
 
 
 def test_info_and_withdrawn_vulnerabilities_do_not_raise_exploit_score() -> None:

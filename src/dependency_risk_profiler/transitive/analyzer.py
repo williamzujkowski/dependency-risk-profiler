@@ -6,6 +6,7 @@ import os
 from typing import Dict, List, Set
 
 from ..models import DependencyMetadata
+from .analyzer_enhanced import record_transitive_source
 
 logger = logging.getLogger(__name__)
 
@@ -169,10 +170,14 @@ def analyze_transitive_dependencies(
         direct_dependencies = list(dependencies.keys())
         transitive_deps = build_dependency_graph(direct_dependencies, dependency_map)
 
-        # Update dependency metadata with transitive dependencies
+        # Update dependency metadata with transitive dependencies. The source
+        # marker is not decoration: since #199 the scorer treats an unmarked
+        # dependency as unmeasured, so a resolver that populates the set and
+        # says nothing about where it came from has its work discarded.
         for pkg_name, deps in transitive_deps.items():
-            if pkg_name in dependencies:
+            if pkg_name in dependencies and pkg_name in dependency_map:
                 dependencies[pkg_name].transitive_dependencies = deps
+                record_transitive_source(dependencies[pkg_name], source="manifest")
                 logger.info(f"Found {len(deps)} transitive dependencies for {pkg_name}")
 
     except Exception as e:

@@ -30,7 +30,6 @@ from signal_floors import (
     assert_abandoned_package_is_scored,
     assert_measures_registry_signals,
     assert_meets_signal_floor,
-    mark_transitive_unmeasured,
 )
 
 from dependency_risk_profiler.analyzers.python import PythonAnalyzer
@@ -205,7 +204,7 @@ def _score_offline(
         community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
     ):
         dep = community_analyzer.analyze_community_metrics(dep, payload)
-    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
+    return RiskScorer().score_dependency(dep)
 
 
 def test_release_dates_come_off_the_registry_payload() -> None:
@@ -405,7 +404,7 @@ def test_a_failed_registry_lookup_leaves_the_source_signal_unmeasured() -> None:
     ):
         analyzed = analyzer.analyze({"does-not-exist": dep})["does-not-exist"]
 
-    score = RiskScorer().score_dependency(mark_transitive_unmeasured(analyzed))
+    score = RiskScorer().score_dependency(analyzed)
 
     assert analyzed.source_repository_state is None
     assert score.source_repository_score is None

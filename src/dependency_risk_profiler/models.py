@@ -117,7 +117,10 @@ class DependencyMetadata:
     source_repository_state: Optional[SourceRepositoryState] = None
     # How this dependency's transitive set was established, so the scorer can
     # tell "resolved, and it is empty" from "never resolved". Written only by
-    # ``transitive.analyzer_enhanced.record_transitive_source``.
+    # ``transitive.analyzer_enhanced.record_transitive_source``, and read only
+    # through ``signals.transitive_is_measured``, which fails closed: None here
+    # means nobody resolved this tree, not that someone resolved it and found
+    # nothing (#199).
     transitive_source: Optional[str] = None
 
     additional_info: Dict[str, str] = field(default_factory=dict)
