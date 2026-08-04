@@ -22,7 +22,7 @@ from typing import Dict, Optional
 from unittest import mock
 
 import pytest
-from signal_floors import assert_meets_signal_floor
+from signal_floors import assert_measures_registry_signals, assert_meets_signal_floor
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.nuget import NuGetAnalyzer
@@ -540,17 +540,7 @@ def test_nuget_meets_minimum_measured_signal_coverage() -> None:
 
 def test_nuget_measures_the_signals_the_registry_provides() -> None:
     """Each signal nuget.org can answer is measured, not left unknown."""
-    score = _score_offline()
-
-    registry_backed = {
-        "staleness",
-        "maintainer",
-        "version",
-        "license",
-        "community",
-        "transitive",
-    }
-    assert registry_backed.isdisjoint(score.unknown_signals)
+    assert_measures_registry_signals(_score_offline(), "nuget")
 
 
 @pytest.mark.parametrize(

@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from unittest import mock
 
-from signal_floors import assert_meets_signal_floor, mark_transitive_unmeasured
+from signal_floors import (
+    assert_measures_registry_signals,
+    assert_meets_signal_floor,
+    mark_transitive_unmeasured,
+)
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.ruby import RubyGemsAnalyzer
@@ -222,7 +226,6 @@ def test_rubygems_meets_minimum_measured_signal_coverage() -> None:
 
 def test_rubygems_measures_the_signals_the_registry_provides() -> None:
     """Each signal the gem payload can answer is measured, not left unknown."""
-    score = _score_gem_offline(TZINFO_GEM_RESPONSE)
-
-    registry_backed = {"staleness", "maintainer", "version", "license", "community"}
-    assert registry_backed.isdisjoint(score.unknown_signals)
+    assert_measures_registry_signals(
+        _score_gem_offline(TZINFO_GEM_RESPONSE), "rubygems"
+    )

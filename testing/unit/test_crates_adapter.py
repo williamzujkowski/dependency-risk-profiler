@@ -4,7 +4,11 @@ import copy
 from typing import Dict, List, Optional
 from unittest import mock
 
-from signal_floors import assert_meets_signal_floor, mark_transitive_unmeasured
+from signal_floors import (
+    assert_measures_registry_signals,
+    assert_meets_signal_floor,
+    mark_transitive_unmeasured,
+)
 
 from dependency_risk_profiler.analyzers.crates import CratesIOAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
@@ -199,10 +203,9 @@ def test_cargo_meets_minimum_measured_signal_coverage() -> None:
 
 def test_cargo_measures_the_signals_the_registry_provides() -> None:
     """Each signal the crates.io payload can answer is measured, not left unknown."""
-    score = _score_crate_offline(ANYHOW_CRATE_RESPONSE)
-
-    registry_backed = {"staleness", "maintainer", "version", "license", "community"}
-    assert registry_backed.isdisjoint(score.unknown_signals)
+    assert_measures_registry_signals(
+        _score_crate_offline(ANYHOW_CRATE_RESPONSE), "cargo"
+    )
 
 
 def test_missing_versions_entry_does_not_break_the_adapter() -> None:

@@ -6,7 +6,11 @@ from pathlib import Path
 from typing import Dict, Optional
 from unittest import mock
 
-from signal_floors import assert_meets_signal_floor, mark_transitive_unmeasured
+from signal_floors import (
+    assert_measures_registry_signals,
+    assert_meets_signal_floor,
+    mark_transitive_unmeasured,
+)
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.composer import ComposerAnalyzer
@@ -276,7 +280,6 @@ def test_composer_meets_minimum_measured_signal_coverage() -> None:
 
 def test_composer_measures_the_signals_the_registry_provides() -> None:
     """Each signal the Packagist payload can answer is measured, not left unknown."""
-    score = _score_package_offline(CONSOLE_RELEASE)
-
-    registry_backed = {"staleness", "maintainer", "version", "license", "community"}
-    assert registry_backed.isdisjoint(score.unknown_signals)
+    assert_measures_registry_signals(
+        _score_package_offline(CONSOLE_RELEASE), "composer"
+    )
