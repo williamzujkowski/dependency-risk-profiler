@@ -20,6 +20,28 @@ manifest.json                 what to capture, and the shared limits
 `manifest.json` is read by both the capture script and the test harness, so
 what CI replays and what a refresh fetches cannot drift apart.
 
+## Not everything is JSON
+
+Half the ecosystems answer with something else, so a manifest entry may declare
+`"format": "text"` and the body is recorded verbatim as a JSON string:
+
+| Ecosystem | Documents |
+|---|---|
+| maven | `maven-metadata.xml`, the artifact `.pom` — XML |
+| nuget | flat-container index and registration index (JSON) plus the `.nuspec` (XML) |
+| golang | `@latest` (JSON) plus the module's `go.mod` (plain text) |
+
+Text payloads are never string-truncated and never reduced. Shortening a POM
+changes how it *parses*, which is a key difference wearing a volume costume;
+the capture script refuses the combination outright.
+
+**Version-pinned URLs.** A POM lives at `.../<version>/<artifact>-<version>.pom`
+and a `go.mod` at `.../@v/<version>.mod`, so the manifest pins the version that
+was current at capture. When the artifact ships again, the adapter asks for a
+URL no fixture records and the replay fetcher raises — loudly, by design.
+Re-capturing those means editing the manifest URL first, which gets the same
+review as any other refresh.
+
 ## Refreshing
 
 ```bash
@@ -42,17 +64,29 @@ trigger rather than depending on memory.
 
 Reducers may remove **volume**. They may never remove **key diversity**.
 
-Four exist, one per document shape: `none`, `npm-packument`, `pypi-project`
-(samples the `releases` map), and `crates-io` (samples the `versions` list).
-Each keeps the entries the adapter resolves against plus the oldest and newest,
-in their original order, with every key intact.
+Six exist, one per document shape: `none`, `npm-packument`, `pypi-project`
+(samples the `releases` map), `crates-io` (samples the `versions` list),
+`packagist-p2` (samples each package's release list) and `nuget-registration`
+(keeps the newest registration page and samples its leaves). Each keeps the
+entries the adapter resolves against plus the oldest and newest, in their
+original order, with every key intact.
 
 - Dropping 285 of express's 288 release manifests is volume.
 - Dropping 314 of serde's 316 release entries is volume.
+- Dropping 763 of symfony/console's 766 p2 entries is volume; the head is kept,
+  because Packagist's minified format means only the head is complete.
 - Capping a 40 KB `readme` string at 2000 characters is volume; the key stays.
 - Dropping a key the adapter does not parse yet is **not allowed**. Those are
   precisely the keys that reveal the next dead read — `versions[<latest>]
-  .deprecated` was one of them until #142 went looking for it.
+  .deprecated` was one of them until #142 went looking for it, and Packagist's
+  `require` block is one of them today.
+
+Sometimes the *absence* of a key is the finding, and then two payloads have to
+be captured rather than one. `nuget/servicebus.registration` and
+`nuget/servicebus.registration-semver1` are the same catalog entry for the same
+package and version out of nuget.org's two registration hives; they differ by
+exactly the `deprecation` block, and holding them side by side is what turns
+"the key is missing" into "the registry does not send it here".
 
 One honest consequence: a reduced fixture cannot exercise a fallback path that
 depends on the dropped volume. Those paths keep their synthetic tests next to

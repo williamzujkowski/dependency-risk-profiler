@@ -1,0 +1,543 @@
+{
+  "payload": {
+    "@context": {
+      "@vocab": "http://schema.nuget.org/schema#",
+      "catalog": "http://schema.nuget.org/catalog#",
+      "commitId": {
+        "@id": "catalog:commitId"
+      },
+      "commitTimeStamp": {
+        "@id": "catalog:commitTimeStamp",
+        "@type": "xsd:dateTime"
+      },
+      "count": {
+        "@id": "catalog:count"
+      },
+      "dependencies": {
+        "@container": "@set",
+        "@id": "dependency"
+      },
+      "dependencyGroups": {
+        "@container": "@set",
+        "@id": "dependencyGroup"
+      },
+      "items": {
+        "@container": "@set",
+        "@id": "catalog:item"
+      },
+      "packageContent": {
+        "@type": "@id"
+      },
+      "packageTargetFrameworks": {
+        "@container": "@set",
+        "@id": "packageTargetFramework"
+      },
+      "parent": {
+        "@id": "catalog:parent",
+        "@type": "@id"
+      },
+      "published": {
+        "@type": "xsd:dateTime"
+      },
+      "reasons": {
+        "@container": "@set"
+      },
+      "registration": {
+        "@type": "@id"
+      },
+      "tags": {
+        "@container": "@set",
+        "@id": "tag"
+      },
+      "xsd": "http://www.w3.org/2001/XMLSchema#"
+    },
+    "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json",
+    "@type": [
+      "catalog:CatalogRoot",
+      "PackageRegistration",
+      "catalog:Permalink"
+    ],
+    "commitId": "4daff677-9044-4de1-bb44-85d653d324cc",
+    "commitTimeStamp": "2026-04-10T00:40:20.2690973+00:00",
+    "count": 1,
+    "items": [
+      {
+        "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json#page/0.0.2-preview/5.2.0",
+        "@type": "catalog:CatalogPage",
+        "commitId": "4daff677-9044-4de1-bb44-85d653d324cc",
+        "commitTimeStamp": "2026-04-10T00:40:20.2690973+00:00",
+        "count": 35,
+        "items": [
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/0.0.2-preview.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netframework4.5.1",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netframework4.5.1/microsoft.azure.amqp",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Amqp",
+                      "range": "[2.0.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.amqp/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETFramework4.5.1"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.net.security",
+                      "@type": "PackageDependency",
+                      "id": "System.Net.Security",
+                      "range": "[4.0.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.net.security/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.private.datacontractserialization",
+                      "@type": "PackageDependency",
+                      "id": "System.Private.DataContractSerialization",
+                      "range": "[4.1.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.private.datacontractserialization/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.runtime.serialization.primitives",
+                      "@type": "PackageDependency",
+                      "id": "System.Runtime.Serialization.Primitives",
+                      "range": "[4.1.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.runtime.serialization.primitives/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.runtime.serialization.xml",
+                      "@type": "PackageDependency",
+                      "id": "System.Runtime.Serialization.Xml",
+                      "range": "[4.1.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.runtime.serialization.xml/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.reflection",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.reflection.emit",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.Emit",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.emit/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.xml.readerwriter",
+                      "@type": "PackageDependency",
+                      "id": "System.Xml.ReaderWriter",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.xml.readerwriter/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.xml.xmlserializer",
+                      "@type": "PackageDependency",
+                      "id": "System.Xml.XmlSerializer",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.xml.xmlserializer/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/system.text.regularexpressions",
+                      "@type": "PackageDependency",
+                      "id": "System.Text.RegularExpressions",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.text.regularexpressions/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#dependencygroup/.netstandard1.3/microsoft.azure.amqp",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Amqp",
+                      "range": "[2.0.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.amqp/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.3"
+                }
+              ],
+              "deprecation": {
+                "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#deprecation",
+                "@type": "deprecation",
+                "alternatePackage": {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.0.0.2-preview.json#deprecation/alternatePackage",
+                  "@type": "alternatePackage",
+                  "id": "Azure.Messaging.ServiceBus",
+                  "range": "*"
+                },
+                "message": "Please note, this package is obsolete and will no longer be maintained after 9/30/2026. Microsoft encourages you to upgrade to the replacement package, Azure.Messaging.ServiceBus, to continue receiving updates. Refer to the migration guide (https://aka.ms/azsdk/net/migrate/sb) for guidance on upgrading. Refer to our deprecation policy (https://aka.ms/azsdk/support-policies) for more details.",
+                "reasons": [
+                  "Other"
+                ]
+              },
+              "description": "This is the next generation Service Bus .NET Standard client library that focuses on queues & topics. For more information about Service Bus, see https://azure.microsoft.com/en-us/services/service-bus/ ",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/0.0.2-preview/icon",
+              "id": "Microsoft.Azure.ServiceBus",
+              "language": "",
+              "licenseExpression": "",
+              "licenseUrl": "https://raw.githubusercontent.com/Azure/azure-service-bus-dotnet/master/LICENSE",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/0.0.2-preview/microsoft.azure.servicebus.0.0.2-preview.nupkg",
+              "projectUrl": "https://github.com/Azure/azure-service-bus-dotnet",
+              "published": "2017-04-03T22:58:20.15+00:00",
+              "requireLicenseAcceptance": true,
+              "summary": "",
+              "tags": [
+                "Azure",
+                "Service",
+                "Bus",
+                "ServiceBus",
+                ".NET",
+                "AMQP",
+                "IoT",
+                "Queue",
+                "Topic"
+              ],
+              "title": "Microsoft.Azure.ServiceBus",
+              "version": "0.0.2-preview"
+            },
+            "commitId": "77a57a4f-b7ea-4266-9d35-ca8433c674e6",
+            "commitTimeStamp": "2024-10-30T19:22:04.4479347+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/0.0.2-preview/microsoft.azure.servicebus.0.0.2-preview.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/5.1.2.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#dependencygroup/.netstandard2.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#dependencygroup/.netstandard2.0/microsoft.azure.amqp",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Amqp",
+                      "range": "[2.4.11, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.amqp/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#dependencygroup/.netstandard2.0/microsoft.azure.services.appauthentication",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Services.AppAuthentication",
+                      "range": "[1.0.3, 2.0.0)",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.services.appauthentication/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#dependencygroup/.netstandard2.0/newtonsoft.json",
+                      "@type": "PackageDependency",
+                      "id": "Newtonsoft.Json",
+                      "range": "[10.0.3, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/newtonsoft.json/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#dependencygroup/.netstandard2.0/system.diagnostics.diagnosticsource",
+                      "@type": "PackageDependency",
+                      "id": "System.Diagnostics.DiagnosticSource",
+                      "range": "[4.5.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.diagnosticsource/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#dependencygroup/.netstandard2.0/system.identitymodel.tokens.jwt",
+                      "@type": "PackageDependency",
+                      "id": "System.IdentityModel.Tokens.Jwt",
+                      "range": "[5.4.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.identitymodel.tokens.jwt/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard2.0"
+                }
+              ],
+              "deprecation": {
+                "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#deprecation",
+                "@type": "deprecation",
+                "alternatePackage": {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.2.json#deprecation/alternatePackage",
+                  "@type": "alternatePackage",
+                  "id": "Azure.Messaging.ServiceBus",
+                  "range": "*"
+                },
+                "message": "Please note, this package is obsolete and will no longer be maintained after 9/30/2026. Microsoft encourages you to upgrade to the replacement package, Azure.Messaging.ServiceBus, to continue receiving updates. Refer to the migration guide (https://aka.ms/azsdk/net/migrate/sb) for guidance on upgrading. Refer to our deprecation policy (https://aka.ms/azsdk/support-policies) for more details.",
+                "reasons": [
+                  "Other"
+                ]
+              },
+              "description": "This is the next generation Azure Service Bus .NET Standard client library that focuses on queues & topics. For more information about Service Bus, see https://azure.microsoft.com/en-us/services/service-bus/",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.1.2/icon",
+              "id": "Microsoft.Azure.ServiceBus",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/5.1.2/license",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.1.2/microsoft.azure.servicebus.5.1.2.nupkg",
+              "projectUrl": "https://github.com/Azure/azure-sdk-for-net/blob/Microsoft.Azure.ServiceBus_5.1.2/sdk/servicebus/Microsoft.Azure.ServiceBus/README.md",
+              "published": "2021-02-25T01:33:51.747+00:00",
+              "requireLicenseAcceptance": true,
+              "summary": "",
+              "tags": [
+                "Microsoft",
+                "Azure",
+                "Service",
+                "Bus",
+                "ServiceBus",
+                ".NET",
+                "AMQP",
+                "IoT",
+                "Queue",
+                "Topic"
+              ],
+              "title": "",
+              "version": "5.1.2"
+            },
+            "commitId": "77a57a4f-b7ea-4266-9d35-ca8433c674e6",
+            "commitTimeStamp": "2024-10-30T19:22:04.4479347+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.1.2/microsoft.azure.servicebus.5.1.2.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/5.1.3.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#dependencygroup/.netstandard2.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#dependencygroup/.netstandard2.0/microsoft.azure.amqp",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Amqp",
+                      "range": "[2.4.11, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.amqp/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#dependencygroup/.netstandard2.0/microsoft.azure.services.appauthentication",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Services.AppAuthentication",
+                      "range": "[1.0.3, 2.0.0)",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.services.appauthentication/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#dependencygroup/.netstandard2.0/newtonsoft.json",
+                      "@type": "PackageDependency",
+                      "id": "Newtonsoft.Json",
+                      "range": "[10.0.3, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/newtonsoft.json/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#dependencygroup/.netstandard2.0/system.diagnostics.diagnosticsource",
+                      "@type": "PackageDependency",
+                      "id": "System.Diagnostics.DiagnosticSource",
+                      "range": "[4.5.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.diagnosticsource/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#dependencygroup/.netstandard2.0/system.identitymodel.tokens.jwt",
+                      "@type": "PackageDependency",
+                      "id": "System.IdentityModel.Tokens.Jwt",
+                      "range": "[5.4.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.identitymodel.tokens.jwt/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard2.0"
+                }
+              ],
+              "deprecation": {
+                "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#deprecation",
+                "@type": "deprecation",
+                "alternatePackage": {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2024.10.30.19.13.49/microsoft.azure.servicebus.5.1.3.json#deprecation/alternatePackage",
+                  "@type": "alternatePackage",
+                  "id": "Azure.Messaging.ServiceBus",
+                  "range": "*"
+                },
+                "message": "Please note, this package is obsolete and will no longer be maintained after 9/30/2026. Microsoft encourages you to upgrade to the replacement package, Azure.Messaging.ServiceBus, to continue receiving updates. Refer to the migration guide (https://aka.ms/azsdk/net/migrate/sb) for guidance on upgrading. Refer to our deprecation policy (https://aka.ms/azsdk/support-policies) for more details.",
+                "reasons": [
+                  "Other"
+                ]
+              },
+              "description": "Please note, a newer package Azure.Messaging.ServiceBus is available as of November 2020. While this package will continue to receive critical bug fixes, we strongly encourage you to upgrade. Read the migration guide at https://aka.ms/azsdk/net/migrate/sb for more details.",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.1.3/icon",
+              "id": "Microsoft.Azure.ServiceBus",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/5.1.3/license",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.1.3/microsoft.azure.servicebus.5.1.3.nupkg",
+              "projectUrl": "https://github.com/Azure/azure-sdk-for-net/blob/Microsoft.Azure.ServiceBus_5.1.3/sdk/servicebus/Microsoft.Azure.ServiceBus/README.md",
+              "published": "2021-04-19T22:51:06.94+00:00",
+              "requireLicenseAcceptance": true,
+              "summary": "",
+              "tags": [
+                "Microsoft",
+                "Azure",
+                "Service",
+                "Bus",
+                "ServiceBus",
+                ".NET",
+                "AMQP",
+                "IoT",
+                "Queue",
+                "Topic"
+              ],
+              "title": "",
+              "version": "5.1.3"
+            },
+            "commitId": "77a57a4f-b7ea-4266-9d35-ca8433c674e6",
+            "commitTimeStamp": "2024-10-30T19:22:04.4479347+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.1.3/microsoft.azure.servicebus.5.1.3.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/5.2.0.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#dependencygroup/.netstandard2.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#dependencygroup/.netstandard2.0/microsoft.azure.amqp",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Amqp",
+                      "range": "[2.4.11, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.amqp/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#dependencygroup/.netstandard2.0/microsoft.azure.services.appauthentication",
+                      "@type": "PackageDependency",
+                      "id": "Microsoft.Azure.Services.AppAuthentication",
+                      "range": "[1.0.3, 2.0.0)",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.services.appauthentication/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#dependencygroup/.netstandard2.0/newtonsoft.json",
+                      "@type": "PackageDependency",
+                      "id": "Newtonsoft.Json",
+                      "range": "[10.0.3, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/newtonsoft.json/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#dependencygroup/.netstandard2.0/system.diagnostics.diagnosticsource",
+                      "@type": "PackageDependency",
+                      "id": "System.Diagnostics.DiagnosticSource",
+                      "range": "[4.5.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.diagnostics.diagnosticsource/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#dependencygroup/.netstandard2.0/system.identitymodel.tokens.jwt",
+                      "@type": "PackageDependency",
+                      "id": "System.IdentityModel.Tokens.Jwt",
+                      "range": "[5.4.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.identitymodel.tokens.jwt/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard2.0"
+                }
+              ],
+              "deprecation": {
+                "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#deprecation",
+                "@type": "deprecation",
+                "alternatePackage": {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.38.52/microsoft.azure.servicebus.5.2.0.json#deprecation/alternatePackage",
+                  "@type": "alternatePackage",
+                  "id": "Azure.Messaging.ServiceBus",
+                  "range": "*"
+                },
+                "message": "Please note, this package is obsolete and will no longer be maintained after 9/30/2026. Microsoft encourages you to upgrade to the replacement package, Azure.Messaging.ServiceBus, to continue receiving updates. Refer to the migration guide (https://aka.ms/azsdk/net/migrate/sb) for guidance on upgrading. Refer to our deprecation policy (https://aka.ms/azsdk/support-policies) for more details.",
+                "reasons": [
+                  "Other"
+                ]
+              },
+              "description": "Please note, a newer package Azure.Messaging.ServiceBus is available as of November 2020. While this package will continue to receive critical bug fixes, we strongly encourage you to upgrade. Read the migration guide at https://aka.ms/azsdk/net/migrate/sb for more details.",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.2.0/icon",
+              "id": "Microsoft.Azure.ServiceBus",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/5.2.0/license",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.2.0/microsoft.azure.servicebus.5.2.0.nupkg",
+              "projectUrl": "https://github.com/Azure/azure-sdk-for-net/blob/Microsoft.Azure.ServiceBus_5.2.0/sdk/servicebus/Microsoft.Azure.ServiceBus/README.md",
+              "published": "2021-11-08T06:56:15.993+00:00",
+              "readmeUrl": "https://www.nuget.org/packages/Microsoft.Azure.ServiceBus/5.2.0#show-readme-container",
+              "requireLicenseAcceptance": true,
+              "summary": "",
+              "tags": [
+                "Microsoft",
+                "Azure",
+                "Service",
+                "Bus",
+                "ServiceBus",
+                ".NET",
+                "AMQP",
+                "IoT",
+                "Queue",
+                "Topic"
+              ],
+              "title": "",
+              "version": "5.2.0"
+            },
+            "commitId": "4daff677-9044-4de1-bb44-85d653d324cc",
+            "commitTimeStamp": "2026-04-10T00:40:20.2690973+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.2.0/microsoft.azure.servicebus.5.2.0.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json"
+          }
+        ],
+        "lower": "0.0.2-preview",
+        "parent": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json",
+        "upper": "5.2.0"
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "nuget-registration",
+    "source_url": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json",
+    "trimming": [
+      "items[-1].items: kept the oldest leaf and the newest 3, dropped 31 others (volume only; retained leaves keep every key)"
+    ]
+  }
+}

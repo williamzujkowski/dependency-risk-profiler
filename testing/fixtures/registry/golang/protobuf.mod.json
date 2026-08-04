@@ -1,0 +1,11 @@
+{
+  "payload": "// Deprecated: Use the \"google.golang.org/protobuf\" module instead.\nmodule github.com/golang/protobuf\n\ngo 1.17\n\nrequire (\n\tgithub.com/google/go-cmp v0.5.5\n\tgoogle.golang.org/protobuf v1.33.0\n)\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://proxy.golang.org/github.com/golang/protobuf/@v/v1.5.4.mod",
+    "trimming": []
+  }
+}

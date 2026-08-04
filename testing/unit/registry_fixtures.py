@@ -63,7 +63,7 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Callable, Dict, List, Mapping, Optional, Tuple
+from typing import Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 from warnings import warn
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "registry"
@@ -98,11 +98,30 @@ class RegistryFixture:
     reducer: str
     trimming: Tuple[str, ...]
     payload: object
+    fmt: str = "json"
 
     @property
     def slug(self) -> str:
         """Return the ``ecosystem/name`` id used in assertion messages."""
         return f"{self.ecosystem}/{self.name}"
+
+    @property
+    def body(self) -> bytes:
+        """Return the recorded document as the bytes the registry sent.
+
+        Four ecosystems answer with something other than JSON — Maven Central
+        with XML, nuget.org with a nuspec, the Go module proxy with a plain-text
+        ``go.mod`` — and their adapters parse bytes rather than a decoded
+        object. Serving those adapters the recorded bytes keeps the parse under
+        test instead of stubbing it out.
+
+        Returns:
+            The payload encoded as UTF-8: verbatim for a text capture, and
+            compactly re-serialized for a JSON one.
+        """
+        if isinstance(self.payload, str):
+            return self.payload.encode("utf-8")
+        return json.dumps(self.payload).encode("utf-8")
 
     def age_days(self, today: Optional[date] = None) -> int:
         """Return how many days old the capture is.
@@ -245,6 +264,7 @@ def load_fixture(ecosystem: str, name: str) -> RegistryFixture:
         reducer=provenance.get("reducer", "none"),
         trimming=tuple(provenance.get("trimming", ())),
         payload=payload,
+        fmt=provenance.get("format", "json"),
     )
 
 
@@ -338,12 +358,102 @@ def replay_fetcher(
 
     def fetch(url: str, timeout: int = 30) -> object:
         if url not in responses:
-            raise AssertionError(
-                f"the adapter requested {url}, which no fixture records. Either "
-                f"the adapter changed which endpoint it reads, or the manifest "
-                f"needs a new entry — do not let this fall through to the "
-                f"network."
-            )
+            raise AssertionError(_no_recording(url))
         return responses[url]
 
     return fetch
+
+
+def _no_recording(url: str) -> str:
+    """Return the message a replay seam raises for an unrecorded URL.
+
+    Args:
+        url: The URL the adapter asked for.
+
+    Returns:
+        The failure message.
+    """
+    return (
+        f"the adapter requested {url}, which no fixture records. Either the "
+        f"adapter changed which endpoint it reads, or the manifest needs a new "
+        f"entry — do not let this fall through to the network."
+    )
+
+
+class RecordedResponse:
+    """The slice of ``requests.Response`` the byte-oriented adapters touch.
+
+    Maven Central, nuget.org and Packagist are read through ``requests.get``
+    rather than through a JSON helper, and each reads the body differently: the
+    Maven and NuGet clients stream it with :meth:`iter_content` under a byte
+    cap, and the Composer adapter calls :meth:`json`. All three check
+    ``status_code`` first, and two of them use the response as a context
+    manager. Recreating those four surfaces is what lets the real parse run
+    against a captured payload instead of being stubbed past.
+    """
+
+    def __init__(self, url: str, body: bytes, status_code: int = 200) -> None:
+        """Initialize the recorded response.
+
+        Args:
+            url: The URL this body was captured from.
+            body: The recorded bytes.
+            status_code: The status to report; 404 for a recorded absence.
+        """
+        self.url = url
+        self.status_code = status_code
+        self.content = body
+        self.headers: Dict[str, str] = {}
+
+    def iter_content(self, chunk_size: int = 65536) -> Iterator[bytes]:
+        """Yield the recorded body in chunks, as a streamed response would."""
+        for start in range(0, len(self.content), max(chunk_size, 1)):
+            yield self.content[start : start + chunk_size]
+
+    def json(self) -> object:
+        """Decode the recorded body as JSON."""
+        return json.loads(self.content.decode("utf-8"))
+
+    @property
+    def text(self) -> str:
+        """Return the recorded body decoded as UTF-8."""
+        return self.content.decode("utf-8")
+
+    def __enter__(self) -> "RecordedResponse":
+        """Return self, so ``with requests.get(...) as response`` works."""
+        return self
+
+    def __exit__(self, *exc_info: object) -> bool:
+        """Do nothing; there is no socket to release."""
+        return False
+
+
+def replay_requests_get(
+    fixtures: Mapping[str, RegistryFixture],
+    absent: Sequence[str] = (),
+) -> Callable[..., RecordedResponse]:
+    """Build a ``requests.get`` stub that answers only from recorded bytes.
+
+    The same rule as :func:`replay_fetcher`, one layer lower: keyed by the URL
+    each fixture was captured from, and raising on anything else so a test can
+    never fall through to a live registry.
+
+    Args:
+        fixtures: Fixtures to serve, keyed however the caller likes.
+        absent: URLs that must answer 404 — a recorded absence is a fact about
+            the registry too, and the adapters have real branches for it.
+
+    Returns:
+        A callable with the ``requests.get`` signature the clients use.
+    """
+    bodies = {fixture.source_url: fixture.body for fixture in fixtures.values()}
+    missing = set(absent)
+
+    def get(url: str, **_kwargs: object) -> RecordedResponse:
+        if url in missing:
+            return RecordedResponse(url, b"", status_code=404)
+        if url not in bodies:
+            raise AssertionError(_no_recording(url))
+        return RecordedResponse(url, bodies[url])
+
+    return get

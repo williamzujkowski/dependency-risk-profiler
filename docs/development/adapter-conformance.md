@@ -12,6 +12,11 @@ Issues: [#73][73] (harness), [#145][145] (dead-read audit), [#160][160]
 [73]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/73
 [145]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/145
 [160]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/160
+[#178]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/178
+[#179]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/179
+[#180]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/180
+[#182]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/182
+[#183]: https://github.com/williamzujkowski/dependency-risk-profiler/issues/183
 
 ## The gap it closes
 
@@ -57,6 +62,13 @@ So: `scripts/capture_registry_fixtures.py` fetches from the live registry, and
 reducers may drop **volume** but never **key diversity**. See
 `testing/fixtures/registry/README.md` for the rule, the refresh cadence, the
 ownership, and the security handling of captured payloads.
+
+Half the registries do not answer with JSON — Maven Central serves XML, nuget.org
+serves a `.nuspec` beside its JSON, the Go proxy serves a `go.mod` as text — so a
+manifest entry may declare `"format": "text"` and the body is recorded verbatim
+and replayed as bytes. Text captures are never truncated and never reduced:
+shortening a POM changes how it *parses*, which is a key difference wearing a
+volume costume.
 
 CI never touches the network. Capture is manual or run from the
 `registry-fixtures` dispatch workflow; the suite replays recordings only, and
@@ -108,7 +120,45 @@ leaves the measured set. That is the line between the two layers, and it only
 holds because the floor was re-baselined to 8 in the same change. A floor left
 at 7 would have gone green on the signal it had just started measuring.
 
-## Status: 4 of 8 converted
+### This round
+
+golang, by deleting the `go.mod` read again — the exact state the adapter
+shipped in until this change:
+
+| Gate | With the `go.mod` read removed |
+|---|---|
+| `test_signal_floors.py` (counts) | **passed** (6/6) |
+| `test_golang_version.py` + `test_go_module_path.py` | **passed** (45/45) |
+| conformance floor case `golang/logrus.latest` | **passed** |
+| `test_adapter_conformance.py` value assertions | **FAILED** on `golang/protobuf.latest` |
+
+nuget, by pointing `REGISTRATION_BASE` back at `registration5-semver1` and
+serving the SemVer1 payload captured from that hive — #129's behaviour replayed
+against the bytes it actually got:
+
+| Gate | With the SemVer1 hive restored |
+|---|---|
+| `test_signal_floors.py` (counts) | **passed** (6/6) |
+| `test_nuget_adapter.py` floor + named-signal assertions | **passed** (63/63) |
+| `test_adapter_conformance.py` value assertions | **FAILED**: `nuget/servicebus.nuspec: is_deprecated is False, expected True` |
+
+That second row is the whole argument in one line. `test_nuget_adapter.py`
+contains a test called `test_an_explicit_deprecation_block_is_honoured`, and it
+passed — against a hand-written payload that has the key because the parser
+looks for it.
+
+maven is this round's instructive contrast, the `ownership` case again: delete
+the `<lastUpdated>` read and the staleness signal goes to `None`, which drops
+maven below its own floor, so both layers fail. That is the correct outcome and
+the reason the floor was set at 8 in the same change rather than at the 6 the
+capture first measured.
+
+composer's is the least interesting and worth recording anyway: repoint
+`abandoned` at a key Packagist does not send and the conformance value
+assertion fails — but so does `test_composer_adapter.py`, which already had a
+targeted deprecation test. Not every ecosystem needed this harness equally.
+
+## Status: 8 of 8 converted
 
 | Ecosystem | State | Notes |
 |---|---|---|
@@ -116,34 +166,73 @@ at 7 would have gone green on the signal it had just started measuring.
 | **rubygems** | converted | 2 gem payloads + owners docs. A *different* dead-read shape (#134: registry sends a `licenses` list, adapter read a `license` string), on the other side of `SCORES_FROM_REGISTRY_ALONE` from npm, and small enough to capture whole. |
 | **python** | converted | 3 captured project documents. #145's named blind spot, and the capture found two dead reads in it: `ownership` (#171 — the maintainer count PyPI was recorded as not publishing) and `license_expression` (PEP 639; 17 of 30 sampled popular packages publish it with a null `license` and no `License ::` classifier). |
 | **cargo** | converted | 2 crate documents + owners docs. #139's *wrong-value* shape, and the only ecosystem whose deprecation non-default branch is capturable at all — crates.io answers 200 for a fully yanked crate where rubygems answers 404 (#170). Capturing it found `max_version` answering the sentinel `"0.0.0"` when nothing installable remains. |
-| composer | pending | Never closely audited. Packagist's p2 document needs a reducer like `npm-packument`'s. |
-| nuget | pending | Multi-document; its catalog `deprecation` block is a real enum. |
-| maven | pending | #141 left 10 of 11 signals structurally unreachable. Still has **no `signal_floors` entry at all**, so it needs a floor before it can have a value gate — the only one of the four in that position. |
-| golang | pending | Uses `proxy.golang.org`, so both the reducer and the replay seam differ. Converting it first is what makes #160's narrowed-B migration verifiable. |
+| **composer** | converted | 3 captured p2 documents. The one audit of the four that found **no** dead read — every key the adapter reads, Packagist sends. It found two unread ones instead: the `require` block (the transitive fact nuget scores from its nuspec) and a failed lookup recorded as UNDECLARED rather than unmeasured. |
+| **nuget** | converted | 7 captured documents (version index + registration index + nuspec, two packages, plus a second registration hive as evidence). The capture found #142's shape in a **fourth** adapter: the `deprecation` block exists only in `registration5-gz-semver2`, and #129 read `registration5-semver1`. |
+| **maven** | converted | 6 captured XML documents, and maven's **first `signal_floors` entry ever**. The capture found `<lastUpdated>` unread (no release cadence without a clone) and no source-repository record at all. A third reading is filed rather than fixed: `<licenses>` and `<scm>` inherited from a *parent* POM are never walked to. |
+| **golang** | converted | 4 captured proxy documents, and the first non-JSON registry here. The capture found #142's shape in a **fifth** adapter: Go states a module's retirement in its own `go.mod` and nothing fetched it, so `is_deprecated` was False for every Go module ever scanned. `@latest`'s `Time` was unread too. |
 
-### What the two conversions in this round changed
+### What the four conversions in this round changed
 
 | Ecosystem | Floor before | Floor after | Reaches a verdict unaided |
 |---|---|---|---|
-| python | 7 | **8** (`+ maintainer`) | False → **True** |
-| cargo | 8 | 8 (unchanged) | True (unchanged) |
+| composer | 8 | 8 (unchanged) | True (unchanged) |
+| nuget | 8 | 8 (unchanged) | True (unchanged) |
+| maven | **none** | **8** | — → **True** |
+| golang | **none** | **6** | — → **False** |
 
-python's floor moved because `ownership` answers the maintainer count, and a
-floor below measured coverage is a permission slip, not a floor (#158). The
-honest caveat is captured rather than rounded off: a project owned by a PyPI
-*organization* reports `roles: []`, and `python/flask` is that fixture — its
-maintainer count stays unmeasured, so it lands back at seven and does not clear
-the insufficient-data bar. Zero would have scored the single-maintainer
-verdict from a fact nobody measured.
+maven and golang had no floor of any kind before this. maven's is 8 rather than
+the 6 the capture first measured, because two of the readings it found were
+fixed in the same change — a floor sits at measured coverage, never below it
+(#158). golang's is 6 and stays there: `proxy.golang.org` publishes no licence
+and no owner list, so a Go module does not clear the insufficient-data bar from
+proxy metadata alone, and that is recorded rather than rounded up to match its
+neighbours.
 
-`adapter_conformance.CONVERSION_STATUS` carries the same table in code, and
-`test_the_conversion_ledger_is_honest` stops it claiming more than it has.
+The earlier round, for reference: python moved 7 → 8 (`+ maintainer`, via
+`ownership`) and False → True; cargo stayed at 8. The honest caveat there is
+captured rather than rounded off — a project owned by a PyPI *organization*
+reports `roles: []`, and `python/flask` is that fixture.
+
+`adapter_conformance.CONVERSION_STATUS` carries the same table in code.
+`test_the_conversion_ledger_is_honest` stops it claiming more than it has, and
+`test_every_ecosystem_with_an_adapter_is_under_the_value_harness` stops it
+claiming less by quietly shrinking.
+
+## What the four captures found
+
+Every conversion so far has found at least one reading nobody predicted. These
+four kept the record intact.
+
+| Ecosystem | Finding | Shape | Status |
+|---|---|---|---|
+| nuget | `deprecation` exists only in `registration5-gz-semver2`; #129 read `registration5-semver1`, where the key is simply absent. No .NET package could ever be flagged deprecated. | #142 exactly: always measured, always `False` | **fixed** — one base URL |
+| golang | Go states retirement as `// Deprecated:` on the `module` directive in `go.mod`; the proxy serves the file, nothing fetched it. `is_deprecated` was `False` for every Go module. | #142 exactly | **fixed** — one extra read |
+| golang | `@latest` publishes `Time` beside `Version`; unread, so a Go module had no release cadence without a clone — on the ecosystem whose repositories are least likely to clone. | unread key → `None` | **fixed** |
+| maven | `maven-metadata.xml` publishes `<versioning><lastUpdated>`; unread, same consequence. | unread key → `None` | **fixed** |
+| maven | The adapter never recorded whether the POM declares a source repository, so the signal was absent from the score rather than answered either way. | signal absent, not defaulted | **fixed** |
+| maven | `<licenses>` and `<scm>` are conventionally declared once in a *parent* POM and inherited. The adapter reads the artifact POM and stops. guava's own POM has neither; so does every Apache and Spring artifact built the same way. | unread *document*, not key | **filed** ([#178]) — POM-graph walk |
+| maven | Maven Central publishes no retirement marker at all, so deprecation reads measured-and-`False` for every artifact with no ground truth to capture. | #142's shape, unprovable | **filed** ([#179]) as an unproven branch |
+| composer | The p2 entry states the package's own `require` block — the fact nuget reads from its nuspec and scores — and composer marks transitive unmeasured. | unread key | **filed** ([#180]) |
+| composer | A failed Packagist lookup records the source repository as UNDECLARED rather than unmeasured, so a 404 scores as "declares no source". | error path → measured value | **filed** ([#182]) |
+| nuget | Resolves a repository URL from the nuspec and still records nothing about whether one is declared, so it scores 15 signals where the rest score 16. | signal absent, not defaulted | **filed** ([#183]) |
+
+The nuget one is the methodological point of the round. It was **not visible
+from one payload**: the parser looked for `deprecation`, the hand-written
+fixture had `deprecation` because the parser looked for it, and the live SemVer1
+payload simply does not carry the key. Only holding both hives side by side
+showed it, which is why both are captured — `nuget/servicebus.registration` and
+`nuget/servicebus.registration-semver1`, same package, same version, differing
+by exactly that key.
 
 ## Converting the next ecosystem
 
+All eight are converted, so this is now the procedure for a *new* ecosystem —
+and for re-doing one whose registry changed shape.
+
 1. Add its packages to `testing/fixtures/registry/manifest.json`. Pick at least
    a healthy one (the coverage-floor case) plus one per polarized signal whose
-   ground truth is the **non-default** branch.
+   ground truth is the **non-default** branch. Add the host to
+   `allowed_hosts`, and mark non-JSON documents `"format": "text"`.
 2. Add a reducer to the capture script if the document is version-keyed and
    large. Volume only.
 3. `python scripts/capture_registry_fixtures.py --ecosystem <name>`, then read
@@ -169,3 +258,14 @@ verdict from a fact nobody measured.
   would bring it under this harness.
 - A reduced fixture cannot exercise a fallback path that depends on the dropped
   volume. Those keep their synthetic tests next to the adapter.
+- Some non-default branches cannot be captured at all, and those are recorded
+  as waivers rather than skipped. maven's deprecation is the sharpest: Maven
+  Central publishes no retirement marker of any kind, so the signal reads as
+  measured and `False` for every artifact in the repository and no payload can
+  make it read otherwise. rubygems' is the other: a gem whose releases are all
+  yanked answers 404, so the adapter returns before the read. `unproven_branches()`
+  prints every one with its reason.
+- Version-pinned fixture URLs (a POM, a `go.mod`) go stale when the artifact
+  ships again: the adapter asks for a URL no fixture records and the replay
+  fetcher raises. That is the designed failure, not a flake — re-capture, which
+  means editing the manifest URL first.

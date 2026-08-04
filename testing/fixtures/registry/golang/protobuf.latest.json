@@ -1,0 +1,20 @@
+{
+  "payload": {
+    "Origin": {
+      "Hash": "75de7c059e36b64f01d0dd234ff2fff404ec3374",
+      "Ref": "refs/tags/v1.5.4",
+      "URL": "https://github.com/golang/protobuf",
+      "VCS": "git"
+    },
+    "Time": "2024-03-06T06:45:40Z",
+    "Version": "v1.5.4"
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "none",
+    "source_url": "https://proxy.golang.org/github.com/golang/protobuf/@latest",
+    "trimming": []
+  }
+}

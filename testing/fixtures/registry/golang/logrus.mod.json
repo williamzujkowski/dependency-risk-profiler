@@ -1,0 +1,11 @@
+{
+  "payload": "module github.com/sirupsen/logrus\n\ngo 1.17\n\nrequire (\n\tgithub.com/stretchr/testify v1.10.0\n\tgolang.org/x/sys v0.13.0\n)\n\nrequire (\n\tgithub.com/davecgh/go-spew v1.1.1 // indirect\n\tgithub.com/pmezard/go-difflib v1.0.0 // indirect\n\tgopkg.in/yaml.v3 v3.0.1 // indirect\n)\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://proxy.golang.org/github.com/sirupsen/logrus/@v/v1.9.4.mod",
+    "trimming": []
+  }
+}

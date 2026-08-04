@@ -46,6 +46,8 @@ from registry_fixtures import (
 )
 from signal_floors import MIN_MEASURED_SIGNALS, SCORES_FROM_REGISTRY_ALONE
 
+from dependency_risk_profiler.analyzers.golang import deprecation_notice
+
 CASE_IDS = [case.slug for case in CASES]
 
 
@@ -245,6 +247,229 @@ def test_the_serde_release_date_is_not_the_crates_first_publication() -> None:
     assert score.staleness_score is not None and score.staleness_score < 1.0
 
 
+def test_the_dotnet_deprecation_block_exists_in_only_one_registration_hive() -> None:
+    """The nuget capture's finding, proven by holding the two hives side by side.
+
+    #129 read the deprecation marker from ``registration5-semver1``. nuget.org
+    publishes that block **only** in ``registration5-gz-semver2``: the same
+    package, the same version, the same catalog entry, differing by exactly
+    that key. No amount of reading one payload would have shown it, which is
+    why both are captured — the absence has to be provable as the registry's
+    shape rather than as a failed request, and a hand-written fixture would
+    have carried the key because the parser looks for it.
+
+    Microsoft.Azure.ServiceBus has been deprecated in favour of
+    Azure.Messaging.ServiceBus since 2021 and read as healthy the whole time.
+    """
+    semver2 = load_fixture("nuget", "servicebus.registration")
+    semver1 = load_fixture("nuget", "servicebus.registration-semver1")
+
+    entries = {
+        fixture.name: _newest_catalog_entry(fixture) for fixture in (semver1, semver2)
+    }
+    assert (
+        entries["servicebus.registration"]["version"]
+        == entries["servicebus.registration-semver1"]["version"]
+    ), "the two hives no longer describe the same newest version; re-capture"
+
+    assert "deprecation" not in entries["servicebus.registration-semver1"], (
+        "registration5-semver1 grew a 'deprecation' key; if nuget.org really "
+        "started publishing one there, this finding's premise changed and this "
+        "test needs rewriting rather than deleting"
+    )
+    deprecation = entries["servicebus.registration"]["deprecation"]
+    assert isinstance(deprecation, Mapping)
+    assert deprecation["reasons"] == ["Other"]
+    assert deprecation["alternatePackage"]["id"] == "Azure.Messaging.ServiceBus"
+    assert entries["servicebus.registration"]["listed"] is True, (
+        "the unlisted fallback must not be what makes this package deprecated; "
+        "the explicit block is the thing under test"
+    )
+
+    score = score_case(next(c for c in CASES if c.slug == "nuget/servicebus.nuspec"))
+
+    assert score.dependency.is_deprecated is True
+    assert score.deprecation_score == 1.0
+
+
+def _newest_catalog_entry(fixture: object) -> Mapping[str, object]:
+    """Return the newest inlined catalog entry in a captured registration index.
+
+    Args:
+        fixture: A captured NuGet registration index.
+
+    Returns:
+        The last leaf's ``catalogEntry`` on the newest page.
+    """
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    pages = payload["items"]
+    assert isinstance(pages, list)
+    page = pages[-1]
+    assert isinstance(page, Mapping)
+    leaves = page["items"]
+    assert isinstance(leaves, list)
+    entry = leaves[-1]["catalogEntry"]
+    assert isinstance(entry, Mapping)
+    return entry
+
+
+def test_the_retired_go_module_is_flagged_from_its_own_go_mod() -> None:
+    """#142's shape in a fifth adapter, and the most complete instance yet.
+
+    Go states a module's retirement in the module's own ``go.mod``, as a
+    ``// Deprecated:`` comment attached to the ``module`` directive. The proxy
+    serves that file at ``@v/<version>.mod``. Nothing fetched it, so
+    ``is_deprecated`` was False for every Go module ever scanned — measured,
+    and measured wrong, with every count green.
+
+    Both halves are asserted: that ``@latest`` carries no deprecation field of
+    its own (so there was no key to have read instead) and that the resulting
+    signal is 1.0 anyway.
+    """
+    latest = load_fixture("golang", "protobuf.latest")
+    payload = latest.payload
+    assert isinstance(payload, Mapping)
+    assert payload["Version"] == "v1.5.4"
+    assert not [key for key in payload if "eprecat" in key], (
+        "proxy.golang.org grew a deprecation field on @latest; the marker used "
+        "to exist only in the go.mod, which is why this needed a second "
+        "endpoint rather than a second key"
+    )
+
+    go_mod = load_fixture("golang", "protobuf.mod").payload
+    assert isinstance(go_mod, str)
+    assert go_mod.splitlines()[0].startswith("// Deprecated:")
+    assert deprecation_notice(go_mod) is not None
+
+    healthy = load_fixture("golang", "logrus.mod").payload
+    assert isinstance(healthy, str)
+    assert deprecation_notice(healthy) is None
+
+    score = score_case(next(c for c in CASES if c.slug == "golang/protobuf.latest"))
+
+    assert score.dependency.is_deprecated is True
+    assert score.deprecation_score == 1.0
+
+
+def test_a_require_line_comment_does_not_retire_the_module_reading_it() -> None:
+    """The notice belongs to the ``module`` directive, not to a require entry.
+
+    A ``// Deprecated:`` comment above a ``require`` line is about the
+    *dependency*. Reading it as the module's own would flag every consumer of a
+    retired package as retired itself, which is a fabricated finding rather
+    than a missed one — the worse of the two failure modes for this signal.
+    """
+    consumer = (
+        "module example.com/healthy\n"
+        "\n"
+        "go 1.21\n"
+        "\n"
+        "require (\n"
+        "\t// Deprecated: use google.golang.org/protobuf\n"
+        "\tgithub.com/golang/protobuf v1.5.4\n"
+        ")\n"
+    )
+
+    assert deprecation_notice(consumer) is None
+
+
+def test_the_maven_release_date_comes_from_the_metadata_document() -> None:
+    """Maven's first measured cadence, pinned against the document that states it.
+
+    ``maven-metadata.xml`` publishes ``<versioning><lastUpdated>`` as a bare
+    ``yyyyMMddHHmmss`` in UTC. Nothing read it, so a Maven artifact had no
+    release cadence at all without a clone — on the ecosystem where the
+    repository is least likely to be reachable, since #141 had left
+    ``repository_url`` unset entirely.
+    """
+    fixture = load_fixture("maven", "jackson-databind.metadata")
+    document = fixture.payload
+    assert isinstance(document, str)
+    assert "<lastUpdated>" in document
+
+    score = score_case(next(c for c in CASES if c.slug == "maven/jackson-databind.pom"))
+
+    assert score.dependency.last_updated is not None
+    assert score.dependency.last_updated.tzinfo is not None
+    assert score.staleness_score is not None
+    assert "staleness" not in score.unknown_signals
+
+
+def test_a_maven_licence_declared_only_in_the_parent_pom_stays_unmeasured() -> None:
+    """The reading the maven capture found and this change does not fix.
+
+    Maven's convention is to declare ``<licenses>``, ``<scm>`` and
+    ``<developers>`` once in a parent POM and inherit them. The adapter reads
+    the artifact POM and stops. guava's own POM carries none of the three, so
+    its licence is unmeasured while Maven Central serves it one request away —
+    and the same holds for every Apache, Spring and Google artifact built the
+    same way.
+
+    Unmeasured is the honest answer for what the adapter can currently see, and
+    that is the point of pinning it: this test goes red the day someone walks
+    the parent chain, which is when the floor should move.
+    """
+    fixture = load_fixture("maven", "guava.pom")
+    pom = fixture.payload
+    assert isinstance(pom, str)
+    assert "<licenses>" not in pom
+    assert "<scm>" not in pom
+    assert "<artifactId>guava-parent</artifactId>" in pom
+
+    score = score_case(next(c for c in CASES if c.slug == "maven/guava.pom"))
+
+    assert score.dependency.license_info is None
+    assert score.license_score is None
+    assert "license" in score.unknown_signals
+
+
+def test_the_packagist_abandoned_marker_names_its_successor() -> None:
+    """Composer's deprecation non-default branch, captured.
+
+    Packagist's ``abandoned`` is two-valued: ``true``, or the name of the
+    package that supersedes it. swiftmailer carries the second form. A dead
+    read of the key gives False here forever, and False is measured.
+    """
+    fixture = load_fixture("composer", "swiftmailer")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    head = payload["packages"]["swiftmailer/swiftmailer"][0]
+    assert head["abandoned"] == "symfony/mailer"
+    assert head["license"] == ["MIT"], (
+        "Packagist publishes the licence as a list, the RubyGems shape; #134's "
+        "fix is what makes it read at all"
+    )
+
+    score = score_case(next(c for c in CASES if c.slug == "composer/swiftmailer"))
+
+    assert score.dependency.is_deprecated is True
+    assert score.deprecation_score == 1.0
+    assert score.dependency.additional_info["abandoned_in_favor_of"] == "symfony/mailer"
+
+
+def test_the_packagist_entry_states_dependencies_the_adapter_does_not_read() -> None:
+    """The gap the composer audit found, recorded rather than quietly skipped.
+
+    The p2 release entry carries a ``require`` block naming the package's own
+    dependencies — the same fact nuget reads out of its ``.nuspec`` and scores
+    as the transitive signal (#129). composer does not read it, so the signal
+    is unmeasured for every PHP package. Unmeasured is honest; it is not
+    complete, and pinning it here is what makes the gap fail loudly on the day
+    it is closed.
+    """
+    fixture = load_fixture("composer", "monolog")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    head = payload["packages"]["monolog/monolog"][0]
+    assert isinstance(head["require"], Mapping) and head["require"]
+
+    score = score_case(next(c for c in CASES if c.slug == "composer/monolog"))
+
+    assert score.transitive_score is None
+    assert "transitive" in score.unknown_signals
+
+
 # --- 2. The non-default-branch rule ----------------------------------------
 
 
@@ -391,8 +616,17 @@ def test_trimming_removed_volume_and_never_a_schema_key() -> None:
 
 
 def test_the_conversion_ledger_is_honest() -> None:
-    """Every ecosystem is listed, converted ones have a driver, pending say why."""
-    assert set(CONVERSION_STATUS) >= set(MIN_MEASURED_SIGNALS)
+    """Every ecosystem is listed, converted ones have a driver, pending say why.
+
+    The ledger claims all eight are converted, so this checks the claim from
+    both ends: nothing is marked converted without a driver, a polarity table,
+    a coverage-floor case and at least one value assertion behind it, and
+    nothing with a floor is missing from the ledger.
+    """
+    assert set(CONVERSION_STATUS) == set(MIN_MEASURED_SIGNALS), (
+        "the ledger and the floor table describe the same eight ecosystems; a "
+        "key in one and not the other is a half-registered adapter"
+    )
     assert set(CONVERSION_STATUS) >= set(DRIVERS)
 
     converted = converted_ecosystems()
@@ -408,6 +642,22 @@ def test_the_conversion_ledger_is_honest() -> None:
         ), f"{ecosystem} has no coverage-floor case"
 
     pending = [k for k, v in CONVERSION_STATUS.items() if not v.converted]
-    assert pending, "six ecosystems remain; #73 is Refs, not Closes"
     for ecosystem in pending:
         assert "PENDING" in CONVERSION_STATUS[ecosystem].note
+
+
+def test_every_ecosystem_with_an_adapter_is_under_the_value_harness() -> None:
+    """No adapter scores dependencies without a captured value gate behind it.
+
+    The ledger's own honesty check (above) is satisfied by any consistent
+    story, including a shrinking one. This is the ratchet: every ecosystem the
+    tool can analyze must be converted, so removing a conversion fails here
+    rather than passing as a smaller-but-consistent table.
+    """
+    unconverted = sorted(set(MIN_MEASURED_SIGNALS) - set(converted_ecosystems()))
+
+    assert not unconverted, (
+        f"{unconverted} score dependencies with no per-signal value gate. A "
+        f"count-based floor cannot see a signal that is always measured and "
+        f"always wrong, which is the whole of #145."
+    )

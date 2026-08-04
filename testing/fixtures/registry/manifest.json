@@ -5,9 +5,13 @@
   "warn_after_days": 180,
   "fail_after_days": 545,
   "allowed_hosts": [
+    "api.nuget.org",
     "crates.io",
+    "proxy.golang.org",
     "pypi.org",
     "registry.npmjs.org",
+    "repo.packagist.org",
+    "repo1.maven.org",
     "rubygems.org"
   ],
   "ecosystems": {
@@ -31,6 +35,78 @@
         }
       }
     },
+    "composer": {
+      "fixtures": {
+        "monolog": {
+          "url": "https://repo.packagist.org/p2/monolog/monolog.json",
+          "reducer": "packagist-p2"
+        },
+        "swiftmailer": {
+          "url": "https://repo.packagist.org/p2/swiftmailer/swiftmailer.json",
+          "reducer": "packagist-p2"
+        },
+        "psr-log": {
+          "url": "https://repo.packagist.org/p2/psr/log.json",
+          "reducer": "packagist-p2"
+        }
+      }
+    },
+    "golang": {
+      "fixtures": {
+        "logrus.latest": {
+          "url": "https://proxy.golang.org/github.com/sirupsen/logrus/@latest",
+          "reducer": "none"
+        },
+        "logrus.mod": {
+          "url": "https://proxy.golang.org/github.com/sirupsen/logrus/@v/v1.9.4.mod",
+          "reducer": "none",
+          "format": "text"
+        },
+        "protobuf.latest": {
+          "url": "https://proxy.golang.org/github.com/golang/protobuf/@latest",
+          "reducer": "none"
+        },
+        "protobuf.mod": {
+          "url": "https://proxy.golang.org/github.com/golang/protobuf/@v/v1.5.4.mod",
+          "reducer": "none",
+          "format": "text"
+        }
+      }
+    },
+    "maven": {
+      "fixtures": {
+        "jackson-databind.metadata": {
+          "url": "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "jackson-databind.pom": {
+          "url": "https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.22.1/jackson-databind-2.22.1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "guava.metadata": {
+          "url": "https://repo1.maven.org/maven2/com/google/guava/guava/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "guava.pom": {
+          "url": "https://repo1.maven.org/maven2/com/google/guava/guava/33.6.0-jre/guava-33.6.0-jre.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "slf4j-api.metadata": {
+          "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "slf4j-api.pom": {
+          "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/2.1.0-alpha1/slf4j-api-2.1.0-alpha1.pom",
+          "reducer": "none",
+          "format": "text"
+        }
+      }
+    },
     "nodejs": {
       "fixtures": {
         "express": {
@@ -44,6 +120,40 @@
         "indexof": {
           "url": "https://registry.npmjs.org/indexof",
           "reducer": "npm-packument"
+        }
+      }
+    },
+    "nuget": {
+      "fixtures": {
+        "newtonsoft.json.versions": {
+          "url": "https://api.nuget.org/v3-flatcontainer/newtonsoft.json/index.json",
+          "reducer": "none"
+        },
+        "newtonsoft.json.registration": {
+          "url": "https://api.nuget.org/v3/registration5-gz-semver2/newtonsoft.json/index.json",
+          "reducer": "nuget-registration"
+        },
+        "newtonsoft.json.nuspec": {
+          "url": "https://api.nuget.org/v3-flatcontainer/newtonsoft.json/13.0.4/newtonsoft.json.nuspec",
+          "reducer": "none",
+          "format": "text"
+        },
+        "servicebus.versions": {
+          "url": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/index.json",
+          "reducer": "none"
+        },
+        "servicebus.registration": {
+          "url": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.azure.servicebus/index.json",
+          "reducer": "nuget-registration"
+        },
+        "servicebus.registration-semver1": {
+          "url": "https://api.nuget.org/v3/registration5-semver1/microsoft.azure.servicebus/index.json",
+          "reducer": "nuget-registration"
+        },
+        "servicebus.nuspec": {
+          "url": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.2.0/microsoft.azure.servicebus.nuspec",
+          "reducer": "none",
+          "format": "text"
         }
       }
     },

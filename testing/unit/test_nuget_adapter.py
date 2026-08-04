@@ -8,11 +8,21 @@ nuget.org and trimmed to the fields the adapter reads. Refresh with:
 
     curl https://api.nuget.org/v3-flatcontainer/mediatr/index.json
     curl https://api.nuget.org/v3-flatcontainer/mediatr/12.0.1/mediatr.nuspec
-    curl https://api.nuget.org/v3/registration5-semver1/mediatr/index.json
+    curl https://api.nuget.org/v3/registration5-gz-semver2/mediatr/index.json
 
 The split matters: only the ``.nuspec`` carries ``<repository>`` (MediatR's
 ``projectUrl`` is a documentation site, not a repository), and only the
 registration catalog carries the publication date and the deprecation marker.
+
+The hive in that third URL matters too, and the payloads below are why it took
+a live capture to notice: they are "trimmed to the fields the adapter reads",
+which is exactly the sentence #145 identifies as the mechanism behind four of
+its five dead reads. nuget.org publishes the ``deprecation`` block **only** in
+``registration5-gz-semver2``; ``registration5-semver1``, which #129 read, serves
+the same catalog entries with the key absent. The hand-written payload here had
+the key because the parser looked for it, so this file passed throughout. The
+captured-payload gate in ``adapter_conformance`` is what caught it. URLs are
+built from ``REGISTRATION_BASE`` now so the two cannot drift apart again.
 """
 
 import copy
@@ -30,7 +40,10 @@ from dependency_risk_profiler.community import analyzer as community_analyzer
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.parsers.nuget import NuGetParser
-from dependency_risk_profiler.parsers.nuget_registry import NuGetRegistryClient
+from dependency_risk_profiler.parsers.nuget_registry import (
+    REGISTRATION_BASE,
+    NuGetRegistryClient,
+)
 from dependency_risk_profiler.parsers.version_sources import (
     VERSION_SOURCE_DECLARED,
     VERSION_SOURCE_KEY,
@@ -153,7 +166,7 @@ def test_nuget_ecosystem_routes_correctly() -> None:
 
 PACKAGE_ID = "MediatR"
 FLAT_BASE = "https://api.nuget.org/v3-flatcontainer"
-REGISTRATION_URL = "https://api.nuget.org/v3/registration5-semver1/mediatr/index.json"
+REGISTRATION_URL = f"{REGISTRATION_BASE}/mediatr/index.json"
 FLAT_INDEX_URL = f"{FLAT_BASE}/mediatr/index.json"
 NUSPEC_URL = f"{FLAT_BASE}/mediatr/12.0.1/mediatr.nuspec"
 
@@ -191,8 +204,7 @@ REGISTRATION_INDEX: Dict[str, object] = {
     "count": 1,
     "items": [
         {
-            "@id": "https://api.nuget.org/v3/registration5-semver1/mediatr/index.json"
-            "#page/0.1.0/12.1.0",
+            "@id": f"{REGISTRATION_URL}#page/0.1.0/12.1.0",
             "count": 2,
             "lower": "0.1.0",
             "upper": "12.1.0",
@@ -450,9 +462,7 @@ def test_an_explicit_deprecation_block_is_honoured() -> None:
 
 def test_a_paged_registration_index_fetches_only_the_newest_page() -> None:
     """Large packages leave the newest page out of the index and give a URL."""
-    page_url = (
-        "https://api.nuget.org/v3/registration5-semver1/mediatr/page/0.1.0/12.1.0.json"
-    )
+    page_url = f"{REGISTRATION_BASE}/mediatr/page/0.1.0/12.1.0.json"
     registration = copy.deepcopy(REGISTRATION_INDEX)
     pages = registration["items"]
     assert isinstance(pages, list)

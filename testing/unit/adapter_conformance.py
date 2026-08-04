@@ -30,10 +30,15 @@ top level again — and ``test_adapter_conformance`` fails on the captured
 ``request`` packument, which has no top-level ``deprecated`` key and does carry
 one inside ``versions["2.88.2"]``.
 
-Converted ecosystems and the ones still pending
------------------------------------------------
-See :data:`CONVERSION_STATUS`. Four of eight are converted; the other four are
-listed with what each needs, so the gap is visible rather than assumed closed.
+Converted ecosystems
+--------------------
+See :data:`CONVERSION_STATUS`. All eight are converted. That is not the same as
+"every branch is proven": :func:`unproven_branches` names each polarized branch
+no captured payload can reach, with the reason it cannot, and the conformance
+report prints every one. maven's deprecation branch is the sharpest of them —
+Maven Central publishes no retirement marker at all, so the signal reads as
+measured and False for every artifact in the repository and no fixture can make
+it read otherwise.
 
 Fixtures come from :mod:`registry_fixtures` — captured from the live registry,
 provenance-dated, replayed offline. This module never touches the network.
@@ -44,20 +49,42 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 from unittest import mock
 
-from registry_fixtures import RegistryFixture, load_ecosystem, replay_fetcher
+from registry_fixtures import (
+    RegistryFixture,
+    load_ecosystem,
+    replay_fetcher,
+    replay_requests_get,
+)
 from signal_floors import (
     REGISTRY_MEASURED_SIGNALS,
     assert_meets_signal_floor,
     mark_transitive_unmeasured,
 )
 
+from dependency_risk_profiler.analyzers import composer as composer_module
+from dependency_risk_profiler.analyzers import maven as maven_module
+from dependency_risk_profiler.analyzers.composer import ComposerAnalyzer
 from dependency_risk_profiler.analyzers.crates import CratesIOAnalyzer
+from dependency_risk_profiler.analyzers.golang import GoAnalyzer
+from dependency_risk_profiler.analyzers.maven import MavenAnalyzer
 from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer
+from dependency_risk_profiler.analyzers.nuget import NuGetAnalyzer
 from dependency_risk_profiler.analyzers.python import PythonAnalyzer
 from dependency_risk_profiler.analyzers.ruby import RubyGemsAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.go_modules import GoModuleResolver
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
+from dependency_risk_profiler.parsers import maven_central as maven_central_module
+from dependency_risk_profiler.parsers import nuget_registry as nuget_registry_module
+from dependency_risk_profiler.parsers.maven_central import pom_url
+from dependency_risk_profiler.parsers.nuget_registry import (
+    FLAT_CONTAINER_BASE,
+    NuGetRegistryClient,
+    parse_nuspec,
+)
+from dependency_risk_profiler.parsers.pom_model import PomCoordinate, read_pom
+from dependency_risk_profiler.parsers.xml_utils import parse_xml_bytes
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 # The community signal is scraped off a GitHub repository page, not off a
@@ -158,6 +185,7 @@ class FixtureCase:
     purpose: str
     signals: Sequence[SignalValue]
     extra_fixtures: Sequence[str] = ()
+    absent_urls: Sequence[str] = ()
     expected_latest_version: Optional[str] = None
     expected_repository_url: Optional[str] = None
     expected_license_id: Optional[str] = None
@@ -357,9 +385,259 @@ def _score_cargo(
     return _finish(dep, analyzer.metadata_cache[name])
 
 
+def _score_composer(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one captured Packagist p2 document offline.
+
+    Composer reads its registry through ``requests.get`` rather than through a
+    JSON helper, so the replay happens one layer lower — which is the point:
+    the p2 document's ``packages -> <name> -> [releases]`` unwrapping and the
+    minified format's "only the head entry is complete" rule both stay under
+    test instead of being stubbed past.
+
+    Args:
+        case: The conformance case.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    fixture = fixtures[case.fixture]
+    name = _packagist_name(fixture)
+    analyzer = ComposerAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=name, installed_version=case.installed_version)
+
+    get = replay_requests_get({case.fixture: fixture}, absent=case.absent_urls)
+    with mock.patch.object(composer_module.requests, "get", side_effect=get):
+        dep = analyzer.analyze({name: dep})[name]
+    return _finish(dep, analyzer.metadata_cache.get(name, {"name": name}))
+
+
+def _packagist_name(fixture: RegistryFixture) -> str:
+    """Return the package name a Packagist p2 document is keyed by.
+
+    Args:
+        fixture: The captured p2 document.
+
+    Returns:
+        The ``vendor/package`` name.
+    """
+    payload = fixture.payload
+    assert isinstance(payload, Mapping), f"{fixture.slug} is not a JSON object"
+    packages = payload.get("packages")
+    assert isinstance(packages, Mapping) and packages, f"{fixture.slug} has no packages"
+    return sorted(packages)[0]
+
+
+def _score_golang(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one captured Go module-proxy answer offline.
+
+    Two documents, two seams: ``@latest`` is JSON and goes through
+    ``fetch_json``; ``@v/<version>.mod`` is plain text and goes through
+    ``fetch_url``. Both are replayed from recordings, and the module path is
+    taken from the fixture's own source URL so a changed escaping rule fails at
+    the replay map rather than reaching the proxy.
+
+    Args:
+        case: The conformance case, whose ``extra_fixtures`` names the module's
+            ``go.mod``.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    served = {case.fixture: fixtures[case.fixture]}
+    for extra in case.extra_fixtures:
+        served[extra] = fixtures[extra]
+
+    name = _go_module_path(served[case.fixture])
+    analyzer = GoAnalyzer()
+    analyzer.clone_repos = False
+    # A github.com module path resolves by rule, with no lookup; passing a
+    # fetcher that answers nothing makes "this test never reaches the network"
+    # true of the vanity path too rather than merely unexercised.
+    analyzer.resolver = GoModuleResolver(fetch=lambda url: None)
+    dep = DependencyMetadata(name=name, installed_version=case.installed_version)
+
+    json_fetch = replay_fetcher(
+        {k: v for k, v in served.items() if v.fmt == "json"},
+    )
+    text_fetch = replay_fetcher({k: v for k, v in served.items() if v.fmt == "text"})
+
+    with (
+        mock.patch(
+            "dependency_risk_profiler.analyzers.golang.fetch_json",
+            side_effect=json_fetch,
+        ),
+        mock.patch(
+            "dependency_risk_profiler.analyzers.golang.fetch_url",
+            side_effect=text_fetch,
+        ),
+    ):
+        dep = analyzer.analyze({name: dep})[name]
+    return _finish(dep, analyzer.metadata_cache.get(name, {"name": name}))
+
+
+def _go_module_path(fixture: RegistryFixture) -> str:
+    """Return the module path a captured ``@latest`` URL was taken for.
+
+    Args:
+        fixture: The captured ``@latest`` document.
+
+    Returns:
+        The Go module path.
+    """
+    prefix = "https://proxy.golang.org/"
+    assert fixture.source_url.startswith(prefix), fixture.source_url
+    path = fixture.source_url[len(prefix) :]
+    assert path.endswith("/@latest"), fixture.source_url
+    return path[: -len("/@latest")]
+
+
+def _score_maven(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one captured Maven Central artifact offline.
+
+    Maven answers with XML, not JSON, and across two documents: the artifact's
+    ``maven-metadata.xml`` (latest version, last publication) and the version's
+    own ``.pom`` (repository, licence, dependencies). Both are replayed as
+    bytes, so the real XML parse runs.
+
+    Args:
+        case: The conformance case, naming the POM fixture, with the metadata
+            document in ``extra_fixtures``.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    served = {case.fixture: fixtures[case.fixture]}
+    for extra in case.extra_fixtures:
+        served[extra] = fixtures[extra]
+
+    coordinate = _maven_coordinate(served[case.fixture])
+    name = coordinate.key
+    analyzer = MavenAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=name, installed_version=case.installed_version)
+
+    # The adapter prefers the installed version's own POM and falls back to the
+    # latest. Only the latest is captured, so the installed one is recorded as
+    # a 404 — which is what Maven Central answers for a version that was never
+    # published, and the branch the fallback exists for.
+    absent = list(case.absent_urls)
+    if case.installed_version != coordinate.version:
+        absent.append(
+            pom_url(
+                PomCoordinate(
+                    coordinate.group_id, coordinate.artifact_id, case.installed_version
+                )
+            )
+        )
+
+    get = replay_requests_get(served, absent=absent)
+    with (
+        mock.patch.object(maven_module.requests, "get", side_effect=get),
+        mock.patch.object(maven_central_module.requests, "get", side_effect=get),
+    ):
+        dep = analyzer.analyze({name: dep})[name]
+    return _finish(dep, analyzer.metadata_cache.get(name, {"name": name}))
+
+
+def _maven_coordinate(fixture: RegistryFixture) -> PomCoordinate:
+    """Return the coordinate a captured POM describes.
+
+    The POM is parsed with the tool's own reader rather than pattern-matched,
+    so an artifact that inherits its ``groupId`` from a parent — guava does —
+    resolves the same way the adapter resolves it.
+
+    Args:
+        fixture: The captured ``.pom`` document.
+
+    Returns:
+        The ``groupId:artifactId:version`` triple.
+    """
+    root = parse_xml_bytes(fixture.body, fixture.source_url)
+    assert root is not None, f"{fixture.slug} did not parse as XML"
+    document = read_pom(root)
+    group_id = document.effective_group_id
+    artifact_id = document.artifact_id
+    version = document.effective_version
+    assert group_id and artifact_id and version, f"{fixture.slug} has no coordinate"
+    return PomCoordinate(group_id, artifact_id, version)
+
+
+def _score_nuget(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one captured nuget.org package offline.
+
+    The most multi-document ecosystem of the eight: a flat-container version
+    index, a registration index whose newest page carries the catalog entry,
+    and the package's own XML ``.nuspec``. The replay map serves all three from
+    one recording set, so the client's own budget, host allowlist and page-walk
+    all run for real.
+
+    Args:
+        case: The conformance case, naming the nuspec fixture, with the version
+            index and registration index in ``extra_fixtures``.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    served = {case.fixture: fixtures[case.fixture]}
+    for extra in case.extra_fixtures:
+        served[extra] = fixtures[extra]
+
+    package_id, version = _nuspec_identity(served[case.fixture])
+    analyzer = NuGetAnalyzer(client=NuGetRegistryClient(enabled=True))
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=package_id, installed_version=case.installed_version)
+
+    absent = list(case.absent_urls)
+    if case.installed_version.lower() != version.lower():
+        lowered = package_id.lower()
+        absent.append(
+            f"{FLAT_CONTAINER_BASE}/{lowered}/{case.installed_version.lower()}/"
+            f"{lowered}.nuspec"
+        )
+
+    get = replay_requests_get(served, absent=absent)
+    with mock.patch.object(nuget_registry_module.requests, "get", side_effect=get):
+        dep = analyzer.analyze({package_id: dep})[package_id]
+    return _finish(dep, analyzer.metadata_cache.get(package_id, {"name": package_id}))
+
+
+def _nuspec_identity(fixture: RegistryFixture) -> Tuple[str, str]:
+    """Return the package id and version a captured nuspec declares.
+
+    Args:
+        fixture: The captured ``.nuspec`` document.
+
+    Returns:
+        The declared id and version.
+    """
+    root = parse_xml_bytes(fixture.body, fixture.source_url)
+    assert root is not None, f"{fixture.slug} did not parse as XML"
+    document = parse_nuspec(root)
+    assert document is not None, f"{fixture.slug} carries no <metadata>"
+    assert document.package_id and document.version, f"{fixture.slug} has no identity"
+    return document.package_id, document.version
+
+
 DRIVERS = {
     "cargo": _score_cargo,
+    "composer": _score_composer,
+    "golang": _score_golang,
+    "maven": _score_maven,
     "nodejs": _score_nodejs,
+    "nuget": _score_nuget,
     "python": _score_python,
     "rubygems": _score_rubygems,
 }
@@ -474,6 +752,144 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
             why=(
                 "Same as npm's: a repository read that finds nothing records "
                 "UNDECLARED and scores 1.0, which a dead read also produces."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Same aggregator, "
+                "same coverage, same gap."
+            ),
+        ),
+    },
+    "composer": {
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why=(
+                "Packagist marks a replaced package with 'abandoned', either "
+                "true or the name of its successor. Absent key means False "
+                "forever, the same shape as npm's."
+            ),
+        ),
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "Same as npm's: a source.url read that finds nothing records "
+                "UNDECLARED and scores 1.0, which a dead read also produces."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Packagist is the "
+                "second registry to publish its own advisory feed the adapter "
+                "does not read — the p2 document carries a top-level "
+                "'security-advisories' key, kept in the fixtures so the "
+                "decision stays visible. Left unread for PyPI's reason (#171): "
+                "OSV answers the same question across every ecosystem and with "
+                "a real severity model."
+            ),
+        ),
+    },
+    "golang": {
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why=(
+                "Go states a module's retirement in its own go.mod, as a "
+                "'// Deprecated:' comment on the module directive, and the "
+                "proxy serves that file at @v/<version>.mod. Nothing read it, "
+                "so is_deprecated was False for every Go module ever scanned — "
+                "measured, and measured wrong, which is #142's shape exactly. "
+                "github.com/golang/protobuf is the captured ground truth."
+            ),
+        ),
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "A module path is an import path, not a repository URL, and "
+                "the ones that do not resolve leave eight signals quiet. Until "
+                "#73 the adapter recorded neither answer, so the signal was "
+                "absent from the score rather than measured either way."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Same aggregator, "
+                "same coverage, same gap."
+            ),
+        ),
+    },
+    "maven": {
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why=(
+                "is_deprecated defaults to False, and for a Maven artifact it "
+                "stays there."
+            ),
+            proven_elsewhere=(
+                "UNPROVEN, and structurally so: Maven Central publishes no "
+                "retirement marker at all. There is no POM element and no "
+                "maven-metadata field for it — the closest thing Maven has is "
+                "<distributionManagement><relocation>, which says an artifact "
+                "MOVED, not that it was retired, and which the adapter does "
+                "not read either. So the deprecation signal reads as measured "
+                "and False for every artifact in Maven Central, and no "
+                "captured payload can make it read otherwise. This is #142's "
+                "shape with no ground truth to capture: the fix is either to "
+                "read <relocation> as the nearest available fact or to stop "
+                "reporting deprecation as measured for this ecosystem, and "
+                "both are scoring changes rather than fixture work, and both are "
+                "filed as #179. Recorded here rather than left as a silent "
+                "green."
+            ),
+        ),
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "A POM that declares neither <scm> nor a repository-shaped "
+                "<url> records UNDECLARED and scores 1.0, which is also what "
+                "the adapter produced for every artifact before #73, because "
+                "it never recorded the answer at all."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Same aggregator, "
+                "same coverage, same gap."
+            ),
+        ),
+    },
+    "nuget": {
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why=(
+                "nuget.org publishes a real deprecation object — reasons, "
+                "message, and the package that supersedes it — on the catalog "
+                "entry. #129 read it from the registration5-semver1 hive, "
+                "which does not carry the key: the block exists only in "
+                "registration5-gz-semver2. Every .NET package therefore read "
+                "as not-deprecated no matter what nuget.org said about it "
+                "(#73). Microsoft.Azure.ServiceBus is the captured ground "
+                "truth, and the two hives were captured side by side to prove "
+                "the key's absence was the registry's shape and not a fetch "
+                "failure."
             ),
         ),
         "exploit": Polarity(
@@ -1121,8 +1537,637 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
     ),
 )
 
+COMPOSER_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="composer",
+        fixture="monolog",
+        installed_version="2.0.0",
+        purpose=(
+            "The coverage floor case. Packagist's p2 document is minified "
+            "(composer/2.0): the head entry is complete and every later one "
+            "carries only what changed from its predecessor, which is why the "
+            "adapter reads the head and nothing else. The reduced fixture "
+            "keeps three entries so that property is visible in the payload "
+            "rather than asserted in a comment."
+        ),
+        expected_latest_version="3.10.0",
+        expected_repository_url="https://github.com/Seldaek/monolog",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "'license' is a list (['MIT']), the RubyGems shape rather than the "
+            "npm one; #134's fix is what makes it read at all.",
+            "source.url carries a .git suffix and has to be trimmed.",
+            "the entry carries a 'require' block naming the package's own "
+            "dependencies, which the adapter does not read — see the "
+            "conversion note.",
+        ),
+        signals=(
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT read out of the licenses *list*",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="source.url is declared — non-default branch",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="monolog is not abandoned; the default branch",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=1.0,
+                because="composer.json declares one author, and one is a risk",
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="2.0.0 against a 3.x latest is a major-version gap",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off the head entry's 'time'; the step moves with the "
+                    "calendar, so only measurement is pinned"
+                ),
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "the p2 entry states 'require' and the adapter does not "
+                    "read it, so the signal is honestly unmeasured rather than "
+                    "an assumed-empty zero (#141)"
+                ),
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="composer",
+        fixture="swiftmailer",
+        installed_version="6.0.0",
+        purpose=(
+            "The deprecation non-default branch, captured. Packagist's "
+            "'abandoned' marker is a two-valued thing — true, or the name of "
+            "the successor — and swiftmailer carries the second form, naming "
+            "symfony/mailer."
+        ),
+        expected_latest_version="6.3.0",
+        expected_repository_url="https://github.com/swiftmailer/swiftmailer",
+        expected_license_id="MIT",
+        expected_deprecated=True,
+        ground_truth=(
+            "'abandoned' is the string 'symfony/mailer', not the boolean true.",
+            "the last release shipped in October 2021.",
+        ),
+        signals=(
+            SignalValue(
+                "deprecation",
+                equals=1.0,
+                because=(
+                    "THE assertion for composer. A dead read of 'abandoned' "
+                    "gives False here forever, and False is measured (#142)"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="last released in October 2021; over a year is maximum",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="an abandoned package still declares its repository",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT; abandoning a package does not unlicense it",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=0.5,
+                because="composer.json declares two authors",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="composer",
+        fixture="psr-log",
+        installed_version="1.0.0",
+        purpose=(
+            "The maintainer count's honest caveat, on a real package. "
+            "Packagist publishes no per-package owner endpoint, so the count "
+            "comes from composer.json's declared authors — and psr/log "
+            "declares exactly one, 'PHP-FIG', which is a working group rather "
+            "than a person. It scores the single-maintainer verdict. This is "
+            "python/flask's finding in a second ecosystem, and unlike flask's "
+            "it cannot be told apart from a genuine bus factor of one from the "
+            "payload alone."
+        ),
+        expected_latest_version="3.0.2",
+        expected_repository_url="https://github.com/php-fig/log",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        ground_truth=(
+            "authors is [{'name': 'PHP-FIG', 'homepage': ...}] — one entry, an "
+            "organization, with no email and no account.",
+            "there is no owners endpoint on Packagist to check it against.",
+        ),
+        signals=(
+            SignalValue(
+                "maintainer",
+                equals=1.0,
+                because=(
+                    "one declared author scores the worst bus factor, and the "
+                    "author is an organization; recorded rather than rounded off"
+                ),
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="1.0.0 against a 3.x latest is a major-version gap",
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="3.0.2 shipped in September 2024",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="source.url is declared",
+            ),
+        ),
+    ),
+)
+
+GOLANG_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="golang",
+        fixture="logrus.latest",
+        extra_fixtures=("logrus.mod",),
+        installed_version="1.8.0",
+        purpose=(
+            "The coverage floor case, and the one that shows where the floor "
+            "actually is. proxy.golang.org answers with a version, a date and "
+            "a go.mod, and nothing else: no licence, no owners. Six measured "
+            "signals is the honest number, and it leaves Go modules short of "
+            "the insufficient-data bar without a clone."
+        ),
+        expected_latest_version="v1.9.4",
+        expected_repository_url="https://github.com/sirupsen/logrus",
+        expected_license_id=None,
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "@latest carries 'Time' beside 'Version', and an 'Origin' object "
+            "naming the VCS and the commit — the adapter reads Version and "
+            "Time; Origin.URL is the proxy's own answer to the question the "
+            "module-path resolver answers by rule.",
+            "the go.mod carries no '// Deprecated:' comment.",
+        ),
+        signals=(
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off @latest's 'Time'. Before #73 nothing read that "
+                    "key and a Go module had no cadence at all without a "
+                    "clone; the step itself moves with the calendar"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="the module path resolves to a repository — non-default branch",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="logrus is not retired; the default branch",
+            ),
+            SignalValue(
+                "version",
+                minimum=0.25,
+                because="1.8.0 against v1.9.4 is a real minor gap",
+            ),
+            SignalValue(
+                "license",
+                unmeasured=True,
+                because=(
+                    "the module proxy publishes no licence field; unmeasured, "
+                    "never a confident zero (#74)"
+                ),
+            ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because="Go has no module-level owner concept to read",
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="golang",
+        fixture="protobuf.latest",
+        extra_fixtures=("protobuf.mod",),
+        installed_version="1.3.0",
+        purpose=(
+            "The deprecation non-default branch, and the fifth adapter caught "
+            "in #142's shape. github.com/golang/protobuf has been retired in "
+            "favour of google.golang.org/protobuf since 2020, says so on the "
+            "first line of its own go.mod, and read as not-deprecated for the "
+            "life of the Go adapter because nothing fetched that file."
+        ),
+        expected_latest_version="v1.5.4",
+        expected_repository_url="https://github.com/golang/protobuf",
+        expected_license_id=None,
+        expected_deprecated=True,
+        ground_truth=(
+            "the go.mod's first line is '// Deprecated: Use the "
+            '"google.golang.org/protobuf" module instead.\', immediately '
+            "above the module directive.",
+            "@latest reports v1.5.4 with no deprecation field of its own — the "
+            "marker exists only in the go.mod, which is why it needed a second "
+            "endpoint rather than a second key.",
+        ),
+        signals=(
+            SignalValue(
+                "deprecation",
+                equals=1.0,
+                because=(
+                    "THE assertion for golang. Without the go.mod read this is "
+                    "False forever, and False is measured, so only the value "
+                    "catches it (#142)"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="v1.5.4 shipped in March 2024",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="a retired module still resolves to its repository",
+            ),
+            SignalValue(
+                "license",
+                unmeasured=True,
+                because="the module proxy publishes no licence field",
+            ),
+        ),
+    ),
+)
+
+MAVEN_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="maven",
+        fixture="jackson-databind.pom",
+        extra_fixtures=("jackson-databind.metadata",),
+        installed_version="2.9.0",
+        purpose=(
+            "The coverage floor case, and maven's first floor of any kind: "
+            "#141 left the ecosystem with no entry in signal_floors at all. "
+            "jackson-databind declares <licenses>, <scm> and <dependencies> in "
+            "its own POM, which is the shape the adapter was written for and "
+            "is rarer than it looks — see the guava case."
+        ),
+        expected_latest_version="2.22.1",
+        expected_repository_url="https://github.com/FasterXML/jackson-databind",
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "maven-metadata.xml states <lastUpdated> as a bare yyyyMMddHHmmss "
+            "in UTC; nothing read it before #73 and staleness was unmeasured "
+            "for every Maven artifact without a clone.",
+            "<scm><url> points at the repository root already, so the "
+            "canonicalizer has nothing to trim here.",
+            "the POM declares its own <dependencies>, which is a measured "
+            "transitive signal rather than an assumed-empty one (#141).",
+        ),
+        signals=(
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "THE #73 assertion for maven: measured at all. Read off "
+                    "<lastUpdated>; the step moves with the calendar"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="the POM declares <scm> — non-default branch",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache 2.0, read from the POM's own <licenses>",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because=(
+                    "the default branch, and the only branch Maven Central can "
+                    "reach — see the maven deprecation waiver"
+                ),
+            ),
+            SignalValue(
+                "version",
+                minimum=0.25,
+                because="2.9.0 against a 2.22.x latest is a real minor gap",
+            ),
+            SignalValue(
+                "transitive",
+                minimum=0.0,
+                maximum=1.0,
+                because="the POM's <dependencies> block is a real measurement",
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because=(
+                    "Maven Central publishes no owner list; <developers> is "
+                    "free text in a POM the artifact's own author controls"
+                ),
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="guava.pom",
+        extra_fixtures=("guava.metadata",),
+        installed_version="20.0",
+        purpose=(
+            "The dead read the maven capture found, in the one place a "
+            "hand-written POM fixture would never have looked: the *parent*. "
+            "Maven's convention is to declare <licenses>, <scm> and "
+            "<developers> once in a parent POM and inherit them, and guava "
+            "does exactly that — its own POM carries none of the three. The "
+            "adapter reads the artifact POM and stops, so guava's licence is "
+            "unmeasured while Maven Central serves it one request away, and "
+            "the same is true of every Apache, Spring and Google artifact "
+            "built the same way."
+        ),
+        expected_latest_version="33.6.0-jre",
+        expected_repository_url="https://github.com/google/guava",
+        expected_license_id=None,
+        expected_deprecated=False,
+        ground_truth=(
+            "guava's own POM has no <licenses> and no <scm>; both are in "
+            "com.google.guava:guava-parent, which the fixture deliberately "
+            "does not capture — the point is what the adapter can see.",
+            "the repository survives only because <url> happens to be the "
+            "GitHub page; an artifact whose <url> is a docs site loses it too.",
+        ),
+        signals=(
+            SignalValue(
+                "license",
+                unmeasured=True,
+                because=(
+                    "the licence is in the parent POM and the adapter never "
+                    "walks there; unmeasured, not a confident zero"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="<url> is a repository URL, so the fallback lands",
+            ),
+            SignalValue(
+                "transitive",
+                minimum=0.0,
+                maximum=1.0,
+                because="guava's own POM does declare five dependencies",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="the default branch; see the maven deprecation waiver",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="slf4j-api.pom",
+        extra_fixtures=("slf4j-api.metadata",),
+        installed_version="1.7.0",
+        purpose=(
+            "The UNDECLARED branch on a real artifact. slf4j-api publishes no "
+            "<scm> and a <url> of http://www.slf4j.org, which is a project "
+            "homepage rather than a repository, so the canonicalizer correctly "
+            "refuses it. Its <dependencies> block is genuinely empty, which is "
+            "a measured zero rather than an unmeasured one."
+        ),
+        expected_latest_version="2.1.0-alpha1",
+        expected_repository_url=None,
+        expected_license_id=None,
+        expected_deprecated=False,
+        ground_truth=(
+            "no <scm> element at all; <url> is http://www.slf4j.org.",
+            "no <licenses> either — it is in slf4j-parent.",
+            "<release> in maven-metadata.xml is an alpha, which is what the "
+            "adapter reports as latest because that is what Maven Central "
+            "names as the release.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=1.0,
+                because=(
+                    "the POM was read and declares no usable source — the "
+                    "default branch"
+                ),
+            ),
+            SignalValue(
+                "license",
+                unmeasured=True,
+                because="no <licenses> in the artifact POM; unmeasured, not zero",
+            ),
+            SignalValue(
+                "community",
+                unmeasured=True,
+                because="no repository to scrape stars from",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because="the POM declares no dependencies, and someone looked",
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="1.7.0 against a 2.x latest is a major-version gap",
+            ),
+        ),
+    ),
+)
+
+NUGET_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="nuget",
+        fixture="newtonsoft.json.nuspec",
+        extra_fixtures=("newtonsoft.json.versions", "newtonsoft.json.registration"),
+        installed_version="12.0.1",
+        purpose=(
+            "The coverage floor case, and the most multi-document one of the "
+            "eight: a flat-container version index, a registration index whose "
+            "newest page carries the catalog entry, and the package's own XML "
+            "nuspec — three URLs served from one recording set, with the "
+            "client's host allowlist and page walk running for real."
+        ),
+        expected_latest_version="13.0.4",
+        expected_repository_url="https://github.com/JamesNK/Newtonsoft.Json",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "the nuspec's <repository url> is the authoritative source "
+            "pointer; <projectUrl> is a docs site on many packages and is only "
+            "the fallback.",
+            "the catalog entry carries 'published' and, on this package, no "
+            "'deprecation' key — the absence is the healthy case here.",
+        ),
+        signals=(
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT, from the nuspec's SPDX <license type='expression'>",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="Newtonsoft.Json is not deprecated; the default branch",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=1.0,
+                because="the nuspec declares one author, and one is a risk",
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="12.0.1 against a 13.x latest is a major-version gap",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off the catalog entry's publication date; the step "
+                    "moves with the calendar"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                minimum=0.0,
+                maximum=1.0,
+                because="the nuspec states the package's own dependencies (#129)",
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="nuget",
+        fixture="servicebus.nuspec",
+        extra_fixtures=("servicebus.versions", "servicebus.registration"),
+        installed_version="4.0.0",
+        purpose=(
+            "The dead read the nuget capture found. nuget.org publishes a "
+            "real deprecation object — reasons, message, and the package that "
+            "supersedes it — and #129 read it from the wrong registration "
+            "hive: registration5-semver1 serves the same catalog entries with "
+            "the 'deprecation' key stripped out, and the block exists only in "
+            "registration5-gz-semver2. Microsoft.Azure.ServiceBus has been "
+            "deprecated in favour of Azure.Messaging.ServiceBus since 2021 and "
+            "read as healthy the whole time."
+        ),
+        expected_latest_version="5.2.0",
+        expected_repository_url="https://github.com/Azure/azure-sdk-for-net",
+        expected_license_id="MIT",
+        expected_deprecated=True,
+        ground_truth=(
+            "the SemVer2 catalog entry carries 'deprecation' with "
+            "reasons: ['Other'] and alternatePackage.id "
+            "'Azure.Messaging.ServiceBus'.",
+            "the SemVer1 entry for the same package and version carries no "
+            "'deprecation' key at all — the two were fetched side by side, so "
+            "the absence is the registry's shape and not a failed request.",
+            "'listed' is true and 'published' is 2021, so the unlisted "
+            "fallback is not what fires here.",
+        ),
+        signals=(
+            SignalValue(
+                "deprecation",
+                equals=1.0,
+                because=(
+                    "THE assertion for nuget. Point the client back at "
+                    "registration5-semver1 and this is 0.0 forever, with every "
+                    "count still green (#142's shape, fourth adapter)"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="5.2.0 was published in November 2021",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT; deprecating a package does not unlicense it",
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="4.0.0 against a 5.x latest is a major-version gap",
+            ),
+        ),
+    ),
+)
+
 CASES: Tuple[FixtureCase, ...] = (
-    NODEJS_CASES + RUBYGEMS_CASES + PYTHON_CASES + CARGO_CASES
+    NODEJS_CASES
+    + RUBYGEMS_CASES
+    + PYTHON_CASES
+    + CARGO_CASES
+    + COMPOSER_CASES
+    + GOLANG_CASES
+    + MAVEN_CASES
+    + NUGET_CASES
 )
 
 
@@ -1199,38 +2244,97 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
         ),
     ),
     "composer": ConversionStatus(
-        converted=False,
+        converted=True,
         note=(
-            "PENDING. Never closely audited (#145 lists it with nuget and "
-            "python as unexamined). Packagist's p2 document is version-keyed "
-            "and large; it needs a reducer like npm-packument's."
+            "Three captured p2 documents, reduced by volume only. #145 listed "
+            "composer with nuget and python as never closely audited, and it "
+            "is the one of the three whose audit found no dead read: every key "
+            "the adapter reads, Packagist sends. What it found instead is two "
+            "things the registry sends and the adapter does not read. The p2 "
+            "entry states the package's own 'require' block — the same fact "
+            "nuget reads out of its nuspec and scores as transitive (#129) — "
+            "and composer marks the signal unmeasured anyway. And a Packagist "
+            "lookup that fails records the source repository as UNDECLARED "
+            "rather than unmeasured, so a 404 is scored as 'this package "
+            "declares no source'. Both are filed rather than fixed here: the "
+            "first is a scoring change (#180) and the second needs a failure "
+            "fixture the capture script is deliberately not able to take "
+            "(#182). Known limit "
+            "carried by psr/log: the maintainer count comes from "
+            "composer.json's declared authors, so a working group counts as "
+            "one maintainer and scores the worst bus factor."
         ),
     ),
     "nuget": ConversionStatus(
-        converted=False,
+        converted=True,
         note=(
-            "PENDING. Multi-document (registration index plus catalog entry), "
-            "so the replay map has to serve several URLs per package. Its "
-            "catalog 'deprecation' block is a real enum and would exercise the "
-            "polarity rule properly."
+            "Six captured documents across two packages — a flat-container "
+            "version index, a registration index and an XML nuspec each — "
+            "which makes it the multi-document proof for the replay map. The "
+            "capture found #142's shape in a fourth adapter, and this one was "
+            "invisible from the payload alone: #129 read the deprecation block "
+            "from registration5-semver1, and nuget.org publishes that block "
+            "only in registration5-gz-semver2. The same catalog entry, same "
+            "package, same version, differs between the two hives by exactly "
+            "that key, so no amount of staring at one payload would have shown "
+            "it — capturing both did. Fixed by pointing REGISTRATION_BASE at "
+            "the SemVer2 hive, which is a base-URL change: the hive is "
+            "gzip-encoded, not gzip-named, and requests decodes it. Known "
+            "limit: nuget resolves a repository and still reports nothing "
+            "either way about whether one is declared, so source_repository "
+            "stays out of its measured set (#183)."
         ),
     ),
     "maven": ConversionStatus(
-        converted=False,
+        converted=True,
         note=(
-            "PENDING. #141 found repository_url was never set at all, leaving "
-            "10 of 11 signals structurally unreachable. Has no signal_floors "
-            "entry yet, so it needs a floor before it can have a value gate."
+            "Six captured XML documents across three artifacts — a "
+            "maven-metadata.xml and an artifact POM each — and the first "
+            "signal_floors entry maven has ever had. It is floored at 8, "
+            "which is two higher than the capture found it at, because the "
+            "capture found two readings: maven-metadata.xml states "
+            "<lastUpdated> and nothing read it, so staleness was unmeasured "
+            "for every artifact without a clone; and the adapter never "
+            "recorded whether the POM declares a source repository, so that "
+            "signal was absent from the score rather than answered either way. "
+            "The floor sits at the measured value, per #158. Capturing also "
+            "found a third reading that is NOT fixed here: Maven's convention "
+            "is to declare <licenses> and <scm> once in a *parent* POM and "
+            "inherit them, the adapter reads the artifact POM and stops, and "
+            "guava — whose own POM has neither — is the captured proof. That "
+            "is a POM-graph walk rather than a key, so it is filed as #178. "
+            "Open: the "
+            "deprecation branch is unprovable by construction; see "
+            "POLARIZED_SIGNALS['maven']."
         ),
     ),
     "golang": ConversionStatus(
-        converted=False,
+        converted=True,
         note=(
-            "PENDING. Uses proxy.golang.org rather than a JSON registry, so "
-            "the capture reducer and the replay seam both differ. Also one of "
-            "the two adapters #160's narrowed-B migrates onto "
-            "collect_repository_signals; converting it here first is what "
-            "makes that migration verifiable rather than faith-based."
+            "Four captured proxy documents across two modules, and the first "
+            "ecosystem here whose registry is not a JSON registry: "
+            "proxy.golang.org answers @latest with JSON and @v/<version>.mod "
+            "with the module's own go.mod as text, so the fixture format and "
+            "both replay seams differ from the other seven. The capture found "
+            "#142's shape in a fifth adapter and the most complete instance of "
+            "it yet: Go states a module's retirement as a '// Deprecated:' "
+            "comment on the module directive in its go.mod, the proxy serves "
+            "that file, nothing fetched it, and is_deprecated was therefore "
+            "False for every Go module ever scanned. "
+            "github.com/golang/protobuf — retired since 2020, says so on line "
+            "one — is the captured ground truth. It also found @latest's "
+            "'Time' unread, which left Go modules with no release cadence at "
+            "all without a clone, on the ecosystem whose repositories are "
+            "*least* likely to clone cleanly. Floored at 6 and "
+            "SCORES_FROM_REGISTRY_ALONE False: the proxy publishes no licence "
+            "and no owner list, so Go modules do not reach a verdict unaided, "
+            "and that is recorded rather than rounded up. This conversion is "
+            "also what makes #160's narrowed-B migration of golang and maven "
+            "onto collect_repository_signals verifiable rather than "
+            "faith-based — both now have value gates to migrate against. Known "
+            "limit: @latest also publishes an 'Origin' object naming the VCS "
+            "and URL, which the adapter does not read because the module-path "
+            "resolver answers the same question by rule and without a request."
         ),
     ),
 }
