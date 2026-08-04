@@ -74,9 +74,24 @@ SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "cargo": True,
     "composer": True,
     "nodejs": False,
+    "nuget": True,
     "python": False,
     "rubygems": True,
 }
+
+# The two tables above are keyed by the same ecosystems and are edited by
+# different people at different times: #129 added nuget to the floors while
+# #146 was independently adding this second table, and the two only met at a
+# rebase, where the missing key surfaced as a KeyError instead of a readable
+# failure. Keep them in lockstep so a half-registered ecosystem fails here,
+# naming itself, rather than deep inside an adapter test.
+_FLOORS_ONLY = sorted(MIN_MEASURED_SIGNALS.keys() - SCORES_FROM_REGISTRY_ALONE.keys())
+_VERDICT_ONLY = sorted(SCORES_FROM_REGISTRY_ALONE.keys() - MIN_MEASURED_SIGNALS.keys())
+assert not _FLOORS_ONLY and not _VERDICT_ONLY, (
+    "signal_floors tables have drifted; "
+    f"in MIN_MEASURED_SIGNALS only: {_FLOORS_ONLY}, "
+    f"in SCORES_FROM_REGISTRY_ALONE only: {_VERDICT_ONLY}"
+)
 
 # The oldest release date the tool must still describe as a measured cadence.
 # Nothing here asserts a *specific* date: the property is that a decade-dead
