@@ -10,7 +10,7 @@ makes the inheritance rules testable without a single HTTP call.
 import re
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 from .xml_utils import child_text, find_child, local_name
 
@@ -101,6 +101,77 @@ class PomDocument:
         if self.version:
             return self.version
         return self.parent.version if self.parent else None
+
+
+@dataclass(frozen=True)
+class InheritedMetadata:
+    """The project metadata a POM has after its parent chain is applied.
+
+    Attributes:
+        licenses: License names, from the nearest POM that declares any.
+        scm_url: Source-repository URL, from the nearest POM that declares one.
+        project_url: Project ``<url>``, from the nearest POM that declares one.
+    """
+
+    licenses: Tuple[str, ...] = ()
+    scm_url: Optional[str] = None
+    project_url: Optional[str] = None
+
+    @property
+    def complete(self) -> bool:
+        """Return True once nothing further up the chain could change the answer.
+
+        ``<scm>`` outranks ``<url>`` wherever both exist, so a known licence and
+        a known SCM URL settle the question: an ancestor can only contribute a
+        ``<url>`` that would lose anyway.
+        """
+        return bool(self.licenses) and self.scm_url is not None
+
+
+def inherit_metadata(lineage: Iterable[PomDocument]) -> InheritedMetadata:
+    """Merge ``<licenses>``, ``<scm>`` and ``<url>`` down a parent chain.
+
+    Maven's convention is to declare these once in a parent POM and inherit
+    them: guava, slf4j-api and the Apache Commons artifacts carry none of them
+    in their own POM (commons-lang3's licence is two hops up, in
+    ``org.apache:apache``). Reading only the artifact's POM therefore reports
+    much of the mainstream Java ecosystem as having no licence and no source
+    repository (#178). Not all of it — Spring publishes Gradle-generated POMs
+    that declare both inline, and jackson-databind declares its own — which is
+    exactly why the walk has to be lazy rather than unconditional.
+
+    **Precedence: nearest declaration wins**, which is the rule #141 already
+    chose for ``<properties>`` and ``<dependencyManagement>``. A child that
+    declares its own ``<licenses>`` keeps them and the parent's are not merged
+    in, matching Maven, where an inherited ``<licenses>`` block is replaced
+    wholesale rather than appended to.
+
+    One documented divergence from Maven's own model builder: Maven appends the
+    child's ``artifactId`` to an inherited ``<scm><url>``, so guava's effective
+    SCM URL is ``.../google/guava/guava``. That path is then trimmed straight
+    back off by :func:`~..analyzers.common.canonical_repository_url`, which only
+    ever wants the repository root, so the append is skipped rather than
+    performed and undone.
+
+    Args:
+        lineage: The POM and its ancestors, nearest first. Consumed lazily and
+            abandoned as soon as :attr:`InheritedMetadata.complete` holds, so a
+            POM that declares everything itself never causes a parent fetch.
+
+    Returns:
+        The merged view. Every field is None or empty when no POM on the chain
+        declares it, which stays distinguishable from a declared-empty value.
+    """
+    merged = InheritedMetadata()
+    for document in lineage:
+        merged = InheritedMetadata(
+            licenses=merged.licenses or tuple(document.licenses),
+            scm_url=merged.scm_url or document.scm_url,
+            project_url=merged.project_url or document.project_url,
+        )
+        if merged.complete:
+            break
+    return merged
 
 
 def read_pom(root: ElementTree.Element) -> PomDocument:

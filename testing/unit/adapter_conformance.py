@@ -1575,9 +1575,9 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
             "'license' is a list (['MIT']), the RubyGems shape rather than the "
             "npm one; #134's fix is what makes it read at all.",
             "source.url carries a .git suffix and has to be trimmed.",
-            "the entry carries a 'require' block naming the package's own "
-            "dependencies, which the adapter does not read — see the "
-            "conversion note.",
+            "the entry's 'require' block is {php: >=8.1, psr/log: ...}: one "
+            "package and one platform constraint, so the platform filter is "
+            "load-bearing even on the floor case (#180).",
         ),
         signals=(
             SignalValue(
@@ -1622,11 +1622,12 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "transitive",
-                unmeasured=True,
+                equals=0.1,
                 because=(
-                    "the p2 entry states 'require' and the adapter does not "
-                    "read it, so the signal is honestly unmeasured rather than "
-                    "an assumed-empty zero (#141)"
+                    "one runtime package, psr/log. 'php' is a platform "
+                    "constraint and is not counted; the nineteen entries in "
+                    "'require-dev' are not what installing monolog pulls in "
+                    "and are not read (#180)"
                 ),
             ),
         ),
@@ -1648,6 +1649,9 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
         ground_truth=(
             "'abandoned' is the string 'symfony/mailer', not the boolean true.",
             "the last release shipped in October 2021.",
+            "'require' names four packages and 'php'; 'require-dev' names two "
+            "more. Counting the dev block would move the transitive score from "
+            "0.1 to 0.25, which is what pins the runtime-only decision (#180).",
         ),
         signals=(
             SignalValue(
@@ -1656,6 +1660,15 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
                 because=(
                     "THE assertion for composer. A dead read of 'abandoned' "
                     "gives False here forever, and False is measured (#142)"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.1,
+                because=(
+                    "four runtime packages. Six — the dev block folded in — "
+                    "would score 0.25, so this value is the require-vs-"
+                    "require-dev decision asserted rather than described"
                 ),
             ),
             SignalValue(
@@ -1702,6 +1715,10 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
             "authors is [{'name': 'PHP-FIG', 'homepage': ...}] — one entry, an "
             "organization, with no email and no account.",
             "there is no owners endpoint on Packagist to check it against.",
+            "'require' is {'php': '>=8.0.0'} and nothing else, so the whole "
+            "block is platform constraints and the measured answer is zero "
+            "packages — the one payload where the filter and a dead read give "
+            "different numbers (0.0 against 0.1).",
         ),
         signals=(
             SignalValue(
@@ -1710,6 +1727,15 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
                 because=(
                     "one declared author scores the worst bus factor, and the "
                     "author is an organization; recorded rather than rounded off"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because=(
+                    "THE #180 platform-filter assertion: psr/log requires only "
+                    "'php', which is a runtime and not a package. A measured "
+                    "zero, not an unmeasured one and not a phantom dependency"
                 ),
             ),
             SignalValue(
@@ -1726,6 +1752,66 @@ COMPOSER_CASES: Tuple[FixtureCase, ...] = (
                 "source_repository",
                 equals=0.0,
                 because="source.url is declared",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="composer",
+        fixture="mailgun-php",
+        installed_version="4.5.1",
+        purpose=(
+            "The platform filter's sharpest edge, and the reason it tests the "
+            "vendor prefix rather than the name. mailgun/mailgun-php requires "
+            "six packages, three of them under the php-http vendor: "
+            "php-http/client-common, php-http/discovery and "
+            "php-http/multipart-stream-builder. A filter that checked the "
+            "'php-' prefix before the slash would delete all three and report "
+            "three dependencies where there are six — the same class of quiet "
+            "wrongness as #142, arrived at from the opposite direction (#180)."
+        ),
+        expected_latest_version="4.5.1",
+        expected_repository_url="https://github.com/mailgun/mailgun-php",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "require names 'php' and six vendored packages; three of the six "
+            "start with 'php-', which is also a platform prefix.",
+            "source.url carries a .git suffix and has to be trimmed.",
+        ),
+        signals=(
+            SignalValue(
+                "transitive",
+                equals=0.25,
+                because=(
+                    "six runtime packages. Dropping the three php-http/* names "
+                    "as platform constraints would leave three and score 0.1, "
+                    "so this value is the vendor-prefix rule asserted"
+                ),
+            ),
+            SignalValue(
+                "version",
+                equals=0.0,
+                because="the installed version is the latest one Packagist has",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT, read out of the licenses list",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="source.url is declared",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off the head entry's 'time'; the step moves with the "
+                    "calendar, so only measurement is pinned"
+                ),
             ),
         ),
     ),
@@ -1941,76 +2027,96 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
     FixtureCase(
         ecosystem="maven",
         fixture="guava.pom",
-        extra_fixtures=("guava.metadata",),
+        extra_fixtures=("guava.metadata", "guava-parent.pom"),
         installed_version="20.0",
         purpose=(
-            "The dead read the maven capture found, in the one place a "
-            "hand-written POM fixture would never have looked: the *parent*. "
-            "Maven's convention is to declare <licenses>, <scm> and "
-            "<developers> once in a parent POM and inherit them, and guava "
-            "does exactly that — its own POM carries none of the three. The "
-            "adapter reads the artifact POM and stops, so guava's licence is "
-            "unmeasured while Maven Central serves it one request away, and "
-            "the same is true of every Apache, Spring and Google artifact "
-            "built the same way."
+            "Inheritance at one hop, which is where most of the Java ecosystem "
+            "keeps its licence. Maven's convention is to declare <licenses>, "
+            "<scm> and <developers> once in a parent POM, and guava does "
+            "exactly that: its own POM carries none of the three. The adapter "
+            "used to read the artifact POM and stop, so guava's licence was "
+            "unmeasured while Maven Central served it one request away, and "
+            "the same held for every Apache Commons artifact — commons-lang3's "
+            "licence is two hops up, in org.apache:apache (#178). It now walks "
+            "the parent chain — through the "
+            "same bounded client #141 built for version resolution — and this "
+            "case is the ground truth for the walk."
         ),
         expected_latest_version="33.6.0-jre",
         expected_repository_url="https://github.com/google/guava",
-        expected_license_id=None,
+        expected_license_id="APACHE",
         expected_deprecated=False,
+        meets_signal_floor=True,
         ground_truth=(
             "guava's own POM has no <licenses> and no <scm>; both are in "
-            "com.google.guava:guava-parent, which the fixture deliberately "
-            "does not capture — the point is what the adapter can see.",
-            "the repository survives only because <url> happens to be the "
-            "GitHub page; an artifact whose <url> is a docs site loses it too.",
+            "com.google.guava:guava-parent, which is captured beside it so the "
+            "walk is replayed rather than stubbed.",
+            "the parent's <scm><url> and the child's <url> happen to be the "
+            "same GitHub page here, so the licence is what the walk actually "
+            "recovers — before it, this artifact reported no licence at all.",
+            "Maven would append the child's artifactId to the inherited "
+            "<scm><url> and produce .../google/guava/guava; the append is "
+            "skipped because canonical_repository_url trims it straight off.",
         ),
         signals=(
             SignalValue(
                 "license",
-                unmeasured=True,
+                equals=0.0,
                 because=(
-                    "the licence is in the parent POM and the adapter never "
-                    "walks there; unmeasured, not a confident zero"
+                    "THE #178 assertion: Apache 2.0, declared only in "
+                    "guava-parent. Unmeasured here before the parent walk"
                 ),
             ),
             SignalValue(
                 "source_repository",
                 equals=0.0,
-                because="<url> is a repository URL, so the fallback lands",
+                because="declared — by the parent's <scm> and the child's <url>",
             ),
             SignalValue(
                 "transitive",
-                minimum=0.0,
-                maximum=1.0,
-                because="guava's own POM does declare five dependencies",
+                equals=0.25,
+                because="guava's own POM declares five shipped dependencies",
             ),
             SignalValue(
                 "deprecation",
                 equals=0.0,
                 because="the default branch; see the maven deprecation waiver",
             ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because=(
+                    "<developers> is inherited too, and is still free text the "
+                    "artifact's own author controls; not read either way"
+                ),
+            ),
         ),
     ),
     FixtureCase(
         ecosystem="maven",
         fixture="slf4j-api.pom",
-        extra_fixtures=("slf4j-api.metadata",),
+        extra_fixtures=("slf4j-api.metadata", "slf4j-parent.pom", "slf4j-bom.pom"),
         installed_version="1.7.0",
         purpose=(
-            "The UNDECLARED branch on a real artifact. slf4j-api publishes no "
-            "<scm> and a <url> of http://www.slf4j.org, which is a project "
-            "homepage rather than a repository, so the canonicalizer correctly "
-            "refuses it. Its <dependencies> block is genuinely empty, which is "
-            "a measured zero rather than an unmeasured one."
+            "Inheritance at two hops, and the case that proves the walk does "
+            "not stop at the first parent. slf4j-api declares no <scm>, no "
+            "<licenses> and a <url> of http://www.slf4j.org that is a project "
+            "homepage rather than a repository; its parent, slf4j-parent, "
+            "declares none of the three either; slf4j-bom, the grandparent, "
+            "declares both the MIT licence and the qos-ch/slf4j repository. "
+            "This case used to assert the UNDECLARED branch — that was the "
+            "adapter's blindness being read as slf4j's silence."
         ),
         expected_latest_version="2.1.0-alpha1",
-        expected_repository_url=None,
-        expected_license_id=None,
+        expected_repository_url="https://github.com/qos-ch/slf4j",
+        expected_license_id="MIT",
         expected_deprecated=False,
+        meets_signal_floor=True,
         ground_truth=(
-            "no <scm> element at all; <url> is http://www.slf4j.org.",
-            "no <licenses> either — it is in slf4j-parent.",
+            "no <scm>, no <licenses> and no usable <url> anywhere in the first "
+            "two POMs; both facts are in org.slf4j:slf4j-bom, two hops up.",
+            "<scm> outranks <url> even when the <url> is nearer, which is why "
+            "http://www.slf4j.org does not win over the grandparent's repo.",
             "<release> in maven-metadata.xml is an alpha, which is what the "
             "adapter reports as latest because that is what Maven Central "
             "names as the release.",
@@ -2018,31 +2124,188 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         signals=(
             SignalValue(
                 "source_repository",
-                equals=1.0,
+                equals=0.0,
                 because=(
-                    "no <scm> element at all, and <url> is a project homepage "
-                    "rather than a declaration of source — the default branch"
+                    "DECLARED, two hops up — the walk does not stop at one. "
+                    "This read 1.0 under #176 because the artifact's own POM "
+                    "has no <scm>, which was the adapter's blindness being "
+                    "recorded as slf4j's silence (#178)"
                 ),
             ),
             SignalValue(
                 "license",
-                unmeasured=True,
-                because="no <licenses> in the artifact POM; unmeasured, not zero",
+                equals=0.0,
+                because="MIT, from slf4j-bom; unmeasured before the parent walk",
             ),
             SignalValue(
                 "community",
-                unmeasured=True,
-                because="no repository to scrape stars from",
+                minimum=0.0,
+                maximum=1.0,
+                because="an inherited repository is still a repository to scrape",
             ),
             SignalValue(
                 "transitive",
                 equals=0.0,
-                because="the POM declares no dependencies, and someone looked",
+                because=(
+                    "the artifact's own <dependencies> is empty and someone "
+                    "looked; <dependencies> is not inherited"
+                ),
             ),
             SignalValue(
                 "version",
                 equals=1.0,
                 because="1.7.0 against a 2.x latest is a major-version gap",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="javax.inject.pom",
+        extra_fixtures=("javax.inject.metadata",),
+        installed_version="1",
+        purpose=(
+            "The zero-hop bound on #178's parent walk, and #176's UNUSABLE "
+            "state arrived at from a second direction. javax.inject has no "
+            "<parent> at all, so the walk yields exactly one document and "
+            "costs no fetch beyond the artifact's own POM — the case that "
+            "shows inheritance is not something every artifact pays for. Its "
+            "<scm> and <url> both point at code.google.com, which was shut "
+            "down in 2016: log4j declares a Subversion host that still "
+            "answers, this one declares a host that no longer exists, and "
+            "both are DECLARED-but-unusable rather than undeclared. It is "
+            "also the only case pinning the unmeasured *version* branch, "
+            "below. It was captured under #178 to hold maven's UNDECLARED "
+            "branch after inheritance rescued slf4j-api; #176 landed first "
+            "and gave that branch to commons-collections, which declares "
+            "nothing at all, so this case holds the other two properties "
+            "instead."
+        ),
+        expected_repository_url=None,
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        ground_truth=(
+            "maven-metadata.xml states neither <release> nor <latest>, only a "
+            "<versions> list of one, so latest_version is honestly unmeasured "
+            "and the version signal drops out rather than reporting parity.",
+            "<lastUpdated> is 20100720032040 — the staleness signal working on "
+            "the population it exists for.",
+            "the licence is in the artifact's own POM, so this case also pins "
+            "that the walk does not need a parent to find one.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.75,
+                because=(
+                    "declared, and not a git forge — the same third state "
+                    "log4j lands in, from a host that was decommissioned "
+                    "rather than merely obsolete. 1.0 would say javax.inject "
+                    "never named a source, and it did"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache 2.0, declared in the artifact's own POM",
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="one release, July 2010; maximum staleness",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because="no <dependencies> and no parent; a measured zero",
+            ),
+            SignalValue(
+                "community",
+                unmeasured=True,
+                because="no resolvable repository to scrape stars from",
+            ),
+            SignalValue(
+                "version",
+                unmeasured=True,
+                because=(
+                    "maven-metadata.xml names no release, so there is nothing "
+                    "to compare the installed version against. The only case "
+                    "pinning this branch; a read that defaulted to the "
+                    "installed version would report parity forever"
+                ),
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="ant.pom",
+        extra_fixtures=("ant.metadata", "ant-parent.pom"),
+        installed_version="1.10.13",
+        purpose=(
+            "Where #178 and #176 meet, and the case that keeps the meeting "
+            "honest. ant 1.10.13 declares no <scm> of its own; ant-parent "
+            "declares one, and it points at gitbox.apache.org, which is not a "
+            "git forge the canonicalizer can resolve. So the artifact has "
+            "DECLARED a source repository — in the Apache idiom, through its "
+            "parent — and it is unusable. Recording the #176 'declared' "
+            "argument off the artifact's own POM would report UNDECLARED at "
+            "1.0 here: 'this project never said where its source lives', "
+            "about a project that said so one document away. That is #182's "
+            "fabricated negative arrived at from a third direction, and "
+            "without this fixture the leaf-POM read passes every other test. "
+            "org.apache.velocity:velocity-engine-core is the same shape at "
+            "three hops."
+        ),
+        expected_latest_version="1.10.17",
+        expected_repository_url=None,
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        ground_truth=(
+            "ant's own POM has no <scm> and no <licenses>; ant-parent has "
+            "both, and its <scm> is "
+            "https://gitbox.apache.org/repos/asf/ant.git.",
+            "the project <url> inherited from the parent is "
+            "https://ant.apache.org/, a docs site, so no fallback rescues the "
+            "repository either — the artifact is genuinely unclonable.",
+            "ant declares five dependencies and four of them are <scope>test"
+            "</scope>, so only ant-launcher ships.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.75,
+                because=(
+                    "THE assertion for the #178/#176 interaction: DECLARED by "
+                    "the parent and not a git forge. 1.0 is what a leaf-only "
+                    "read of 'declared' produces, and it is a fabricated "
+                    "negative"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache 2.0, inherited from ant-parent one hop up",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.1,
+                because=(
+                    "one shipped dependency. Counting the four test-scoped "
+                    "ones would score 0.25, so this pins the scope filter too"
+                ),
+            ),
+            SignalValue(
+                "community",
+                unmeasured=True,
+                because="a gitbox URL is no more scrapeable than no URL at all",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off <lastUpdated>; the step moves with the calendar, "
+                    "so only measurement is pinned"
+                ),
             ),
         ),
     ),
@@ -2060,7 +2323,8 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             "thing separating a project of 2012 from one that never said where "
             "its source lived. PR #175 sampled 25 artifacts across both eras: "
             "9 declared no <scm>, 12 named SVN or CVS, and the 4 that named a "
-            "forge all resolved."
+            "forge all resolved. Untouched by #178's parent walk: log4j has no "
+            "<parent>, so there is nowhere for inheritance to rescue it from."
         ),
         expected_latest_version="1.2.17",
         expected_repository_url=None,
@@ -2074,6 +2338,7 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             "maven-metadata.xml's <lastUpdated> is 20140318154402 — the "
             "artifact is a decade dead and still one of the most depended-on "
             "jars in the ecosystem.",
+            "no <parent> element, so the #178 walk reads one document here.",
         ),
         signals=(
             SignalValue(
@@ -2120,7 +2385,10 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             "element of any kind — the string 'scm' does not appear in the "
             "POM. It never said where its source lived; log4j said so and the "
             "answer rotted. Different facts, and until #176 they were the same "
-            "recorded value."
+            "recorded value. Since #178 it is also maven's only UNDECLARED "
+            "case, and it holds that branch honestly: it has no <parent>, so "
+            "there is no inheritance that could rescue it and none that has "
+            "to be suppressed to keep the branch reachable."
         ),
         expected_latest_version="20040616",
         expected_repository_url=None,
@@ -2132,6 +2400,8 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             "maven-metadata.xml names 20040616 as both <latest> and <release>, "
             "which is a date masquerading as a version and is what Maven "
             "Central actually publishes for this artifact.",
+            "no <parent> element either, so 'no licence' survives the #178 "
+            "walk as a fact about the artifact rather than about the reader.",
         ),
         signals=(
             SignalValue(
@@ -2151,7 +2421,10 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             SignalValue(
                 "license",
                 unmeasured=True,
-                because="no <licenses> in the artifact POM; unmeasured, not zero",
+                because=(
+                    "no <licenses> in the artifact POM and no <parent> to "
+                    "inherit one from; unmeasured, not zero, even after #178"
+                ),
             ),
             SignalValue(
                 "transitive",
@@ -2387,20 +2660,32 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
     "composer": ConversionStatus(
         converted=True,
         note=(
-            "Three captured p2 documents, reduced by volume only. #145 listed "
+            "Four captured p2 documents, reduced by volume only. #145 listed "
             "composer with nuget and python as never closely audited, and it "
             "is the one of the three whose audit found no dead read: every key "
             "the adapter reads, Packagist sends. What it found instead is two "
             "things the registry sends and the adapter does not read. The p2 "
             "entry states the package's own 'require' block — the same fact "
             "nuget reads out of its nuspec and scores as transitive (#129) — "
-            "and composer marks the signal unmeasured anyway. And a Packagist "
+            "and composer marked the signal unmeasured anyway. And a Packagist "
             "lookup that fails records the source repository as UNDECLARED "
             "rather than unmeasured, so a 404 is scored as 'this package "
-            "declares no source'. Both are filed rather than fixed here: the "
-            "first is a scoring change (#180); the second is fixed, and the "
-            "failure fixture the capture script is deliberately not able to "
-            "take lives beside the adapter in test_composer_adapter instead "
+            "declares no source'. Both are closed now. The first by #180, "
+            "which moved the floor from 8 to 9 and makes Packagist the highest "
+            "of the eight: it is the only registry document answering both a "
+            "maintainer count and a dependency list. Two judgements ride on it "
+            "and both are asserted by value — platform constraints ('php', "
+            "'ext-*') are not packages, proven by psr/log, whose entire "
+            "require block is 'php' and whose measured answer is therefore "
+            "zero rather than one; and 'require-dev' is not counted, proven by "
+            "swiftmailer, where four runtime packages score 0.1 and the six "
+            "that include the dev block would score 0.25. mailgun/mailgun-php "
+            "was captured for the edge that judgement has: the filter tests "
+            "the vendor prefix, not the name, because php-http/discovery and "
+            "php-di/php-di are packages whose names start with a platform "
+            "prefix. The second by #182, whose failure fixture the capture "
+            "script is deliberately not able to take, so it lives beside the "
+            "adapter in test_composer_adapter instead "
             "(#182). Known limit "
             "carried by psr/log: the maintainer count comes from "
             "composer.json's declared authors, so a working group counts as "
@@ -2432,8 +2717,9 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
     "maven": ConversionStatus(
         converted=True,
         note=(
-            "Ten captured XML documents across five artifacts — a "
-            "maven-metadata.xml and an artifact POM each — and the first "
+            "Eighteen captured XML documents across seven artifacts — a "
+            "maven-metadata.xml and an artifact POM each, plus the four "
+            "parent POMs the inheritance walk reads — and the first "
             "signal_floors entry maven has ever had. It is floored at 8, "
             "which is two higher than the capture found it at, because the "
             "capture found two readings: maven-metadata.xml states "
@@ -2442,19 +2728,39 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
             "recorded whether the POM declares a source repository, so that "
             "signal was absent from the score rather than answered either way. "
             "The floor sits at the measured value, per #158. Capturing also "
-            "found a third reading that is NOT fixed here: Maven's convention "
-            "is to declare <licenses> and <scm> once in a *parent* POM and "
-            "inherit them, the adapter reads the artifact POM and stops, and "
-            "guava — whose own POM has neither — is the captured proof. That "
-            "is a POM-graph walk rather than a key, so it is filed as #178. "
-            "log4j and commons-collections were captured later, for #176: they "
+            "found a third reading, closed in #178: Maven's convention is to "
+            "declare <licenses> and <scm> once in a *parent* POM and inherit "
+            "them, and the adapter read the artifact POM and stopped. guava "
+            "(one hop) and slf4j-api (two, through a parent that declares "
+            "neither) are the captured proof, and both moved from below the "
+            "floor to at it — the floor itself did not move, because 8 was "
+            "already everything Maven Central answers. The walk is #141's "
+            "bounded parent chain, consumed lazily, so jackson-databind — "
+            "which declares both in its own POM — still costs no parent fetch "
+            "at all. "
+            "log4j and commons-collections were captured for #176: they "
             "are the pair proving the source-repository signal has three "
             "states and not two. log4j 1.2.17 declares <scm> and every "
             "spelling of it is Subversion; commons-collections 3.1 carries no "
             "<scm> element at all. Both recorded UNDECLARED until the third "
             "state existed, which is a distinction thrown away rather than one "
             "never available — PR #175 had already found it across 25 sampled "
-            "artifacts, 9 declaring none and 12 naming SVN or CVS. "
+            "artifacts, 9 declaring none and 12 naming SVN or CVS. Neither has "
+            "a <parent>, so #178's walk reads one document for each and the "
+            "two states it separates stay reachable. slf4j-api used to be a "
+            "third UNDECLARED artifact and is not one any more — it inherits "
+            "a repository two hops up, and reading it as silence was the "
+            "adapter's blindness rather than the artifact's. javax.inject, "
+            "captured under #178 to hold that branch before #176 landed, "
+            "turned out to declare a code.google.com <scm> and so lands in "
+            "UNUSABLE beside log4j; it is kept for the zero-hop walk bound and "
+            "for the unmeasured-version branch nothing else pins. ant 1.10.13 "
+            "is where the two issues actually interact and is the case neither "
+            "would have produced alone: it declares no <scm> itself and "
+            "inherits a gitbox one, so recording #176's 'declared' argument "
+            "off the artifact's own POM reports UNDECLARED about a project "
+            "that declared one document away. Reverting to the leaf-POM read "
+            "fails ant, javax.inject and log4j by value. "
             "Open: the "
             "deprecation branch is unprovable by construction; see "
             "POLARIZED_SIGNALS['maven']."

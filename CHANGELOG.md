@@ -118,6 +118,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answered with nothing). All three now leave the key unset, which is the
   unmeasured branch the scorer already handled. (#182)
 
+- **maven now follows `<parent>`, which is where Java keeps its licence.**
+  Maven's convention is to declare `<licenses>` and `<scm>` once in a parent POM
+  and inherit them, and the adapter read the artifact's own POM and stopped. So
+  `com.google.guava:guava` reported no licence at all, and neither did any
+  Apache Commons artifact — commons-lang3's licence is two hops up, in
+  `org.apache:apache`. The parent chain is walked through the same bounded
+  client #141 built for version resolution: `repo1.maven.org` over https only,
+  redirects refused, coordinates matched against a strict grammar, a 2 MiB
+  streamed cap, XXE-safe parsing, a bounded depth and the per-manifest fetch
+  budget, with failures and successes memoized so twelve Spring starters sharing
+  a parent cost one fetch between them. **Precedence is
+  nearest-declaration-wins**, matching Maven (a child's own `<licenses>` block
+  replaces the parent's rather than merging with it) and matching what #141
+  already chose for properties and dependency management. The walk is lazy and
+  stops once a licence and an SCM URL are known, so an artifact that declares
+  both itself — jackson-databind, every modern Spring module — costs no extra
+  request. Two deliberate divergences from Maven's own model builder, both
+  documented in `pom_model.inherit_metadata`: the child `artifactId` is not
+  appended to an inherited `<scm><url>`, because the consumer trims URLs back to
+  the repository root anyway; and `<dependencies>` is not inherited, because an
+  artifact's own dependency list is what it ships and a parent's is what its
+  siblings ship. The `declared` argument #176 added to
+  `record_source_repository` is fed the **inherited** `<scm>` rather than the
+  artifact's own, so an artifact that inherits a Subversion or gitbox `<scm>`
+  from its parent records UNUSABLE rather than UNDECLARED — recording it off the
+  leaf POM would be #182's fabricated negative arrived at from a third
+  direction, and it is not a rare shape: `org.apache.ant:ant` and
+  `org.apache.velocity:velocity-engine-core` are both built that way.
+  **Maven licence and source-repository scores will move for real
+  dependencies**: guava and slf4j-api both go from below the measured-signal
+  floor to at it (slf4j-api's `source_repository` moves 1.0 → 0.0, because it
+  inherits `github.com/qos-ch/slf4j` two hops up and reading it as silence was
+  the adapter's blindness rather than the artifact's), and commons-lang3 moves
+  from MEDIUM to LOW on registry metadata alone. log4j and commons-collections,
+  #176's three-state pair, both declare no `<parent>` and are unaffected. (#178)
+
+- **composer now reads the Packagist `require` block.** Every p2 release entry
+  names the package's own dependencies — the same fact nuget reads out of its
+  `.nuspec` and maven out of its POM's `<dependencies>` — and composer marked
+  the transitive signal unmeasured anyway, for every PHP package. Two judgement
+  calls, both asserted by value against captured fixtures rather than described
+  in a comment. **Platform constraints are not dependencies**: `php`, `php-*`,
+  `ext-*`, `lib-*`, `hhvm` and `composer-*` describe the runtime a package needs,
+  not something a consumer is exposed to through the dependency graph, and they
+  are dropped. psr/log, whose entire `require` block is `{"php": ">=8.0.0"}`, is
+  the proof — it measures zero dependencies rather than one. The filter tests
+  the *vendor prefix*, not the name, because several real vendors start with
+  exactly the prefixes a platform constraint does: `php-http/discovery`,
+  `php-di/php-di`, `composer/semver`. mailgun/mailgun-php was captured for that
+  edge — three of its six runtime dependencies are `php-http/*`, and a
+  name-first filter would report three. **`require-dev` is
+  not counted**: it is what building the package needs, not what installing it
+  pulls in, so it is out for the same reason maven excludes `test` and
+  `provided` scopes. swiftmailer is the proof — four runtime packages score
+  0.1, and the six that fold in the dev block would score 0.25. **Composer risk
+  levels will move**: `symfony/console` goes from UNKNOWN (insufficient data) to
+  LOW, because the ninth measured signal is what carries it over the bar.
+  `MIN_MEASURED_SIGNALS["composer"]` moves 8 -> 9, the highest floor of the eight
+  ecosystems. (#180)
+
 - **`community_score` measures development cadence, which it never has.**
   The score advertised a composite of popularity and development activity.
   `CommunityMetrics.commit_frequency` was read in six places and assigned in
