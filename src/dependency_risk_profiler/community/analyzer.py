@@ -9,9 +9,10 @@ from typing import Dict, Optional
 from ..models import CommunityMetrics, DependencyMetadata
 from ..utils import (
     extract_github_repo_info,
-    fetch_json,
     fetch_url,
+    github_commit_frequency,
     github_contributor_count,
+    is_shallow_clone,
 )
 from ..versioning import match_release_date
 
@@ -60,45 +61,6 @@ def extract_star_count(html_content: str) -> Optional[int]:
     return None
 
 
-def extract_fork_count(html_content: str) -> Optional[int]:
-    """Extract fork count from GitHub repository HTML.
-
-    Args:
-        html_content: GitHub repository HTML content.
-
-    Returns:
-        Fork count or None if not found.
-    """
-    if not html_content:
-        return None
-
-    # Look for fork count in HTML
-    fork_patterns = [
-        r'aria-label="([0-9,]+) users forked this repository"',
-        r'<span class="Counter">([0-9,k]+)</span> forks',
-        r'<a class="social-count" [^>]*>([0-9,k]+)</a>',
-    ]
-
-    for pattern in fork_patterns:
-        match = re.search(pattern, html_content)
-        if match:
-            count_str = match.group(1).replace(",", "")
-            if "k" in count_str.lower():
-                # Handle cases like "1.2k"
-                count_str = count_str.lower().replace("k", "")
-                try:
-                    return int(float(count_str) * 1000)
-                except ValueError:
-                    continue
-            else:
-                try:
-                    return int(count_str)
-                except ValueError:
-                    continue
-
-    return None
-
-
 def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float]:
     """Calculate commit frequency over the last N months.
 
@@ -107,8 +69,20 @@ def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float
         months: Number of months to look back.
 
     Returns:
-        Average number of commits per month or None if calculation failed.
+        Average number of commits per month, or None if the repository cannot
+        answer — including when it is a shallow clone, whose single reachable
+        commit would read as a confidently dead project for every repository
+        on earth. The real number then comes from the GitHub API (see
+        ``utils.github_commit_frequency``), the same split ``count_contributors``
+        already makes.
     """
+    if is_shallow_clone(repo_dir):
+        logger.debug(
+            "Skipping commit frequency in %s: shallow clone has no history",
+            repo_dir,
+        )
+        return None
+
     try:
         # Get the date N months ago
         date_threshold = (datetime.now() - timedelta(days=30 * months)).strftime(
@@ -164,8 +138,10 @@ def analyze_github_community_metrics(
     owner, repo = repo_info
     logger.info(f"Analyzing GitHub community metrics for {owner}/{repo}")
 
-    # Initialize community metrics
-    community_metrics = CommunityMetrics()
+    # Reuse whatever the repository clone already measured. This step used to
+    # assign a fresh CommunityMetrics, which discarded the clone-derived commit
+    # frequency because the analyze pipeline runs the clone first (#166).
+    community_metrics = dependency.community_metrics or CommunityMetrics()
 
     # Prefer the real contributor count from the GitHub API. Fall back to any
     # count already collected, but never to a shallow-clone guess (which is
@@ -177,11 +153,18 @@ def analyze_github_community_metrics(
     elif dependency.maintainer_count:
         community_metrics.contributor_count = dependency.maintainer_count
 
-    # Fetch repository HTML to extract star and fork counts
+    # Development cadence, for the same reason and by the same route. The clone
+    # is shallow, so it can only supply this when someone hands us a full one;
+    # otherwise the API answers, and if neither can, the cadence half of the
+    # community score stays honestly unmeasured (#166).
+    api_frequency = github_commit_frequency(dependency.repository_url, github_token)
+    if api_frequency is not None:
+        community_metrics.commit_frequency = api_frequency
+
+    # Fetch repository HTML to extract the star count
     html_content = fetch_url(f"https://github.com/{owner}/{repo}")
     if html_content:
         community_metrics.star_count = extract_star_count(html_content)
-        community_metrics.fork_count = extract_fork_count(html_content)
 
     # Set community metrics
     dependency.community_metrics = community_metrics
@@ -204,23 +187,13 @@ def analyze_npm_community_metrics(
     if not dependency.community_metrics:
         dependency.community_metrics = CommunityMetrics()
 
-    # Extract download count if available
-    if "downloads" in npm_data:
-        if (
-            isinstance(npm_data["downloads"], dict)
-            and "last-month" in npm_data["downloads"]
-        ):
-            dependency.community_metrics.downloads_count = npm_data["downloads"][
-                "last-month"
-            ]
-
     # Extract maintainer count if not already set
     if dependency.maintainer_count is None and "maintainers" in npm_data:
         if isinstance(npm_data["maintainers"], list):
             dependency.maintainer_count = len(npm_data["maintainers"])
             dependency.community_metrics.contributor_count = dependency.maintainer_count
 
-    # Extract release count and last release date
+    # Extract last release date
     if "time" in npm_data:
         if isinstance(npm_data["time"], dict):
             # Exclude metadata fields
@@ -229,8 +202,6 @@ def analyze_npm_community_metrics(
                 for k, v in npm_data["time"].items()
                 if k not in ["created", "modified", "updated"]
             }
-
-            dependency.community_metrics.releases_count = len(release_dates)
 
             if release_dates:
                 latest_release = max(release_dates.items(), key=lambda x: x[1])
@@ -278,10 +249,8 @@ def analyze_pypi_community_metrics(
     if not dependency.community_metrics:
         dependency.community_metrics = CommunityMetrics()
 
-    # Extract release count and last release date
+    # Extract last release date
     if "releases" in pypi_data:
-        dependency.community_metrics.releases_count = len(pypi_data["releases"])
-
         latest_release_date = None
         # Publication date per version, taken from the payload already fetched
         # above. The installed version's date is what makes elapsed-time drift
@@ -314,20 +283,6 @@ def analyze_pypi_community_metrics(
         )
         if installed_release_date:
             dependency.community_metrics.installed_release_date = installed_release_date
-
-    # PyPI does not provide this directly; PyPI Stats is a simple fallback.
-    try:
-        download_stats = fetch_json(
-            f"https://pypistats.org/api/packages/{dependency.name}/recent"
-        )
-        if download_stats and "data" in download_stats:
-            if "last_month" in download_stats["data"]:
-                dependency.community_metrics.downloads_count = download_stats["data"][
-                    "last_month"
-                ]
-    except Exception as e:  # nosec B110
-        logger.debug(f"Could not fetch PyPI download stats for {dependency.name}: {e}")
-        # Continue without download stats
 
     return dependency
 

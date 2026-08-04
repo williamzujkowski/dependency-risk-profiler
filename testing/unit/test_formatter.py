@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from dependency_risk_profiler.cli.formatter import TerminalFormatter
 from dependency_risk_profiler.models import (
+    CommunityMetrics,
     DependencyMetadata,
     DependencyRiskScore,
     ProjectRiskProfile,
@@ -146,3 +147,38 @@ def test_unresolved_installed_version_is_labelled_not_blank() -> None:
     output = TerminalFormatter(color=False).format_profile(profile)
 
     assert "unmanaged → 2.22.1" in output
+
+
+def test_low_cadence_reaches_the_terminal_report() -> None:
+    """REGRESSION #166: the cadence branch was unreachable, so it never printed.
+
+    ``commit_frequency`` had no producer, so this line of the terminal report
+    was dead code from the day it was written. It is also no longer gated on
+    the averaged ``community_score``: a well-starred package with a dead commit
+    log averages to exactly 0.5 and cleared no ``> 0.5`` threshold.
+    """
+    dep = DependencyRiskScore(
+        dependency=DependencyMetadata(
+            name="six",
+            installed_version="1.16.0",
+            community_metrics=CommunityMetrics(
+                star_count=50_000,
+                commit_frequency=0.5,
+            ),
+        ),
+        community_score=0.5,
+        total_score=1.0,
+        risk_level=RiskLevel.MEDIUM,
+        measured_signal_count=9,
+        total_signal_count=16,
+    )
+    profile = ProjectRiskProfile(
+        manifest_path="/tmp/wg/requirements.txt",
+        ecosystem="python",
+        dependencies=[dep],
+        medium_risk_dependencies=1,
+    )
+
+    output = TerminalFormatter(color=False).format_profile(profile)
+
+    assert "low development activity (0.5/month)" in output

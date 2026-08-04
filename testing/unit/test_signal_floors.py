@@ -64,11 +64,15 @@ def _collapsed_scores() -> List[DependencyRiskScore]:
 
 
 def test_a_healthy_crate_clears_the_bar_by_exactly_one_signal() -> None:
-    """Cargo measures eight and is unmeasured on seven: one field of headroom."""
+    """Cargo measures eight and is unmeasured on eight: still not insufficient.
+
+    The eighth unmeasured signal is the community pair, which counts once —
+    an absent community record is one gap, not two (#166).
+    """
     score = _score_crate_offline(ANYHOW_CRATE_RESPONSE)
 
     assert score.measured_signal_count == 8
-    assert score.unknown_signal_count == 7
+    assert score.unknown_signal_count == 8
     assert score.insufficient_data is False
 
 

@@ -318,7 +318,7 @@ def test_total_score_calculation_with_partial_metrics() -> None:
     assert score.total_score <= 5.0, "Score should not exceed max_score"
     assert score.risk_level == RiskLevel.UNKNOWN
     assert score.insufficient_data is True
-    assert score.unknown_signal_count == 11
+    assert score.unknown_signal_count == 12
     assert score.measured_signal_count == 3
 
 
@@ -1014,7 +1014,10 @@ def test_risk_factor_determination_performance_sla() -> None:
             dep.has_tests, dep.has_ci, dep.has_contribution_guidelines
         )
         license_score = scorer._calculate_license_score(dep.license_info)
-        community_score = scorer._calculate_community_score(dep.community_metrics)
+        popularity_score = scorer._calculate_popularity_score(dep.community_metrics)
+        development_activity_score = scorer._calculate_development_activity_score(
+            dep.community_metrics
+        )
         transitive_score = scorer._calculate_transitive_score(
             dep.transitive_dependencies
         )
@@ -1045,7 +1048,8 @@ def test_risk_factor_determination_performance_sla() -> None:
             version_score,
             health_score,
             license_score,
-            community_score,
+            popularity_score,
+            development_activity_score,
             transitive_score,
             security_policy_score,
             dependency_update_score,

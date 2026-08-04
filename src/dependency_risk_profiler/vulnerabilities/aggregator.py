@@ -7,7 +7,6 @@ and caches the results to disk to reduce the number of API calls.
 import logging
 import os
 import time
-from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
@@ -1254,10 +1253,6 @@ def _update_dependency_with_vulnerabilities(
         _count_applicability_reasons(undecided_vulnerabilities)
     )
 
-    # Count fixed vulnerabilities (those with fixed versions)
-    fixed_count = sum(1 for v in vulnerabilities if v.get("fixed_versions"))
-    dependency.security_metrics.fixed_vulnerability_count = fixed_count
-
     # Find maximum CVSS score
     max_cvss = 0.0
     max_severity = None
@@ -1283,24 +1278,6 @@ def _update_dependency_with_vulnerabilities(
     dependency.security_metrics.max_vulnerability_severity = max_severity
 
     dependency.has_known_exploits = bool(counted_vulnerabilities)
-
-    # Check if there was a recent security update
-    if counted_vulnerabilities:
-        # Look for recent vulnerability publications (last 90 days)
-        ninety_days_ago = (datetime.now() - timedelta(days=90)).isoformat()
-        recent_vulnerabilities = [
-            v
-            for v in counted_vulnerabilities
-            if _get_string(v, "published") is not None
-            and (_get_string(v, "published") or "") >= ninety_days_ago
-        ]
-
-        # Look for fixed versions
-        any_fixed = any(v.get("fixed_versions") for v in counted_vulnerabilities)
-
-        # Recent published vulnerabilities with fixes indicate active remediation.
-        if recent_vulnerabilities and any_fixed:
-            dependency.security_metrics.has_recent_security_update = True
 
     return dependency
 

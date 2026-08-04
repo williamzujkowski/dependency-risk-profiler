@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`community_score` measures development cadence, which it never has.**
+  The score advertised a composite of popularity and development activity.
+  `CommunityMetrics.commit_frequency` was read in six places and assigned in
+  none, and its producer `calculate_commit_frequency` had zero callers, so the
+  score was the star-count bucket verbatim — and star count is the weakest
+  signal in this tool's own thesis, because it measures attention rather than
+  maintenance. It was not even an honest unknown: the star half *was*
+  populated, so the composite returned a confident number while silently
+  dropping the half that mattered. **Community scores will move for real
+  dependencies.** Cadence now comes from the GitHub commits API in both the
+  analyze path and org scans; the git implementation is retained but skipped on
+  the `--depth 1` clones the tool makes, because one reachable commit reads as
+  a confidently dead project for every repository on earth (the split
+  `count_contributors` already makes). Two consequences that had never fired in
+  the tool's history now can: the "Low development activity" risk factor, and
+  the matching line in the terminal report. (#166)
+
+- **A half-measured community signal no longer reports as a whole one.**
+  Popularity and cadence are now weighted independently rather than averaged
+  into one entry, so an unmeasurable half leaves both the numerator and the
+  denominator instead of being carried by the other half at full weight — #74's
+  rule, applied one layer down. When cadence cannot be measured, output names
+  `community_activity` in `unknown_signals` rather than implying it was
+  considered. When *neither* half is measurable the pair still counts as one
+  gap, not two, so this does not re-introduce the over-counting #146 fixed. The
+  risk factors and terminal signals gate on their own half rather than on the
+  average, which for a well-starred package with a dead commit log lands on
+  exactly 0.5 and cleared no `> 0.5` threshold. (#166)
+
+- **Five fields were computed, stored, and never read.** `fork_count`,
+  `releases_count`, `downloads_count`, `SecurityMetrics.fixed_vulnerability_count`
+  and `has_recent_security_update` reached no output, no score, and no risk
+  factor. All five are deleted along with the code that produced them. This
+  removes a per-dependency HTTP call to pypistats.org — an unaffiliated
+  third-party service the scan contacted for a number nobody consumed. (#166)
+
+### Added
+
+- **A test that fails when a model field the code reads has no writer.** The
+  generalized form of the sweep that found the above: any `models.py` field
+  declared `= None`, read somewhere in `src/`, and assigned nowhere is a
+  constant wearing a signal's name. Verified to fail when an assignment is
+  removed. (#166)
+
 - **The org-scan headline no longer reports the reassuring number on its own.**
   A scan of a 25-repo org led with "2 high-risk dependencies exposed across 1
   repositories" while 198 of its 1135 dependencies carried live advisories and

@@ -320,10 +320,12 @@ class TerminalFormatter(BaseFormatter):
             else:
                 signals.append("not actively maintained")
 
-        if dep.community_score is not None and dep.community_score > 0.5:
-            community_signal = self._format_community_signal(dep)
-            if community_signal:
-                signals.append(community_signal)
+        # Gated on the metrics themselves rather than on the averaged community
+        # score: a heavily-starred package with a dead commit log averages to
+        # exactly 0.5 and would otherwise report neither half (#166).
+        community_signal = self._format_community_signal(dep)
+        if community_signal:
+            signals.append(community_signal)
 
         if dep.transitive_score is not None and dep.transitive_score > 0.5:
             signals.append(f"{len(metadata.transitive_dependencies)} transitive deps")
@@ -352,7 +354,7 @@ class TerminalFormatter(BaseFormatter):
         if metrics.star_count is not None and metrics.star_count < 100:
             return f"low popularity ({metrics.star_count} stars)"
         if metrics.commit_frequency is not None and metrics.commit_frequency < 1:
-            return "low development activity"
+            return f"low development activity ({metrics.commit_frequency:.1f}/month)"
         return ""
 
     def _format_release_signal(self, last_updated: datetime) -> str:
