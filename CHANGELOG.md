@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The `aiohttp` cap in the dev extra was tested instead of trusted, and it
+  survived.** `"aiohttp>=3.8.6,<3.14",  # Keep aioresponses mocks compatible in
+  tests` is holding 14 open advisories — 1 high, 8 medium, 5 low — in this
+  project's own committed lockfile, and after #239 it is the only thing left in
+  there. Dependabot PR #195 proposed raising the ceiling to `<3.15`, which
+  admits the patched 3.14.3 and clears all fourteen. #240 asked the prior
+  question: is the comment still true, or merely inherited?
+
+  It is true. Cap lifted, `uv lock --upgrade-package aiohttp` (3.13.5 ->
+  3.14.3), `uv sync --extra dev`, full suite: **8 failures.** aiohttp 3.14.0
+  made `stream_writer` a required keyword-only argument of
+  `ClientResponse.__init__`, and `aioresponses` builds every mock response by
+  calling that constructor directly with a hardcoded kwarg set. The client under
+  test catches `Exception` and returns `None`, so the breakage arrives as
+  `assert None == {'message': 'success'}` and never as the `TypeError` it
+  actually is. The boundary is exact — 3.13.5 green, 3.14.0 fails — so `<3.14`
+  is precisely right rather than defensively round. #195 is closed: `<3.15`
+  admits exactly the versions that break.
+
+  The near-miss worth recording is the shape of the partial pass. Nine of the
+  seventeen tests in `test_async_http.py` pass under aiohttp 3.14, and all of
+  `test_aggregator_async.py` does, because injected exceptions and 4xx paths
+  return before that constructor is ever reached. Check a subset, or check that
+  the import works, and the evidence says the cap can go.
+
+  `aioresponses` 0.7.9 is the latest release, postdates aiohttp 3.14.0 by three
+  weeks, and declares `aiohttp<4.0,>=3.8` — it advertises support for a version
+  it cannot run against, and the upstream fix is open and unreleased
+  (pnuckowski/aioresponses#288). The resolver will assemble that broken
+  environment on request. This cap is the only thing that stops it.
+
+  So the cap stays and the comment stops asking the next reader to take it on
+  faith: it now names the constructor, the version boundary, the date, the
+  `aioresponses` version it was measured against, the fourteen advisories it
+  costs, and #244 — which removes the *coupling* rather than the cap, and is
+  the only thing that can get this lockfile to zero. Nothing about the runtime
+  dependency changed; `aiohttp>=3.8.6` in `[project] dependencies` has no
+  ceiling, so no consumer of the published package was ever held back. What is
+  held back is every contributor's `uv sync` and every CI run.
+
+  Recorded plainly: a comment that turns out to be accurate is the *unusual*
+  outcome in this repository, and it is only known to be accurate because
+  someone lifted the cap and watched eight tests fail. The next person to
+  suspect this line should do the same rather than believe this paragraph.
 - **BREAKING CHANGE: Python 3.9 is no longer supported; `requires-python` is
   now `>=3.10`.** The floor was not a style preference. It was putting 47 known
   advisories — 20 high, 23 medium, 4 low — into this project's own committed

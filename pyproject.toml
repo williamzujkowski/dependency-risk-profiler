@@ -53,7 +53,22 @@ dev = [
     "flake8>=7.0.0",
     "mypy>=1.9.0",
     "responses>=0.25.0",        # For HTTP mocking in tests
-    "aiohttp>=3.8.6,<3.14",     # Keep aioresponses mocks compatible in tests
+    # Capped below 3.14, and the cap is still load-bearing — re-verified
+    # 2026-08-04 (#240) rather than inherited. aiohttp 3.14.0 made
+    # `stream_writer` a required keyword-only argument of
+    # `ClientResponse.__init__`; aioresponses constructs that class directly in
+    # `_build_response`, so every mock that must materialise a response body
+    # raises TypeError, which the client swallows into a `None`. Measured with
+    # aioresponses 0.7.9, the latest release: 3.13.5 green, 3.14.0 and 3.14.3
+    # both fail 8 tests in testing/unit/test_async_http.py. Do not read a
+    # partial pass as compatibility — `exception=` mocks and 4xx paths return
+    # before the constructor is reached, so 9 tests in that file pass anyway.
+    # aioresponses declares `aiohttp<4.0,>=3.8`, so nothing but this cap stops
+    # the resolver assembling an environment that cannot work; the upstream fix
+    # (pnuckowski/aioresponses#288) is open and unreleased. This holds 14
+    # advisories in uv.lock. Removing the coupling, which is the actual fix, is
+    # #244 — raise both together, or neither.
+    "aiohttp>=3.8.6,<3.14",
     "aioresponses>=0.7.9",      # For mocking async HTTP requests
     "tomli>=2.0.1",  # TOML parsing/writing in tests (make available for all Python versions)
     "tomli-w>=1.0.0",           # For TOML writing in tests
