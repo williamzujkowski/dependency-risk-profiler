@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING CHANGE: the simulated code-signing subsystem is gone, along with
+  the public API it exposed.** `src/dependency_risk_profiler/secure_release/`
+  (1784 lines across `code_signing.py`, `release_build.py`,
+  `release_management.py`, and a packaged `github_actions_ci_cd.yaml` template)
+  is deleted, and with it these names, which were re-exported from the
+  top-level package and are therefore importable by anyone who has
+  `pip install`ed 0.4.0:
+
+  - `dependency_risk_profiler.sign_artifact`
+  - `dependency_risk_profiler.verify_signature`
+  - `dependency_risk_profiler.create_release`
+  - the `dependency_risk_profiler.secure_release` subpackage in its entirety,
+    including `SigningMode`, `BuildMode`, `VersionBumpType`, `scan_for_malware`,
+    and `python -m dependency_risk_profiler.secure_release.code_signing`
+
+  None of it was reachable from any CLI command, and none of it did what its
+  name said. `retrieve_signing_key` returned `os.urandom(...)` on every call in
+  *both* TEST and RELEASE mode, so no key was ever persisted and no signature
+  could ever be verified by a second call. `create_signature` was
+  `sha256(file_hash || key)`, with the real PSS implementation sitting commented
+  out directly above it — no asymmetric key, nothing a third party could check,
+  no non-repudiation. `scan_for_malware` set `scan_result = True`
+  unconditionally, with the `clamscan` invocation commented out, while its
+  docstring advertised a `False` branch that did not exist. A supply-chain risk
+  tool was publicly exporting a signature verifier that verified nothing and a
+  malware scan that could not fail.
+
+  **Removed rather than deprecated, deliberately.** A deprecation cycle would
+  leave a fake signature verifier callable and importable for at least one more
+  release, which is precisely backwards for a security fix: the whole problem is
+  that the function is reachable and misleading. There is no correct migration
+  target to point a deprecation warning at, because the project does not sign
+  releases and should not do so from inside the scanner — real signing needs key
+  management, timestamping, and revocation, and belongs in CI (sigstore/cosign),
+  not in a library function.
+
+  **Version implication:** this is a breaking removal of published public API.
+  Under 0.x semantics this warrants a **minor bump to 0.5.0 at minimum**; post-1.0
+  it would be a major bump. Maintainer's call, but do not ship it as a patch.
+
+  **If you were calling these:** you were not getting a cryptographic guarantee,
+  so there is nothing to preserve. For artifact verification, use the Sigstore
+  attestations that PyPI trusted publishing already produces for this project's
+  own releases, or `sigstore`/`cosign` directly for your own.
+
+  The release workflow (`.github/workflows/release.yml`) was the one real
+  consumer: it called `sign_artifact(..., SigningMode.RELEASE)` on every tagged
+  release, attached the resulting `.sig` files and `signing.log` to the GitHub
+  Release, and printed release notes claiming the release was "cryptographically
+  signed using the project's secure release system." That step is removed, the
+  `.sig`/`signing.log` uploads are dropped, and the notes now describe only what
+  is actually true: SHA256 checksums plus the PyPI trusted-publishing Sigstore
+  attestations (which were already enabled). Past releases carrying `.sig` files
+  should be treated as unsigned. (#174)
+
 ### Fixed
 
 - **`community_score` measures development cadence, which it never has.**

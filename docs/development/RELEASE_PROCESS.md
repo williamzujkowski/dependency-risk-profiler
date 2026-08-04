@@ -50,12 +50,11 @@ Once the tag is pushed, the release workflow will automatically:
 
 1. Build the Python package (wheel and sdist)
 2. Generate release notes based on commits since the last release
-3. Sign the package artifacts using the project's code signing module
-4. Generate SHA256 checksums for all artifacts
-5. Create a GitHub Release with the generated notes
-6. Upload the package files, signature files, and checksums to the GitHub Release
-7. Publish the package to PyPI
-8. Update the documentation site
+3. Generate SHA256 checksums for all artifacts
+4. Create a GitHub Release with the generated notes
+5. Upload the package files and checksums to the GitHub Release
+6. Publish the package to PyPI via trusted publishing, with Sigstore attestations
+7. Update the documentation site
 
 You can monitor the workflow's progress in the "Actions" tab of the GitHub repository.
 
@@ -71,22 +70,28 @@ After the workflow completes successfully:
 2. Verify the GitHub Release was created with the correct artifacts:
    - Visit the "Releases" page on GitHub
    - Ensure both the wheel and source distribution are attached
-   - Verify that signature files (.sig) and SHA256SUMS.txt are included
+   - Verify that SHA256SUMS.txt is included
 
-3. Verify the signatures (optional):
+3. Verify the artifacts (optional):
    ```bash
-   # Download the package and signature files
+   # Download the package and checksums
    wget https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/dependency_risk_profiler-X.Y.Z-py3-none-any.whl
-   wget https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/dependency_risk_profiler-X.Y.Z-py3-none-any.whl.sig
    wget https://github.com/williamzujkowski/dependency-risk-profiler/releases/download/vX.Y.Z/SHA256SUMS.txt
 
    # Verify checksum
    sha256sum -c SHA256SUMS.txt
 
-   # Verify signature (requires the package to be installed)
-   pip install dependency-risk-profiler==X.Y.Z
-   python -m dependency_risk_profiler.secure_release.code_signing dependency_risk_profiler-X.Y.Z-py3-none-any.whl --verify dependency_risk_profiler-X.Y.Z-py3-none-any.whl.sig
+   # Verify the PyPI attestation (Sigstore, produced by trusted publishing)
+   pip install sigstore
+   python -m sigstore verify identity \
+     --cert-identity https://github.com/williamzujkowski/dependency-risk-profiler/.github/workflows/release.yml@refs/tags/vX.Y.Z \
+     --cert-oidc-issuer https://token.actions.githubusercontent.com \
+     dependency_risk_profiler-X.Y.Z-py3-none-any.whl
    ```
+
+   The project does not publish its own detached signatures. Artifact authenticity
+   comes from PyPI trusted publishing (OIDC + Sigstore attestations); integrity of
+   the GitHub Release copies comes from the published checksums.
 
 4. Confirm the documentation site has been updated:
    - Visit https://williamzujkowski.github.io/dependency-risk-profiler/

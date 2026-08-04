@@ -52,7 +52,6 @@ This document provides an overview of the Dependency Risk Profiler project struc
 - `src/dependency_risk_profiler/parsers/` - Manifest file parsers for different ecosystems
 - `src/dependency_risk_profiler/scorecard/` - OpenSSF Scorecard-inspired metrics analysis
 - `src/dependency_risk_profiler/scoring/` - Risk scoring implementation
-- `src/dependency_risk_profiler/secure_release/` - Code signing and secure release management
 - `src/dependency_risk_profiler/supply_chain/` - Supply chain analysis and visualization
 - `src/dependency_risk_profiler/transitive/` - Transitive dependency analysis
 - `src/dependency_risk_profiler/vulnerabilities/` - Vulnerability scanning and aggregation

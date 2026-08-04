@@ -9,9 +9,6 @@ from .models import (
     ProjectRiskProfile,
     RiskLevel,
 )
-
-# Imports for secure release functionality
-from .secure_release import create_release, sign_artifact, verify_signature
 from .supply_chain import (
     analyze_historical_trends,
     analyze_supply_chain_risk,
@@ -36,7 +33,4 @@ __all__ = [
     "generate_trend_visualization",
     "aggregate_vulnerability_data",
     "normalize_cvss_score",
-    "sign_artifact",
-    "verify_signature",
-    "create_release",
 ]
