@@ -64,3 +64,17 @@ mkdocs gh-deploy
 - Keep functions focused and under 50 lines when possible
 - Handle exceptions with custom exception classes
 - Organize imports: stdlib, third-party, local (handled by isort)
+
+## What may land
+
+`CLAUDE.md` covers how to build and how to format. **[`AGENTS.md`](AGENTS.md) covers what may land**, and its rules bind humans and agents equally:
+
+1. **No simulated implementations** — a function does what its name says or does not exist. If the real thing cannot be built now, file an issue and land nothing.
+2. **Rescope, don't stub** — split it, land a correct smaller piece, file the remainder with acceptance criteria.
+3. **Landed code must be reachable** — a function needs a caller, a field needs a writer and a reader.
+4. **Silence is not an answer** — unmeasured is structurally distinct from measured-zero.
+5. **Fixtures are captured, never authored** — reducers drop volume, never key diversity.
+6. **Verify that a gate bites** — reintroduce the defect, confirm the failure, revert.
+7. **The bar** — no `# type: ignore` / `Any` / `# noqa` / new `# nosec`; mypy exemption list stays empty; ratchets only move down.
+
+Read `AGENTS.md` before writing code. It explains why each rule exists, with the specific defect that motivated it.

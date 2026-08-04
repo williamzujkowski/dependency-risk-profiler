@@ -111,44 +111,6 @@ def categorize_license(license_id: str) -> LicenseCategory:
     return LicenseCategory.UNKNOWN
 
 
-def analyze_license_compatibility(licenses: Set[str]) -> RiskLevel:
-    """Analyze compatibility between multiple licenses.
-
-    Args:
-        licenses: Set of license IDs.
-
-    Returns:
-        Risk level based on license compatibility.
-    """
-    if not licenses:
-        return RiskLevel.MEDIUM  # Default to MEDIUM risk when license is unknown
-
-    # Check if any license is unknown
-    for license_id in licenses:
-        category = categorize_license(license_id)
-        if category == LicenseCategory.UNKNOWN:
-            return RiskLevel.CRITICAL
-
-    # Check for network copyleft licenses
-    for license_id in licenses:
-        category = categorize_license(license_id)
-        if category == LicenseCategory.NETWORK_COPYLEFT:
-            return RiskLevel.HIGH
-
-    # Check for copyleft licenses
-    has_copyleft = False
-    for license_id in licenses:
-        category = categorize_license(license_id)
-        if category == LicenseCategory.COPYLEFT:
-            has_copyleft = True
-
-    if has_copyleft:
-        return RiskLevel.MEDIUM
-
-    # All permissive licenses
-    return RiskLevel.LOW
-
-
 def first_license_string(value: object) -> Optional[str]:
     """Return the first non-empty license string in a metadata value.
 
