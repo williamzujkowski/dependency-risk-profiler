@@ -15,6 +15,8 @@ and "I would not accept what you gave me" are different outcomes.
 """
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, List, Protocol, Tuple
 
@@ -24,7 +26,23 @@ from typer.testing import CliRunner
 from dependency_risk_profiler.cli.typer_cli import app
 from dependency_risk_profiler.models import DependencyMetadata
 
-runner = CliRunner()
+
+def _make_runner() -> CliRunner:
+    """Return a runner whose ``stdout`` really is stdout.
+
+    The invariant under test is about stdout alone, so the streams must stay
+    apart. Click below 8.2 folds stderr into stdout unless told not to; 8.2
+    removed the flag and always separates them. Without this, the Python 3.9
+    job saw the status lines that correctly went to stderr and reported them as
+    JSON corruption.
+    """
+    try:
+        return CliRunner(mix_stderr=False)
+    except TypeError:
+        return CliRunner()
+
+
+runner = _make_runner()
 
 # The keys an automated consumer is promised on every JSON run.
 REQUIRED_KEYS = {
@@ -294,6 +312,48 @@ def test_manifest_under_a_nonstandard_name_names_the_parser_that_would_accept_it
     assert "rubygems parser" in output
     assert "Rename or copy it to Gemfile.lock" in output
     assert result.exit_code == 1, result.output
+
+
+def test_real_process_stdout_is_json_on_the_paths_that_need_no_network(
+    tmp_path: Path,
+) -> None:
+    """INVARIANT (#147), measured on a real process rather than a test runner.
+
+    `CliRunner` has folded stderr into stdout depending on the click version,
+    which is exactly the confusion this invariant exists to rule out. These
+    three paths reach no registry and no network, so they can be run for real:
+    whatever a subprocess sees on fd 1 is what an agent would see.
+    """
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    unsupported = tmp_path / "package.json"
+    unsupported.write_text(
+        json.dumps({"dependencies": {"express": "^4.13.4"}}), encoding="utf-8"
+    )
+    misnamed = tmp_path / "project-Gemfile.lock"
+    misnamed.write_text("GEM\n  specs:\n    rake (13.0.6)\n", encoding="utf-8")
+
+    for target in (empty, unsupported, misnamed):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "dependency_risk_profiler",
+                "analyze",
+                str(target),
+                "--output",
+                "json",
+                "--disable-osv",
+                "--no-color",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        payload = json.loads(completed.stdout)
+        assert isinstance(payload, dict), target
+        assert REQUIRED_KEYS <= set(payload), target
+        assert payload["dependencies"] == [], target
 
 
 def test_empty_directory_still_exits_zero(
