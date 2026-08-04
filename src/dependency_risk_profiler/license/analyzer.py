@@ -149,6 +149,63 @@ def analyze_license_compatibility(licenses: Set[str]) -> RiskLevel:
     return RiskLevel.LOW
 
 
+def first_license_string(value: object) -> Optional[str]:
+    """Return the first non-empty license string in a metadata value.
+
+    Registries disagree on the shape as well as the key: npm and PyPI publish a
+    plain string, while RubyGems and Packagist publish a *list* (``["MIT"]``).
+    Lists are flattened so a list-valued field is read rather than discarded.
+
+    Args:
+        value: Raw value read from package metadata.
+
+    Returns:
+        License string, or None when the value carries none.
+    """
+    if isinstance(value, str):
+        return value.strip() or None
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            text = first_license_string(item)
+            if text:
+                return text
+    return None
+
+
+def extract_license_text(metadata: Dict) -> Optional[str]:
+    """Return the raw license string published in package metadata.
+
+    Both the top level and PyPI's nested ``info`` object are searched under the
+    singular and plural spellings, because the key differs per registry
+    (``license`` on npm/PyPI, ``licenses`` on RubyGems/Packagist). PyPI's
+    ``License ::`` classifiers are the last resort.
+
+    Args:
+        metadata: Package metadata.
+
+    Returns:
+        License string, or None when the metadata carries none.
+    """
+    info = metadata.get("info")
+    for source in (metadata, info if isinstance(info, dict) else None):
+        if source is None:
+            continue
+        for key in ("license", "licenses"):
+            license_text = first_license_string(source.get(key))
+            if license_text:
+                return license_text
+
+    if isinstance(info, dict):
+        # Look for license in PyPI classifiers
+        classifiers = info.get("classifiers")
+        if isinstance(classifiers, (list, tuple)):
+            for classifier in classifiers:
+                if isinstance(classifier, str) and "License ::" in classifier:
+                    return classifier.split("::")[-1].strip()
+
+    return None
+
+
 def extract_license_info(metadata: Dict) -> Optional[LicenseInfo]:
     """Extract license information from package metadata.
 
@@ -158,19 +215,7 @@ def extract_license_info(metadata: Dict) -> Optional[LicenseInfo]:
     Returns:
         License information, or None if not available.
     """
-    license_text = None
-
-    # Check common metadata fields for license information
-    if "license" in metadata:
-        license_text = metadata["license"]
-    elif "info" in metadata and "license" in metadata["info"]:
-        license_text = metadata["info"]["license"]
-    elif "info" in metadata and "classifiers" in metadata["info"]:
-        # Look for license in PyPI classifiers
-        for classifier in metadata["info"]["classifiers"]:
-            if "License ::" in classifier:
-                license_text = classifier.split("::")[-1].strip()
-                break
+    license_text = extract_license_text(metadata)
 
     if not license_text:
         return None
