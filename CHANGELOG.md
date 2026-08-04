@@ -78,6 +78,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository is cloned once per scan instead of once per module, so projects
   with many subdirectory modules from one repository do far less network work.
 
+- **cargo and composer dependencies are scored instead of returning UNKNOWN.**
+  Both adapters read a couple of fields off their registry and stopped, so the
+  eight repository-derived signals — staleness, health indicators, license, and
+  the five OpenSSF Scorecard-inspired checks — were never collected and every
+  dependency tripped the `unmeasured > measured` bar. crates.io's `repository`
+  and Packagist's `source.url` now resolve the source repository (trimmed to its
+  `owner/repo` root, so workspace subdirectories and `.git` suffixes stop
+  dropping it), release timestamps populate staleness, yanked/abandoned releases
+  mark deprecation, and licence and maintainer counts come off the registry
+  payload. **Manifests that previously reported nothing but UNKNOWN will now
+  produce real risk levels**, so a scan diff across this version can show new
+  findings without anything having changed upstream. Packages that genuinely
+  publish no repository keep their repository-derived signals unmeasured rather
+  than scored as zero. On real manifests: BurntSushi/ripgrep 0 of 13 scored →
+  13 of 13 and tokio-rs/tokio 0 of 13 → 13 of 13, both going from ~5 of 14
+  signals measured to 13; drupal/drupal 0 of 151 → 150 of 151, unmeasured
+  signals down from 1371 to 158. The one package still `UNKNOWN`
+  (`phpstan/phpstan`) publishes no source repository on Packagist at all, and
+  the residual unmeasured signal on every dependency is `transitive`, which
+  composer and cargo manifests have never resolved.
+
 ### Changed
 
 - **More ecosystem spellings are now analyzed.** Analyzer dispatch is driven by
@@ -109,6 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of being guessed at. SemVer packages and Go pseudo-versions
   (`v0.0.0-20210428235338-…`) are unaffected: detection requires the calendar
   *shape*, not merely a large leading number.
+
 - **Unknown ecosystems no longer silently default to PyPI.** `infer_ecosystem`
   returned `"python"` for any URL it could not classify, so non-Python packages
   were queried against the wrong advisory source and came back clean. It now

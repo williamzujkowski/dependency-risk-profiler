@@ -1,7 +1,7 @@
 """Regression tests for parser and analyzer routing correctness."""
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from _pytest.monkeypatch import MonkeyPatch
 
@@ -16,6 +16,13 @@ from dependency_risk_profiler.parsers.golang import GoParser
 class StubCratesIOAnalyzer(CratesIOAnalyzer):
     """Crates analyzer test double with an in-memory crates.io response."""
 
+    def __init__(self) -> None:
+        """Route metadata through the stub and keep the suite off the network."""
+        super().__init__()
+        # The adapter clones the resolved repository for its eight
+        # repository-derived signals (#132); this test is about routing only.
+        self.clone_repos = False
+
     def _get_crate_info(self, crate_name: str) -> Dict[str, object]:
         """Return deterministic crates.io metadata without network calls."""
         return {
@@ -26,6 +33,10 @@ class StubCratesIOAnalyzer(CratesIOAnalyzer):
                 "license": "MIT OR Apache-2.0",
             }
         }
+
+    def _get_owner_count(self, crate_name: str) -> Optional[int]:
+        """Return no owner count; the crates.io owners endpoint is not reached."""
+        return None
 
 
 def test_go_parser_ignores_block_require_opener(tmp_path: Path) -> None:

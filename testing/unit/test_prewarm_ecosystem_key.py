@@ -34,7 +34,7 @@ MANIFEST_ECOSYSTEM_FETCHERS = (
     ("golang", "_get_latest_version"),
     ("cargo", "_get_crate_info"),
     ("rubygems", "_get_gem_info"),
-    ("composer", "_get_latest_version"),
+    ("composer", "_get_latest_release"),
     ("nuget", "_get_latest_version"),
     ("maven", "_get_latest_version"),
 )

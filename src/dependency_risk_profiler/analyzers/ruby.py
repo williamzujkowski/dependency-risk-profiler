@@ -6,10 +6,9 @@ from typing import Dict, List, Optional
 
 import requests
 
-from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from .base import BaseAnalyzer
-from .common import canonical_repository_url, cloned_repo, is_cloneable_repo_url
+from .common import canonical_repository_url, collect_repository_signals
 
 logger = logging.getLogger(__name__)
 
@@ -55,16 +54,10 @@ class RubyGemsAnalyzer(BaseAnalyzer):
                 # Repository-derived signals (last commit, tests/CI, the
                 # OpenSSF-style security checks) come from the source repo, the
                 # same way the Python/npm/Go analyzers collect them.
-                repository_url = dep.repository_url
-                if (
-                    self.clone_repos
-                    and repository_url
-                    and is_cloneable_repo_url(repository_url)
-                ):
-                    with cloned_repo(repository_url) as clone_result:
-                        if clone_result:
-                            repo_dir, _ = clone_result
-                            dep = analyze_repository(dep, repo_dir)
+                dep = collect_repository_signals(
+                    dep, dep.repository_url, self.clone_repos
+                )
+                dependencies[name] = dep
 
                 # Gem owners are RubyGems' own maintainer set (who may push a
                 # release). Read them after the repository pass so the shallow
