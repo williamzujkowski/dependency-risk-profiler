@@ -72,6 +72,7 @@ from .models import (
     DependencyRiskScore,
     LicenseInfo,
     SecurityMetrics,
+    VerdictFloor,
 )
 from .signals import FieldSource, Measurement, MeasurementState, ProvenancedField
 
@@ -541,6 +542,48 @@ def advisories_to_dict(metrics: Optional[SecurityMetrics]) -> Dict[str, object]:
     }
 
 
+def verdict_floor_to_dict(floor: Optional[VerdictFloor]) -> Dict[str, object]:
+    """Serialize the lagging-evidence floor under a verdict (#242).
+
+    Additive: ``risk_level`` keeps its meaning and its position, and this block
+    says whether a fact rather than the weighted mean is what put it there.
+    Every key is always present, and ``applied`` carries the state — the same
+    shape ``measurement_to_dict`` uses, and for the same reason: a consumer
+    should read one field, not infer a state from which key is null.
+
+    ``applied: false`` with a non-null ``floor`` is the informative case. It
+    says the floor was computed and the verdict already cleared it, which is
+    what lets a test assert the *cause* of a verdict rather than only its
+    value. ``floor`` is published rather than left to be re-derived from
+    ``max_counted_severity``: a consumer should not have to reimplement the
+    rule to read the record of it being applied.
+
+    Args:
+        floor: The floor the scorer recorded, or None when the counted
+            advisories established none.
+
+    Returns:
+        The ``verdict_floor`` block.
+    """
+    if floor is None:
+        return {
+            "applied": False,
+            "max_counted_severity": None,
+            "advisory_id": None,
+            "floor": None,
+            "from": None,
+            "to": None,
+        }
+    return {
+        "applied": floor.applied,
+        "max_counted_severity": floor.max_counted_severity,
+        "advisory_id": floor.advisory_id,
+        "floor": floor.floor_level.value,
+        "from": floor.unfloored_level.value,
+        "to": floor.floor_level.value if floor.applied else None,
+    }
+
+
 def scored_dependency(
     score: DependencyRiskScore,
     *,
@@ -575,6 +618,9 @@ def scored_dependency(
         "known_vulnerable": known_vulnerable(metadata),
         "maintainer_count": metadata.maintainer_count,
         "risk_level": score.risk_level.value,
+        # Additive in schema 2 (#242). Says whether ``risk_level`` is where the
+        # weighted mean left it or where a counted advisory held it.
+        "verdict_floor": verdict_floor_to_dict(score.verdict_floor),
         "risk_score": score.total_score,
         "risk_factors": list(score.factors),
         "insufficient_data": score.insufficient_data,

@@ -194,6 +194,129 @@ generalized.
 
 ---
 
+## Compensatory and non-compensatory evidence: facts set floors
+
+The score is a weighted mean. That is a **compensatory** model: it treats every
+signal as exchangeable evidence about one latent variable, so a good answer
+anywhere can pay for a bad answer anywhere else. For forecasting how a package
+will behave, that is the right shape — an aging release line really is offset
+by an active maintainer roster.
+
+Known exploitation of the **installed** version is not that kind of evidence.
+It is not a forecast about the package's trajectory; it is a fact about the
+version in your lockfile right now, and upstream velocity does not patch a pin.
+Averaging a fact against forecasts lets the forecasts erase it.
+
+> **The rule.** A weighted mean is a compensatory model: it treats signals as
+> exchangeable evidence about one latent variable. Known exploitation of the
+> installed version is **non-compensatory** — a fact about the present, not a
+> forecast about the future. Facts set floors; forecasts move within them.
+>
+> **Leading indicators may raise a verdict above the lagging floor. They may
+> never lower it below.**
+
+This is the standard worst-of construct rather than an invention: CVSS
+environmental scoring does not let process controls erase base severity, and an
+audit grade is capped by any failed critical control. It is written here **as a
+general rule** so the next non-linearity has a principle to be tested against
+instead of a precedent to be copied. Anything proposed as a second floor has to
+argue that its evidence is non-compensatory in the same sense — a *fact about
+the installed artifact*, not a *prediction about the project*.
+
+### Why the rule was needed: the verdict could not reach the evidence (#242)
+
+`exploit` carries the largest single weight, 0.5. There are sixteen signals and
+their weights sum to 3.5, so the exploit signal's maximum share of the
+normalized score is `0.5 / 3.5 = 0.143`, against a LOW/MEDIUM boundary of 0.25.
+
+A package with a **maximal** exploit signal and a perfect, zero-risk record on
+all fifteen other signals normalizes to 0.143 — LOW. No advisory load, however
+severe, could cross the first boundary on its own. axios 1.6.5 is the case
+that surfaced it, found by running the tool against
+`examples/manifests/package-lock.json`: 44 advisories found, 29 confirmed to
+affect the installed version, maximum counted severity HIGH at CVSS 8.0, and a
+printed verdict of `LOW` on the same record as `known_vulnerable: true`.
+
+That ceiling was **emergent**, not designed. Nobody recorded a decision to cap
+the signal; it fell out of sixteen weights summing to 3.5.
+
+The example manifest has since been upgraded to current releases (#253), so it
+no longer reproduces the case — axios 1.19.0 finds the same 44 advisories and
+counts none of them. The recording lives in
+`testing/fixtures/axios_1_6_5.json`, which is the only place this defect is
+still reproducible and the reason it cannot quietly come back.
+
+### The floor mapping, and why it is discounted by one rung
+
+| Maximum counted severity | Verdict may not sit below |
+|---|---|
+| `CRITICAL` | `HIGH` |
+| `HIGH` | `MEDIUM` |
+| `MEDIUM` | `LOW` |
+| `LOW` | `LOW` |
+
+**One rung under the worst live advisory**, clamped at the bottom of the scale.
+The two lower rows are no-ops by construction — `LOW` is the floor of the scale
+— and they are written out anyway, because a rule with unstated edges is a rule
+somebody will re-derive differently.
+
+The single rung of slack is the whole of the argument. Advisory severity is a
+property of the vulnerability considered alone: a CVSS base tier, assigned
+without environmental context. The verdict is a property of the package *in
+this tree*, and whether the vulnerable path is reachable from the caller is
+something this tool does not measure and does not claim to. One rung is what
+that unmeasured context is worth. Two rungs is not slack — it is the verdict
+ignoring the fact, which is #242.
+
+Rejected alternatives, recorded so they are not re-proposed as fresh ideas:
+
+* **`floor(S) = S`.** Lets a context-free base tier dictate the whole composite
+  and collapses the leading-indicator model into a CVE tracker, which is the
+  thing this tool exists not to be.
+* **Any counted advisory floors at `MEDIUM`.** Says a single LOW-severity
+  advisory is worth as much as a HIGH one, and inflates verdicts off low-grade
+  noise — the same defect as #242 pointing the other way.
+* **Raising `exploit_weight` until the signal can cross a boundary alone.**
+  Needs `w / (3.0 + w) >= 0.25`, i.e. `w >= 1.0` — tripling the largest weight.
+  It moves every score in the corpus, re-baselines the per-ecosystem floors in
+  #131, and still leaves a compensatory model that dilutes at higher
+  thresholds. Maximum blast radius, and it does not fix the mechanism.
+
+### What the floor keys on, exactly
+
+`counted_vulnerability_count` — the same field the output contract's
+`known_vulnerable` is computed from, because #242 is precisely that those two
+fields could contradict each other. An advisory the annotator filtered never
+reaches that count and therefore floors nothing:
+
+| Situation | Floors? |
+|---|---|
+| Advisory affects the installed version, at or above the scoring threshold | **yes** |
+| Fixed before the installed version, or otherwise not applicable (#61) | no |
+| Withdrawn | no |
+| Informational, or of unknown severity | no |
+| Below `--vuln-min-severity` | no |
+| Advisory lookup failed or never ran (#219) | no — unmeasured is not a fact |
+| Verdict is `UNKNOWN` | no — see below |
+
+`UNKNOWN` is left as an abstention. It is not a rung on the scale, it is not a
+reassuring verdict, and the published contract states that
+`insufficient_data: true` implies `risk_level: UNKNOWN` — so raising it would
+be a semantic change to schema 2 rather than an additive one. A live CRITICAL
+on a package too sparsely covered to score is therefore still reported as
+`UNKNOWN` with `known_vulnerable: true`; that gap is #248, not this rule.
+
+### It is reported, not just applied
+
+The verdict alone cannot tell a reader which of two things produced it. Every
+scored dependency carries a `verdict_floor` block saying whether a floor was
+computed, what it was, which advisory carried the severity, and whether it moved
+anything — including the case where it was computed and the verdict had already
+cleared it. It is additive to schema 2 and breaks no consumer. See
+`docs/agents.md` for the field.
+
+---
+
 ## What the wrapper costs
 
 The design review flagged a per-field wrapper as a real cost in a thread-pooled

@@ -802,6 +802,24 @@ def test_scoring_performance_sla() -> None:
     - Average scoring time: < 1ms per dependency
     - p95 scoring time: < 2ms per dependency
     - Maximum scoring time: < 5ms per dependency
+
+    Measured as the median of three batches after a warm-up, for the same
+    reason ``test_project_profile_performance_sla`` is — that test was repaired
+    for this exact failure mode and this one was left behind.
+
+    The `max` line is what made it matter. One unwarmed batch of 100 samples
+    charges the scorer for `packaging`'s first regex compilation, coverage's
+    tracer warm-up, and any gen-2 collection the interpreter decides to run
+    mid-loop. Observed here at 23-27ms against a 5ms bar while the *average*
+    over the same 100 samples was under 1ms — a two-order-of-magnitude single
+    sample is a scheduler or GC event, not scoring work. Adding an unrelated
+    70 KB fixture elsewhere in the suite was enough to flip this test between
+    pass and fail on scoring code that a microbenchmark showed unchanged
+    (17.9 µs/dependency against 18.5 µs on the parent commit).
+
+    A median over batches still fails on any real algorithmic regression,
+    because that shows up in every batch rather than in one. What it stops
+    measuring is the machine.
     """
     # Arrange
     scorer = RiskScorer()
@@ -839,17 +857,24 @@ def test_scoring_performance_sla() -> None:
     )
 
     # Act
-    scoring_times = []
-
-    for _ in range(num_iterations):
-        start_time = time.time()
+    for _ in range(num_iterations):  # warm-up
         scorer.score_dependency(dep)
-        scoring_times.append((time.time() - start_time) * 1000)  # Convert to ms
+
+    batches: List[List[float]] = []
+    for _ in range(3):
+        scoring_times = []
+        for _ in range(num_iterations):
+            start_time = time.perf_counter()
+            scorer.score_dependency(dep)
+            scoring_times.append(
+                (time.perf_counter() - start_time) * 1000
+            )  # Convert to ms
+        batches.append(scoring_times)
 
     # Assert
-    avg_time = sum(scoring_times) / len(scoring_times)
-    p95_time = float(numpy.percentile(scoring_times, 95))
-    max_time = max(scoring_times)
+    avg_time = sorted(sum(batch) / len(batch) for batch in batches)[1]
+    p95_time = sorted(float(numpy.percentile(batch, 95)) for batch in batches)[1]
+    max_time = sorted(max(batch) for batch in batches)[1]
 
     assert avg_time < 1.0, f"Average scoring time {avg_time}ms exceeds SLA of 1ms"
     assert (

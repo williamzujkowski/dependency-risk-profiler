@@ -56,6 +56,9 @@ SHARED_KEYS = {
     "known_vulnerable",
     "maintainer_count",
     "risk_level",
+    # Additive in schema 2 (#242): whether ``risk_level`` is where the weighted
+    # mean left it or where a counted advisory held it.
+    "verdict_floor",
     "risk_score",
     "risk_factors",
     "insufficient_data",

@@ -7,6 +7,7 @@ from typing import Collection, Dict, FrozenSet, List, Optional, Sequence, Tuple
 from packaging import version
 
 from ..models import (
+    RISK_LEVEL_ORDER,
     CommunityMetrics,
     DependencyMetadata,
     DependencyRiskScore,
@@ -14,6 +15,7 @@ from ..models import (
     ProjectRiskProfile,
     RiskLevel,
     SecurityMetrics,
+    VerdictFloor,
 )
 from ..popularity import (
     POPULARITY_HIGH_CONTRIBUTORS_DEFAULT,
@@ -74,6 +76,124 @@ COMMUNITY_SIGNALS: FrozenSet[str] = frozenset(
 # real evidence about the package's publishing hygiene and its era. See
 # ``_calculate_source_repository_score`` for the argument (#176).
 SOURCE_REPOSITORY_UNUSABLE_SCORE = 0.75
+
+# Advisory severity tiers read as verdict rungs. The vocabularies are the same
+# four words on purpose; this is the only place that says so.
+SEVERITY_AS_RISK_LEVEL: Dict[str, RiskLevel] = {
+    "LOW": RiskLevel.LOW,
+    "MEDIUM": RiskLevel.MEDIUM,
+    "HIGH": RiskLevel.HIGH,
+    "CRITICAL": RiskLevel.CRITICAL,
+}
+
+
+def severity_floor(max_counted_severity: str) -> Optional[RiskLevel]:
+    """Return the verdict a live advisory of this severity forbids sitting below.
+
+    **One rung under the worst counted advisory**, clamped at the bottom of the
+    scale. Derived from :data:`~..models.RISK_LEVEL_ORDER` rather than written
+    out as a table, so the rule and the mapping cannot drift apart.
+
+    The one rung of slack is the whole of the argument, so it is stated here
+    rather than left to be re-derived. Advisory severity is a property of the
+    vulnerability considered alone — a CVSS base tier, with no environmental
+    context — while the verdict is a property of the package in *this* tree,
+    and whether the vulnerable path is reachable from the caller is something
+    this tool does not measure and does not claim to. One rung is what that
+    unmeasured context is worth. Two rungs is not slack; it is the verdict
+    ignoring the fact, which is #242.
+
+    Args:
+        max_counted_severity: Worst severity among the advisories that counted
+            toward the score.
+
+    Returns:
+        The floor, or None when the severity is not one this scale recognizes.
+    """
+    tier = SEVERITY_AS_RISK_LEVEL.get(max_counted_severity)
+    if tier is None:
+        return None
+    return RISK_LEVEL_ORDER[max(0, RISK_LEVEL_ORDER.index(tier) - 1)]
+
+
+def verdict_floor_for(
+    dependency: DependencyMetadata, unfloored_level: RiskLevel
+) -> Optional[VerdictFloor]:
+    """Return the floor the counted advisories put under a verdict, if any.
+
+    Keyed on exactly the fact that produces ``known_vulnerable`` in the output
+    contract — ``counted_vulnerability_count`` — because #242 is that those two
+    fields could contradict each other. Anything the annotator filtered (fixed
+    before the installed version, withdrawn, informational, below the scoring
+    threshold) never reaches ``counted_vulnerability_count`` and so cannot floor
+    anything: inflating a verdict off advisories that do not affect the
+    installed version would be the same defect pointing the other way.
+
+    ``UNKNOWN`` is left alone. It is an abstention rather than a rung, it is not
+    a reassuring verdict, and ``insufficient_data: true`` implies
+    ``risk_level: UNKNOWN`` in the published contract — raising it here would be
+    a semantic break to schema v2 rather than an additive change. See #248.
+
+    A module-level function for the same measured reason as
+    :func:`advisory_risk_factors`: ``score_dependency`` sits on a benchmark
+    cliff where physical lines cost budget and helpers do not.
+
+    Args:
+        dependency: The scored dependency.
+        unfloored_level: The verdict the weighted mean produced on its own.
+
+    Returns:
+        The floor and whether it moved the verdict, or None when no counted
+        advisory established one.
+    """
+    if unfloored_level is RiskLevel.UNKNOWN:
+        return None
+    metrics = dependency.security_metrics
+    if metrics is None or not metrics.counted_vulnerability_count:
+        return None
+    max_severity = metrics.max_vulnerability_severity
+    if max_severity is None:
+        return None
+    floor_level = severity_floor(max_severity)
+    if floor_level is None:
+        return None
+    return VerdictFloor(
+        max_counted_severity=max_severity,
+        advisory_id=_worst_counted_advisory_id(metrics, max_severity),
+        unfloored_level=unfloored_level,
+        floor_level=floor_level,
+        applied=(
+            RISK_LEVEL_ORDER.index(floor_level)
+            > RISK_LEVEL_ORDER.index(unfloored_level)
+        ),
+    )
+
+
+def _worst_counted_advisory_id(
+    metrics: SecurityMetrics, max_counted_severity: str
+) -> Optional[str]:
+    """Return the counted advisory that carries the maximum severity.
+
+    Lexicographically first among ties rather than first-seen, so the recorded
+    cause does not depend on which advisory source answered first — the same
+    determinism requirement the org-scan report is held to.
+
+    Args:
+        metrics: The dependency's security metrics.
+        max_counted_severity: The severity to match.
+
+    Returns:
+        The advisory ID, or None when the counted advisories carry no readable
+        ID — which is a gap in the record, never a reason to drop the floor.
+    """
+    candidates = [
+        str(detail["id"])
+        for detail in metrics.vulnerability_details
+        if detail.get("counted_in_score") is True
+        and detail.get("normalized_severity") == max_counted_severity
+        and isinstance(detail.get("id"), str)
+    ]
+    return min(candidates) if candidates else None
 
 
 def advisory_risk_factors(dependency: DependencyMetadata) -> List[str]:
@@ -425,6 +545,10 @@ class RiskScorer:
             if insufficient_data
             else self._determine_risk_level(total_score)
         )
+        # Facts set floors; forecasts move within them (#242).
+        floor = verdict_floor_for(dependency, risk_level)
+        if floor is not None and floor.applied:
+            risk_level = floor.floor_level
 
         # Determine risk factors
         risk_factors = self._determine_risk_factors(
@@ -474,6 +598,7 @@ class RiskScorer:
             source_repository_score=source_repository_score,
             total_score=total_score,
             risk_level=risk_level,
+            verdict_floor=floor,
             factors=risk_factors,
             unknown_signals=unknown_signals,
             measured_signal_count=measured_signal_count,

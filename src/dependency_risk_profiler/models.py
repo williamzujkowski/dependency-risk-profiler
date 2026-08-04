@@ -27,6 +27,41 @@ class RiskLevel(Enum):
     CRITICAL = "CRITICAL"
 
 
+#: The verdict scale, weakest first. ``UNKNOWN`` is deliberately absent: it is
+#: an abstention rather than a rung, and nothing may be ordered against it.
+RISK_LEVEL_ORDER: Tuple[RiskLevel, ...] = (
+    RiskLevel.LOW,
+    RiskLevel.MEDIUM,
+    RiskLevel.HIGH,
+    RiskLevel.CRITICAL,
+)
+
+
+@dataclass(frozen=True)
+class VerdictFloor:
+    """The lower bound a live advisory puts under a verdict (#242).
+
+    Recorded whenever counted advisories establish a floor, whether or not the
+    floor moved anything. A field that only appeared when the floor fired would
+    let a test assert the *outcome* and never the *cause*, and this repository
+    has a history of expectations that start passing for the wrong reason.
+
+    ``applied`` is therefore the fact, not the existence of this object.
+    """
+
+    #: Worst severity among the advisories that counted toward the score.
+    max_counted_severity: str
+    #: The advisory that carries that severity. Lexicographically first among
+    #: ties, so the record does not depend on which source answered first.
+    advisory_id: Optional[str]
+    #: The verdict the weighted mean produced on its own.
+    unfloored_level: RiskLevel
+    #: The verdict the floor forbids the tool to report below.
+    floor_level: RiskLevel
+    #: Whether the floor actually raised the verdict.
+    applied: bool
+
+
 class LicenseCategory(Enum):
     """License categories for risk assessment."""
 
@@ -271,6 +306,11 @@ class DependencyRiskScore:
 
     total_score: float = 0.0
     risk_level: RiskLevel = RiskLevel.UNKNOWN
+    # The lagging-evidence floor under ``risk_level``, or None when the counted
+    # advisories established none (#242). Additive: ``risk_level`` still reads
+    # the same way, and this says whether a fact rather than the weighted mean
+    # is what put it there.
+    verdict_floor: Optional[VerdictFloor] = None
     factors: List[str] = field(default_factory=list)
     unknown_signals: List[str] = field(default_factory=list)
     measured_signal_count: int = 0

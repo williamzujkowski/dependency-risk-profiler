@@ -126,7 +126,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   years ago, and `dependabot_check/` in six pre-commit hooks, naming one that
   has never existed in this repository at all. Nothing mechanically checks that
   an exclusion points at something real; #252 proposes that it should.
+- **A counted advisory now puts a floor under the verdict, because the verdict
+  could not otherwise reach the evidence.** The tool printed
+  `risk_level: LOW` on the same record where it printed
+  `known_vulnerable: true`, and that pairing was not a mis-tuned weight — it
+  was arithmetically unreachable. `exploit` carries the largest single weight,
+  0.5, but there are sixteen signals whose weights sum to 3.5, so the exploit
+  signal's maximum share of the normalized score is `0.5 / 3.5 = 0.143` against
+  a LOW/MEDIUM boundary of `0.25`. **A package with a maximal exploit signal
+  and a perfect, zero-risk record on all fifteen other signals normalized to
+  0.143 and reported LOW.** No advisory load, however severe, could cross the
+  first boundary on its own.
 
+  axios 1.6.5 is the case that surfaced it, found by running the tool
+  against `examples/manifests/package-lock.json` rather than by reading the
+  code: 44 advisories found, **29** confirmed to affect the installed version,
+  maximum counted severity HIGH at CVSS 8.0 — and `LOW`. It reached LOW *because it is healthy
+  on everything else*: maintained, released last week, no deprecation. Every
+  one of those zeros is correct. The verdict built from them was not.
+
+  What this cost a user is specific. The tool spent the requests, counted the
+  29, wrote `known_vulnerable: true`, and then guaranteed by construction that
+  none of it could matter to the number a CI gate reads. Every other defect
+  fixed in this repository made the tool report *less* than it knew; this one
+  made it report a reassuring verdict over evidence it was displaying on the
+  same line.
+
+  The fix is a floor, not a re-weighting, and the distinction is load-bearing.
+  A weighted mean is a **compensatory** model — signals are exchangeable
+  evidence about one latent variable, so a good answer anywhere pays for a bad
+  answer anywhere else. Known exploitation of the installed version is
+  **non-compensatory**: a fact about the present, not a forecast about the
+  future. Your lockfile holds 1.6.5, and upstream velocity does not patch it.
+  So: **facts set floors; forecasts move within them. Leading indicators may
+  raise a verdict above the lagging floor. They may never lower it below.** The
+  rule is written into `docs/signals.md` as a general rule rather than as this
+  special case, so the next non-linearity has a principle to be tested against
+  instead of a precedent to be copied.
+
+  The floor is one rung under the maximum counted severity — `CRITICAL` → at
+  least `HIGH`, `HIGH` → at least `MEDIUM` — and the single rung of slack is
+  argued rather than assumed: advisory severity is a CVSS base tier assigned
+  without environmental context, while the verdict is about the package in
+  *this* tree, and reachability of the vulnerable path is something this tool
+  does not measure. One rung is what that unmeasured context is worth. Two
+  rungs is the verdict ignoring the fact.
+
+  It keys on `counted_vulnerability_count` — the same field `known_vulnerable`
+  is computed from, since the whole defect is that those two could contradict
+  each other. Advisories the annotator filtered floor nothing: fixed before
+  your version (#61), withdrawn, informational, or below
+  `--vuln-min-severity`. Inflating a verdict off advisories that do not affect
+  the installed version would be the same defect pointing the other way.
+
+  `risk_score` is untouched. axios still scores 1.1364 of 5, still 0.2273
+  normalized, still inside LOW's boundary; only the verdict moves. Every
+  component score is asserted at its pre-change value in
+  `testing/unit/test_verdict_floor.py`, which is what distinguishes this from a
+  re-weighting from the outside. **Corpus movement is zero: 805 scored records
+  across nine ecosystems in the test corpus, and eleven across the example
+  manifests, all unchanged in verdict and in score.** The per-ecosystem
+  measured-signal floors in #131 do not move, and neither does anything #239
+  re-baselined.
+
+  Zero, rather than the one movement this started out with, because #253
+  upgraded the example manifests to current releases hours before this landed.
+  axios 1.19.0 finds the same 44 advisories and counts **none** of them, which
+  is the negative case holding on live data. The recording in
+  `testing/fixtures/axios_1_6_5.json` is now the only place the defect
+  reproduces, and it is captured rather than authored for exactly that reason:
+  a regression whose only witness is a manifest somebody upgrades is a
+  regression that comes back.
+
+  Re-weighting was considered and rejected on arithmetic: crossing 0.25 alone
+  needs `w >= 1.0`, tripling the largest weight, which moves every score in the
+  corpus and *still* leaves a compensatory model that dilutes at higher
+  thresholds. Maximum blast radius, and it does not fix the mechanism.
+
+  Note for CI gates: `--fail-on medium` and above can now trip on a package
+  whose leading indicators are clean. That is the intended behaviour.
+  `UNKNOWN` verdicts are deliberately left alone — an abstention is not a
+  reassuring verdict, and the contract states that `insufficient_data: true`
+  implies `risk_level: UNKNOWN`, so moving it would be a schema-semantics
+  break rather than an additive change. #248 tracks that gap.
+- **`test_scoring_performance_sla` measured the machine, not the scorer, and
+  now measures the scorer.** It timed 100 unwarmed calls and asserted on the
+  single worst sample against a 5ms bar. Adding an unrelated 70 KB fixture
+  elsewhere in the suite flipped it between pass and fail — four failures in
+  eight full-suite runs, at 23-27ms — while the *average* over the same 100
+  samples stayed under 1ms and a microbenchmark showed the scoring path
+  unchanged at 17.9 µs per dependency against 18.5 µs on the parent commit. A
+  two-order-of-magnitude single sample is a GC pause or a scheduler
+  preemption, not scoring work.
+
+  Repaired the way its sibling `test_project_profile_performance_sla` already
+  was, and for the same stated reason: warm up, then take the median of three
+  batches. A real algorithmic regression shows in every batch; a hiccup shows
+  in one. Verified to still bite — 2.5ms of real work added to
+  `score_dependency` fails it at `Average scoring time 2.825ms exceeds SLA of
+  1ms`. The thresholds are unchanged; what changed is what the number means.
+  AGENTS.md says a check that fires on legitimate work is a bug in the check.
 - **The `aiohttp` cap in the dev extra was tested instead of trusted, and it
   survived.** `"aiohttp>=3.8.6,<3.14",  # Keep aioresponses mocks compatible in
   tests` is holding 14 open advisories — 1 high, 8 medium, 5 low — in this
@@ -221,6 +320,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`verdict_floor` on every `ScoredDependency`, saying whether a fact or a
+  forecast set `risk_level`.** Additive to schema 2 — no key renamed, none
+  removed, so no consumer breaks — and required rather than decorative: a
+  verdict alone cannot tell a reader which of two mechanisms produced it, and a
+  test that can only assert the outcome cannot catch an expectation that starts
+  passing for the wrong reason. The block carries `applied`, the
+  `max_counted_severity` and the `advisory_id` that carried it, the `floor`
+  itself, and the `from` / `to` transition. Every key is always present, so a
+  consumer reads `applied` instead of inferring state from which key is null —
+  the same shape `signals` uses. `applied: false` with a non-null `floor` is
+  the informative middle case: the floor was computed and the leading
+  indicators had already carried the verdict past it (#242).
 - **NuGet collects `<GlobalPackageReference>` packages, which appear in no
   project file at all.** Central Package Management lets a
   `Directory.Packages.props` apply a package to *every* project under it
