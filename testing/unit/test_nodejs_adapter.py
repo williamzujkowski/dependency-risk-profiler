@@ -18,9 +18,17 @@ from typing import Dict, Optional
 from unittest import mock
 
 import pytest
+from signal_floors import (
+    SCORES_FROM_REGISTRY_ALONE,
+    assert_measures_registry_signals,
+    assert_meets_signal_floor,
+    mark_transitive_unmeasured,
+)
 
 from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer, npm_registry_path
-from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.license.analyzer import analyze_license
+from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.release_dates import (
     RELEASE_DATE_SOURCE_KEY,
     RELEASE_DATE_SOURCE_REGISTRY,
@@ -62,6 +70,13 @@ CYPRESS_XVFB_PACKUMENT: Dict[str, object] = {
     "repository": {"type": "git", "url": "git+https://github.com/cypress-io/xvfb.git"},
     "versions": {"1.2.4": {"name": "@cypress/xvfb", "version": "1.2.4"}},
 }
+
+
+# Enough of a GitHub repository page for the community analyzer's star scrape.
+GITHUB_REPO_HTML = (
+    '<a href="/expressjs/express/stargazers" '
+    'aria-label="1,234 users starred this repository">1.2k</a>'
+)
 
 
 def _analyzer() -> NodeJSAnalyzer:
@@ -343,3 +358,81 @@ def test_a_packument_with_no_repository_declares_none() -> None:
     score = RiskScorer().score_dependency(dep)
     assert score.source_repository_score == 1.0
     assert "Declares no source repository" in score.factors
+
+
+def _score_offline(
+    name: str,
+    installed_version: str,
+    responses: Dict[str, Optional[Dict[str, object]]],
+) -> DependencyRiskScore:
+    """Run the npm pipeline for one package with every network call stubbed.
+
+    Mirrors the analyze command's order — adapter, license, community, scoring
+    — with repository cloning off, so the result reflects only what the
+    packument and a public repository page provide. npm's transitive set comes
+    from a lockfile rather than from the registry, so it is marked unmeasured
+    here for the same reason the other registry-only adapters mark it (#141).
+
+    Args:
+        name: npm package name.
+        installed_version: Version pinned by the lockfile.
+        responses: Mapping of request URL to recorded payload (None = failure).
+
+    Returns:
+        The scored dependency.
+    """
+    analyzer = _analyzer()
+    dep = DependencyMetadata(name=name, installed_version=installed_version)
+
+    def fake_fetch_json(url: str, timeout: int = 30) -> Optional[Dict[str, object]]:
+        assert url in responses, f"unexpected request: {url}"
+        return responses[url]
+
+    with mock.patch(
+        "dependency_risk_profiler.analyzers.nodejs.fetch_json",
+        side_effect=fake_fetch_json,
+    ):
+        dep = analyzer.analyze({name: dep})[name]
+
+    metadata = analyzer.metadata_cache[name]
+    dep = analyze_license(dep, metadata)
+    with mock.patch.object(
+        community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
+    ):
+        dep = community_analyzer.analyze_community_metrics(dep, metadata)
+
+    return RiskScorer().score_dependency(mark_transitive_unmeasured(dep))
+
+
+def _express_score() -> DependencyRiskScore:
+    """Score the recorded express packument with no clone and no token."""
+    return _score_offline(
+        "express",
+        "4.17.1",
+        {"https://registry.npmjs.org/express": EXPRESS_PACKUMENT},
+    )
+
+
+def test_nodejs_meets_minimum_measured_signal_coverage() -> None:
+    """The npm floor was recorded but never exercised until #136 wired it up."""
+    assert_meets_signal_floor(_express_score(), "nodejs")
+
+
+def test_nodejs_measures_the_signals_the_registry_provides() -> None:
+    """Each signal the packument can answer is measured, not left unknown."""
+    assert_measures_registry_signals(_express_score(), "nodejs")
+
+
+def test_npm_lands_one_signal_short_of_a_verdict_without_a_clone() -> None:
+    """The registry publishes no cheap maintainer count, so npm scores UNKNOWN.
+
+    ``SCORES_FROM_REGISTRY_ALONE`` records this as False for nodejs. Asserting
+    it here keeps that table honest: if npm ever grows a maintainer read, this
+    fails and the table gets updated rather than quietly describing a state
+    that no longer exists.
+    """
+    score = _express_score()
+
+    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is False
+    assert "maintainer" in score.unknown_signals
+    assert score.insufficient_data is True

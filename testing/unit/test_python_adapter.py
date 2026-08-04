@@ -22,6 +22,7 @@ from unittest import mock
 
 from signal_floors import (
     assert_abandoned_package_is_scored,
+    assert_measures_registry_signals,
     assert_meets_signal_floor,
     mark_transitive_unmeasured,
 )
@@ -372,10 +373,9 @@ def test_python_meets_minimum_measured_signal_coverage() -> None:
 
 def test_python_measures_the_signals_the_registry_provides() -> None:
     """Each signal the PyPI payload can answer is measured, not left unknown."""
-    score = _score_offline(REQUESTS_RESPONSE, "2.31.0")
-
-    registry_backed = {"staleness", "version", "license", "source_repository"}
-    assert registry_backed.isdisjoint(score.unknown_signals)
+    assert_measures_registry_signals(
+        _score_offline(REQUESTS_RESPONSE, "2.31.0"), "python"
+    )
 
 
 def test_a_failed_registry_lookup_leaves_the_source_signal_unmeasured() -> None:

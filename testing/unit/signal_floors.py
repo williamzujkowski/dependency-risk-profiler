@@ -9,35 +9,67 @@ metadata never reached the fields the scorer reads.
 
 Each floor below is what its ecosystem must be able to measure from **registry
 metadata alone** — no repository clone, no GitHub token — which is the weakest
-environment the tool runs in and the one a regression shows up in first. The
-numbers are deliberately conservative: they pin the seven signals a registry
-payload can answer (release cadence, maintainers, deprecation, version drift,
-license, community, exploit), not the ~14 a full run reaches. Transitive
-resolution is not among them: it only understands npm lockfiles and Python
-requirement sets, so for these three ecosystems the signal is honestly
-unmeasured (#141) and :func:`mark_transitive_unmeasured` reproduces that here
-rather than letting an empty set score as "no transitive risk".
+environment the tool runs in and the one a regression shows up in first.
+Transitive resolution is not among those signals for most ecosystems: it only
+understands npm lockfiles and Python requirement sets, and a lockfile is not
+registry metadata, so :func:`mark_transitive_unmeasured` reproduces the
+unmeasured marker here (#141) rather than letting an empty set score as "no
+transitive risk". nuget is the one exception, because a package's ``.nuspec``
+states its own dependencies and the registry serves it (#129).
 
-Seven of fourteen is exactly the edge: the scorer flips to UNKNOWN at
-``unmeasured > measured``, so a registry payload is *just* enough on its own
-and losing any one field takes the whole ecosystem back to the all-UNKNOWN
-state of #127 / #132. That is the property worth pinning. (#146 added a
-fifteenth signal, ``source_repository``, for the adapters that report the
-registry's answer; the floor stays at seven because the point is the edge, not
-the ceiling.)
+**The floor sits at the measured value, not below it.** Every number here was
+read off the offline adapter test it guards, and it is the exact count that
+test produces today — not a round number with headroom. Headroom is what this
+table used to have and it was the bug (#136): every ecosystem was pinned at
+seven, and seven of fourteen is precisely where the scorer flips to UNKNOWN
+(``unmeasured > measured``). A floor of seven therefore admitted a *fully
+collapsed* ecosystem — the all-UNKNOWN state of #127 / #132 — while still
+reporting green. Dropping cargo's license field takes it from eight measured
+to seven and straight to UNKNOWN, and the old floor passed that. So: a floor
+below the measured value is not a floor, it is a permission slip.
+
+The consequence is that this table ratchets. Improve an ecosystem's coverage
+and you raise its number in the same change; that is the intended cost, and it
+is how a conformance gate differs from a smoke test. The collapse arithmetic
+itself is still worth documenting, so it lives in ``test_signal_floors.py`` as
+its own assertion instead of masquerading as the floor.
+
+Where the numbers come from: crates.io, Packagist, RubyGems and NuGet each
+answer eight signals unaided; PyPI and npm answer seven, landing one short of
+the insufficient-data bar because neither publishes a cheap maintainer count.
+:data:`SCORES_FROM_REGISTRY_ALONE` records that difference rather than papering
+over it.
+
+:data:`REGISTRY_MEASURED_SIGNALS` names the signals behind each count, because
+a count cannot see a swap: an ecosystem that loses one signal and gains another
+holds its total steady while a real regression lands. Naming them is #145's
+first item ("extend it from a count to a per-signal set").
+
+It is not all of #145. The dead read that issue is named for — npm looked for a
+top-level ``deprecated`` key that npm has never sent, so no npm package could
+ever be flagged deprecated (#142) — would still pass here, because the
+deprecation score is computed from a boolean that defaults to False and is
+therefore always "measured", just always measured wrong. Catching that needs an
+assertion on a signal's *value* against a live-captured fixture, which is the
+rest of #145.
 
 :func:`assert_abandoned_package_is_scored` pins the same property from the
 other direction, for #146: a package abandoned a decade ago must still produce
 a measured release cadence and a risk verdict, because that is the population
 the maintenance-cadence signal exists to flag and the one it used to fail on.
 
+Refresh cadence: the recorded registry payloads these floors are read from live
+next to the adapter tests, each with the ``curl`` that produced it. Re-record
+them once a release cycle, or whenever an ecosystem's coverage changes; a floor
+is only as honest as the fixture underneath it.
+
 This module is the seam #73's adapter-conformance harness should grow into:
-when that lands, it should consume this table rather than each adapter test
+when that lands, it should consume these tables rather than each adapter test
 restating the reasoning.
 """
 
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, FrozenSet
 
 from dependency_risk_profiler.models import (
     DependencyMetadata,
@@ -49,19 +81,48 @@ from dependency_risk_profiler.transitive.analyzer_enhanced import (
     TRANSITIVE_SOURCE_UNMEASURED,
 )
 
-# Minimum signals an ecosystem must measure from registry metadata alone.
+# Minimum signals an ecosystem must measure from registry metadata alone, set
+# at what each one measures today. Raising these is a normal part of improving
+# an adapter; lowering one is a regression that needs a reason in the commit.
 #
-# nuget sits one above the rest because its registry publishes one more thing:
-# a package's ``.nuspec`` states the package's own dependencies, so the
-# transitive signal is genuinely measured rather than absent (#129). The other
-# three have no per-package dependency document to read and leave it unmeasured.
+# npm and PyPI sit one below the rest for the same reason: no maintainer count
+# without a clone. Everything above that line clears the insufficient-data bar
+# by exactly one signal, which is why the identity table below matters as much
+# as these counts do.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
-    "cargo": 7,
-    "composer": 7,
+    "cargo": 8,
+    "composer": 8,
     "nuget": 8,
     "nodejs": 7,
     "python": 7,
-    "rubygems": 7,
+    "rubygems": 8,
+}
+
+# Which signals make up each count. Asserted by name so that losing one signal
+# and gaining another fails instead of passing under an unchanged total (#145).
+#
+# The membership differences are real registry differences, not oversights:
+# cargo, composer and rubygems answer a maintainer count and report whether a
+# source repository is declared; nuget serves per-package dependencies in its
+# ``.nuspec`` and so measures ``transitive``, but reports nothing either way
+# about a source repository; npm and PyPI publish no cheap maintainer count.
+_REGISTRY_CORE: FrozenSet[str] = frozenset(
+    {
+        "staleness",
+        "deprecation",
+        "exploit",
+        "version",
+        "license",
+        "community",
+    }
+)
+REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
+    "cargo": _REGISTRY_CORE | {"maintainer", "source_repository"},
+    "composer": _REGISTRY_CORE | {"maintainer", "source_repository"},
+    "nuget": _REGISTRY_CORE | {"maintainer", "transitive"},
+    "nodejs": _REGISTRY_CORE | {"source_repository"},
+    "python": _REGISTRY_CORE | {"source_repository"},
+    "rubygems": _REGISTRY_CORE | {"maintainer", "source_repository"},
 }
 
 # Whether that floor is on its own enough to clear the insufficient-data bar.
@@ -79,18 +140,37 @@ SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "rubygems": True,
 }
 
-# The two tables above are keyed by the same ecosystems and are edited by
-# different people at different times: #129 added nuget to the floors while
-# #146 was independently adding this second table, and the two only met at a
-# rebase, where the missing key surfaced as a KeyError instead of a readable
-# failure. Keep them in lockstep so a half-registered ecosystem fails here,
-# naming itself, rather than deep inside an adapter test.
-_FLOORS_ONLY = sorted(MIN_MEASURED_SIGNALS.keys() - SCORES_FROM_REGISTRY_ALONE.keys())
-_VERDICT_ONLY = sorted(SCORES_FROM_REGISTRY_ALONE.keys() - MIN_MEASURED_SIGNALS.keys())
-assert not _FLOORS_ONLY and not _VERDICT_ONLY, (
-    "signal_floors tables have drifted; "
-    f"in MIN_MEASURED_SIGNALS only: {_FLOORS_ONLY}, "
-    f"in SCORES_FROM_REGISTRY_ALONE only: {_VERDICT_ONLY}"
+# The tables above are keyed by the same ecosystems and are edited by different
+# people at different times: #129 added nuget to the floors while #146 was
+# independently adding the verdict table, and the two only met at a rebase,
+# where the missing key surfaced as a KeyError instead of a readable failure.
+# Keep them in lockstep so a half-registered ecosystem fails here, naming
+# itself, rather than deep inside an adapter test.
+_ECOSYSTEMS = frozenset(MIN_MEASURED_SIGNALS)
+_TABLES = {
+    "SCORES_FROM_REGISTRY_ALONE": frozenset(SCORES_FROM_REGISTRY_ALONE),
+    "REGISTRY_MEASURED_SIGNALS": frozenset(REGISTRY_MEASURED_SIGNALS),
+}
+_DRIFT = {
+    name: (sorted(_ECOSYSTEMS - keys), sorted(keys - _ECOSYSTEMS))
+    for name, keys in _TABLES.items()
+    if keys != _ECOSYSTEMS
+}
+assert not _DRIFT, (
+    "signal_floors tables have drifted from MIN_MEASURED_SIGNALS; "
+    f"(missing, extra) per table: {_DRIFT}"
+)
+
+# The count and the named set are two views of one measurement, so a floor that
+# does not match its own signal list is a typo waiting to be argued about.
+_MISCOUNTED = {
+    ecosystem: (floor, sorted(REGISTRY_MEASURED_SIGNALS[ecosystem]))
+    for ecosystem, floor in MIN_MEASURED_SIGNALS.items()
+    if floor != len(REGISTRY_MEASURED_SIGNALS[ecosystem])
+}
+assert not _MISCOUNTED, (
+    "MIN_MEASURED_SIGNALS disagrees with REGISTRY_MEASURED_SIGNALS; "
+    f"(floor, named signals) per ecosystem: {_MISCOUNTED}"
 )
 
 # The oldest release date the tool must still describe as a measured cadence.
@@ -116,6 +196,34 @@ def mark_transitive_unmeasured(dependency: DependencyMetadata) -> DependencyMeta
     return dependency
 
 
+def assert_measures_registry_signals(
+    score: DependencyRiskScore, ecosystem: str
+) -> None:
+    """Assert every signal the ecosystem's registry can answer was measured.
+
+    The identity half of the gate. A count alone cannot tell "npm still reads
+    seven signals" from "npm lost one signal and picked up another", so the
+    names are checked too (#145). This is a floor, not an inventory: measuring
+    *more* than the recorded set is fine, and should be followed by adding the
+    new signal to :data:`REGISTRY_MEASURED_SIGNALS`.
+
+    Args:
+        score: Risk score produced with no clone and no GitHub token.
+        ecosystem: Registry key present in :data:`REGISTRY_MEASURED_SIGNALS`.
+
+    Raises:
+        AssertionError: If any recorded signal came back unmeasured.
+    """
+    required = REGISTRY_MEASURED_SIGNALS[ecosystem]
+    lost = sorted(required.intersection(score.unknown_signals))
+
+    assert not lost, (
+        f"{ecosystem} no longer measures {lost} from registry metadata; "
+        f"the count can stay flat while a signal is swapped out, which is why "
+        f"these are named. All unmeasured: {sorted(score.unknown_signals)}"
+    )
+
+
 def assert_meets_signal_floor(score: DependencyRiskScore, ecosystem: str) -> None:
     """Assert a scored dependency clears its ecosystem's measured-signal floor.
 
@@ -124,10 +232,10 @@ def assert_meets_signal_floor(score: DependencyRiskScore, ecosystem: str) -> Non
         ecosystem: Registry key present in :data:`MIN_MEASURED_SIGNALS`.
 
     Raises:
-        AssertionError: If the ecosystem measures too few signals to be scored,
-            i.e. it has regressed to the all-UNKNOWN state of #127 / #132. The
-            verdict half of the check applies only to the registries that can
-            reach it unaided, per :data:`SCORES_FROM_REGISTRY_ALONE`.
+        AssertionError: If the ecosystem measures too few signals, measures the
+            wrong ones, or has regressed to the all-UNKNOWN state of #127 /
+            #132. The verdict half of the check applies only to the registries
+            that can reach it unaided, per :data:`SCORES_FROM_REGISTRY_ALONE`.
     """
     floor = MIN_MEASURED_SIGNALS[ecosystem]
 
@@ -136,6 +244,7 @@ def assert_meets_signal_floor(score: DependencyRiskScore, ecosystem: str) -> Non
         f"{score.total_signal_count} signals (floor {floor}); "
         f"unmeasured: {score.unknown_signals}"
     )
+    assert_measures_registry_signals(score, ecosystem)
     if not SCORES_FROM_REGISTRY_ALONE[ecosystem]:
         return
     assert score.insufficient_data is False, (
