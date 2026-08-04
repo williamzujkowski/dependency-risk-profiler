@@ -8,6 +8,8 @@ such dependency would miss on read and re-query OSV despite the prewarm.
 
 from typing import List, Tuple
 
+import pytest
+
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.org_scan.models import DependencyKey, canonical_ecosystem
@@ -15,9 +17,26 @@ from dependency_risk_profiler.org_scan.pipeline import (
     ExistingDependencyProfiler,
     VulnerabilityOptions,
 )
+from dependency_risk_profiler.parsers.base import BaseParser
+from dependency_risk_profiler.parsers.registry import EcosystemRegistry
 from dependency_risk_profiler.vulnerabilities.aggregator import (
     get_cache_key,
     infer_ecosystem,
+)
+
+# Every ecosystem a manifest parser can emit, paired with the single network
+# entry point of the analyzer it dispatches to. Stubbing that method makes the
+# read-side derivation deterministic and offline.
+MANIFEST_ECOSYSTEM_FETCHERS = (
+    ("nodejs", "_get_npm_package_info"),
+    ("python", "_get_pypi_package_info"),
+    ("pyproject", "_get_pypi_package_info"),
+    ("golang", "_get_latest_version"),
+    ("cargo", "_get_crate_info"),
+    ("rubygems", "_get_gem_info"),
+    ("composer", "_get_latest_version"),
+    ("nuget", "_get_latest_version"),
+    ("maven", "_get_latest_version"),
 )
 
 
@@ -108,3 +127,48 @@ def test_prewarm_normalizes_pyproject_but_preserves_others(monkeypatch) -> None:
     # Every prewarm ecosystem is the canonical (post-analysis) one.
     for (key, _metadata), (_, ecosystem) in zip(pending, captured["pairs"]):
         assert ecosystem == canonical_ecosystem(key.ecosystem)
+
+
+def test_fetcher_table_covers_every_registered_parser_ecosystem() -> None:
+    """#116: the parity table below must track the parser registry.
+
+    A new manifest parser adds an ecosystem the prewarm can emit; if it is not
+    listed here its cache-key parity goes unchecked.
+    """
+    BaseParser._initialize_registry()
+    assert set(EcosystemRegistry.get_available_ecosystems()) == {
+        ecosystem for ecosystem, _fetcher in MANIFEST_ECOSYSTEM_FETCHERS
+    }
+
+
+@pytest.mark.parametrize("manifest_ecosystem,fetcher", MANIFEST_ECOSYSTEM_FETCHERS)
+def test_prewarm_key_matches_read_key_for_every_ecosystem(
+    manifest_ecosystem: str, fetcher: str, monkeypatch
+) -> None:
+    """#116: prewarm writes and the profiling read agree on the cache key.
+
+    Generalizes the pyproject case above to every parser ecosystem: the write
+    key (``canonical_ecosystem`` of the manifest ecosystem) and the read key
+    (``infer_ecosystem`` of the analyzed dependency) must be the same string, or
+    the prewarm silently buys nothing and every dependency re-queries OSV.
+    """
+    captured = _capture_prewarm(monkeypatch)
+
+    profiler = ExistingDependencyProfiler({}, _osv_only_options())
+    key = DependencyKey(manifest_ecosystem, "pkg", "1.0.0")
+    profiler._prewarm_osv_batch_cache(
+        [(key, DependencyMetadata(name="pkg", installed_version="1.0.0"))]
+    )
+    ((write_name, write_ecosystem),) = captured["pairs"]
+
+    analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(manifest_ecosystem)
+    assert analyzer is not None
+    analyzer.clone_repos = False
+    monkeypatch.setattr(analyzer, fetcher, lambda name: None)
+    analyzed = analyzer.analyze(
+        {"pkg": DependencyMetadata(name="pkg", installed_version="1.0.0")}
+    )["pkg"]
+
+    assert get_cache_key(write_name, write_ecosystem) == get_cache_key(
+        "pkg", infer_ecosystem(analyzed)
+    )

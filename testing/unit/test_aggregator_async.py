@@ -62,6 +62,9 @@ def test_dependency():
         installed_version="1.0.0",
         repository_url="https://github.com/test/test-package",
     )
+    # Analyzers stamp this; without it the aggregator now fails closed (#109)
+    # rather than guessing python from the repository URL.
+    dep.additional_info["ecosystem"] = "python"
     dep.security_metrics = SecurityMetrics()
     return dep
 

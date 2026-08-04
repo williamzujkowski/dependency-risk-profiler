@@ -242,6 +242,14 @@ async def aggregate_vulnerabilities_for_package_async(
     """
     package_name = dependency.name
     ecosystem = infer_ecosystem(dependency)
+    if not ecosystem:
+        # Fail closed (#109): querying every source under a guessed ecosystem
+        # returns an authoritative-looking empty result for the wrong package.
+        logger.warning(
+            f"Skipping vulnerability lookup for {package_name}: "
+            "ecosystem could not be determined"
+        )
+        return dependency, []
 
     # Check cache first
     cached = get_cached_data(package_name, ecosystem)

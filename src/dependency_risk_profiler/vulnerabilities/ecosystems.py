@@ -60,8 +60,7 @@ _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
 # testing/unit/test_ecosystem_routing_parity.py) — a missing alias would drop a
 # source's coverage for that spelling, re-introducing the #66 class. ``toml`` is
 # deliberately absent: it was a deps.dev-only, semantically-bogus alias for
-# cargo and is handled as a vestigial special case in _deps_dev_system (pending
-# removal in #75) rather than leaking "cargo" into OSV/GHA/NVD.
+# cargo, removed with the generic .toml pseudo-ecosystem (#75).
 _ALIASES: Mapping[str, str] = MappingProxyType(
     {
         "nodejs": "nodejs",
