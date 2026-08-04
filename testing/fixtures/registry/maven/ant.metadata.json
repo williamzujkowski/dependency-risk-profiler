@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<metadata>\n  <groupId>org.apache.ant</groupId>\n  <artifactId>ant</artifactId>\n  <versioning>\n    <latest>1.10.17</latest>\n    <release>1.10.17</release>\n    <versions>\n      <version>1.7.0</version>\n      <version>1.7.1</version>\n      <version>1.8.0</version>\n      <version>1.8.1</version>\n      <version>1.8.2</version>\n      <version>1.8.3</version>\n      <version>1.8.4</version>\n      <version>1.9.0</version>\n      <version>1.9.1</version>\n      <version>1.9.2</version>\n      <version>1.9.3</version>\n      <version>1.9.4</version>\n      <version>1.9.5</version>\n      <version>1.9.6</version>\n      <version>1.9.7</version>\n      <version>1.9.8</version>\n      <version>1.9.9</version>\n      <version>1.9.10</version>\n      <version>1.9.11</version>\n      <version>1.9.12</version>\n      <version>1.9.13</version>\n      <version>1.9.14</version>\n      <version>1.9.15</version>\n      <version>1.9.16</version>\n      <version>1.10.0</version>\n      <version>1.10.1</version>\n      <version>1.10.2</version>\n      <version>1.10.3</version>\n      <version>1.10.4</version>\n      <version>1.10.5</version>\n      <version>1.10.6</version>\n      <version>1.10.7</version>\n      <version>1.10.8</version>\n      <version>1.10.9</version>\n      <version>1.10.10</version>\n      <version>1.10.11</version>\n      <version>1.10.12</version>\n      <version>1.10.13</version>\n      <version>1.10.14</version>\n      <version>1.10.15</version>\n      <version>1.10.16</version>\n      <version>1.10.17</version>\n    </versions>\n    <lastUpdated>20260410150445</lastUpdated>\n  </versioning>\n</metadata>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/org/apache/ant/ant/maven-metadata.xml",
+    "trimming": []
+  }
+}

@@ -401,19 +401,19 @@ def test_the_maven_release_date_comes_from_the_metadata_document() -> None:
     assert "staleness" not in score.unknown_signals
 
 
-def test_a_maven_licence_declared_only_in_the_parent_pom_stays_unmeasured() -> None:
-    """The reading the maven capture found and this change does not fix.
+def test_a_maven_licence_declared_only_in_the_parent_pom_is_read() -> None:
+    """The reading the maven capture found, now closed (#178).
 
     Maven's convention is to declare ``<licenses>``, ``<scm>`` and
-    ``<developers>`` once in a parent POM and inherit them. The adapter reads
-    the artifact POM and stops. guava's own POM carries none of the three, so
-    its licence is unmeasured while Maven Central serves it one request away —
-    and the same holds for every Apache, Spring and Google artifact built the
-    same way.
+    ``<developers>`` once in a parent POM and inherit them. The adapter used to
+    read the artifact POM and stop, so guava's licence was unmeasured while
+    Maven Central served it one request away — and the same held for every
+    Apache Commons artifact, whose licence sits two hops up in
+    ``org.apache:apache``.
 
-    Unmeasured is the honest answer for what the adapter can currently see, and
-    that is the point of pinning it: this test goes red the day someone walks
-    the parent chain, which is when the floor should move.
+    The fixture halves of these assertions are what keep the test honest: guava
+    genuinely declares neither element, so a licence appearing on the score can
+    only have come from walking to ``guava-parent``.
     """
     fixture = load_fixture("maven", "guava.pom")
     pom = fixture.payload
@@ -422,11 +422,38 @@ def test_a_maven_licence_declared_only_in_the_parent_pom_stays_unmeasured() -> N
     assert "<scm>" not in pom
     assert "<artifactId>guava-parent</artifactId>" in pom
 
+    parent = load_fixture("maven", "guava-parent.pom")
+    parent_pom = parent.payload
+    assert isinstance(parent_pom, str)
+    assert "<licenses>" in parent_pom and "<scm>" in parent_pom
+
     score = score_case(next(c for c in CASES if c.slug == "maven/guava.pom"))
 
-    assert score.dependency.license_info is None
-    assert score.license_score is None
-    assert "license" in score.unknown_signals
+    assert score.dependency.license_info is not None
+    assert score.dependency.license_info.license_id == "APACHE"
+    assert score.license_score == 0.0
+    assert "license" not in score.unknown_signals
+
+
+def test_the_maven_parent_walk_does_not_stop_at_the_first_parent() -> None:
+    """slf4j-api's licence and repository are two hops up, not one.
+
+    slf4j-parent declares neither ``<licenses>`` nor ``<scm>``; slf4j-bom, its
+    parent, declares both. A walk that read one level and gave up would report
+    this artifact exactly as the unwalked adapter did, so the two-hop case is
+    the one that tells "walks the chain" from "reads the parent".
+    """
+    middle = load_fixture("maven", "slf4j-parent.pom")
+    middle_pom = middle.payload
+    assert isinstance(middle_pom, str)
+    assert "<licenses>" not in middle_pom
+    assert "<scm>" not in middle_pom
+
+    score = score_case(next(c for c in CASES if c.slug == "maven/slf4j-api.pom"))
+
+    assert score.dependency.repository_url == "https://github.com/qos-ch/slf4j"
+    assert score.license_score == 0.0
+    assert not {"license", "source_repository"} & set(score.unknown_signals)
 
 
 def test_two_maven_artifacts_of_the_same_era_report_different_source_states() -> None:
@@ -532,15 +559,22 @@ def test_the_packagist_abandoned_marker_names_its_successor() -> None:
     assert score.dependency.additional_info["abandoned_in_favor_of"] == "symfony/mailer"
 
 
-def test_the_packagist_entry_states_dependencies_the_adapter_does_not_read() -> None:
-    """The gap the composer audit found, recorded rather than quietly skipped.
+def test_the_packagist_entry_states_dependencies_and_the_adapter_reads_them() -> None:
+    """The gap the composer audit found, now closed (#180).
 
     The p2 release entry carries a ``require`` block naming the package's own
     dependencies — the same fact nuget reads out of its ``.nuspec`` and scores
-    as the transitive signal (#129). composer does not read it, so the signal
-    is unmeasured for every PHP package. Unmeasured is honest; it is not
-    complete, and pinning it here is what makes the gap fail loudly on the day
-    it is closed.
+    as the transitive signal (#129). Two judgements are asserted by value here
+    rather than described in a comment.
+
+    **Platform constraints are not packages.** psr/log's whole ``require`` block
+    is ``{"php": ">=8.0.0"}``. Counting it would give one dependency and a 0.1
+    score; the measured answer is zero packages and 0.0, and the two are
+    distinguishable, which is the only reason this fixture proves anything.
+
+    **``require-dev`` is not counted.** swiftmailer requires four packages at
+    runtime and two more for development. Runtime-only scores 0.1; folding the
+    dev block in scores 0.25.
     """
     fixture = load_fixture("composer", "monolog")
     payload = fixture.payload
@@ -550,8 +584,56 @@ def test_the_packagist_entry_states_dependencies_the_adapter_does_not_read() -> 
 
     score = score_case(next(c for c in CASES if c.slug == "composer/monolog"))
 
-    assert score.transitive_score is None
-    assert "transitive" in score.unknown_signals
+    assert score.dependency.transitive_dependencies == {"psr/log"}
+    assert score.transitive_score == 0.1
+    assert "transitive" not in score.unknown_signals
+
+    platform_only = load_fixture("composer", "psr-log").payload
+    assert isinstance(platform_only, Mapping)
+    assert platform_only["packages"]["psr/log"][0]["require"] == {"php": ">=8.0.0"}
+
+    psr_log = score_case(next(c for c in CASES if c.slug == "composer/psr-log"))
+
+    assert psr_log.dependency.transitive_dependencies == set()
+    assert psr_log.transitive_score == 0.0, (
+        "a require block holding only platform constraints is a measured zero; "
+        "counting 'php' as a package would score 0.1"
+    )
+
+    dev_heavy = load_fixture("composer", "swiftmailer").payload
+    assert isinstance(dev_heavy, Mapping)
+    dev_head = dev_heavy["packages"]["swiftmailer/swiftmailer"][0]
+    assert len(dev_head["require-dev"]) == 2
+
+    swiftmailer = score_case(next(c for c in CASES if c.slug == "composer/swiftmailer"))
+
+    assert "php" not in swiftmailer.dependency.transitive_dependencies
+    assert len(swiftmailer.dependency.transitive_dependencies) == 4
+    assert swiftmailer.transitive_score == 0.1, (
+        "runtime requirements only; the six-package total that includes "
+        "require-dev scores 0.25"
+    )
+
+
+def test_a_composer_vendor_that_looks_like_a_platform_prefix_still_counts() -> None:
+    """``php-http/discovery`` is a package, not a platform requirement (#180).
+
+    The platform filter tests the vendor prefix rather than the name, because
+    several real vendors start with exactly the prefixes a platform constraint
+    does. mailgun/mailgun-php requires six packages, three of them under
+    ``php-http``; a filter that matched ``php-`` before it looked for the slash
+    would report three, and score 0.1 instead of 0.25.
+    """
+    payload = load_fixture("composer", "mailgun-php").payload
+    assert isinstance(payload, Mapping)
+    require = payload["packages"]["mailgun/mailgun-php"][0]["require"]
+    assert sum(name.startswith("php-http/") for name in require) == 3
+
+    score = score_case(next(c for c in CASES if c.slug == "composer/mailgun-php"))
+
+    assert "php-http/discovery" in score.dependency.transitive_dependencies
+    assert len(score.dependency.transitive_dependencies) == 6
+    assert score.transitive_score == 0.25
 
 
 # --- 2. The non-default-branch rule ----------------------------------------

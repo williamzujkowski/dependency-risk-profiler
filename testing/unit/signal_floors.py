@@ -14,8 +14,11 @@ Transitive resolution is not among those signals for most ecosystems: it only
 understands npm lockfiles and Python requirement sets, and a lockfile is not
 registry metadata, so :func:`mark_transitive_unmeasured` reproduces the
 unmeasured marker here (#141) rather than letting an empty set score as "no
-transitive risk". nuget is the one exception, because a package's ``.nuspec``
-states its own dependencies and the registry serves it (#129).
+transitive risk". Three registries are the exception, because each publishes
+the package's own dependency list beside it: nuget in the ``.nuspec`` (#129),
+maven in the POM's ``<dependencies>``, and — since #180 — composer in the p2
+entry's ``require`` block, minus the platform constraints (``php``, ``ext-*``)
+that are runtimes rather than packages.
 
 **The floor sits at the measured value, not below it.** Every number here was
 read off the offline adapter test it guards, and it is the exact count that
@@ -34,13 +37,24 @@ is how a conformance gate differs from a smoke test. The collapse arithmetic
 itself is still worth documenting, so it lives in ``test_signal_floors.py`` as
 its own assertion instead of masquerading as the floor.
 
-Where the numbers come from: crates.io, Packagist, PyPI, RubyGems, NuGet and
-Maven Central each answer eight signals unaided; npm answers seven, landing one
-short of the insufficient-data bar because it publishes no cheap maintainer
-count. :data:`SCORES_FROM_REGISTRY_ALONE` records that difference rather than
-papering over it. PyPI was in npm's column until #171: it publishes a top-level
-``ownership`` object the adapter had never read, and reading it moved python
-from seven to eight.
+Where the numbers come from: crates.io, PyPI, RubyGems, NuGet and Maven Central
+each answer eight signals unaided and Packagist answers nine; npm answers seven,
+landing one short of the insufficient-data bar because it publishes no cheap
+maintainer count. :data:`SCORES_FROM_REGISTRY_ALONE` records that difference
+rather than papering over it. PyPI was in npm's column until #171: it publishes
+a top-level ``ownership`` object the adapter had never read, and reading it
+moved python from seven to eight.
+
+Packagist is the highest of the eight for the same reason: #180 found the p2
+entry's ``require`` block unread, which is the only registry document that
+answers a maintainer count *and* a dependency list, so composer measures
+everything nuget does plus everything cargo does. maven's floor did not move
+when #178 closed the parent-POM gap, and that is not an oversight — maven was
+already floored at everything Maven Central can answer, and the artifacts the
+fix rescues (guava, slf4j-api: licence and repository declared only in a parent)
+were below the floor rather than at it. The re-baseline there is in
+``adapter_conformance``, where both cases now assert the floor instead of
+asserting their own blindness.
 
 The Go module proxy is the outlier at six, and its floor is set where it is on
 purpose. ``proxy.golang.org`` publishes a version, a release date and a
@@ -119,10 +133,10 @@ from dependency_risk_profiler.transitive.analyzer_enhanced import (
 # had never read (#171), found by capturing a live payload for the conformance
 # harness. Everything above that line clears the insufficient-data bar by
 # exactly one signal, which is why the identity table below matters as much as
-# these counts do.
+# these counts do — except composer, which since #180 clears it by two.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "cargo": 8,
-    "composer": 8,
+    "composer": 9,
     "golang": 6,
     "maven": 8,
     "nuget": 9,
@@ -160,7 +174,7 @@ _REGISTRY_CORE: FrozenSet[str] = frozenset(
 )
 REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "cargo": _REGISTRY_CORE | {"maintainer", "source_repository"},
-    "composer": _REGISTRY_CORE | {"maintainer", "source_repository"},
+    "composer": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
     "golang": (_REGISTRY_CORE - {"license"}) | {"source_repository"},
     "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
     "nuget": _REGISTRY_CORE | {"maintainer", "transitive", "source_repository"},
@@ -241,11 +255,13 @@ def mark_transitive_unmeasured(dependency: DependencyMetadata) -> DependencyMeta
     it would credit the ecosystem with a signal it never measures.
 
     It also leaves an adapter's own record alone, and so does this: nuget reads
-    its ``.nuspec`` dependencies and maven its POM's ``<dependencies>``, both of
-    which are real measurements the adapter stamps with its own source. An empty
+    its ``.nuspec`` dependencies, maven its POM's ``<dependencies>`` and
+    composer the p2 entry's ``require`` block, all three of which are real
+    measurements the adapter stamps with its own source. An empty
     ``<dependencies>`` block on an artifact that declares none is a measured
-    zero, not an unmeasured one, and overwriting the stamp here would report it
-    as the second while the pipeline reports the first (see
+    zero, not an unmeasured one — as is a ``require`` block holding nothing but
+    ``php`` — and overwriting the stamp here would report it as unmeasured while
+    the pipeline reports it as measured (see
     ``transitive.analyzer_enhanced``, which skips dependencies that already
     carry a source).
 

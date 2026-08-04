@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<metadata>\n  <groupId>javax.inject</groupId>\n  <artifactId>javax.inject</artifactId>\n  <version>1</version>\n  <versioning>\n    <versions>\n      <version>1</version>\n    </versions>\n    <lastUpdated>20100720032040</lastUpdated>\n  </versioning>\n</metadata>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/javax/inject/javax.inject/maven-metadata.xml",
+    "trimming": []
+  }
+}

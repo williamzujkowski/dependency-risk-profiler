@@ -12,7 +12,13 @@ import requests
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
 from ..parsers.maven_central import MavenCentralClient
-from ..parsers.pom_model import PomCoordinate, PomDocument
+from ..parsers.maven_versions import ManagedVersionResolver
+from ..parsers.pom_model import (
+    InheritedMetadata,
+    PomCoordinate,
+    PomDocument,
+    inherit_metadata,
+)
 from ..parsers.xml_utils import local_name
 from ..release_dates import apply_registry_release_date, record_source_repository
 from .base import BaseAnalyzer
@@ -47,6 +53,12 @@ class MavenAnalyzer(BaseAnalyzer):
     the source repository, the license, and the artifact's own dependencies.
     Reading it is what turns a Java scan from "here are your CVEs" into the same
     signal set the profiler collects for npm, PyPI, and Go.
+
+    Reading *only* it is not enough. Maven's convention is to declare the
+    licence and the source repository once in a parent POM and inherit them, so
+    the artifact's own POM is where those two are most often absent — guava's
+    has neither, and neither does any Apache Commons artifact (#178). The parent
+    chain is walked through the same bounded client version resolution uses.
     """
 
     def __init__(
@@ -68,6 +80,11 @@ class MavenAnalyzer(BaseAnalyzer):
             if client is not None
             else MavenCentralClient(timeout=timeout, fetch_budget=512)
         )
+        # The parent walk #141 built for version resolution, reused here for the
+        # metadata that lives in the parent POM (#178). One walk, one set of
+        # fences, one memoizing client — twelve Spring starters sharing a parent
+        # cost one fetch between them.
+        self.resolver = ManagedVersionResolver(self.client)
 
     def analyze(
         self, dependencies: Dict[str, DependencyMetadata]
@@ -95,7 +112,7 @@ class MavenAnalyzer(BaseAnalyzer):
                 # — the signal the tool exists for — could only ever come from a
                 # clone (#73).
                 apply_registry_release_date(dep, last_updated)
-                document = self._collect_artifact_metadata(name, dep, latest)
+                inherited = self._collect_artifact_metadata(name, dep, latest)
                 # What the POM says about its source is a measured fact, and it
                 # has three answers rather than two. The discriminator is not
                 # whether <scm> is present but whether what it names is a git
@@ -104,9 +121,15 @@ class MavenAnalyzer(BaseAnalyzer):
                 # and all 4 resolved (#176). Recorded only when a POM was
                 # actually read — an artifact whose POM could not be fetched is
                 # unmeasured, not undeclared (#182).
-                if document is not None:
+                #
+                # The declaration is the *inherited* <scm>, not the artifact's
+                # own. An artifact that inherits a Subversion <scm> from its
+                # parent has declared one, and reading only its own POM would
+                # record UNDECLARED — #182's fabricated negative arrived at
+                # from a third direction (#178).
+                if inherited is not None:
                     record_source_repository(
-                        dep, dep.repository_url, declared=document.scm_url
+                        dep, dep.repository_url, declared=inherited.scm_url
                     )
             except Exception as exc:
                 logger.error("Error analyzing Maven package %s: %s", name, exc)
@@ -121,7 +144,7 @@ class MavenAnalyzer(BaseAnalyzer):
         name: str,
         dep: DependencyMetadata,
         latest: Optional[str],
-    ) -> Optional[PomDocument]:
+    ) -> Optional[InheritedMetadata]:
         """Read the artifact's published POM for repo, license, and deps.
 
         The installed version is preferred so the metadata describes what the
@@ -129,8 +152,9 @@ class MavenAnalyzer(BaseAnalyzer):
         whose version is managed somewhere we could not reach.
 
         Returns:
-            The POM that was read, or None when no candidate version answered —
-            which is a failed lookup, not a statement about the artifact.
+            The metadata the POM has once its parent chain is applied, or None
+            when no candidate version answered — which is a failed lookup, not
+            a statement about the artifact.
         """
         group_id, _, artifact_id = name.partition(":")
         if not group_id or not artifact_id:
@@ -142,8 +166,7 @@ class MavenAnalyzer(BaseAnalyzer):
             )
             if document is None:
                 continue
-            self._apply_artifact_metadata(name, dep, document)
-            return document
+            return self._apply_artifact_metadata(name, dep, document)
         return None
 
     @staticmethod
@@ -159,13 +182,29 @@ class MavenAnalyzer(BaseAnalyzer):
 
     def _apply_artifact_metadata(
         self, name: str, dep: DependencyMetadata, document: PomDocument
-    ) -> None:
-        """Copy repository, license, and dependency data off an artifact POM."""
+    ) -> InheritedMetadata:
+        """Copy repository, license, and dependency data off an artifact POM.
+
+        ``<licenses>`` and ``<scm>`` are read across the parent chain rather
+        than off the artifact's own POM, because Maven's convention is to
+        declare them once in a parent and inherit them — guava's own POM has
+        neither, and commons-lang3's licence is two hops up (#178).
+        Precedence is nearest-declaration-wins, the same rule #141 chose for
+        versions. ``<dependencies>`` is deliberately *not* inherited: an
+        artifact's own dependency list is what it ships, and a parent's is what
+        its siblings ship.
+
+        Returns:
+            The inherited view, so the caller can record what the artifact
+            *declares* about its source separately from what resolved (#176).
+        """
+        inherited = inherit_metadata(self.resolver.iter_lineage(document))
+
         # <scm> is the authoritative pointer; <url> is the fallback for POMs
         # that only publish a project homepage. Both get trimmed to the
         # repository root, because monorepo artifacts point at a subdirectory
         # and both git clone and the GitHub API reject that deeper path.
-        for candidate in (document.scm_url, document.project_url):
+        for candidate in (inherited.scm_url, inherited.project_url):
             repository_url = canonical_repository_url(normalize_scm_url(candidate))
             if repository_url:
                 dep.repository_url = repository_url
@@ -175,8 +214,8 @@ class MavenAnalyzer(BaseAnalyzer):
         # from <licenses>, using the plural key so the multi-license case stays
         # a list the compatibility analysis can walk.
         cached: Dict[str, object] = {"name": name}
-        if document.licenses:
-            cached["licenses"] = list(document.licenses)
+        if inherited.licenses:
+            cached["licenses"] = list(inherited.licenses)
         self.metadata_cache[name] = cached
 
         # An artifact's own <dependencies> block is a measured transitive
@@ -190,6 +229,7 @@ class MavenAnalyzer(BaseAnalyzer):
         }
         dep.transitive_dependencies = shipped
         dep.additional_info["transitive_source"] = "maven-pom"
+        return inherited
 
     def _analyze_repositories(
         self, dependencies: Dict[str, DependencyMetadata]

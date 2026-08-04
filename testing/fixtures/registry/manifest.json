@@ -48,6 +48,10 @@
         "psr-log": {
           "url": "https://repo.packagist.org/p2/psr/log.json",
           "reducer": "packagist-p2"
+        },
+        "mailgun-php": {
+          "url": "https://repo.packagist.org/p2/mailgun/mailgun-php.json",
+          "reducer": "packagist-p2"
         }
       }
     },
@@ -95,6 +99,11 @@
           "reducer": "none",
           "format": "text"
         },
+        "guava-parent.pom": {
+          "url": "https://repo1.maven.org/maven2/com/google/guava/guava-parent/33.6.0-jre/guava-parent-33.6.0-jre.pom",
+          "reducer": "none",
+          "format": "text"
+        },
         "slf4j-api.metadata": {
           "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/maven-metadata.xml",
           "reducer": "none",
@@ -102,6 +111,41 @@
         },
         "slf4j-api.pom": {
           "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-api/2.1.0-alpha1/slf4j-api-2.1.0-alpha1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "slf4j-parent.pom": {
+          "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-parent/2.1.0-alpha1/slf4j-parent-2.1.0-alpha1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "slf4j-bom.pom": {
+          "url": "https://repo1.maven.org/maven2/org/slf4j/slf4j-bom/2.1.0-alpha1/slf4j-bom-2.1.0-alpha1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "javax.inject.metadata": {
+          "url": "https://repo1.maven.org/maven2/javax/inject/javax.inject/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "javax.inject.pom": {
+          "url": "https://repo1.maven.org/maven2/javax/inject/javax.inject/1/javax.inject-1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "ant.metadata": {
+          "url": "https://repo1.maven.org/maven2/org/apache/ant/ant/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "ant.pom": {
+          "url": "https://repo1.maven.org/maven2/org/apache/ant/ant/1.10.13/ant-1.10.13.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "ant-parent.pom": {
+          "url": "https://repo1.maven.org/maven2/org/apache/ant/ant-parent/1.10.13/ant-parent-1.10.13.pom",
           "reducer": "none",
           "format": "text"
         },

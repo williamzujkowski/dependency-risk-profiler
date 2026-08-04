@@ -1,0 +1,11 @@
+{
+  "payload": "<project>\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>javax.inject</groupId>\n  <artifactId>javax.inject</artifactId>\n  <packaging>jar</packaging>\n  <name>javax.inject</name>\n  <version>1</version>\n  <description>The javax.inject API</description>\n  <url>http://code.google.com/p/atinject/</url>\n  <licenses>\n    <license>\n      <name>The Apache Software License, Version 2.0</name>\n      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>\n      <distribution>repo</distribution>\n    </license>\n  </licenses>\n  <scm>\n    <url>http://code.google.com/p/atinject/source/checkout</url>\n  </scm>\n</project>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/javax/inject/javax.inject/1/javax.inject-1.pom",
+    "trimming": []
+  }
+}

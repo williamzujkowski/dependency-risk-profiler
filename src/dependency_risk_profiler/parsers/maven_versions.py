@@ -28,7 +28,7 @@ POM whose dependencies are all pinned inline never touches the network.
 
 import logging
 from dataclasses import dataclass, replace
-from typing import Dict, FrozenSet, List, Optional, Set
+from typing import Dict, FrozenSet, Iterator, List, Optional, Set
 
 from .maven_central import MavenCentralClient
 from .pom_model import (
@@ -105,30 +105,50 @@ class ManagedVersionResolver:
 
     def _resolve(self, document: PomDocument, scope: _Scope) -> "ResolvedPom":
         """Resolve one POM's own effective property and management scope."""
-        chain = self._parent_chain(document)
+        chain = self.parent_chain(document)
         properties = self._merged_properties(chain)
         managed = self._merged_management(chain, properties, scope)
         return ResolvedPom(properties=properties, managed=managed, chain=chain)
 
-    def _parent_chain(self, document: PomDocument) -> List[PomDocument]:
-        """Return the POM and its reachable ancestors, nearest first."""
-        chain = [document]
+    def iter_lineage(self, document: PomDocument) -> Iterator[PomDocument]:
+        """Yield the POM and its reachable ancestors, nearest first.
+
+        Lazy on purpose. Version resolution consumes the whole chain, but the
+        metadata inheritance added in #178 stops as soon as it has a licence
+        and an SCM URL, and a caller that stops after the leaf POM costs no
+        network request at all. Every fetch goes through the same
+        :class:`~.maven_central.MavenCentralClient` as the rest of this module,
+        so the host allowlist, redirect refusal, byte cap, XXE-safe parse,
+        memoization and per-manifest fetch budget all apply unchanged.
+
+        Args:
+            document: The POM to start from.
+
+        Yields:
+            ``document`` first, then each ancestor that could be fetched, up to
+            :data:`MAX_PARENT_DEPTH`. A parent that cannot be retrieved ends the
+            walk rather than being guessed at.
+        """
+        yield document
         current = document
         for _ in range(MAX_PARENT_DEPTH):
             parent_coordinate = current.parent
             if parent_coordinate is None:
-                break
+                return
             parent = self.client.fetch_pom(parent_coordinate)
             if parent is None:
                 logger.debug(
-                    "Parent POM %s:%s is not reachable; version resolution stops here",
+                    "Parent POM %s:%s is not reachable; the walk stops here",
                     parent_coordinate.key,
                     parent_coordinate.version,
                 )
-                break
-            chain.append(parent)
+                return
+            yield parent
             current = parent
-        return chain
+
+    def parent_chain(self, document: PomDocument) -> List[PomDocument]:
+        """Return the POM and its reachable ancestors, nearest first."""
+        return list(self.iter_lineage(document))
 
     @staticmethod
     def _merged_properties(chain: List[PomDocument]) -> Dict[str, str]:

@@ -6,11 +6,13 @@ from typing import Dict, List, Optional
 import requests
 
 from ..models import DependencyMetadata
+from ..parsers.composer import required_packages
 from ..release_dates import (
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
 )
+from ..transitive.analyzer_enhanced import TRANSITIVE_SOURCE_KEY
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -18,6 +20,12 @@ logger = logging.getLogger(__name__)
 
 PACKAGIST_METADATA_BASE = "https://repo.packagist.org/p2"
 _USER_AGENT = "dependency-risk-profiler (metadata lookup)"
+
+# Recorded so the transitive signal is treated as measured rather than as an
+# assumed-empty set (#141). The p2 entry states the package's own runtime
+# requirements, which is a real measurement — psr/log requires only ``php`` and
+# so has a measured zero, not an unmeasured one (#180).
+TRANSITIVE_SOURCE_PACKAGIST = "packagist-require"
 
 
 class ComposerAnalyzer(BaseAnalyzer):
@@ -120,6 +128,16 @@ class ComposerAnalyzer(BaseAnalyzer):
         # cadence a consumer of the package actually sees, and it now wins over
         # a clone's last commit rather than being overwritten by it (#146).
         apply_registry_release_date(dep, parse_registry_timestamp(release.get("time")))
+
+        # The p2 entry's `require` block names the package's own runtime
+        # dependencies — the same fact nuget reads out of its .nuspec and maven
+        # out of its POM's <dependencies>. Platform constraints (`php`, `ext-*`)
+        # are not packages and are dropped; `require-dev` is not what installing
+        # the package pulls in and is not read (#180).
+        dep.transitive_dependencies = required_packages(release.get("require")) - {
+            dep.name
+        }
+        dep.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_PACKAGIST
 
         # Packagist marks a replaced package with `abandoned`: either `true` or
         # the name of the package that supersedes it.
