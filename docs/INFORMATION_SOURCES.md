@@ -76,9 +76,13 @@ Example API response structure:
   being a subdirectory module), and rewrites `golang.org/x/<name>` to its
   `github.com/golang/<name>` mirror offline. Remaining vanity import paths are resolved from
   the `go-import` meta tag at `https://{module}?go-get=1` — a bounded fetch (hard timeout,
-  response-size cap, redirect limit, public hosts only) whose response is trusted for
-  nothing but the `go-import` content, cached per import prefix. A module that does not
-  resolve keeps its repository-derived signals unmeasured rather than scored.
+  response-size cap, redirect limit, https and public hosts only) whose response is trusted
+  for nothing but the `go-import` content, cached per import prefix. The host is resolved
+  before the connection is opened and refused if any of its addresses is private, loopback,
+  link-local or a cloud-metadata endpoint; the socket then goes to a validated address
+  rather than to the name, so a public-looking vanity domain cannot rebind onto an internal
+  one. Every redirect hop repeats the whole check. A module that does not resolve keeps its
+  repository-derived signals unmeasured rather than scored.
 
 ### Rust (crates.io)
 

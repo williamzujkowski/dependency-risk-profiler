@@ -32,9 +32,12 @@ manifest under analysis, which an attacker may influence. The fetch is bounded
 only the ``content`` attribute of ``go-import`` meta tags is read. The repository
 root it yields is re-validated as an https URL on a public host before use;
 scheme, credentials, port, query and fragment from the response are discarded.
+The fetch itself is performed by :mod:`dependency_risk_profiler.secure_http`,
+which resolves the host and pins the connection to a validated address on every
+hop, so a public-looking vanity domain cannot rebind onto a private or
+cloud-metadata address (#138).
 """
 
-import ipaddress
 import logging
 import re
 from dataclasses import dataclass
@@ -42,7 +45,8 @@ from html.parser import HTMLParser
 from typing import Callable, Dict, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
-import requests
+from .secure_http import SafeFetcher
+from .secure_http import is_public_host as _is_public_host
 
 logger = logging.getLogger(__name__)
 
@@ -60,14 +64,11 @@ _STATIC_MIRRORS: Tuple[Tuple[str, str], ...] = (
     ("golang.org/x/", "github.com/golang/"),
 )
 
-_HOSTNAME = re.compile(
-    r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
-)
-
 # Bounds on the untrusted ?go-get=1 fetch. The document we want is a handful of
 # meta tags; anything larger is not a Go vanity page.
 GO_IMPORT_MAX_BYTES = 256 * 1024
 GO_IMPORT_MAX_REDIRECTS = 3
+GO_IMPORT_USER_AGENT = "dependency-risk-profiler (go-import lookup)"
 
 # A callable that returns the body of a ?go-get=1 URL, or None. Injected so the
 # test suite can exercise vanity resolution without touching the network.
@@ -152,6 +153,12 @@ class GoModuleResolver:
                 ``lambda url: None`` to disable vanity resolution entirely.
         """
         self.timeout = timeout
+        self._fetcher = SafeFetcher(
+            timeout=float(timeout),
+            max_bytes=GO_IMPORT_MAX_BYTES,
+            max_redirects=GO_IMPORT_MAX_REDIRECTS,
+            user_agent=GO_IMPORT_USER_AGENT,
+        )
         self._fetch: MetaFetcher = fetch if fetch is not None else self._fetch_go_import
         # Keyed by import prefix; the value is the resolution for that prefix
         # itself, including whether its lookup could be performed at all.
@@ -254,36 +261,12 @@ class GoModuleResolver:
     def _fetch_go_import(self, url: str) -> Optional[str]:
         """Fetch a ``?go-get=1`` document under strict bounds, or return None.
 
-        The response is attacker-influenceable, so it is size-capped while being
-        streamed, redirect-limited, and never trusted beyond the meta tags the
-        caller extracts from it.
+        The response is attacker-influenceable, so ``SafeFetcher`` size-caps it
+        while reading, bounds the redirect budget, and re-validates and re-pins
+        the destination address on every hop. Nothing beyond the meta tags the
+        caller extracts is trusted.
         """
-        session = requests.Session()
-        session.max_redirects = GO_IMPORT_MAX_REDIRECTS
-        try:
-            response = session.get(
-                url,
-                timeout=self.timeout,
-                stream=True,
-                headers={
-                    "Accept": "text/html",
-                    "User-Agent": "dependency-risk-profiler (go-import lookup)",
-                },
-            )
-            if response.status_code != 200:
-                return None
-            body = bytearray()
-            for chunk in response.iter_content(chunk_size=8192):
-                body.extend(chunk)
-                if len(body) >= GO_IMPORT_MAX_BYTES:
-                    del body[GO_IMPORT_MAX_BYTES:]
-                    break
-            return body.decode("utf-8", errors="replace")
-        except requests.RequestException as exc:
-            logger.debug("go-import lookup failed for %s: %s", url, exc)
-            return None
-        finally:
-            session.close()
+        return self._fetcher.fetch_text(url)
 
 
 def _repository_from_path(path: str) -> Optional[ModuleRepository]:
@@ -383,22 +366,3 @@ def _validated_repo_root(value: str) -> Optional[str]:
     if not path:
         return None
     return f"{host}/{path}"
-
-
-def _is_public_host(host: Optional[str]) -> bool:
-    """Return True for a syntactically valid, publicly routable hostname.
-
-    Blocks IP literals outside the global range and ``localhost`` so a hostile
-    manifest cannot aim the ``?go-get=1`` fetch at a link-local metadata service
-    or an internal address.
-    """
-    if not host:
-        return False
-    lowered = host.lower().rstrip(".")
-    if lowered == "localhost" or lowered.endswith(".localhost"):
-        return False
-    try:
-        address = ipaddress.ip_address(lowered.strip("[]"))
-    except ValueError:
-        return _HOSTNAME.match(lowered) is not None
-    return address.is_global
