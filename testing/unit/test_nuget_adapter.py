@@ -48,12 +48,8 @@ from dependency_risk_profiler.parsers.version_sources import (
     VERSION_SOURCE_DECLARED,
     VERSION_SOURCE_KEY,
 )
-from dependency_risk_profiler.release_dates import (
-    SOURCE_REPOSITORY_DECLARED,
-    SOURCE_REPOSITORY_KEY,
-    SOURCE_REPOSITORY_UNUSABLE,
-)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import SourceRepositoryState
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
 PACKAGES_LOCK = {
@@ -530,10 +526,7 @@ def test_the_nuspec_repository_declaration_is_a_measured_signal() -> None:
     """
     score = _score_offline()
 
-    assert (
-        score.dependency.additional_info[SOURCE_REPOSITORY_KEY]
-        == SOURCE_REPOSITORY_DECLARED
-    )
+    assert score.dependency.source_repository_state == SourceRepositoryState.DECLARED
     assert score.source_repository_score == 0.0
     assert "source_repository" not in score.unknown_signals
 
@@ -571,10 +564,7 @@ def test_a_nuspec_repository_on_a_non_forge_host_is_declared_but_unusable() -> N
 
     score = _score_offline(_recorded_responses(nuspec=nuspec))
 
-    assert (
-        score.dependency.additional_info[SOURCE_REPOSITORY_KEY]
-        == SOURCE_REPOSITORY_UNUSABLE
-    )
+    assert score.dependency.source_repository_state == SourceRepositoryState.UNUSABLE
     assert score.source_repository_score == 0.75
 
 
@@ -588,7 +578,7 @@ def test_an_unanswered_nuget_lookup_leaves_the_source_signal_unmeasured() -> Non
 
     score = RiskScorer().score_dependency(dep)
 
-    assert SOURCE_REPOSITORY_KEY not in dep.additional_info
+    assert dep.source_repository_state is None
     assert score.source_repository_score is None
     assert "source_repository" not in score.unknown_signals
 

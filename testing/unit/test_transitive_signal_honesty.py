@@ -12,9 +12,8 @@ from typing import Dict
 
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import TRANSITIVE_SOURCE_UNMEASURED
 from dependency_risk_profiler.transitive.analyzer_enhanced import (
-    TRANSITIVE_SOURCE_KEY,
-    TRANSITIVE_SOURCE_UNMEASURED,
     analyze_transitive_dependencies_enhanced,
 )
 
@@ -25,7 +24,7 @@ def _dependencies() -> Dict[str, DependencyMetadata]:
         name="com.google.guava:guava", installed_version="33.0.0-jre"
     )
     measured.transitive_dependencies = {"com.google.guava:failureaccess"}
-    measured.additional_info[TRANSITIVE_SOURCE_KEY] = "maven-pom"
+    measured.transitive_source = "maven-pom"
     return {
         "com.google.guava:guava": measured,
         "org.jsoup:jsoup": DependencyMetadata(
@@ -40,15 +39,9 @@ def test_unsupported_manifest_marks_transitive_unmeasured(tmp_path: str) -> None
 
     result = analyze_transitive_dependencies_enhanced(_dependencies(), pom)
 
-    assert (
-        result["org.jsoup:jsoup"].additional_info[TRANSITIVE_SOURCE_KEY]
-        == TRANSITIVE_SOURCE_UNMEASURED
-    )
+    assert result["org.jsoup:jsoup"].transitive_source == TRANSITIVE_SOURCE_UNMEASURED
     # What the ecosystem analyzer already collected is left alone.
-    assert (
-        result["com.google.guava:guava"].additional_info[TRANSITIVE_SOURCE_KEY]
-        == "maven-pom"
-    )
+    assert result["com.google.guava:guava"].transitive_source == "maven-pom"
     assert result["com.google.guava:guava"].transitive_dependencies == {
         "com.google.guava:failureaccess"
     }
@@ -58,7 +51,7 @@ def test_unmeasured_transitive_is_excluded_from_the_score() -> None:
     """An unmeasured signal leaves both numerator and denominator (#74)."""
     scorer = RiskScorer()
     unmeasured = DependencyMetadata(name="a:b", installed_version="1.0.0")
-    unmeasured.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_UNMEASURED
+    unmeasured.transitive_source = TRANSITIVE_SOURCE_UNMEASURED
 
     score = scorer.score_dependency(unmeasured)
 
@@ -70,7 +63,7 @@ def test_measured_empty_transitive_still_scores_zero() -> None:
     """Looking and finding nothing is a real result, and still scores 0.0."""
     scorer = RiskScorer()
     looked = DependencyMetadata(name="a:b", installed_version="1.0.0")
-    looked.additional_info[TRANSITIVE_SOURCE_KEY] = "manifest"
+    looked.transitive_source = "manifest"
 
     score = scorer.score_dependency(looked)
 

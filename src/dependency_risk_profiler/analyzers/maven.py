@@ -21,6 +21,7 @@ from ..parsers.pom_model import (
 )
 from ..parsers.xml_utils import local_name
 from ..release_dates import apply_registry_release_date, record_source_repository
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, cloned_repo, is_cloneable_repo_url
 
@@ -36,6 +37,14 @@ _LAST_UPDATED_FORMAT = "%Y%m%d%H%M%S"
 # "provided" dependencies are not part of a consumer's runtime surface, so they
 # do not belong in the transitive-dependency signal.
 _SHIPPED_SCOPES = {None, "compile", "runtime"}
+
+# Recorded so the transitive signal is treated as measured rather than as an
+# assumed-empty set (#141). An artifact whose POM declares no dependencies has
+# a measured zero, not an unmeasured one. This used to be a bare string literal
+# writing straight into ``additional_info``, which meant the one place the
+# marker was spelled by hand was the one place a typo would have read as
+# "unmeasured" forever (#164).
+TRANSITIVE_SOURCE_MAVEN_POM = "maven-pom"
 
 # Maven SCM connection strings are URLs wearing a costume: "scm:git:" prefixes,
 # "git://" and "ssh://" schemes, and the scp-style "git@host:owner/repo" form.
@@ -228,7 +237,7 @@ class MavenAnalyzer(BaseAnalyzer):
             and declaration.key != name
         }
         dep.transitive_dependencies = shipped
-        dep.additional_info["transitive_source"] = "maven-pom"
+        record_transitive_source(dep, source=TRANSITIVE_SOURCE_MAVEN_POM)
         return inherited
 
     def _analyze_repositories(

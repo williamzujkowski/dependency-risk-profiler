@@ -23,9 +23,10 @@ defaulted to a date nobody published.
 
 import logging
 from datetime import datetime
-from typing import FrozenSet, Iterable, List, Optional
+from typing import Iterable, List, Optional
 
 from .models import DependencyMetadata
+from .signals import SourceRepositoryState
 from .utils import canonical_repository_url
 
 logger = logging.getLogger(__name__)
@@ -33,36 +34,15 @@ logger = logging.getLogger(__name__)
 # Provenance of ``DependencyMetadata.last_updated``. Recorded rather than
 # inferred from "is it already set?" so the precedence rule is explicit: only a
 # registry-sourced date blocks a later repository-sourced one.
+#
+# Still a stringly-typed ``additional_info`` entry, and deliberately so. This
+# one records *which of two write paths won*, not whether a signal was
+# measured, which puts it under the provenance item of #164 — the one gated on
+# a benchmark and sequenced last. Folding it in here would be doing that work
+# early and under a different name.
 RELEASE_DATE_SOURCE_KEY = "release_date_source"
 RELEASE_DATE_SOURCE_REGISTRY = "registry"
 RELEASE_DATE_SOURCE_REPOSITORY = "repository"
-
-# What the registry says about the package's source repository. A package that
-# no longer says where its source lives is a leading indicator in its own
-# right, and it is the reason eight repository-derived signals go quiet.
-#
-# Three states, not two. "Declares nothing" and "declares something that is not
-# a git forge" are different facts and used to be recorded identically:
-# commons-collections:3.1 carries no <scm> element at all, while log4j:1.2.17
-# declares one pointing at svn.apache.org. One project never said where its
-# source lives; the other said so in the idiom of 2012 and the answer has since
-# been decommissioned (#176).
-#
-# A fourth state is the absence of this key entirely: the lookup did not happen
-# or did not answer. That is unmeasured, and it must never be written as a
-# negative finding — a 404 scored as "declares no source repository" is #141's
-# fabricated zero in a different field (#182).
-SOURCE_REPOSITORY_KEY = "declares_source_repository"
-SOURCE_REPOSITORY_DECLARED = "true"
-SOURCE_REPOSITORY_UNUSABLE = "unusable"
-SOURCE_REPOSITORY_UNDECLARED = "false"
-
-# The states in which no repository can be read, whatever the registry said.
-# Both silence the same eight repository-derived signals, so both explain that
-# silence as one measured fact rather than eight independent gaps (#146).
-SOURCE_REPOSITORY_UNREADABLE: FrozenSet[str] = frozenset(
-    {SOURCE_REPOSITORY_UNUSABLE, SOURCE_REPOSITORY_UNDECLARED}
-)
 
 
 def parse_registry_timestamp(value: object) -> Optional[datetime]:
@@ -172,6 +152,11 @@ def record_source_repository(
 ) -> None:
     """Record what the registry said about the package's source repository.
 
+    The state is a :class:`~.signals.SourceRepositoryState` on the dependency
+    rather than a string in ``additional_info``: this is a measurement state,
+    and #164 moved measurement states out of the untyped bag so a typo cannot
+    read as a different answer and mypy can see the field at all.
+
     Three states, and the caller has to supply the evidence for the middle one,
     which is why ``declared`` is keyword-only and has no default: the difference
     between "declared nothing" and "declared something unusable" is only visible
@@ -192,7 +177,7 @@ def record_source_repository(
     UNDECLARED rather than promoting a landing page to a broken repository.
 
     Call this only when the registry actually answered. A failed lookup leaves
-    the key unset, which is the unmeasured state (#182).
+    the state None, which is the unmeasured state (#182).
 
     Args:
         dependency: Dependency metadata to update in place.
@@ -201,12 +186,12 @@ def record_source_repository(
             None when that field is absent or empty.
     """
     if canonical_repository_url(repository_url) is not None:
-        state = SOURCE_REPOSITORY_DECLARED
+        state = SourceRepositoryState.DECLARED
     elif declared is not None and declared.strip():
-        state = SOURCE_REPOSITORY_UNUSABLE
+        state = SourceRepositoryState.UNUSABLE
     else:
-        state = SOURCE_REPOSITORY_UNDECLARED
-    dependency.additional_info[SOURCE_REPOSITORY_KEY] = state
+        state = SourceRepositoryState.UNDECLARED
+    dependency.source_repository_state = state
 
 
 def _normalize_fractional_seconds(text: str) -> Optional[str]:

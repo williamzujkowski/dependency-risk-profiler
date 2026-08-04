@@ -20,11 +20,8 @@ from dependency_risk_profiler.go_modules import (
     _validated_repo_root,
 )
 from dependency_risk_profiler.models import DependencyMetadata
-from dependency_risk_profiler.release_dates import (
-    SOURCE_REPOSITORY_KEY,
-    SOURCE_REPOSITORY_UNUSABLE,
-)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import SourceRepositoryState
 
 
 def _meta(prefix: str, repo_root: str) -> str:
@@ -346,7 +343,7 @@ def test_a_module_on_a_non_forge_host_is_declared_but_unusable() -> None:
         )[name]
 
     assert analyzed.repository_url == "https://software.sslmate.com/src/go-pkcs12.git"
-    assert analyzed.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNUSABLE
+    assert analyzed.source_repository_state == SourceRepositoryState.UNUSABLE
     assert RiskScorer().score_dependency(analyzed).source_repository_score == 0.75
 
 
@@ -360,7 +357,7 @@ def test_a_module_path_with_no_repository_in_it_is_declared_but_unusable() -> No
         )[name]
 
     assert analyzed.repository_url is None
-    assert analyzed.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNUSABLE
+    assert analyzed.source_repository_state == SourceRepositoryState.UNUSABLE
 
 
 def test_a_vanity_host_that_does_not_answer_leaves_the_signal_unmeasured() -> None:
@@ -378,7 +375,7 @@ def test_a_vanity_host_that_does_not_answer_leaves_the_signal_unmeasured() -> No
             {name: DependencyMetadata(name=name, installed_version="v1.0.0")}
         )[name]
 
-    assert SOURCE_REPOSITORY_KEY not in analyzed.additional_info
+    assert analyzed.source_repository_state is None
     assert RiskScorer().score_dependency(analyzed).source_repository_score is None
 
 

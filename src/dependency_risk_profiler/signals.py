@@ -1,0 +1,685 @@
+"""Stable signal names, the two-state measurement, and the reason table (#164).
+
+Three things live here, and they are one idea:
+
+**1. The signal names are ours and they are stable.** The ratified design
+originally proposed renaming our signals to OpenSSF Scorecard's check names.
+That was rejected, and the reason generalizes: this whole effort is justified on
+*API stability*, and Scorecard's vocabulary is not ours to keep stable. Our
+``signed_commits`` is the sharp case — see :data:`SIGNAL_CATALOG` and
+``docs/signals.md`` — because at the pinned Scorecard version there is no
+commit-signing check at all. Adopting an upstream name we cannot hold still
+would have traded our stability guarantee for the appearance of interop.
+
+So: our names stay, and the correspondence to Scorecard is published as a
+*mapping table pinned to a version*, with every approximate row marked as
+approximate. A mapping a consumer can read is worth more than a rename a
+consumer cannot rely on.
+
+**2. A signal is MEASURED with a value or UNMEASURED with a reason, enforced at
+construction.** #141 shipped a confident ``0.0`` for a signal nobody measured;
+#166 shipped a composite that silently degraded to its weakest component while
+still reporting as measured. Both are the same defect: the type allowed a value
+to exist without a measurement behind it. :class:`Measurement` does not. There
+is no way to build one carrying a value without ``MEASURED``, or one carrying
+``UNMEASURED`` without a reason, and instances are frozen after construction so
+a value cannot be grafted on afterwards.
+
+**3. Classification is centralized, never adapter-local.** :func:`
+unmeasured_reason_for` is the only place that decides *why* a signal came back
+unmeasured, and it decides from the catalog plus one keyword-only fact the
+scorer already knows. Eight adapters making that judgment independently is how
+a table of eight right answers becomes a table of eight opinions.
+
+**``NOT_APPLICABLE`` is deliberately absent.** The design deferred it behind a
+schema version until a consumer demonstrably branches on it, on an argument
+that applies just as forcefully here: *no conformance harness check can tell a
+wrong NOT_APPLICABLE from a right one*. It is the one piece of the design that
+cannot be machine-verified, and a confidently-wrong classification is worse
+than an honest unknown. Note that this also rules out smuggling it back in as a
+*reason*: :class:`UnmeasuredReason` carries no "this signal does not apply to
+this ecosystem" member, and must not grow one. Every reason below is decided
+from a fact the scorer observed, not from a judgment about the package.
+"""
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import FrozenSet, Mapping, Optional
+
+# --- Signal names ----------------------------------------------------------
+#
+# These strings are the public vocabulary: they appear in ``unknown_signals`` in
+# the JSON report and in the conformance harness's per-ecosystem tables. They
+# are stable. Renaming one is a breaking change to the output contract, not a
+# refactor.
+
+SIGNAL_STALENESS = "staleness"
+SIGNAL_MAINTAINER = "maintainer"
+SIGNAL_DEPRECATION = "deprecation"
+SIGNAL_EXPLOIT = "exploit"
+SIGNAL_VERSION = "version"
+SIGNAL_HEALTH_INDICATORS = "health_indicators"
+SIGNAL_LICENSE = "license"
+SIGNAL_COMMUNITY_POPULARITY = "community_popularity"
+SIGNAL_COMMUNITY_ACTIVITY = "community_activity"
+SIGNAL_TRANSITIVE = "transitive"
+SIGNAL_SECURITY_POLICY = "security_policy"
+SIGNAL_DEPENDENCY_UPDATE = "dependency_update"
+SIGNAL_SIGNED_COMMITS = "signed_commits"
+SIGNAL_BRANCH_PROTECTION = "branch_protection"
+SIGNAL_MAINTAINED = "maintained"
+SIGNAL_SOURCE_REPOSITORY = "source_repository"
+
+
+# --- The two-state measurement ---------------------------------------------
+
+
+class MeasurementState(Enum):
+    """Whether a signal was measured at all.
+
+    Two states, not three. See the module docstring for why
+    ``NOT_APPLICABLE`` is not here and must not be added without a consumer
+    that demonstrably branches on it.
+    """
+
+    MEASURED = "measured"
+    UNMEASURED = "unmeasured"
+
+
+class UnmeasuredReason(Enum):
+    """Why a signal could not be measured.
+
+    Each member is decided from something the scorer *observed*, so each one is
+    checkable by the conformance harness. None of them is a judgment about
+    whether the signal ought to apply to the package — that is the deferred
+    ``NOT_APPLICABLE`` wearing a different hat, and it does not belong here.
+    """
+
+    #: The registry answered, and no readable source repository came out of it,
+    #: so the repository-derived signals had nothing to read. One measured fact
+    #: standing behind several silent signals (#146).
+    SOURCE_REPOSITORY_UNREADABLE = "source_repository_unreadable"
+
+    #: The input this signal reads was absent from whatever answered: the
+    #: registry published no such field, or the lookup returned nothing. The
+    #: default, and the one to pick when uncertain.
+    NO_DATA_FROM_SOURCE = "no_data_from_source"
+
+    #: The pipeline step that answers this signal never ran for this manifest.
+    #: Distinct from "it ran and found nothing", which is a measured zero.
+    LOOKUP_NOT_ATTEMPTED = "lookup_not_attempted"
+
+
+class Measurement:
+    """One signal's value, or the reason there isn't one.
+
+    Construction is the gate. ``MEASURED`` requires a value and forbids a
+    reason; ``UNMEASURED`` requires a reason and forbids a value. Instances are
+    frozen afterwards, so neither state can be edited into the other. A
+    fabricated ``0.0`` is therefore not discouraged — it is unrepresentable.
+
+    ``__slots__`` rather than a dataclass because the org scan builds one of
+    these per signal per dependency across thousands of dependencies in a
+    thread pool, and the design review asked for that cost to be measured
+    rather than assumed. See ``docs/signals.md`` for the numbers.
+    """
+
+    __slots__ = ("state", "value", "reason")
+
+    state: MeasurementState
+    value: Optional[float]
+    reason: Optional[UnmeasuredReason]
+
+    def __init__(
+        self,
+        state: MeasurementState,
+        value: Optional[float],
+        reason: Optional[UnmeasuredReason],
+    ) -> None:
+        """Build a measurement, rejecting every inconsistent combination.
+
+        Prefer :meth:`measured`, :meth:`unmeasured`, or :meth:`from_optional`;
+        this signature exists so the invariant has exactly one enforcement
+        point rather than three.
+
+        Args:
+            state: Whether the signal was measured.
+            value: The measured value. Required for ``MEASURED``, forbidden
+                for ``UNMEASURED``.
+            reason: Why it was not measured. Required for ``UNMEASURED``,
+                forbidden for ``MEASURED``.
+
+        Raises:
+            ValueError: If the arguments describe a signal that carries a value
+                nobody measured, or a measurement with no value.
+        """
+        if state is MeasurementState.MEASURED:
+            if value is None:
+                raise ValueError("a MEASURED signal must carry a value")
+            if reason is not None:
+                raise ValueError("a MEASURED signal must not carry a reason")
+        else:
+            if reason is None:
+                raise ValueError("an UNMEASURED signal must carry a reason")
+            if value is not None:
+                raise ValueError(
+                    "an UNMEASURED signal must not carry a value: a number "
+                    "nobody measured is the #141 defect this type exists to "
+                    "make unrepresentable"
+                )
+        object.__setattr__(self, "state", state)
+        object.__setattr__(self, "value", value)
+        object.__setattr__(self, "reason", reason)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Refuse post-construction edits.
+
+        Args:
+            name: Attribute being assigned.
+            value: Value being assigned.
+
+        Raises:
+            AttributeError: Always. Validation happens once, at construction;
+                an editable measurement is one ``m.value = 0.0`` away from
+                being the bug this type prevents.
+        """
+        raise AttributeError(f"Measurement is immutable; cannot set {name!r}")
+
+    def __delattr__(self, name: str) -> None:
+        """Refuse post-construction deletes.
+
+        Args:
+            name: Attribute being deleted.
+
+        Raises:
+            AttributeError: Always, for the same reason as :meth:`__setattr__`.
+        """
+        raise AttributeError(f"Measurement is immutable; cannot delete {name!r}")
+
+    def __repr__(self) -> str:
+        """Return a debugger-friendly rendering.
+
+        Returns:
+            The state plus whichever of value or reason it carries.
+        """
+        if self.state is MeasurementState.MEASURED:
+            return f"Measurement.measured({self.value!r})"
+        return f"Measurement.unmeasured({self.reason})"
+
+    def __eq__(self, other: object) -> bool:
+        """Compare by state, value and reason.
+
+        Args:
+            other: Object to compare against.
+
+        Returns:
+            True when ``other`` is a measurement with the same three fields.
+        """
+        if not isinstance(other, Measurement):
+            return NotImplemented
+        return (
+            self.state is other.state
+            and self.value == other.value
+            and self.reason is other.reason
+        )
+
+    def __hash__(self) -> int:
+        """Hash by state, value and reason.
+
+        Returns:
+            A hash consistent with :meth:`__eq__`.
+        """
+        return hash((self.state, self.value, self.reason))
+
+    @property
+    def is_measured(self) -> bool:
+        """Whether this signal contributed a value.
+
+        Returns:
+            True when the state is ``MEASURED``.
+        """
+        return self.state is MeasurementState.MEASURED
+
+    @classmethod
+    def measured(cls, value: float) -> "Measurement":
+        """Record a value somebody actually measured.
+
+        Args:
+            value: The measured value.
+
+        Returns:
+            A ``MEASURED`` measurement.
+        """
+        return cls(MeasurementState.MEASURED, value, None)
+
+    @classmethod
+    def unmeasured(cls, reason: UnmeasuredReason) -> "Measurement":
+        """Record that a signal has no value, and why.
+
+        Returns a shared instance per reason. That is only safe because these
+        objects are immutable, which makes the frozen-ness pay for part of its
+        own cost: an unmeasured signal allocates nothing, and unmeasured
+        signals are the common case on exactly the sparsely-covered packages an
+        org scan has most of.
+
+        Args:
+            reason: Why the signal could not be measured.
+
+        Returns:
+            An ``UNMEASURED`` measurement.
+        """
+        return _UNMEASURED[reason]
+
+
+#: One shared instance per reason, built once. Safe because :class:`Measurement`
+#: is immutable; see :meth:`Measurement.unmeasured`.
+_UNMEASURED: Mapping[UnmeasuredReason, Measurement] = {
+    reason: Measurement(MeasurementState.UNMEASURED, None, reason)
+    for reason in UnmeasuredReason
+}
+
+
+# --- Adapter-facing measurement states -------------------------------------
+
+
+class SourceRepositoryState(Enum):
+    """What the registry said about the package's source repository.
+
+    Three answers, and the absence of this state entirely is a fourth thing:
+    the lookup did not happen or did not answer, which is unmeasured and must
+    never be written as a negative finding (#182). ``record_source_repository``
+    is the only writer, and it takes the evidence for the middle state as a
+    required keyword-only argument so the state cannot be set by omission.
+    """
+
+    #: A usable ``owner/repo`` root on a supported host. Readable.
+    DECLARED = "true"
+    #: The registry named a source that is not a reachable git forge — a
+    #: Subversion connection string, a decommissioned vanity host (#176).
+    UNUSABLE = "unusable"
+    #: The registry answered and names no source at all.
+    UNDECLARED = "false"
+
+
+#: The states in which no repository can be read, whatever the registry said.
+#: Both silence the same repository-derived signals, so both explain that
+#: silence as one measured fact rather than several independent gaps (#146).
+SOURCE_REPOSITORY_UNREADABLE: FrozenSet[SourceRepositoryState] = frozenset(
+    {SourceRepositoryState.UNUSABLE, SourceRepositoryState.UNDECLARED}
+)
+
+#: Marker meaning "transitive resolution never ran for this dependency", as
+#: opposed to "it ran and the package has none", which is a measured zero.
+TRANSITIVE_SOURCE_UNMEASURED = "unmeasured"
+
+
+# --- The catalog -----------------------------------------------------------
+
+
+class ScorecardFidelity(Enum):
+    """How much a Scorecard check and one of our signals actually agree.
+
+    The grades are deliberately blunt. A consumer joining our output to a
+    Scorecard report needs to know when a row is safe to join and when it is
+    a resemblance, and a five-point scale would only invite splitting hairs.
+    """
+
+    #: Same question, same class of evidence. The numbers are still not
+    #: comparable — ours is a 0..1 risk score, Scorecard's a 0..10 quality
+    #: score, and they run in opposite directions — but the row is joinable.
+    CLOSE = "close"
+    #: Related question, different evidence. Do not treat as interchangeable.
+    APPROXIMATE = "approximate"
+    #: Scorecard has no check that asks this question at the pinned version.
+    NONE = "none"
+    #: The nearest Scorecard check existed once and is gone at the pinned
+    #: version. Exactly the case the design amendment was argued over.
+    REMOVED_UPSTREAM = "removed_upstream"
+
+
+@dataclass(frozen=True)
+class SignalSpec:
+    """One row of the signal catalog.
+
+    Attributes:
+        name: Our stable signal name, as it appears in ``unknown_signals``.
+        summary: What the signal measures, in one line.
+        repository_derived: Whether the signal can only be answered by reading
+            the package's source repository. Drives the #146 collapse.
+        unmeasured_reason: The reason to record when this signal's input is
+            absent and nothing more specific applies.
+        scorecard_check: The nearest OpenSSF Scorecard check at
+            :data:`SCORECARD_VERSION`, or None when there is none.
+        scorecard_fidelity: How much that correspondence is worth.
+        scorecard_note: What differs, stated plainly. Never empty.
+    """
+
+    name: str
+    summary: str
+    repository_derived: bool
+    unmeasured_reason: UnmeasuredReason
+    scorecard_check: Optional[str]
+    scorecard_fidelity: ScorecardFidelity
+    scorecard_note: str
+
+
+#: The Scorecard release this mapping was checked against. A mapping without a
+#: version is a rumour: Scorecard adds, renames and removes checks, and the
+#: ``signed_commits`` row below is what that looks like when it happens to you.
+SCORECARD_VERSION = "v5.5.0"
+
+#: When someone last read Scorecard's ``docs/checks.md`` and ``checks/`` at
+#: that tag and confirmed every row.
+SCORECARD_CHECKED_ON = "2026-08-04"
+
+#: Every check Scorecard defines at :data:`SCORECARD_VERSION`, read from
+#: ``checks/`` and ``docs/checks.md`` at that tag. The catalog may only name a
+#: check from this set; that is what keeps the mapping pinned rather than
+#: remembered, and it is what forces the ``signed_commits`` row to be honest.
+SCORECARD_CHECKS: FrozenSet[str] = frozenset(
+    {
+        "Binary-Artifacts",
+        "Branch-Protection",
+        "CI-Tests",
+        "CII-Best-Practices",
+        "Code-Review",
+        "Contributors",
+        "Dangerous-Workflow",
+        "Dependency-Update-Tool",
+        "Fuzzing",
+        "License",
+        "Maintained",
+        "Packaging",
+        "Pinned-Dependencies",
+        "SAST",
+        "SBOM",
+        "Security-Policy",
+        "Signed-Releases",
+        "Token-Permissions",
+        "Vulnerabilities",
+        "Webhooks",
+    }
+)
+
+
+def _spec(
+    name: str,
+    summary: str,
+    *,
+    repository_derived: bool = False,
+    unmeasured_reason: UnmeasuredReason = UnmeasuredReason.NO_DATA_FROM_SOURCE,
+    scorecard_check: Optional[str] = None,
+    scorecard_fidelity: ScorecardFidelity = ScorecardFidelity.NONE,
+    scorecard_note: str = "",
+) -> SignalSpec:
+    """Build one catalog row.
+
+    Args:
+        name: Our stable signal name.
+        summary: What the signal measures.
+        repository_derived: Whether it needs the source repository.
+        unmeasured_reason: Default reason when its input is absent.
+        scorecard_check: Nearest Scorecard check, or None.
+        scorecard_fidelity: How much that correspondence is worth.
+        scorecard_note: What differs.
+
+    Returns:
+        The populated :class:`SignalSpec`.
+    """
+    return SignalSpec(
+        name=name,
+        summary=summary,
+        repository_derived=repository_derived,
+        unmeasured_reason=unmeasured_reason,
+        scorecard_check=scorecard_check,
+        scorecard_fidelity=scorecard_fidelity,
+        scorecard_note=scorecard_note,
+    )
+
+
+#: Every signal the scorer weighs, with its Scorecard correspondence.
+#:
+#: The table is the source of truth: ``docs/signals.md`` is checked against it
+#: by ``testing/unit/test_signal_catalog.py``, so the published mapping cannot
+#: drift from the code that implements it.
+#:
+#: Three of our signals point at Scorecard's ``Maintained``. That is not a
+#: mistake and it is not invertible: Scorecard answers "is anyone home" once,
+#: from repository activity, where we answer it three times from three
+#: different sources — when the registry last shipped, how often the repository
+#: is committed to, and the repository's own activity heuristics — because a
+#: package can be stale on one and healthy on another and we would rather
+#: report the disagreement than average it away (#166).
+SIGNAL_CATALOG: Mapping[str, SignalSpec] = {
+    spec.name: spec
+    for spec in (
+        _spec(
+            SIGNAL_STALENESS,
+            "How long since the package last shipped a release.",
+            scorecard_check="Maintained",
+            scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
+            scorecard_note=(
+                "Ours reads the registry's own release timestamp, which cannot "
+                "be broken by a repository rename (#146). Scorecard reads "
+                "repository commit and issue activity over the trailing 90 "
+                "days. A package with a live repository and no releases for "
+                "three years scores well upstream and badly here, on purpose."
+            ),
+        ),
+        _spec(
+            SIGNAL_MAINTAINER,
+            "How many people the registry names as owning the package.",
+            scorecard_check="Contributors",
+            scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
+            scorecard_note=(
+                "Ours is a bus-factor count from the registry's owner or "
+                "author list. Scorecard counts repository contributors from "
+                "at least two organizations, which is a diversity-of-"
+                "affiliation question, not a bus-factor one."
+            ),
+        ),
+        _spec(
+            SIGNAL_DEPRECATION,
+            "Whether the registry marks the package as deprecated or yanked.",
+            scorecard_note="Scorecard has no deprecation check.",
+        ),
+        _spec(
+            SIGNAL_EXPLOIT,
+            "Severity of advisories that apply to the installed version.",
+            scorecard_check="Vulnerabilities",
+            scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
+            scorecard_note=(
+                "Both read OSV. Scorecard reports a count of open advisories "
+                "for the repository. Ours is severity-weighted, scoped to the "
+                "installed version's affected ranges, and reports advisories "
+                "whose applicability could not be decided rather than "
+                "assuming them away (#61)."
+            ),
+        ),
+        _spec(
+            SIGNAL_VERSION,
+            "How far the installed version trails the latest published one.",
+            scorecard_note=(
+                "Scorecard scores repositories, not installed versions, so it "
+                "has no equivalent. The nearest thing is Pinned-Dependencies, "
+                "which asks whether *this* project pins its own dependencies."
+            ),
+        ),
+        _spec(
+            SIGNAL_HEALTH_INDICATORS,
+            "Whether the repository carries tests, CI, and contribution docs.",
+            repository_derived=True,
+            scorecard_check="CI-Tests",
+            scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
+            scorecard_note=(
+                "A composite of three presence checks, only one of which "
+                "(CI) Scorecard asks about, and Scorecard asks it of pull "
+                "requests rather than of the repository's configuration."
+            ),
+        ),
+        _spec(
+            SIGNAL_LICENSE,
+            "How much policy risk the declared license carries.",
+            scorecard_check="License",
+            scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
+            scorecard_note=(
+                "Scorecard asks whether a license file exists and is "
+                "SPDX-recognized. We categorize the license — permissive, "
+                "copyleft, network copyleft, commercial — and score the "
+                "obligation it creates. A clean Apache-2.0 and a clean AGPL "
+                "are identical upstream and far apart here."
+            ),
+        ),
+        _spec(
+            SIGNAL_COMMUNITY_POPULARITY,
+            "How much attention the project has (star count).",
+            repository_derived=True,
+            scorecard_note=(
+                "Scorecard deliberately excludes popularity: stars are not a "
+                "security property. We keep it as a dampener on abandonment "
+                "scoring, never as a finding in itself."
+            ),
+        ),
+        _spec(
+            SIGNAL_COMMUNITY_ACTIVITY,
+            "Development cadence, in commits per month.",
+            repository_derived=True,
+            scorecard_check="Maintained",
+            scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
+            scorecard_note=(
+                "Both read commit activity. Scorecard folds issue activity in "
+                "and thresholds at 90 days; ours is a rate over six months and "
+                "is weighed apart from popularity so a well-starred package "
+                "with a dead commit log cannot pass as healthy (#166)."
+            ),
+        ),
+        _spec(
+            SIGNAL_TRANSITIVE,
+            "Size of the package's own dependency tree.",
+            unmeasured_reason=UnmeasuredReason.LOOKUP_NOT_ATTEMPTED,
+            scorecard_note=(
+                "Scorecard has no dependency-tree-size check. Its "
+                "Pinned-Dependencies check asks a different question, about "
+                "how dependencies are referenced rather than how many exist."
+            ),
+        ),
+        _spec(
+            SIGNAL_SECURITY_POLICY,
+            "Whether the repository publishes a security policy.",
+            repository_derived=True,
+            scorecard_check="Security-Policy",
+            scorecard_fidelity=ScorecardFidelity.CLOSE,
+            scorecard_note=(
+                "Same question, same evidence (a SECURITY.md in a well-known "
+                "location). Scorecard grades the policy's contents out of ten; "
+                "ours is presence or absence."
+            ),
+        ),
+        _spec(
+            SIGNAL_DEPENDENCY_UPDATE,
+            "Whether the repository runs an automated dependency updater.",
+            repository_derived=True,
+            scorecard_check="Dependency-Update-Tool",
+            scorecard_fidelity=ScorecardFidelity.CLOSE,
+            scorecard_note=(
+                "Same question, same evidence (Dependabot or Renovate "
+                "configuration in the repository)."
+            ),
+        ),
+        _spec(
+            SIGNAL_SIGNED_COMMITS,
+            "Whether the project signs its commits, tags, or enforces signing.",
+            repository_derived=True,
+            scorecard_fidelity=ScorecardFidelity.REMOVED_UPSTREAM,
+            scorecard_note=(
+                "No Scorecard check asks this at v5.5.0, and this row is why "
+                "the design was amended to keep our own names. We read git "
+                "history directly: commit signature status (git log %G?), tag "
+                "signature status, and workflow- or settings-enforced signing. "
+                "Scorecard's nearest historical check was Signed-Tags, which "
+                "existed at v2.0.0 and was gone by v3.2.1. The nearest live "
+                "check, Signed-Releases, inspects the last release's *assets* "
+                "for detached signature files and never reads git history, so "
+                "it answers a different question and must not be joined to "
+                "this signal. Do not rename this signal to either name."
+            ),
+        ),
+        _spec(
+            SIGNAL_BRANCH_PROTECTION,
+            "Whether the default branch is protected.",
+            repository_derived=True,
+            scorecard_check="Branch-Protection",
+            scorecard_fidelity=ScorecardFidelity.CLOSE,
+            scorecard_note=(
+                "Same question, same evidence. Scorecard needs an admin token "
+                "to see the full settings and degrades without one; ours reads "
+                "what an unauthenticated or read-scoped view exposes, so a "
+                "disagreement here is usually a permissions difference rather "
+                "than a finding."
+            ),
+        ),
+        _spec(
+            SIGNAL_MAINTAINED,
+            "Whether the project shows signs of active maintenance.",
+            repository_derived=True,
+            scorecard_check="Maintained",
+            scorecard_fidelity=ScorecardFidelity.CLOSE,
+            scorecard_note=(
+                "Same question and the closest of our three Maintained rows. "
+                "Scorecard thresholds on activity in the trailing 90 days and "
+                "treats an archived repository as unmaintained outright."
+            ),
+        ),
+        _spec(
+            SIGNAL_SOURCE_REPOSITORY,
+            "Whether the registry declares a usable source repository at all.",
+            scorecard_note=(
+                "Scorecard starts from a repository URL, so it cannot ask "
+                "this question: a package that declares no source is one it "
+                "cannot score. That is precisely why we measure it — the "
+                "packages Scorecard cannot reach are not thereby safe (#146)."
+            ),
+        ),
+    )
+}
+
+#: Signals that can only be answered by reading the package's source
+#: repository. Derived from the catalog rather than restated, so a new
+#: repository-derived signal joins the #146 collapse by declaring itself once.
+REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
+    name for name, spec in SIGNAL_CATALOG.items() if spec.repository_derived
+)
+
+
+def unmeasured_reason_for(
+    signal: str, *, source_repository_unreadable: bool
+) -> UnmeasuredReason:
+    """Decide why a signal came back unmeasured. The only place that decides.
+
+    The design's binding condition: classification lives in a centralized
+    table, never in adapter-local judgment across eight adapters. This is that
+    table's read side, and it takes facts rather than opinions —
+    ``source_repository_unreadable`` is something the scorer *observed* from a
+    recorded registry answer, not an inference about the package.
+
+    ``source_repository_unreadable`` is keyword-only and has no default so a
+    caller cannot reach the fallback by forgetting it.
+
+    Args:
+        signal: A stable signal name from :data:`SIGNAL_CATALOG`.
+        source_repository_unreadable: Whether the registry answered and no
+            readable source repository came out of it.
+
+    Returns:
+        The reason to record. Defaults to the signal's own catalog reason,
+        which for all but ``transitive`` is ``NO_DATA_FROM_SOURCE`` — the
+        honest fallback when nothing more specific is known.
+
+    Raises:
+        KeyError: If ``signal`` is not in the catalog. An unnamed signal is a
+            drift bug, not a caller error to swallow.
+    """
+    spec = SIGNAL_CATALOG[signal]
+    if source_repository_unreadable and spec.repository_derived:
+        return UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
+    return spec.unmeasured_reason

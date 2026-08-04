@@ -44,6 +44,7 @@ nav:
     - 'Configuration': 'configuration.md'
     - 'Scoring': 'SCORING.md'
   - Reference:
+    - 'Signals & Scorecard Mapping': 'signals.md'
     - 'Information Sources': 'INFORMATION_SOURCES.md'
     - 'Security': 'security/SECURITY.md'
     - 'Dependency Security': 'security/DEPENDENCY_SECURITY.md'
