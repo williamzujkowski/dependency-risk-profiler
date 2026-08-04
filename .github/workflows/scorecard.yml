@@ -50,6 +50,6 @@ jobs:
       # If needed, uncomment and add the permission above, but note that this would
       # require careful review according to Scorecard's workflow restrictions
       # - name: "Upload to code-scanning"
-      #   uses: github/codeql-action/upload-sarif@e60ea984bd3baa95954f2856bcf24f9eaba46637 # v3.37.5
+      #   uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
       #   with:
       #     sarif_file: results.sarif
