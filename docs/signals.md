@@ -317,6 +317,94 @@ cleared it. It is additive to schema 2 and breaks no consumer. See
 
 ---
 
+## Which manifests are read, and why it is not "the lock file"
+
+**Source of truth:** the registrations in
+`src/dependency_risk_profiler/parsers/base.py`.
+**Checked by:** `testing/unit/test_manifest_guidance.py`, which fails if the
+recognized-unreadable table ever names a file the registry reads.
+
+| Ecosystem | Read | Not read |
+|---|---|---|
+| npm | `package-lock.json` | `package.json`, `yarn.lock`, `pnpm-lock.yaml`, `npm-shrinkwrap.json` |
+| Python | `requirements.txt`, `Pipfile.lock`, `pyproject.toml` | `Pipfile`, `poetry.lock`, `uv.lock`, `setup.py`, `setup.cfg` |
+| Go | `go.mod` | `go.sum` |
+| Rust | `Cargo.toml` | `Cargo.lock` |
+| Ruby | `Gemfile.lock` | `Gemfile`, `*.gemspec` |
+| PHP | `composer.lock` | `composer.json` |
+| .NET | `packages.lock.json`, `*.csproj` | `packages.config`, `*.vbproj`, `*.fsproj`, `Directory.Packages.props` |
+| Maven | `pom.xml` | — |
+| Gradle | `build.gradle`, `build.gradle.kts` | `settings.gradle(.kts)`, `gradle/libs.versions.toml` |
+
+### There is no lockfile rule, and there was never a reason for one
+
+#243 asked whether the rule should be "always require a lock file" or "accept
+the range-declaring manifest and mark versions `unmanaged`". The honest answer
+is that neither is the rule, because **the lock file is not what this tool is
+mostly reading a manifest for.**
+
+Of the sixteen signals in the mapping above, exactly one — `version` — needs a
+resolved version at all. `exploit` needs one to scope advisories to affected
+ranges, and degrades to `applicability_unknown` without one rather than going
+silent. The other fourteen are properties of the *package*, read from the
+registry and the source repository: staleness, maintainer count, deprecation,
+licence, community activity, security policy, branch protection, signed
+commits. A package name is enough for every one of them. That is the whole
+thesis of a leading-indicator tool — the interesting facts are upstream of your
+build, not in it.
+
+So "we require a lock file because we need resolved versions" was never a rule
+the code followed. `requirements.txt` and `go.mod` and `Cargo.toml` and
+`pom.xml` and `build.gradle` are all read while carrying ranges, and #74/#141
+built `unmanaged` precisely so an unresolvable version drops the drift signal
+from both the numerator and the denominator instead of scoring a fabricated
+zero. Five ecosystems already run that way.
+
+**What each ecosystem is actually chosen on is which file names the
+dependencies at all**, which is a per-ecosystem fact and not a policy:
+
+* **npm.** `package.json` names direct dependencies only. `package-lock.json`
+  names the whole resolved tree, and `parsers/nodejs.py` reads every
+  `node_modules/…` entry in it — which is where npm's risk lives, since the
+  transitive set is normally much larger than the direct one. Scoring
+  `package.json` would report the direct dependencies and say nothing about the
+  rest, which is a coverage claim we would not be entitled to make. Cargo is
+  the same shape read the other way round: `Cargo.toml` names direct
+  dependencies and is what we read, and `Cargo.lock` is the tree we do not.
+* **Ruby and PHP.** `Gemfile` and `composer.json` are the same direct-only
+  shape as `package.json`.
+* **Python.** `requirements.txt` is conventionally the resolved output of a
+  compile step and often *is* the whole tree; `pyproject.toml` is direct-only
+  and read anyway, because it is frequently the only file a library has.
+* **Go.** `go.mod` names the build list including indirect modules. `go.sum` is
+  a checksum database over module versions, not a dependency list — it names
+  modules that are not in the build.
+
+### The rule that *is* enforced
+
+Because the answer varies by ecosystem, the load-bearing rule is not about lock
+files. It is:
+
+> **A manifest this tool does not read is never silently skipped.** It is
+> recognized, named, told what *is* read for its ecosystem, counted in
+> `unreadable_manifests`, and — when nothing else in the scan was scored — it
+> makes the run exit non-zero.
+
+That is AGENTS.md rule 4 applied one level up from a signal. `analyze <dir>`
+over a project of only `package.json` used to report zero dependencies and exit
+0, which is the same shape as scoring an unmeasured signal `0.0`: a reassuring
+answer produced from an absence of measurement. `dependency_count: 0` with an
+empty `unreadable_manifests` means *we looked and there is nothing*;
+`dependency_count: 0` with a populated one means *we could not look*.
+
+Accepting `package.json` with `unmanaged` versions is therefore not refused on
+principle — it is a separate change, because it changes what gets *parsed* and
+its cost is a coverage question — a direct-only dependency set presented as
+a project scan — rather than a version-resolution one. Filed as #261 with
+acceptance criteria rather than folded in.
+
+---
+
 ## What the wrapper costs
 
 The design review flagged a per-field wrapper as a real cost in a thread-pooled

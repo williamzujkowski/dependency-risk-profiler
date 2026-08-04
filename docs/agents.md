@@ -280,16 +280,25 @@ guard. Every run emits exactly one document with the same top-level keys:
 | `dependency_count`, `dependencies` | Yes; `0` and `[]` when there was nothing to report. |
 | `overall_risk_score` | Yes, but `null` when nothing was measured — never `0.0`, which would read as "safe". |
 | `manifests[]` | Every manifest that was successfully analyzed, with its own path, ecosystem, and count. Empty when none were. |
+| `unreadable_manifests[]` | Every file the scan recognized as a dependency manifest and could not read, with `manifest_path`, `ecosystem`, and `guidance`. Empty when everything recognized was read. |
 | `warnings[]` | Why anything was skipped or refused, in plain language. Empty on a clean run. |
 | `ecosystem` | `null` for a mixed-ecosystem directory scan or an empty run. Each dependency still carries its own `ecosystem`. |
 
 A directory containing several manifests emits one merged document, not one per
 manifest.
 
+**`dependency_count: 0` is two different answers, and `unreadable_manifests` is
+how you tell them apart.** With an empty `unreadable_manifests`, the scan looked
+and there was nothing. With a populated one, the scan could not look — the
+project has manifests it does not read, and the count is a floor, not a result.
+Branch on it before you report a clean scan (#243).
+
 `analyze` exit codes: `0` = the run completed, including "nothing to do";
-`1` = the run failed, or every manifest you named was refused and nothing was
-scored. A refused manifest also explains itself — pointing `analyze` at
-`package.json` names `package-lock.json` and says whether it is there.
+`1` = the run failed, or every manifest it considered was refused and nothing
+was scored — including a directory whose only manifests were unreadable. A
+refused manifest also explains itself: it names what *is* read for its
+ecosystem, and pointing `analyze` at `package.json` says whether
+`package-lock.json` is there and how to generate it if it is not.
 
 ### `scan-org` / `scan-user`
 

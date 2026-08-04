@@ -1,17 +1,32 @@
-"""Unit coverage for the refused-manifest guidance table (#125).
+"""Unit coverage for the refused-manifest guidance table (#125, #243).
 
 The rule the tests hold the module to: say something useful when the input is a
 known range-declaring companion or a supported manifest under the wrong name,
 and stay quiet — leaving today's generic message — for anything else. A
 confident guess about an ecosystem the tool cannot parse would be worse than
 the bare message it replaces.
+
+#243 added the second job: the table is also the recognizer a directory walk
+uses to tell "no dependencies here" from "dependencies I could not read". That
+puts two new obligations on it, both asserted below on values rather than
+counts — the table must never name a file the registry actually reads, and
+every message must name what *is* read for the ecosystem it identified.
 """
 
 import json
 from pathlib import Path
+from typing import List
 
-from dependency_risk_profiler.manifest_guidance import unsupported_manifest_guidance
+import pytest
+
+from dependency_risk_profiler.manifest_guidance import (
+    _UNREADABLE_BY_NAME,
+    _UNREADABLE_BY_SUFFIX,
+    recognise_unreadable_manifest,
+    unsupported_manifest_guidance,
+)
 from dependency_risk_profiler.parsers.base import BaseParser
+from dependency_risk_profiler.parsers.registry import EcosystemRegistry
 
 PACKAGE_LOCK = json.dumps(
     {
@@ -132,3 +147,179 @@ def test_unrelated_files_keep_the_generic_message(tmp_path: Path) -> None:
 def test_a_missing_file_does_not_raise(tmp_path: Path) -> None:
     """GUARD: guidance is diagnostics; it must never become the failure."""
     assert unsupported_manifest_guidance(str(tmp_path / "gone.md")) is None
+
+
+# ---------------------------------------------------------------------------
+# #243: the table as a recognizer
+# ---------------------------------------------------------------------------
+
+
+def _registered_file_names() -> List[str]:
+    """Every exact file name the parser registry accepts, lowercased."""
+    if not EcosystemRegistry.get_available_ecosystems():
+        BaseParser._initialize_registry()
+    names: List[str] = []
+    for details in EcosystemRegistry.get_ecosystem_details().values():
+        for entry in details.get("file_patterns", []):
+            if isinstance(entry, str) and entry.startswith("File name: "):
+                names.append(entry[len("File name: ") :].lower())
+    return names
+
+
+def _registered_extensions() -> List[str]:
+    """Every file extension the parser registry accepts, lowercased."""
+    if not EcosystemRegistry.get_available_ecosystems():
+        BaseParser._initialize_registry()
+    extensions: List[str] = []
+    for details in EcosystemRegistry.get_ecosystem_details().values():
+        for entry in details.get("file_patterns", []):
+            if isinstance(entry, str) and entry.startswith("File extension: "):
+                extensions.append(entry[len("File extension: ") :].lower())
+    return extensions
+
+
+def test_the_unreadable_table_never_names_a_file_the_registry_reads() -> None:
+    """INVARIANT (#243): claiming we cannot read a file we read is the worst case.
+
+    Asserted against the registry's own public details rather than a copy of
+    the list, so adding a parser for `package.json` tomorrow fails this test
+    instead of leaving the tool telling users to go find a lock file it no
+    longer needs.
+    """
+    registered_names = set(_registered_file_names())
+    registered_extensions = set(_registered_extensions())
+
+    overlapping_names = registered_names & set(_UNREADABLE_BY_NAME)
+    overlapping_extensions = registered_extensions & set(_UNREADABLE_BY_SUFFIX)
+
+    assert overlapping_names == set(), overlapping_names
+    assert overlapping_extensions == set(), overlapping_extensions
+
+
+def test_every_table_entry_names_what_is_read_or_says_the_ecosystem_is_not() -> None:
+    """INVARIANT (#243): "unsupported format" must never be the whole answer.
+
+    Swept over the table rather than spot-checked, because the defect this
+    replaces was one message that named nothing, and a single-entry test would
+    let the next entry reintroduce it.
+    """
+    for file_name, rule in _UNREADABLE_BY_NAME.items():
+        recognised = recognise_unreadable_manifest(f"/nowhere/{file_name}")
+        assert recognised is not None, file_name
+        if rule.ecosystem.inputs:
+            named = [
+                supported
+                for supported in rule.ecosystem.inputs
+                if supported in recognised.guidance
+            ]
+            assert named, f"{file_name}: names no supported input"
+        else:
+            assert "is not one of the ecosystems this tool reads" in (
+                recognised.guidance
+            ), file_name
+
+
+@pytest.mark.parametrize(
+    ("file_name", "ecosystem", "expected_input"),
+    [
+        ("package.json", "npm", "package-lock.json"),
+        ("yarn.lock", "npm", "package-lock.json"),
+        ("pnpm-lock.yaml", "npm", "package-lock.json"),
+        ("Gemfile", "Ruby", "Gemfile.lock"),
+        ("demo.gemspec", "Ruby", "Gemfile.lock"),
+        ("composer.json", "PHP (Composer)", "composer.lock"),
+        ("Pipfile", "Python", "Pipfile.lock"),
+        ("poetry.lock", "Python", "pyproject.toml"),
+        ("setup.py", "Python", "requirements.txt"),
+        ("go.sum", "Go", "go.mod"),
+        ("Cargo.lock", "Rust", "Cargo.toml"),
+        ("packages.config", ".NET", "packages.lock.json"),
+        ("Demo.vbproj", ".NET", "*.csproj"),
+        ("settings.gradle", "Gradle", "build.gradle"),
+        ("libs.versions.toml", "Gradle", "build.gradle"),
+    ],
+)
+def test_the_cross_ecosystem_sweep_covers_each_near_miss(
+    file_name: str, ecosystem: str, expected_input: str
+) -> None:
+    """REGRESSION (#243): `package.json` was one instance of a general gap.
+
+    Gemfile vs Gemfile.lock, Cargo.toml vs Cargo.lock, composer.json vs
+    composer.lock, `*.csproj` vs its VB and F# siblings, and the version
+    catalog all have the same shape. Fixing only npm would have left the next
+    person to rediscover it one ecosystem at a time.
+    """
+    recognised = recognise_unreadable_manifest(f"/nowhere/{file_name}")
+
+    assert recognised is not None, file_name
+    assert recognised.ecosystem == ecosystem
+    assert expected_input in recognised.guidance
+
+
+def test_recognition_reads_no_file_and_tolerates_one_that_is_not_there() -> None:
+    """INVARIANT (#243): a recursive walk calls this per entry; it must be cheap.
+
+    A path under a directory that does not exist proves nothing was opened —
+    the recognition still lands, and the companion probe degrades to "not
+    found" rather than raising.
+    """
+    recognised = recognise_unreadable_manifest("/no/such/directory/package.json")
+
+    assert recognised is not None
+    assert recognised.ecosystem == "npm"
+    assert recognised.supported_input_present is False
+    assert "not found in /no/such/directory" in recognised.guidance
+
+
+def test_a_supported_input_beside_the_file_is_recorded_as_present(
+    tmp_path: Path,
+) -> None:
+    """HYPOTHESIS (#243): the ecosystem *was* read, so this file is not a gap.
+
+    The flag is what keeps a directory scan of a healthy npm project from
+    warning about the package.json whose lock file it just scored. It is
+    recorded here and acted on by the caller, because the single-file path must
+    still answer for a file the user named by hand.
+    """
+    manifest = tmp_path / "package.json"
+    manifest.write_text(json.dumps({"dependencies": {}}), encoding="utf-8")
+    lock = tmp_path / "package-lock.json"
+    lock.write_text(PACKAGE_LOCK, encoding="utf-8")
+
+    recognised = recognise_unreadable_manifest(str(manifest))
+
+    assert recognised is not None
+    assert recognised.supported_input_present is True
+    assert f"found alongside it at {lock}" in recognised.guidance
+
+
+def test_a_csproj_beside_a_vbproj_counts_as_the_supported_input(
+    tmp_path: Path,
+) -> None:
+    """HYPOTHESIS (#243): the .NET supported input is a glob, and must match as one."""
+    vbproj = tmp_path / "Demo.vbproj"
+    vbproj.write_text("<Project />", encoding="utf-8")
+    csproj = tmp_path / "Demo.csproj"
+    csproj.write_text("<Project />", encoding="utf-8")
+
+    recognised = recognise_unreadable_manifest(str(vbproj))
+
+    assert recognised is not None
+    assert recognised.supported_input_present is True
+    assert str(csproj) in recognised.guidance
+
+
+def test_an_unparsed_ecosystem_says_so_instead_of_inventing_a_next_step() -> None:
+    """GUARD (#243): no parser exists for sbt, and the message must not imply one."""
+    recognised = recognise_unreadable_manifest("/nowhere/build.sbt")
+
+    assert recognised is not None
+    assert recognised.ecosystem == "Scala (sbt)"
+    assert "is not one of the ecosystems this tool reads" in recognised.guidance
+    assert "list-ecosystems" in recognised.guidance
+
+
+def test_an_unrecognized_name_is_not_claimed_as_an_unreadable_manifest() -> None:
+    """GUARD (#243): recognition is a table, never a heuristic on file shape."""
+    assert recognise_unreadable_manifest("/nowhere/notes.md") is None
+    assert recognise_unreadable_manifest("/nowhere/config.toml") is None

@@ -45,6 +45,9 @@ def _make_runner() -> CliRunner:
 runner = _make_runner()
 
 # The keys an automated consumer is promised on every JSON run.
+# `unreadable_manifests` is here rather than only on the paths that populate it:
+# a key that appears only when it is non-empty cannot be branched on, because
+# its absence would mean both "nothing went unread" and "old version" (#243).
 REQUIRED_KEYS = {
     "manifest_path",
     "ecosystem",
@@ -53,6 +56,7 @@ REQUIRED_KEYS = {
     "dependencies",
     "overall_risk_score",
     "manifests",
+    "unreadable_manifests",
     "warnings",
 }
 
@@ -182,12 +186,12 @@ def _flat(text: str) -> str:
     return " ".join(text.split())
 
 
-def _run_json(target: Path) -> Tuple[int, object]:
+def _run_json(target: Path, *, recursive: bool = False) -> Tuple[int, object]:
     """Run analyze in JSON mode and return (exit code, parsed stdout)."""
-    result = runner.invoke(
-        app,
-        ["analyze", str(target), "--output", "json", "--disable-osv", "--no-color"],
-    )
+    argv = ["analyze", str(target), "--output", "json", "--disable-osv", "--no-color"]
+    if recursive:
+        argv.append("--recursive")
+    result = runner.invoke(app, argv)
     assert result.stdout, (
         f"JSON mode wrote nothing to stdout for {target}; "
         f"exit={result.exit_code}\n{result.output}"
@@ -380,3 +384,220 @@ def test_manifest_declaring_no_dependencies_still_exits_zero(
     result = runner.invoke(app, ["analyze", str(requirements), "--no-color"])
 
     assert result.exit_code == 0, result.output
+
+
+# ---------------------------------------------------------------------------
+# #243: a scan that read nothing is not a scan that found nothing
+# ---------------------------------------------------------------------------
+
+
+def test_a_directory_of_only_unreadable_manifests_is_not_a_clean_zero(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """REGRESSION (#243): the silent zero. `package.json` only, exit 0, no deps.
+
+    A project whose npm half the tool could not read reported the same thing as
+    a project with no dependencies: `dependency_count: 0`, an empty
+    `dependencies` list, and exit 0. That reads as "nothing to worry about"
+    when the truth is "I could not read your project".
+    """
+    _patch_offline_analysis(monkeypatch)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "package.json").write_text(
+        json.dumps({"dependencies": {"express": "^4.18.2"}}), encoding="utf-8"
+    )
+
+    exit_code, payload = _run_json(project)
+
+    assert isinstance(payload, dict)
+    # The exit code is the half a shell script sees.
+    assert exit_code == 1
+    # The structural half: a key a consumer can branch on, distinct from
+    # dependency_count, that says a manifest went unread.
+    unreadable = payload["unreadable_manifests"]
+    assert isinstance(unreadable, list)
+    assert len(unreadable) == 1
+    entry = unreadable[0]
+    assert entry["manifest_path"] == str(project / "package.json")
+    assert entry["ecosystem"] == "npm"
+    assert "package-lock.json" in entry["guidance"]
+
+
+def test_an_empty_directory_reports_nothing_unread(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """INVARIANT (#243): the other side of the distinction, asserted on values.
+
+    An empty directory and a directory of unreadable manifests must not
+    serialize the same. Both carry `dependency_count: 0`; only one carries an
+    empty `unreadable_manifests`, and only one exits 0.
+    """
+    _patch_offline_analysis(monkeypatch)
+    empty = tmp_path / "empty"
+    empty.mkdir()
+
+    exit_code, payload = _run_json(empty)
+
+    assert isinstance(payload, dict)
+    assert exit_code == 0
+    assert payload["dependency_count"] == 0
+    assert payload["unreadable_manifests"] == []
+
+
+def test_the_terminal_summary_says_what_it_could_not_read(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """REGRESSION (#243): 'No supported manifest files found' named no next step.
+
+    The human output said the same thing for an empty directory and for an npm
+    project, and then listed every supported ecosystem — which is a catalogue,
+    not an answer to "what do I do about this file".
+    """
+    _patch_offline_analysis(monkeypatch)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "package.json").write_text(
+        json.dumps({"dependencies": {"express": "^4.18.2"}}), encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        app, ["analyze", str(project), "--recursive", "--no-color"], env=WIDE_TERMINAL
+    )
+    output = _flat(result.output)
+
+    assert result.exit_code == 1, result.output
+    assert "look like dependency manifests but could not be read" in output
+    assert "npm projects are read from package-lock.json" in output
+    assert "Run `npm install` to generate one." in output
+    assert "Analyzed 0 of 1 manifest file(s); nothing was scored." in output
+
+
+def test_a_partly_readable_directory_still_names_the_unread_half(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """HYPOTHESIS (#243): scoring something does not license silence about the rest.
+
+    Exit stays 0 — the run did produce a real answer — but the answer covers
+    only the Python half, and the report says which half it is rather than
+    letting the npm dependencies read as absent.
+    """
+    _patch_offline_analysis(monkeypatch)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "requirements.txt").write_text("requests==2.31.0\n", encoding="utf-8")
+    (project / "package.json").write_text(
+        json.dumps({"dependencies": {"express": "^4.18.2"}}), encoding="utf-8"
+    )
+
+    exit_code, payload = _run_json(project)
+
+    assert isinstance(payload, dict)
+    assert exit_code == 0
+    assert payload["dependency_count"] >= 1
+    unreadable = payload["unreadable_manifests"]
+    assert isinstance(unreadable, list)
+    assert [entry["ecosystem"] for entry in unreadable] == ["npm"]
+
+
+def test_a_package_json_beside_its_lock_file_is_not_reported_as_unread(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """GUARD (#243): a warning that fires on healthy projects stops being read.
+
+    The npm dependencies were read — from the lock file sitting right there —
+    so the range-declaring sibling is not a gap in coverage and must not be
+    reported as one.
+    """
+    _patch_offline_analysis(monkeypatch)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "package.json").write_text(
+        json.dumps({"dependencies": {"left-pad": "^1.3.0"}}), encoding="utf-8"
+    )
+    (project / "package-lock.json").write_text(PACKAGE_LOCK, encoding="utf-8")
+
+    exit_code, payload = _run_json(project)
+
+    assert isinstance(payload, dict)
+    assert exit_code == 0
+    assert payload["unreadable_manifests"] == []
+    assert payload["dependency_count"] >= 1
+
+
+def test_installed_dependencies_are_not_reported_as_unreadable_manifests(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """GUARD (#243): node_modules holds one package.json per installed package.
+
+    Recognizing `package.json` without pruning vendored directories turns a
+    recursive scan of any real npm project into thousands of warnings, which is
+    a different way of telling the user nothing. Run with `--recursive`, because
+    that is the only mode that descends far enough to hit the problem.
+    """
+    _patch_offline_analysis(monkeypatch)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "requirements.txt").write_text("requests==2.31.0\n", encoding="utf-8")
+    for package in ("left-pad", "express", "lodash"):
+        installed = project / "node_modules" / package
+        installed.mkdir(parents=True)
+        (installed / "package.json").write_text(
+            json.dumps({"name": package, "version": "1.0.0"}), encoding="utf-8"
+        )
+
+    exit_code, payload = _run_json(project, recursive=True)
+
+    assert isinstance(payload, dict)
+    assert exit_code == 0
+    assert payload["unreadable_manifests"] == []
+
+
+def test_a_single_refused_file_reports_itself_as_unread_in_json(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """INVARIANT (#243): exit 1 and an empty unread list is a self-contradiction.
+
+    `analyze package.json` already exited 1 (#125). Its JSON still said no
+    manifest went unread, so a consumer reading the document alone saw a clean
+    zero — the same defect as the directory case, one path over.
+    """
+    _patch_offline_analysis(monkeypatch)
+    manifest = tmp_path / "package.json"
+    manifest.write_text(
+        json.dumps({"dependencies": {"express": "^4.18.2"}}), encoding="utf-8"
+    )
+
+    exit_code, payload = _run_json(manifest)
+
+    assert isinstance(payload, dict)
+    assert exit_code == 1
+    unreadable = payload["unreadable_manifests"]
+    assert isinstance(unreadable, list)
+    assert [entry["manifest_path"] for entry in unreadable] == [str(manifest)]
+
+
+def test_an_unsupported_ecosystem_says_so_rather_than_scoring_zero(
+    tmp_path: Path, monkeypatch: MonkeyPatchFixture
+) -> None:
+    """HYPOTHESIS (#243): a Scala project has dependencies; this tool reads none.
+
+    "You have no dependencies" and "I do not read sbt" are different answers,
+    and only one of them is true here.
+    """
+    _patch_offline_analysis(monkeypatch)
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "build.sbt").write_text(
+        'libraryDependencies += "org.typelevel" %% "cats-core" % "2.10.0"\n',
+        encoding="utf-8",
+    )
+
+    exit_code, payload = _run_json(project)
+
+    assert isinstance(payload, dict)
+    assert exit_code == 1
+    unreadable = payload["unreadable_manifests"]
+    assert isinstance(unreadable, list)
+    assert [entry["ecosystem"] for entry in unreadable] == ["Scala (sbt)"]
+    assert "list-ecosystems" in unreadable[0]["guidance"]

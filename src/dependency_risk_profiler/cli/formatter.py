@@ -466,6 +466,7 @@ class JsonFormatter(BaseFormatter):
         profiles: List[ProjectRiskProfile],
         manifest_path: str,
         warnings: List[str],
+        unreadable_manifests: List[Dict[str, str]],
     ) -> str:
         """Format a whole analyze run as exactly one JSON document.
 
@@ -476,10 +477,20 @@ class JsonFormatter(BaseFormatter):
         needs a special case for "nothing to report". Anything the run refused
         or skipped is stated in ``warnings`` rather than left as silence.
 
+        ``unreadable_manifests`` is what makes "I found no dependencies"
+        distinguishable from "I could not read your project" (#243). Both used
+        to serialize as ``dependency_count: 0``, and a consumer had no key to
+        branch on. It is a required argument, not an optional one, so the
+        reassuring shape cannot be produced by forgetting to pass it
+        (AGENTS.md rule 4).
+
         Args:
             profiles: Successfully analyzed manifest profiles, possibly empty.
             manifest_path: The path the user actually pointed the tool at.
             warnings: Human-readable notes about skipped or refused inputs.
+            unreadable_manifests: Dependency manifests the scan recognized and
+                could not read, each with ``manifest_path``, ``ecosystem`` and
+                ``guidance``. Empty means every recognized manifest was read.
 
         Returns:
             A single JSON document.
@@ -494,6 +505,7 @@ class JsonFormatter(BaseFormatter):
             }
             for profile in profiles
         ]
+        report["unreadable_manifests"] = [dict(entry) for entry in unreadable_manifests]
         report["warnings"] = list(warnings)
         return json.dumps(report, indent=2, default=self._json_serializer)
 

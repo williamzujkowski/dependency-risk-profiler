@@ -1,10 +1,9 @@
 """Actionable guidance for manifest files the parser registry refuses.
 
-The registry deliberately parses only manifests that carry *resolved* versions:
-a range like ``^3.0.0`` has no version to score drift against. That is the right
-design, but it made the two most common first-run mistakes indistinguishable
-from a genuinely unsupported ecosystem, because both produced a bare
-"Unsupported manifest file" (#125):
+The registry deliberately parses only manifests it can turn into a dependency
+list. That is the right design, but it made the two most common first-run
+mistakes indistinguishable from a genuinely unsupported ecosystem, because both
+produced a bare "Unsupported manifest file" (#125):
 
 1. Pointing the tool at the range-declaring sibling (``package.json``) of a
    supported lock file (``package-lock.json``).
@@ -15,6 +14,26 @@ from a genuinely unsupported ecosystem, because both produced a bare
 This module turns both into a message that names the next step. It adds no
 parser and changes no dispatch: everything here is read-only reporting built on
 the registry's public :meth:`EcosystemRegistry.get_ecosystem_details`.
+
+#243 widened it in two directions.
+
+**The message now names what *is* read**, not only the one companion to
+redirect to. "Unsupported format" told a user nothing about whether the tool
+supports their ecosystem at all; "npm projects are read from package-lock.json"
+does, and it is the same sentence whether or not the lock file happens to be
+there.
+
+**The table became a recognizer, not just a message generator.**
+:func:`recognise_unreadable_manifest` is a filename-only lookup — no file is
+opened — so a directory walk can afford to run it on every entry. That is what
+lets ``analyze <dir> --recursive`` distinguish "this project has no
+dependencies" from "this project has dependencies I could not read", which are
+the same output today and must not be (AGENTS.md rule 4).
+
+The table is deliberately a list of *recognized* names, not a heuristic. A file
+it does not name keeps the generic message and is not counted as unreadable: a
+confident guess about an ecosystem the tool cannot parse would be worse than
+the bare message it replaces.
 """
 
 from __future__ import annotations
@@ -35,83 +54,307 @@ _CONTENT_PREFIX = "Content pattern: "
 
 
 @dataclass(frozen=True)
-class _CompanionRule:
-    """How to redirect one range-declaring manifest to its resolved companion."""
+class _Ecosystem:
+    """An ecosystem and the manifests this tool actually reads for it."""
 
-    # The lock file that carries resolved versions, or None when this ecosystem
-    # has no supported companion yet.
-    companion: Optional[str]
-    # Why this file cannot be scored, phrased as a fact about the file.
+    # How the ecosystem is named to a user, matching README's table.
+    label: str
+    # The supported inputs, best first. Empty means the tool does not read this
+    # ecosystem at all — which is a fact worth stating, not a gap to paper over.
+    inputs: Tuple[str, ...]
+
+
+_NPM = _Ecosystem("npm", ("package-lock.json",))
+_PYTHON = _Ecosystem("Python", ("requirements.txt", "Pipfile.lock", "pyproject.toml"))
+_GO = _Ecosystem("Go", ("go.mod",))
+_RUST = _Ecosystem("Rust", ("Cargo.toml",))
+_RUBY = _Ecosystem("Ruby", ("Gemfile.lock",))
+_PHP = _Ecosystem("PHP (Composer)", ("composer.lock",))
+_NUGET = _Ecosystem(".NET", ("packages.lock.json", "*.csproj"))
+_GRADLE = _Ecosystem("Gradle", ("build.gradle", "build.gradle.kts"))
+_MAVEN = _Ecosystem("Maven", ("pom.xml",))
+
+# Ecosystems with no parser here. Naming them is the honest answer: a project
+# that is entirely one of these produces no dependencies, and the user is owed
+# the difference between "you have none" and "I cannot read yours".
+_SBT = _Ecosystem("Scala (sbt)", ())
+_COCOAPODS = _Ecosystem("CocoaPods", ())
+_SWIFTPM = _Ecosystem("Swift Package Manager", ())
+_PUB = _Ecosystem("Dart / Flutter (pub)", ())
+_HEX = _Ecosystem("Elixir (Hex)", ())
+
+
+@dataclass(frozen=True)
+class _UnreadableRule:
+    """Why one recognized filename is not a dependency list this tool can read."""
+
+    ecosystem: _Ecosystem
+    # A fact about *this file*, completing "<name> ...". Never a guess.
     reason: str
-    # Extra sentence used when there is no companion to point at.
-    fallback: str = ""
+    # A command that produces a supported input, as a whole sentence. Empty
+    # when there is no single command that does — an absent remedy is stated by
+    # saying nothing, never by inventing one.
+    remedy: str = ""
 
 
-# Deliberately small. Anything absent keeps the generic message rather than
-# guessing at an ecosystem the tool does not actually support.
-_COMPANION_RULES: Dict[str, _CompanionRule] = {
-    "package.json": _CompanionRule(
-        companion="package-lock.json",
-        reason="declares version ranges, not resolved versions",
+# Recognized-but-unreadable manifests, keyed by lowercased file name.
+#
+# Every entry was checked against the registry in `parsers/base.py`: a name that
+# the registry matches must not appear here, or the tool would claim it cannot
+# read a file it reads. `testing/unit/test_manifest_guidance.py` asserts that
+# disjointness rather than trusting this comment.
+_UNREADABLE_BY_NAME: Dict[str, _UnreadableRule] = {
+    # npm. package.json is the one #243 was filed about.
+    "package.json": _UnreadableRule(
+        _NPM,
+        "declares version ranges, not resolved versions, so there is nothing "
+        "to score drift against",
+        "Run `npm install` to generate one.",
     ),
-    "gemfile": _CompanionRule(
-        companion="Gemfile.lock",
-        reason="declares version constraints, not resolved versions",
+    "npm-shrinkwrap.json": _UnreadableRule(
+        _NPM,
+        "is an npm shrinkwrap, which this tool does not read",
+        "Run `npm install` to generate one.",
     ),
-    "composer.json": _CompanionRule(
-        companion="composer.lock",
-        reason="declares version constraints, not resolved versions",
+    "yarn.lock": _UnreadableRule(
+        _NPM,
+        "is a Yarn lock file, which this tool does not read",
+        "Run `npm install --package-lock-only` to generate one.",
     ),
-    "pipfile": _CompanionRule(
-        companion="Pipfile.lock",
-        reason="declares version constraints, not resolved versions",
+    "pnpm-lock.yaml": _UnreadableRule(
+        _NPM,
+        "is a pnpm lock file, which this tool does not read",
+        "Run `npm install --package-lock-only` to generate one.",
     ),
-    # build.gradle / build.gradle.kts used to live here, told that Gradle
-    # support was unimplemented. They are parsed directly now (#101): versions
-    # come from the declaration or from gradle/libs.versions.toml, and the ones
-    # that come from neither are reported as unmanaged rather than refused.
+    # Python.
+    "pipfile": _UnreadableRule(
+        _PYTHON,
+        "declares version constraints, not resolved versions, so there is "
+        "nothing to score drift against",
+        "Run `pipenv lock` to generate Pipfile.lock.",
+    ),
+    "poetry.lock": _UnreadableRule(
+        _PYTHON, "is a Poetry lock file, which this tool does not read"
+    ),
+    "uv.lock": _UnreadableRule(
+        _PYTHON, "is a uv lock file, which this tool does not read"
+    ),
+    "setup.py": _UnreadableRule(
+        _PYTHON, "declares dependencies in Python code, which this tool does not run"
+    ),
+    "setup.cfg": _UnreadableRule(
+        _PYTHON, "declares dependencies in a form this tool does not read"
+    ),
+    # Go.
+    "go.sum": _UnreadableRule(
+        _GO, "is a checksum database, not a list of the modules a project requires"
+    ),
+    # Rust. The inverse of the npm case: here it is the *lock* file that is not
+    # read and the range-declaring manifest that is.
+    "cargo.lock": _UnreadableRule(_RUST, "is a lock file this tool does not read"),
+    # Ruby.
+    "gemfile": _UnreadableRule(
+        _RUBY,
+        "declares version constraints, not resolved versions, so there is "
+        "nothing to score drift against",
+        "Run `bundle install` to generate one.",
+    ),
+    # PHP.
+    "composer.json": _UnreadableRule(
+        _PHP,
+        "declares version constraints, not resolved versions, so there is "
+        "nothing to score drift against",
+        "Run `composer install` to generate one.",
+    ),
+    # .NET.
+    "packages.config": _UnreadableRule(
+        _NUGET,
+        "is the legacy NuGet package format, which this tool does not read",
+        "Run `dotnet restore --use-lock-file` to generate packages.lock.json.",
+    ),
+    "directory.packages.props": _UnreadableRule(
+        _NUGET,
+        "supplies Central Package Management versions to the projects that "
+        "reference it; it is not a dependency list of its own",
+    ),
+    # Gradle. build.gradle and build.gradle.kts are read (#101); these are the
+    # files around them that are not.
+    "settings.gradle": _UnreadableRule(
+        _GRADLE, "configures the build; it does not declare the dependencies"
+    ),
+    "settings.gradle.kts": _UnreadableRule(
+        _GRADLE, "configures the build; it does not declare the dependencies"
+    ),
+    "libs.versions.toml": _UnreadableRule(
+        _GRADLE,
+        "is a version catalog: it supplies versions to a build file, and "
+        "declares no dependencies of its own",
+    ),
+    # Maven.
+    "maven_install.json": _UnreadableRule(
+        _MAVEN, "is a rules_jvm_external lock file, which this tool does not read"
+    ),
+    # Ecosystems with no parser at all.
+    "build.sbt": _UnreadableRule(_SBT, "is an sbt build definition"),
+    "podfile": _UnreadableRule(_COCOAPODS, "is a CocoaPods manifest"),
+    "podfile.lock": _UnreadableRule(_COCOAPODS, "is a CocoaPods lock file"),
+    "package.swift": _UnreadableRule(_SWIFTPM, "is a Swift package manifest"),
+    "package.resolved": _UnreadableRule(_SWIFTPM, "is a Swift package lock file"),
+    "pubspec.yaml": _UnreadableRule(_PUB, "is a pub manifest"),
+    "pubspec.lock": _UnreadableRule(_PUB, "is a pub lock file"),
+    "mix.exs": _UnreadableRule(_HEX, "is a Mix project definition"),
+    "mix.lock": _UnreadableRule(_HEX, "is a Mix lock file"),
 }
+
+# The same table, keyed by suffix, for the manifests whose name is the project's
+# rather than the ecosystem's.
+_UNREADABLE_BY_SUFFIX: Dict[str, _UnreadableRule] = {
+    ".vbproj": _UnreadableRule(
+        _NUGET,
+        "is an MSBuild project this tool does not read; of the project types "
+        "only *.csproj is",
+        "Run `dotnet restore --use-lock-file` to generate packages.lock.json.",
+    ),
+    ".fsproj": _UnreadableRule(
+        _NUGET,
+        "is an MSBuild project this tool does not read; of the project types "
+        "only *.csproj is",
+        "Run `dotnet restore --use-lock-file` to generate packages.lock.json.",
+    ),
+    ".gemspec": _UnreadableRule(
+        _RUBY,
+        "declares runtime dependencies as constraints, not resolved versions",
+        "Run `bundle install` to generate one.",
+    ),
+}
+
+
+@dataclass(frozen=True)
+class UnreadableManifest:
+    """A file recognized as a dependency manifest that this tool cannot read.
+
+    ``supported_input_present`` is the field that keeps a directory scan from
+    crying wolf: when a supported input for the same ecosystem sits in the same
+    directory, the ecosystem *was* read and this file is not a gap in coverage.
+    It is recorded rather than acted on here, because the single-file path must
+    still answer for a file the user named explicitly.
+    """
+
+    path: Path
+    ecosystem: str
+    guidance: str
+    supported_input_present: bool
+
+
+def recognise_unreadable_manifest(manifest_path: str) -> Optional[UnreadableManifest]:
+    """Recognize a manifest this tool cannot read, from its filename alone.
+
+    Opens no file, so a recursive directory walk can call it per entry. Returns
+    ``None`` for anything the table does not name — including every manifest the
+    registry *does* read, which is asserted rather than assumed.
+
+    Args:
+        manifest_path: Path to the candidate file. Need not exist.
+
+    Returns:
+        The recognition, or ``None`` when the name is not a recognized manifest.
+    """
+    path = Path(manifest_path)
+    rule = _unreadable_rule(path)
+    if rule is None:
+        return None
+    found = _first_supported_input(path.parent, rule.ecosystem)
+    return UnreadableManifest(
+        path=path,
+        ecosystem=rule.ecosystem.label,
+        guidance=_describe(path, rule, found),
+        supported_input_present=found is not None,
+    )
 
 
 def unsupported_manifest_guidance(manifest_path: str) -> Optional[str]:
     """Return a next step for a refused manifest, or ``None`` when there is none.
 
     ``None`` means the caller should keep today's generic message: the file is
-    not a known range-declaring companion and does not look like a supported
-    manifest wearing the wrong name.
+    not a recognized manifest and does not look like a supported manifest
+    wearing the wrong name.
     """
     path = Path(manifest_path)
-    companion_hint = _companion_guidance(path)
-    if companion_hint is not None:
-        return companion_hint
+    recognised = recognise_unreadable_manifest(manifest_path)
+    if recognised is not None:
+        return recognised.guidance
     return _misnamed_guidance(path)
 
 
-def _companion_guidance(path: Path) -> Optional[str]:
-    """Redirect a known range-declaring manifest to its resolved companion."""
-    rule = _COMPANION_RULES.get(path.name.lower())
-    if rule is None:
-        return None
-
-    opening = f"{path.name} {rule.reason}, so there is nothing to score drift against."
-    if rule.companion is None:
-        return f"{opening} {rule.fallback}".strip()
-
-    directory = path.parent
-    companion_path = _existing_companion(directory, rule.companion)
-    if companion_path is not None:
-        location = f"found alongside it at {companion_path}"
-    else:
-        location = f"not found in {directory}"
-    return f"{opening} Point me at {rule.companion} instead ({location})."
+def _unreadable_rule(path: Path) -> Optional[_UnreadableRule]:
+    """Look one filename up in the recognized-unreadable table."""
+    by_name = _UNREADABLE_BY_NAME.get(path.name.lower())
+    if by_name is not None:
+        return by_name
+    return _UNREADABLE_BY_SUFFIX.get(path.suffix.lower())
 
 
-def _existing_companion(directory: Path, companion: str) -> Optional[Path]:
-    """Return the companion file next to the input, matching case-insensitively.
+def _describe(path: Path, rule: _UnreadableRule, found: Optional[Path]) -> str:
+    """Build the whole message: what this file is, and what is read instead."""
+    opening = f"{path.name} {rule.reason}."
+    ecosystem = rule.ecosystem
+
+    if not ecosystem.inputs:
+        return (
+            f"{opening} {ecosystem.label} is not one of the ecosystems this tool "
+            "reads — run `dependency-risk-profiler list-ecosystems` to see the "
+            "ones it does."
+        )
+
+    reads = f"{ecosystem.label} projects are read from {_join(ecosystem.inputs)}"
+    if found is not None:
+        return f"{opening} {reads}, found alongside it at {found} — point me there."
+
+    # Singular and plural are spelled differently on purpose: "not found in" is
+    # a statement about one named file, and there is more than one here.
+    absence = "not found in" if len(ecosystem.inputs) == 1 else "none found in"
+    located = f"{opening} {reads} — {absence} {path.parent}."
+    return f"{located} {rule.remedy}" if rule.remedy else located
+
+
+def _join(names: Tuple[str, ...]) -> str:
+    """Render supported input names as English, with no Oxford-comma surprises."""
+    if len(names) == 1:
+        return names[0]
+    return f"{', '.join(names[:-1])}, or {names[-1]}"
+
+
+def _first_supported_input(directory: Path, ecosystem: _Ecosystem) -> Optional[Path]:
+    """Return the first supported input for an ecosystem present in a directory.
 
     Checking rather than asserting matters: telling someone to run a file that
     is not there is its own dead end, so the message says which case it is.
     """
+    for name in ecosystem.inputs:
+        found = (
+            _existing_glob(directory, name)
+            if name.startswith("*")
+            else _existing_companion(directory, name)
+        )
+        if found is not None:
+            return found
+    return None
+
+
+def _existing_glob(directory: Path, pattern: str) -> Optional[Path]:
+    """Return the first file matching a supported-input glob such as ``*.csproj``."""
+    try:
+        matches = sorted(directory.glob(pattern))
+    except OSError:
+        return None
+    for match in matches:
+        if match.is_file():
+            return match
+    return None
+
+
+def _existing_companion(directory: Path, companion: str) -> Optional[Path]:
+    """Return the companion file next to the input, matching case-insensitively."""
     candidate = directory / companion
     if candidate.is_file():
         return candidate
