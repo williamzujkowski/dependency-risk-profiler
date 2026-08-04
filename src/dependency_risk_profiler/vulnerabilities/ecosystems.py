@@ -22,6 +22,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping, Optional, Tuple
 
+from ..versioning import VersionScheme
+
 
 class UnknownEcosystem(KeyError):
     """Raised by ``resolve`` when an ecosystem identity cannot be resolved."""
@@ -36,6 +38,7 @@ class Ecosystem:
     github_advisory: Optional[str]
     nvd_cpe_prefix: Optional[str]
     deps_dev: Optional[str]
+    version_scheme: VersionScheme
 
 
 # Canonical entries. Fully-supported ecosystems (an analyzer emits them) plus
@@ -44,15 +47,42 @@ class Ecosystem:
 # entry, not an alias of ``maven``: the two share OSV/GHA names but diverge in
 # the NVD CPE prefix, a legacy quirk preserved here.
 _ECOSYSTEMS: Tuple[Ecosystem, ...] = (
-    Ecosystem("nodejs", "npm", "NPM", "cpe:2.3:a:*:node:", "npm"),
-    Ecosystem("python", "PyPI", "PIP", "cpe:2.3:a:python:", "pypi"),
-    Ecosystem("golang", "Go", "GO", "cpe:2.3:a:golang:", "go"),
-    Ecosystem("cargo", "crates.io", "RUST", "cpe:2.3:a:rust:", "cargo"),
-    Ecosystem("maven", "Maven", "MAVEN", "cpe:2.3:a:apache:maven:", "maven"),
-    Ecosystem("java", "Maven", "MAVEN", "cpe:2.3:a:java:", "maven"),
-    Ecosystem("nuget", "NuGet", "NUGET", None, "nuget"),
-    Ecosystem("ruby", "RubyGems", "RUBYGEMS", "cpe:2.3:a:ruby:", "rubygems"),
-    Ecosystem("composer", "Packagist", "COMPOSER", "cpe:2.3:a:php:", None),
+    Ecosystem("nodejs", "npm", "NPM", "cpe:2.3:a:*:node:", "npm", VersionScheme.SEMVER),
+    Ecosystem(
+        "python", "PyPI", "PIP", "cpe:2.3:a:python:", "pypi", VersionScheme.PEP440
+    ),
+    Ecosystem("golang", "Go", "GO", "cpe:2.3:a:golang:", "go", VersionScheme.SEMVER),
+    Ecosystem(
+        "cargo", "crates.io", "RUST", "cpe:2.3:a:rust:", "cargo", VersionScheme.SEMVER
+    ),
+    Ecosystem(
+        "maven",
+        "Maven",
+        "MAVEN",
+        "cpe:2.3:a:apache:maven:",
+        "maven",
+        VersionScheme.MAVEN,
+    ),
+    Ecosystem(
+        "java", "Maven", "MAVEN", "cpe:2.3:a:java:", "maven", VersionScheme.MAVEN
+    ),
+    Ecosystem("nuget", "NuGet", "NUGET", None, "nuget", VersionScheme.NUGET),
+    Ecosystem(
+        "ruby",
+        "RubyGems",
+        "RUBYGEMS",
+        "cpe:2.3:a:ruby:",
+        "rubygems",
+        VersionScheme.RUBYGEMS,
+    ),
+    Ecosystem(
+        "composer",
+        "Packagist",
+        "COMPOSER",
+        "cpe:2.3:a:php:",
+        None,
+        VersionScheme.SEMVER,
+    ),
 )
 
 # Every spelling the four legacy routing tables accepted, mapped to a canonical
@@ -112,3 +142,23 @@ def resolve(name: str) -> Ecosystem:
     if eco is None:
         raise UnknownEcosystem(name)
     return eco
+
+
+def version_scheme(name: str) -> VersionScheme:
+    """Return the version-ordering rules for an ecosystem name or alias.
+
+    Unlike the source-routing lookups, this one has a defensible default: an
+    unrecognized ecosystem falls back to the lenient SemVer comparator, which
+    orders the numeric-dotted shape every ecosystem shares and reports
+    "unparseable" for anything else. It never guesses an *ordering* — that
+    would be the #61 failure mode — only which comparator to try.
+
+    Args:
+        name: Ecosystem name or alias.
+
+    Returns:
+        The ecosystem's version scheme, or ``VersionScheme.SEMVER`` when the
+        name is not recognized.
+    """
+    eco = lookup(name)
+    return eco.version_scheme if eco is not None else VersionScheme.SEMVER

@@ -13,7 +13,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import requests
 
 from ..models import DependencyMetadata
-from . import ecosystems
+from ..versioning import VersionScheme
+from . import affected_ranges, ecosystems
 from .cache import default_cache as disk_cache
 
 logger = logging.getLogger(__name__)
@@ -252,7 +253,7 @@ class OSVSource(VulnerabilitySource):
                 data = response.json()
 
                 vulns = data.get("vulns", [])
-                return self._normalize_results(vulns)
+                return self._normalize_results(vulns, package_name, osv_ecosystem)
 
             except requests.HTTPError as e:
                 # Don't retry on 4xx client errors (except 429 Too Many Requests)
@@ -307,11 +308,20 @@ class OSVSource(VulnerabilitySource):
         # Unknown ecosystem is returned verbatim (historical OSV behavior).
         return eco.osv if eco is not None else ecosystem
 
-    def _normalize_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _normalize_results(
+        self,
+        results: List[Dict[str, Any]],
+        package_name: Optional[str] = None,
+        osv_ecosystem: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Normalize OSV vulnerability data.
 
         Args:
             results: OSV vulnerability data
+            package_name: Package the lookup was for, used to drop ``affected``
+                entries belonging to other packages in a multi-package advisory
+            osv_ecosystem: OSV ecosystem name, which disambiguates packages
+                that share a name across ecosystems
 
         Returns:
             List of normalized vulnerability dictionaries
@@ -343,6 +353,13 @@ class OSVSource(VulnerabilitySource):
                             if "fixed" in event:
                                 fixed_versions.append(event["fixed"])
 
+            # The affected block is what makes an advisory answerable against a
+            # pin. Dropping it is how every advisory ever published came to be
+            # counted against whatever version was installed (#61).
+            affected = affected_ranges.affected_versions_from_osv(
+                vuln, package_name, osv_ecosystem
+            )
+
             normalized.append(
                 {
                     "id": vuln.get("id", ""),
@@ -358,6 +375,9 @@ class OSVSource(VulnerabilitySource):
                     "withdrawn": bool(vuln.get("withdrawn")),
                     "confidence": "HIGH",
                     "fixed_versions": fixed_versions,
+                    "affected_versions": (
+                        None if affected.is_empty() else affected.to_payload()
+                    ),
                     "references": [
                         ref.get("url", "") for ref in vuln.get("references", [])
                     ],
@@ -507,6 +527,10 @@ class NVDSource(VulnerabilitySource):
                     "withdrawn": status.lower() in ("rejected", "withdrawn"),
                     "confidence": "MEDIUM" if severity or cvss_score else "LOW",
                     "fixed_versions": [],  # NVD doesn't provide this easily
+                    # NVD's CPE match criteria are not version ranges in any
+                    # ecosystem's ordering, so applicability stays unknown and
+                    # the advisory is counted with that reason recorded (#61).
+                    "affected_versions": None,
                     "references": references,
                 }
             )
@@ -719,6 +743,10 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 if version:
                     fixed_versions.append(version)
 
+            affected = affected_ranges.affected_versions_from_github_range(
+                vuln.get("vulnerableVersionRange")
+            )
+
             normalized.append(
                 {
                     "id": advisory.get("id", ""),
@@ -734,6 +762,9 @@ class GitHubAdvisorySource(VulnerabilitySource):
                     "withdrawn": bool(advisory.get("withdrawnAt")),
                     "confidence": "HIGH",
                     "fixed_versions": fixed_versions,
+                    "affected_versions": (
+                        None if affected.is_empty() else affected.to_payload()
+                    ),
                     "references": [
                         ref.get("url", "") for ref in advisory.get("references", [])
                     ],
@@ -879,12 +910,18 @@ def exploit_score_from_severity(severity: str) -> float:
 def annotate_vulnerabilities_for_scoring(
     vulnerabilities: List[Dict[str, object]],
     minimum_severity: str = DEFAULT_MINIMUM_SEVERITY_FOR_SCORING,
+    installed_version: Optional[str] = None,
+    ecosystem: Optional[str] = None,
 ) -> List[Dict[str, object]]:
     """Annotate vulnerabilities with scoring inclusion and filter reasons.
 
     Args:
         vulnerabilities: Vulnerability records from all sources.
         minimum_severity: Minimum severity tier that counts toward scoring.
+        installed_version: The version actually installed, used to rule out
+            advisories that were fixed before it (#61). Omitting it leaves
+            every advisory's applicability unknown, which counts them all.
+        ecosystem: Ecosystem name, which decides the version-ordering rules.
 
     Returns:
         Vulnerability records with transparent scoring annotations.
@@ -893,13 +930,19 @@ def annotate_vulnerabilities_for_scoring(
     if threshold in ("UNKNOWN", "INFO", "NONE"):
         threshold = "INFO"
 
+    scheme = ecosystems.version_scheme(ecosystem or "")
+
     return [
-        _annotate_vulnerability_for_scoring(vuln, threshold) for vuln in vulnerabilities
+        _annotate_vulnerability_for_scoring(vuln, threshold, installed_version, scheme)
+        for vuln in vulnerabilities
     ]
 
 
 def _annotate_vulnerability_for_scoring(
-    vulnerability: Dict[str, object], threshold: str
+    vulnerability: Dict[str, object],
+    threshold: str,
+    installed_version: Optional[str],
+    scheme: VersionScheme,
 ) -> Dict[str, object]:
     annotated: Dict[str, object] = dict(vulnerability)
     cvss_score = normalize_cvss_score(vulnerability.get("cvss_score"))
@@ -909,10 +952,19 @@ def _annotate_vulnerability_for_scoring(
     )
     withdrawn = _is_withdrawn(vulnerability)
     confidence = _normalize_confidence(vulnerability)
+    applicability = affected_ranges.evaluate_applicability(
+        affected_ranges.affected_versions_from_payload(
+            vulnerability.get("affected_versions")
+        ),
+        installed_version,
+        scheme,
+    )
 
     filter_reasons = []
     if withdrawn:
         filter_reasons.append("withdrawn")
+    if applicability.status is affected_ranges.Applicability.NOT_AFFECTED:
+        filter_reasons.append(affected_ranges.NOT_AFFECTED_FILTER_REASON)
     if normalized_severity == "INFO":
         filter_reasons.append("informational")
     elif normalized_severity == "UNKNOWN":
@@ -927,6 +979,8 @@ def _annotate_vulnerability_for_scoring(
     annotated["cvss_score"] = cvss_score
     annotated["withdrawn"] = withdrawn
     annotated["confidence"] = confidence
+    annotated["version_match"] = applicability.status.value
+    annotated["version_match_reason"] = applicability.reason
     annotated["counted_in_score"] = counted
     annotated["filtered"] = not counted
     annotated["filter_reasons"] = filter_reasons
@@ -1160,7 +1214,10 @@ def _update_dependency_with_vulnerabilities(
         dependency.security_metrics = SecurityMetrics()
 
     annotated_vulnerabilities = annotate_vulnerabilities_for_scoring(
-        vulnerabilities, minimum_severity
+        vulnerabilities,
+        minimum_severity,
+        dependency.installed_version,
+        infer_ecosystem(dependency),
     )
     counted_vulnerabilities = [
         vuln
@@ -1169,6 +1226,13 @@ def _update_dependency_with_vulnerabilities(
     ]
     filtered_vulnerabilities = [
         vuln for vuln in annotated_vulnerabilities if vuln.get("filtered") is True
+    ]
+    # Advisories counted only because applicability could not be decided. They
+    # inflate nothing silently: the count and its reasons are reported (#74).
+    undecided_vulnerabilities = [
+        vuln
+        for vuln in counted_vulnerabilities
+        if vuln.get("version_match") == affected_ranges.Applicability.UNKNOWN.value
     ]
 
     # Count vulnerabilities
@@ -1182,6 +1246,12 @@ def _update_dependency_with_vulnerabilities(
     dependency.security_metrics.vulnerability_details = annotated_vulnerabilities
     dependency.security_metrics.filtered_vulnerability_reasons = _count_filter_reasons(
         filtered_vulnerabilities
+    )
+    dependency.security_metrics.applicability_unknown_count = len(
+        undecided_vulnerabilities
+    )
+    dependency.security_metrics.applicability_unknown_reasons = (
+        _count_applicability_reasons(undecided_vulnerabilities)
     )
 
     # Count fixed vulnerabilities (those with fixed versions)
@@ -1243,6 +1313,18 @@ def _count_filter_reasons(vulnerabilities: List[Dict[str, object]]) -> Dict[str,
             for reason in filter_reasons:
                 if isinstance(reason, str):
                     reason_counts[reason] = reason_counts.get(reason, 0) + 1
+    return reason_counts
+
+
+def _count_applicability_reasons(
+    vulnerabilities: List[Dict[str, object]],
+) -> Dict[str, int]:
+    """Tally why applicability could not be decided for counted advisories."""
+    reason_counts: Dict[str, int] = {}
+    for vulnerability in vulnerabilities:
+        reason = _get_string(vulnerability, "version_match_reason")
+        if reason:
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
     return reason_counts
 
 

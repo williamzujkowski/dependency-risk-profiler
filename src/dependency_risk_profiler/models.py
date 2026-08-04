@@ -80,6 +80,10 @@ class SecurityMetrics:
     counted_vulnerability_count: Optional[int] = None
     filtered_vulnerability_count: Optional[int] = None
     filtered_vulnerability_reasons: Dict[str, int] = field(default_factory=dict)
+    # Counted advisories whose applicability to the installed version could not
+    # be decided, with the reasons why. Reported rather than assumed away (#61).
+    applicability_unknown_count: Optional[int] = None
+    applicability_unknown_reasons: Dict[str, int] = field(default_factory=dict)
     max_vulnerability_severity: Optional[str] = None
     vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
     average_time_to_fix_days: Optional[float] = (

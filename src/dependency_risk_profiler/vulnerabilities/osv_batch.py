@@ -130,7 +130,9 @@ async def _try_prewarm_chunk(
 
         for query, vuln_ids in zip(queries, package_vuln_ids):
             full_vulns = [hydrated_vulns[vuln_id] for vuln_id in vuln_ids]
-            normalized = osv_source._normalize_results(full_vulns)
+            normalized = osv_source._normalize_results(
+                full_vulns, query.name, query.osv_ecosystem
+            )
             cache_data(query.name, query.ecosystem, normalized)
         return True
     except OSVBatchChunkError as exc:

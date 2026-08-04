@@ -68,7 +68,7 @@ class AsyncOSVSource(OSVSource):
 
         # Extract vulnerability data
         vulns = response_data.get("vulns", [])
-        return self._normalize_results(vulns)
+        return self._normalize_results(vulns, package_name, osv_ecosystem)
 
 
 class AsyncNVDSource(NVDSource):

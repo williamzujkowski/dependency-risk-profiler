@@ -106,8 +106,9 @@ class TerminalFormatter(BaseFormatter):
             [
                 "",
                 (
-                    'Worst first. "filtered" = informational / withdrawn / '
-                    "low-confidence advisories excluded from the score."
+                    'Worst first. "filtered" = advisories excluded from the '
+                    "score: ones that do not affect the installed version, "
+                    "plus informational / withdrawn / low-confidence ones."
                 ),
             ]
         )
@@ -550,6 +551,8 @@ class JsonFormatter(BaseFormatter):
                 "counted_in_score": None,
                 "filtered": None,
                 "filtered_reasons": {},
+                "applicability_unknown": None,
+                "applicability_unknown_reasons": {},
                 "max_counted_cvss_score": None,
                 "max_counted_severity": None,
                 "advisories": [],
@@ -560,6 +563,8 @@ class JsonFormatter(BaseFormatter):
             "counted_in_score": metrics.counted_vulnerability_count,
             "filtered": metrics.filtered_vulnerability_count,
             "filtered_reasons": metrics.filtered_vulnerability_reasons,
+            "applicability_unknown": metrics.applicability_unknown_count,
+            "applicability_unknown_reasons": metrics.applicability_unknown_reasons,
             "max_counted_cvss_score": metrics.max_cvss_score,
             "max_counted_severity": metrics.max_vulnerability_severity,
             "advisories": metrics.vulnerability_details,
