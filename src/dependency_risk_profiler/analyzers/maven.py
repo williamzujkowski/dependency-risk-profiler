@@ -1,32 +1,68 @@
 """Analyzer for Java (Maven) dependencies."""
 
 import logging
+import re
 import xml.etree.ElementTree as ElementTree
-from typing import Dict, Optional
+from typing import Dict, List, Optional
+from urllib.parse import urlparse
 
 import requests
 
+from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
+from ..parsers.maven_central import MavenCentralClient
+from ..parsers.pom_model import PomCoordinate, PomDocument
 from ..parsers.xml_utils import local_name
 from .base import BaseAnalyzer
+from .common import canonical_repository_url, cloned_repo, is_cloneable_repo_url
 
 logger = logging.getLogger(__name__)
 
 # maven-metadata.xml is small; cap the download to bound parse cost.
 _MAX_METADATA_BYTES = 2 * 1024 * 1024
 
+# Scopes that describe what actually ships with the artifact. "test" and
+# "provided" dependencies are not part of a consumer's runtime surface, so they
+# do not belong in the transitive-dependency signal.
+_SHIPPED_SCOPES = {None, "compile", "runtime"}
+
+# Maven SCM connection strings are URLs wearing a costume: "scm:git:" prefixes,
+# "git://" and "ssh://" schemes, and the scp-style "git@host:owner/repo" form.
+# The scp pattern demands a dotted host and a slashed path so it cannot swallow
+# an ordinary URI scheme such as "mailto:someone@example.org".
+_SCM_PREFIX = re.compile(r"^scm:(?:[a-z0-9_+-]+:)?", re.IGNORECASE)
+_SCP_STYLE = re.compile(r"^(?:[\w.-]+@)?([\w-]+(?:\.[\w-]+)+):(?!//)([^/].*/.*)$")
+
 
 class MavenAnalyzer(BaseAnalyzer):
-    """Analyzer for Java dependencies published to Maven Central."""
+    """Analyzer for Java dependencies published to Maven Central.
 
-    def __init__(self, timeout: int = 10):
+    Maven Central publishes each artifact's own POM alongside its jar, and that
+    POM carries the metadata every other ecosystem gets from its registry API:
+    the source repository, the license, and the artifact's own dependencies.
+    Reading it is what turns a Java scan from "here are your CVEs" into the same
+    signal set the profiler collects for npm, PyPI, and Go.
+    """
+
+    def __init__(
+        self,
+        timeout: int = 10,
+        client: Optional[MavenCentralClient] = None,
+    ) -> None:
         """Initialize the analyzer.
 
         Args:
             timeout: HTTP request timeout in seconds.
+            client: Bounded Maven Central client used to read artifact POMs.
+                Defaults to a fresh one; tests inject a disabled client.
         """
         super().__init__(timeout)
-        self.metadata_cache: Dict[str, str] = {}
+        self.metadata_cache: Dict[str, Dict[str, object]] = {}
+        self.client = (
+            client
+            if client is not None
+            else MavenCentralClient(timeout=timeout, fetch_budget=512)
+        )
 
     def analyze(
         self, dependencies: Dict[str, DependencyMetadata]
@@ -48,10 +84,114 @@ class MavenAnalyzer(BaseAnalyzer):
                 latest = self._get_latest_version(name)
                 if latest:
                     dep.latest_version = latest
+                self._collect_artifact_metadata(name, dep, latest)
             except Exception as exc:
                 logger.error("Error analyzing Maven package %s: %s", name, exc)
 
+        if self.clone_repos:
+            self._analyze_repositories(dependencies)
+
         return dependencies
+
+    def _collect_artifact_metadata(
+        self,
+        name: str,
+        dep: DependencyMetadata,
+        latest: Optional[str],
+    ) -> None:
+        """Read the artifact's published POM for repo, license, and deps.
+
+        The installed version is preferred so the metadata describes what the
+        project actually uses; the latest version is the fallback for artifacts
+        whose version is managed somewhere we could not reach.
+        """
+        group_id, _, artifact_id = name.partition(":")
+        if not group_id or not artifact_id:
+            return
+
+        for version in self._candidate_versions(dep, latest):
+            document = self.client.fetch_pom(
+                PomCoordinate(group_id, artifact_id, version)
+            )
+            if document is None:
+                continue
+            self._apply_artifact_metadata(name, dep, document)
+            return
+
+    @staticmethod
+    def _candidate_versions(
+        dep: DependencyMetadata, latest: Optional[str]
+    ) -> List[str]:
+        """Return the versions worth trying for the artifact's own POM."""
+        candidates: List[str] = []
+        for version in (dep.installed_version, latest):
+            if version and version not in candidates:
+                candidates.append(version)
+        return candidates
+
+    def _apply_artifact_metadata(
+        self, name: str, dep: DependencyMetadata, document: PomDocument
+    ) -> None:
+        """Copy repository, license, and dependency data off an artifact POM."""
+        # <scm> is the authoritative pointer; <url> is the fallback for POMs
+        # that only publish a project homepage. Both get trimmed to the
+        # repository root, because monorepo artifacts point at a subdirectory
+        # and both git clone and the GitHub API reject that deeper path.
+        for candidate in (document.scm_url, document.project_url):
+            repository_url = canonical_repository_url(normalize_scm_url(candidate))
+            if repository_url:
+                dep.repository_url = repository_url
+                break
+
+        # analyze_license() reads a registry-metadata mapping; give it one built
+        # from <licenses>, using the plural key so the multi-license case stays
+        # a list the compatibility analysis can walk.
+        cached: Dict[str, object] = {"name": name}
+        if document.licenses:
+            cached["licenses"] = list(document.licenses)
+        self.metadata_cache[name] = cached
+
+        # An artifact's own <dependencies> block is a measured transitive
+        # signal, not an assumed-empty one. Only what actually ships counts.
+        shipped = {
+            declaration.key
+            for declaration in document.direct
+            if declaration.scope in _SHIPPED_SCOPES
+            and not declaration.is_bom_import
+            and declaration.key != name
+        }
+        dep.transitive_dependencies = shipped
+        dep.additional_info["transitive_source"] = "maven-pom"
+
+    def _analyze_repositories(
+        self, dependencies: Dict[str, DependencyMetadata]
+    ) -> None:
+        """Clone each distinct source repository once and score every user.
+
+        Twelve Spring Boot starters share one repository. Cloning it twelve
+        times would turn a Java scan into a bandwidth exercise, so dependencies
+        are grouped by repository and the clone is shared.
+        """
+        by_repository: Dict[str, List[DependencyMetadata]] = {}
+        for dep in dependencies.values():
+            if dep.repository_url and is_cloneable_repo_url(dep.repository_url):
+                by_repository.setdefault(dep.repository_url, []).append(dep)
+
+        for repository_url, sharing in by_repository.items():
+            logger.info(
+                "Inspecting %s for %d Maven artifact(s)", repository_url, len(sharing)
+            )
+            with cloned_repo(repository_url) as clone_result:
+                if not clone_result:
+                    continue
+                repo_dir, _ = clone_result
+                for dep in sharing:
+                    try:
+                        analyze_repository(dep, repo_dir)
+                    except Exception as exc:
+                        logger.error(
+                            "Error analyzing repository for %s: %s", dep.name, exc
+                        )
 
     def _get_latest_version(self, coordinate: str) -> Optional[str]:
         """Return the release (or latest) version for a groupId:artifactId."""
@@ -98,3 +238,45 @@ class MavenAnalyzer(BaseAnalyzer):
                     latest = text
             return release or latest
         return None
+
+
+def normalize_scm_url(raw_url: Optional[str]) -> Optional[str]:
+    """Turn a Maven ``<scm>`` value into a plain https repository URL.
+
+    Maven SCM values arrive in four shapes: a browsable ``https://`` URL, a
+    ``scm:git:`` connection string, a ``git://`` or ``ssh://`` URL, and the
+    scp-style ``git@host:owner/repo``. Only the https form is useful downstream,
+    and only a cloneable host survives :func:`is_cloneable_repo_url` later.
+
+    Args:
+        raw_url: The raw ``<scm>`` or ``<url>`` text.
+
+    Returns:
+        An ``https://host/path`` URL, or None if nothing usable is in there.
+    """
+    if not raw_url:
+        return None
+
+    url = _SCM_PREFIX.sub("", raw_url.strip())
+    if not url:
+        return None
+
+    scp_match = _SCP_STYLE.match(url)
+    if scp_match and "://" not in url:
+        url = f"https://{scp_match.group(1)}/{scp_match.group(2)}"
+
+    parsed = urlparse(url)
+    # git:// and ssh:// are the same repository reachable over https; anything
+    # else (mailto:, file:, a bare word) is not a repository at all.
+    if parsed.scheme not in ("https", "http", "git", "ssh") or not parsed.netloc:
+        return None
+
+    path = parsed.path.rstrip("/")
+    if path.endswith(".git"):
+        path = path[: -len(".git")]
+    if not path.strip("/"):
+        return None
+
+    # Drop credentials, query strings, and fragments: only host and path matter.
+    host = parsed.netloc.rsplit("@", 1)[-1]
+    return f"https://{host}{path}"

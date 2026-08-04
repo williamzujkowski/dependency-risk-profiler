@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Golden fixture for issue #128: a project whose dependency versions live in a
+  parent POM's <dependencyManagement>, the shape WebGoat uses with the Spring
+  Boot starter parent. Every remote POM this needs is mirrored under
+  ../repository, so the test suite resolves it without touching the network.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.example.platform</groupId>
+    <artifactId>platform-starter-parent</artifactId>
+    <version>3.4.0</version>
+  </parent>
+
+  <groupId>com.example.app</groupId>
+  <artifactId>demo-app</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+
+  <properties>
+    <guava.version>33.0.0-jre</guava.version>
+    <!-- The grandparent also declares this; the nearest declaration wins. -->
+    <overridden.version>9.9.9</overridden.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Managed by this POM's own block, via a local property. -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <!-- Managed two levels up, with a literal version. -->
+    <dependency>
+      <groupId>com.example.platform</groupId>
+      <artifactId>platform-starter-web</artifactId>
+    </dependency>
+    <!-- Managed two levels up, via a property declared two levels up. -->
+    <dependency>
+      <groupId>org.jsoup</groupId>
+      <artifactId>jsoup</artifactId>
+    </dependency>
+    <!-- Managed two levels up, via a property this POM overrides. -->
+    <dependency>
+      <groupId>com.example.override</groupId>
+      <artifactId>overridden</artifactId>
+    </dependency>
+    <!-- Pinned inline; no inheritance involved. -->
+    <dependency>
+      <groupId>org.pinned</groupId>
+      <artifactId>pinned-lib</artifactId>
+      <version>1.2.3</version>
+    </dependency>
+    <!-- Managed nowhere reachable: must report as unresolved, not as blank. -->
+    <dependency>
+      <groupId>com.nowhere</groupId>
+      <artifactId>ghost</artifactId>
+    </dependency>
+  </dependencies>
+</project>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mirror of a Maven Central artifact, for offline resolution tests.
+     Stands in for the sprawling vendor BOMs (Google's cloud libraries BOM
+     imports well over a hundred of its own) that make the per-import fetch
+     allowance necessary. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.wide</groupId>
+  <artifactId>wide-bom</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.example.wide</groupId>
+        <artifactId>wide-inner-bom</artifactId>
+        <version>1.0.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

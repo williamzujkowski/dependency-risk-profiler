@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mirror of a Maven Central artifact, for offline resolution tests.
+     An importable BOM that itself has a parent. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.example.cloud</groupId>
+    <artifactId>cloud-parent</artifactId>
+    <version>2024.0.1</version>
+  </parent>
+  <artifactId>cloud-bom</artifactId>
+  <packaging>pom</packaging>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.example.cloud</groupId>
+        <artifactId>cloud-gateway</artifactId>
+        <version>4.1.2</version>
+      </dependency>
+      <!-- ${project.version} inside an imported BOM means the BOM's version. -->
+      <dependency>
+        <groupId>com.example.cloud</groupId>
+        <artifactId>cloud-sibling</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <!-- Only the importing project declares ${leaky.version}. An import is
+           resolved in its own scope, so this must stay unresolved. -->
+      <dependency>
+        <groupId>com.example.cloud</groupId>
+        <artifactId>cloud-leaky</artifactId>
+        <version>${leaky.version}</version>
+      </dependency>
+      <!-- The importing project pins this itself, nearer, and must win. -->
+      <dependency>
+        <groupId>com.example.cloud</groupId>
+        <artifactId>cloud-config</artifactId>
+        <version>1.1.1</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Maven dependencies that inherit their version now resolve it.** Java
+  projects overwhelmingly declare a dependency without an inline `<version>`
+  and inherit it from `<dependencyManagement>` — the project's own block, a
+  parent POM's, or an imported BOM. WebGoat pins 4 of 46 inline. The parser
+  read only the inline form, so the installed version was blank for the rest,
+  the VERSION column rendered as a bare arrow, and there was no drift to score.
+  Resolution now follows Maven's rules across the project's own block, the
+  parent POM chain, and `<scope>import</scope>` BOMs (each resolved in its own
+  property scope), fetching parent POMs and BOMs from Maven Central. Every
+  remote read is fenced: https and `repo1.maven.org` only, redirects refused,
+  coordinates validated before they become a URL path, bodies streamed and
+  abandoned past 2 MiB, bounded parent and import depth, a per-manifest fetch
+  budget, and a per-import allowance so one sprawling vendor BOM cannot spend
+  it all. Set `DEPENDENCY_RISK_NO_REMOTE_POMS=1` to keep resolution offline;
+  anything still unresolved is reported as `unmanaged` and its version-drift
+  signal is excluded from both numerator and denominator rather than scored as
+  zero drift.
+
+- **The Maven analyzer now collects the signals every other ecosystem does.**
+  It read a latest version and stopped, so it never set a repository URL and
+  every repository-derived signal — staleness, health indicators, the five
+  OpenSSF-style checks, community, license — was permanently unmeasured for
+  every Java dependency. Each artifact's own published POM is now read from
+  Maven Central for `<scm>`, `<licenses>`, and the artifact's shipped
+  dependencies, and repositories are cloned once each rather than once per
+  artifact (twelve Spring Boot starters share one repo). **Java scans will now
+  report risk levels and scores where they previously reported `UNKNOWN`**, so
+  a scan diff across this version can show large movement without anything
+  having changed upstream. Measured against WebGoat's `pom.xml`: 46 of 46
+  `UNKNOWN` with 502 unmeasured signals becomes 29 scored (2 HIGH, 14 MEDIUM,
+  13 LOW) with 172 unmeasured; against OWASP wrongsecrets, 43 of 43 `UNKNOWN`
+  with 444 unmeasured becomes 33 scored (2 HIGH, 19 MEDIUM, 12 LOW) with 103
+  unmeasured.
+
+- **An unresolved transitive dependency set is no longer scored as zero risk.**
+  Transitive resolution only understands npm lockfiles and Python requirement
+  sets; for every other manifest it logged `Could not extract dependency map`
+  and left an empty set, which the scorer read as "no transitive dependencies,
+  therefore no transitive risk". Unresolved sets are now marked unmeasured and
+  excluded from the score (#74). **Scores can move in either direction for
+  Maven, NuGet, RubyGems, Composer and Cargo manifests**, since one fabricated
+  zero leaves the average and, for Maven, a real measurement replaces it. Two
+  latent crashes on the same theme are fixed: the terminal report compared
+  `deprecation_score` and `transitive_score` against a number without a `None`
+  guard.
+
 - **Go module paths now resolve to their source repository.** A module path is
   an import path, not a repository URL, and the resolver only understood the
   plain `github.com/owner/repo` form. Everything else — a `/vN` major-version

@@ -16,6 +16,11 @@ from ..models import DependencyMetadata
 
 logger = logging.getLogger(__name__)
 
+# Records how a dependency's transitive set was established, so the scorer can
+# tell "resolved, and it is empty" from "never resolved".
+TRANSITIVE_SOURCE_KEY = "transitive_source"
+TRANSITIVE_SOURCE_UNMEASURED = "unmeasured"
+
 
 def create_virtual_env(path: str) -> bool:
     """Create a Python virtual environment.
@@ -418,6 +423,32 @@ def build_dependency_graph(
     return transitive_deps
 
 
+def mark_unmeasured_transitive(
+    dependencies: Dict[str, DependencyMetadata],
+) -> Dict[str, DependencyMetadata]:
+    """Flag dependencies whose transitive set was never actually resolved.
+
+    A dependency that an ecosystem analyzer already populated (Maven reads each
+    artifact's published POM, for instance) keeps its data and its source
+    marker. Everything else gets ``TRANSITIVE_SOURCE_UNMEASURED`` so the scorer
+    reports the signal as unavailable rather than as "zero transitive
+    dependencies, therefore zero risk".
+
+    Args:
+        dependencies: Dictionary mapping dependency names to their metadata.
+
+    Returns:
+        The same dictionary, with unmeasured dependencies marked.
+    """
+    for dependency in dependencies.values():
+        if dependency.transitive_dependencies:
+            continue
+        if dependency.additional_info.get(TRANSITIVE_SOURCE_KEY):
+            continue
+        dependency.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_UNMEASURED
+    return dependencies
+
+
 def analyze_transitive_dependencies_enhanced(
     dependencies: Dict[str, DependencyMetadata],
     manifest_path: str,
@@ -456,10 +487,21 @@ def analyze_transitive_dependencies_enhanced(
                 manifest_path, allow_install=allow_install
             )
 
-        # Skip if no dependency map could be extracted
+        # This module only knows how to walk npm lockfiles and Python
+        # requirement sets. For every other manifest there is no map to build,
+        # which is not a failure — it is an absent capability, and saying so is
+        # the difference between "we looked and found none" and "we never
+        # looked". Anything the ecosystem analyzer already collected stands;
+        # anything it did not is marked unmeasured so the scorer drops the
+        # transitive signal from both numerator and denominator (#74) instead of
+        # scoring an unearned zero.
         if not dependency_map:
-            logger.warning(f"Could not extract dependency map from {manifest_path}")
-            return dependencies
+            logger.debug(
+                "No transitive dependency map is available for %s; keeping "
+                "whatever the ecosystem analyzer collected",
+                manifest_path,
+            )
+            return mark_unmeasured_transitive(dependencies)
 
         # Build transitive dependency graph
         direct_dependencies = list(dependencies.keys())
@@ -469,6 +511,9 @@ def analyze_transitive_dependencies_enhanced(
         for pkg_name, deps in transitive_deps.items():
             if pkg_name in dependencies:
                 dependencies[pkg_name].transitive_dependencies = deps
+                dependencies[pkg_name].additional_info[
+                    TRANSITIVE_SOURCE_KEY
+                ] = "manifest"
                 logger.info(f"Found {len(deps)} transitive dependencies for {pkg_name}")
 
     except Exception as e:
