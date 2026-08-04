@@ -11,11 +11,90 @@ from .unmeasured import no_repository_issue, read_failed_issue
 
 logger = logging.getLogger(__name__)
 
+# ``git log --pretty=%G?`` signature status codes, grouped by the verdict each
+# one establishes. Spelled out as closed sets so that the fall-through below is
+# unmistakably "a code none of these tables contains" rather than a catch-all
+# that quietly answers the question (#236).
+#
+# G: valid signature with the same key as in the commit author
+# B: valid signature but with expired key
+# R: valid signature, key expired
+# U: valid signature with untrusted key
+# X: invalid signature
+# Y: invalid signature, key missing
+# E: signature can't be checked (e.g., missing key)
+# N: no signature
+_COMMIT_STATUS_BUCKETS: Dict[str, str] = {
+    "G": "verified_commits",
+    "B": "verified_commits",
+    "R": "verified_commits",
+    "U": "unverified_commits",
+    "X": "unverified_commits",
+    "Y": "unverified_commits",
+    "E": "unverified_commits",
+    "N": "no_signature_commits",
+}
+
+# ``git tag -v`` output fragments that establish a verdict, in priority order.
+# Every one of these was observed from real git rather than assumed:
+#
+#   annotated + signed + good key -> "Good signature from ..."           (rc 0)
+#   annotated + signed + bad      -> "BAD signature from ..."            (rc 1)
+#   annotated + unsigned          -> "error: no signature found"         (rc 1)
+#   lightweight                   -> "cannot verify a non-tag object"    (rc 1)
+#
+# The last one is a measured negative on purpose: a lightweight tag points
+# straight at a commit and has no object that could carry a signature, so "this
+# release is not signed" is established rather than assumed. Leaving it to the
+# fall-through would unmeasure every repository that tags without ``-a``, which
+# is most of them — laundering a real finding into an unknown is the same defect
+# pointing the other way.
+#
+# What is deliberately *not* here: "gpg: the signature could not be verified"
+# and "fatal: cannot exec '<gpg>'". A tag whose signature gpg could not evaluate
+# is not an unsigned tag, and neither is a tag we could not check because gpg is
+# missing. Both used to land in ``no_signature_tags`` (#236).
+_TAG_VERDICTS: Tuple[Tuple[str, str], ...] = (
+    ("Good signature", "verified_tags"),
+    ("BAD signature", "unverified_tags"),
+    ("error: no signature found", "no_signature_tags"),
+    ("cannot verify a non-tag object", "no_signature_tags"),
+)
+
+
+def _classify_tag_verification(verify_output: str) -> Optional[str]:
+    """Map ``git tag -v`` output to the counter it establishes.
+
+    Args:
+        verify_output: The combined stderr and stdout of ``git tag -v``.
+
+    Returns:
+        The result key the output establishes, or None when the output
+        establishes nothing — a gpg that could not run, a keyring that could not
+        be opened, a tag that vanished between listing and verification.
+    """
+    for fragment, bucket in _TAG_VERDICTS:
+        if fragment in verify_output:
+            return bucket
+    return None
+
 
 def check_recent_commit_signature_status(
     repo_dir: str, commit_count: int = 20
 ) -> Dict[str, int]:
     """Check the signature status of recent commits.
+
+    ``total_commits`` counts only the lines this code could interpret, and
+    ``uninterpretable_commits`` counts the rest. A line ``git`` emitted that
+    does not match ``<sha> <status>`` is not a commit anyone established to be
+    unsigned, so it is excluded from the numerator *and* the denominator of the
+    signing rate — #74's rule for whole signals, applied per record. That leaves
+    the rate a measurement over the records that were actually read, which is
+    the ``AdvisoryLookupState.PARTIAL`` position: an incomplete measurement is
+    still a measurement, and it is reported as incomplete.
+
+    When *no* line could be interpreted there is nothing left to measure, so the
+    read is a failure and says so.
 
     Args:
         repo_dir: Path to the git repository.
@@ -25,6 +104,9 @@ def check_recent_commit_signature_status(
         Dictionary with signature status counts.
 
     Raises:
+        ValueError: If ``git`` emitted commit lines and none of them could be
+            interpreted. A signing rate over zero readable records is not a
+            number; the caller records the signal as unmeasured instead.
         Exception: Whatever the repository read raised. A read that failed
             is not a read that found nothing (#218), so the failure now
             propagates to the single caller, which records the signal as
@@ -35,6 +117,7 @@ def check_recent_commit_signature_status(
         "verified_commits": 0,
         "unverified_commits": 0,
         "no_signature_commits": 0,
+        "uninterpretable_commits": 0,
     }
 
     try:
@@ -52,34 +135,25 @@ def check_recent_commit_signature_status(
             if not line.strip():
                 continue
 
-            result["total_commits"] += 1
+            fields = line.split(" ")
+            status = fields[1] if len(fields) == 2 else ""
+            bucket = _COMMIT_STATUS_BUCKETS.get(status)
+            if bucket is None:
+                # Neither a status this code knows nor a line it can split. It
+                # used to be counted as an unsigned commit, on the strength of
+                # a comment saying "assume no signature" (#236).
+                logger.debug("Uninterpretable git log signature line: %r", line)
+                result["uninterpretable_commits"] += 1
+                continue
 
-            # Signature status codes:
-            # G: valid signature with the same key as in the commit author
-            # B: valid signature but with expired key
-            # U: valid signature with untrusted key
-            # X: invalid signature
-            # Y: invalid signature, key missing
-            # R: valid signature, key expired
-            # E: signature can't be checked (e.g., missing key)
-            # N: no signature
-            try:
-                _, status = line.split(" ")
-                if status in [
-                    "G",
-                    "B",
-                    "R",
-                ]:  # Good signature (valid, but may be expired)
-                    result["verified_commits"] += 1
-                elif status in ["U", "X", "Y", "E"]:  # Bad signature
-                    result["unverified_commits"] += 1
-                elif status == "N":  # No signature
-                    result["no_signature_commits"] += 1
-                else:  # Unknown status
-                    result["no_signature_commits"] += 1
-            except ValueError:
-                # If we can't parse the output, assume no signature
-                result["no_signature_commits"] += 1
+            result["total_commits"] += 1
+            result[bucket] += 1
+
+        if result["total_commits"] == 0 and result["uninterpretable_commits"] > 0:
+            raise ValueError(
+                f"git log emitted {result['uninterpretable_commits']} commit "
+                "signature line(s) and none could be interpreted"
+            )
 
     except Exception as e:
         logger.error(f"Error checking commit signatures: {e}")
@@ -93,6 +167,20 @@ def check_release_signature_status(
 ) -> Dict[str, int]:
     """Check the signature status of release tags.
 
+    ``total_tags`` counts only the tags whose verification output established a
+    verdict; ``uninterpretable_tags`` counts the rest, and they are excluded
+    from both sides of the signing rate for the reason
+    :func:`check_recent_commit_signature_status` gives. When no tag could be
+    classified at all, the read is a failure rather than a verdict.
+
+    ``git tag -v`` deliberately does **not** get ``check=True``. It exits 1 for
+    a genuinely unsigned tag — verified against real git, not assumed — so
+    ``check=True`` would raise on the single most common honest outcome and
+    unmeasure every unsigned repository. The ``check=``-equivalent is here
+    instead: an output this code cannot map to a verdict is a failed read, not
+    an unsigned tag. Before #236 the trailing ``else`` answered "unsigned" for a
+    missing gpg, an unopenable keyring, and a signature gpg could not evaluate.
+
     Args:
         repo_dir: Path to the git repository.
         tag_count: Number of recent tags to check.
@@ -101,6 +189,7 @@ def check_release_signature_status(
         Dictionary with signature status counts.
 
     Raises:
+        ValueError: If tags were listed and none of them could be classified.
         Exception: Whatever the repository read raised. A read that failed
             is not a read that found nothing (#218), so the failure now
             propagates to the single caller, which records the signal as
@@ -111,6 +200,7 @@ def check_release_signature_status(
         "verified_tags": 0,
         "unverified_tags": 0,
         "no_signature_tags": 0,
+        "uninterpretable_tags": 0,
     }
 
     try:
@@ -125,7 +215,6 @@ def check_release_signature_status(
 
         # Get the most recent tags
         tags = output.split("\n")[:tag_count]
-        result["total_tags"] = len(tags)
 
         # Check signature status for each tag
         for tag in tags:
@@ -137,16 +226,25 @@ def check_release_signature_status(
 
             # Parse output to determine signature status
             verify_output = verify_result.stderr + verify_result.stdout
+            bucket = _classify_tag_verification(verify_output)
+            if bucket is None:
+                logger.debug(
+                    "git tag -v %s established no signature verdict (rc=%s): %r",
+                    tag,
+                    verify_result.returncode,
+                    verify_output,
+                )
+                result["uninterpretable_tags"] += 1
+                continue
 
-            if "Good signature" in verify_output:
-                result["verified_tags"] += 1
-            elif "BAD signature" in verify_output:
-                result["unverified_tags"] += 1
-            elif "error: no signature found" in verify_output:
-                result["no_signature_tags"] += 1
-            else:
-                # If we can't determine the status, assume no signature
-                result["no_signature_tags"] += 1
+            result["total_tags"] += 1
+            result[bucket] += 1
+
+        if result["total_tags"] == 0 and result["uninterpretable_tags"] > 0:
+            raise ValueError(
+                f"git listed {result['uninterpretable_tags']} tag(s) and "
+                "verification established a verdict for none of them"
+            )
 
     except Exception as e:
         logger.error(f"Error checking tag signatures: {e}")
@@ -306,6 +404,17 @@ def identify_signed_commits_issues(
     else:
         issues.append("No commit history available for signature verification")
 
+    # A partial read is still a measurement, and it is reported as partial
+    # rather than passed off as a total (the AdvisoryLookupState.PARTIAL
+    # precedent). Silence here would put the rate above in front of a reader
+    # with no way to know it was taken over fewer records than git emitted.
+    uninterpretable_commits = commit_signature_data.get("uninterpretable_commits", 0)
+    if uninterpretable_commits > 0:
+        issues.append(
+            f"{uninterpretable_commits} commit signature record(s) could not be "
+            "interpreted and are excluded from the commit signing rate"
+        )
+
     # Check tag signing issues
     if tag_signature_data["total_tags"] > 0:
         verified_ratio = (
@@ -325,6 +434,13 @@ def identify_signed_commits_issues(
             )
     else:
         issues.append("No release tags found for signature verification")
+
+    uninterpretable_tags = tag_signature_data.get("uninterpretable_tags", 0)
+    if uninterpretable_tags > 0:
+        issues.append(
+            f"{uninterpretable_tags} release tag(s) could not be verified either "
+            "way and are excluded from the tag signing rate"
+        )
 
     # Check commit signing requirement
     if not commit_signing_requirement["requires_commit_signing"]:

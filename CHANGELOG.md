@@ -298,6 +298,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Six scorecard handlers answered from records they could not interpret, and
+  one unreadable directory threw away every signal that was readable.** The
+  narrower residue of #218, split out because it is a different root cause:
+  #218 asked what a read that *failed* means, and these ask what a record we
+  cannot *interpret* means. The answer had been the same in every case, and it
+  was the one that lowers the score.
+
+  `git tag -v` ran without `check=`-equivalent handling and its trailing `else`
+  counted anything the parser did not recognise as an unsigned tag — the
+  comment said "If we can't determine the status, assume no signature" out
+  loud. A missing `gpg`, a keyring that could not be opened and a genuinely
+  unsigned tag were one answer. Measured on a repository with one unsigned
+  annotated tag and one signed tag whose `gpg.program` does not exist: before,
+  `total_tags=2, no_signature_tags=2`; after, `total_tags=1,
+  no_signature_tags=1, uninterpretable_tags=1`, and the one tag nobody could
+  verify is excluded from both sides of the signing rate rather than counted
+  against the project. `check=True` is deliberately *not* what it got: `git tag
+  -v` exits 1 for a genuinely unsigned tag, so `check=True` would raise on the
+  commonest honest outcome and unmeasure every unsigned repository.
+
+  A `renovate.json` that did not parse left `package_managers` empty, and the
+  report then said "Renovate configuration exists but package managers not
+  clearly defined" — a finding about a file's contents, from a file whose
+  contents were never read. `package_managers` is now `Optional`: `[]` means it
+  parsed and named none, `None` means nobody established what it says, and the
+  output names `source_lookup_failed` instead of inventing a finding. The
+  confirmed "this project runs Renovate" is kept, because `exists()` measured
+  that and the parse failure says nothing about it — the
+  `AdvisoryLookupState.PARTIAL` position, that an incomplete measurement is
+  still a measurement and is reported as incomplete.
+
+  `analyze_commit_frequency` turned an unparseable `git rev-list --count` into a
+  month with zero commits, which then fed the average, the trend and the
+  stability figure as though someone had observed a quiet month; the series is
+  positional, so a hole can be neither dropped nor filled, and it now
+  unmeasures. `analyze_release_cadence` swallowed a `git` failure and fell
+  through to a fallback that, absent — which is every call from
+  `analyze_repository`, which passes `None` — returned the same empty result a
+  project that has never tagged a release produces. And every tag date git
+  emitted in an unexpected format was silently dropped from a series that is
+  sorted and then differenced between adjacent entries, so one dropped date
+  merges two release intervals into one that never happened, and a project all
+  of whose dates fail to parse reads as never having released.
+
+  A genuine absence is still a finding, and this was tested in both directions.
+  A lightweight tag really cannot carry a signature, and `git tag -v` says so in
+  words of its own (`cannot verify a non-tag object`); that is a measured
+  negative, and treating it as uninterpretable would have unmeasured every
+  repository that tags without `-a` — most of them. So is an unsigned annotated
+  tag, an unsigned commit, a genuinely quiet month, and a repository that has
+  never tagged anything. Laundering real findings into unknowns is the same
+  defect pointing the other way.
+
+  Separately, `analyze_repository` wrapped nine independent reads in a single
+  `try`. A `PermissionError` from one directory with its execute bit off took
+  everything after it down: measured on a repository with `docs/` at `chmod
+  000`, `security_metrics` came back `None` **entirely** — all five scorecard
+  checks skipped, never run — with one line at ERROR as the only trace. After,
+  each read is isolated to the signal it answers: `has_dependency_update_tools`
+  and `has_signed_commits` report their measured `False`, the four signals that
+  genuinely read `docs/` report unmeasured with a reason, and the contributor
+  count is still `1`. That failure was honest but maximally lossy, and worse, it
+  was indistinguishable from a repository that was wholly unreadable — which is
+  the distinction #218 exists to make. The #218 evidence run hit exactly this
+  and read as the fix working.
+
 - **A repository the scorecard checks could not read reported as a repository
   with nothing in it.** All five OpenSSF-style checks — security policy,
   dependency update tooling, signed commits, branch protection, maintained
