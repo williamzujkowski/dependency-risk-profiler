@@ -48,11 +48,19 @@ def _http_error_status(error: requests.HTTPError) -> Optional[int]:
     adapter or a hand-rolled raise can produce an `HTTPError` whose `response`
     is None. Callers classify on the code, so give them "unknown" rather than
     an AttributeError.
+
+    `status_code` gets the same treatment. It is declared `int`, but
+    `Response.__init__` sets it to None and requests suppresses the resulting
+    error in its own source, so a response that never reached the wire carries
+    no status either.
     """
     response = error.response
     if response is None:
         return None
-    return response.status_code
+    status_code = response.status_code
+    if not isinstance(status_code, int):
+        return None
+    return status_code
 
 
 # Cache settings
