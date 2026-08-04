@@ -22,8 +22,8 @@ from ..parsers.pom_model import (
 from ..parsers.xml_utils import local_name
 from ..release_dates import apply_registry_release_date, record_source_repository
 from ..transitive.analyzer_enhanced import record_transitive_source
+from ..utils import canonical_repository_url, cloned_repo, is_cloneable_repo_url
 from .base import BaseAnalyzer
-from .common import canonical_repository_url, cloned_repo, is_cloneable_repo_url
 
 logger = logging.getLogger(__name__)
 

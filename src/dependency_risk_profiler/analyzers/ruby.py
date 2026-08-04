@@ -14,8 +14,9 @@ from ..release_dates import (
 )
 from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
+from ..utils import canonical_repository_url
 from .base import BaseAnalyzer
-from .common import canonical_repository_url, collect_repository_signals
+from .common import collect_repository_signals
 
 logger = logging.getLogger(__name__)
 

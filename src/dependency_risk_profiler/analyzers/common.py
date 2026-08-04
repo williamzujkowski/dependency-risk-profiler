@@ -1,37 +1,21 @@
-"""Common analysis functions shared across different ecosystems."""
+"""Analysis logic shared across the ecosystem adapters.
+
+This module holds adapter logic that has nowhere else to live, not a second
+name for :mod:`dependency_risk_profiler.utils`. Import the HTTP and git
+helpers straight from ``..utils``; a re-export here only adds a hop a reader
+has to follow before they learn where the function actually is.
+"""
 
 import logging
 from typing import Optional
 
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
-from ..utils import (
-    canonical_repository_url,
-    check_health_indicators,
-    clone_repo,
-    cloned_repo,
-    count_contributors,
-    fetch_json,
-    fetch_url,
-    get_last_commit_date,
-    is_cloneable_repo_url,
-)
+from ..utils import cloned_repo, is_cloneable_repo_url
 
 logger = logging.getLogger(__name__)
 
-# Re-export utilities for backwards compatibility
-__all__ = [
-    "fetch_url",
-    "fetch_json",
-    "clone_repo",
-    "cloned_repo",
-    "canonical_repository_url",
-    "collect_repository_signals",
-    "is_cloneable_repo_url",
-    "get_last_commit_date",
-    "count_contributors",
-    "check_health_indicators",
-]
+__all__ = ["collect_repository_signals"]
 
 
 def collect_repository_signals(

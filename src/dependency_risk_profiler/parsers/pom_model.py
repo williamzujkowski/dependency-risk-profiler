@@ -149,7 +149,7 @@ def inherit_metadata(lineage: Iterable[PomDocument]) -> InheritedMetadata:
     One documented divergence from Maven's own model builder: Maven appends the
     child's ``artifactId`` to an inherited ``<scm><url>``, so guava's effective
     SCM URL is ``.../google/guava/guava``. That path is then trimmed straight
-    back off by :func:`~..analyzers.common.canonical_repository_url`, which only
+    back off by :func:`~..utils.canonical_repository_url`, which only
     ever wants the repository root, so the append is skipped rather than
     performed and undone.
 
