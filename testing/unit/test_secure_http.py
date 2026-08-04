@@ -402,17 +402,6 @@ class _FakeSocket:
     """Stand-in for a connected socket."""
 
 
-class _RecordingContext(ssl.SSLContext):
-    """A real TLS context that records what it was asked to present."""
-
-    recorded_hostname: Optional[str] = None
-
-    def wrap_socket(self, sock, *args, server_hostname=None, **kwargs):
-        """Record the SNI hostname and hand the socket straight back."""
-        self.recorded_hostname = server_hostname
-        return sock
-
-
 def test_connection_dials_the_pinned_address_but_speaks_the_hostname(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -425,6 +414,7 @@ def test_connection_dials_the_pinned_address_but_speaks_the_hostname(
     import socket as socket_module
 
     dialed: List[Tuple[str, int]] = []
+    recorded: Dict[str, Optional[str]] = {}
 
     def fake_create_connection(
         address: Tuple[str, int], timeout: object = None, *args: object
@@ -432,14 +422,30 @@ def test_connection_dials_the_pinned_address_but_speaks_the_hostname(
         dialed.append(address)
         return _FakeSocket()
 
+    def recording_wrap_socket(
+        sock: object,
+        *args: object,
+        server_hostname: Optional[str] = None,
+        **kwargs: object,
+    ) -> object:
+        """Record the SNI hostname and hand the socket straight back."""
+        recorded["hostname"] = server_hostname
+        return sock
+
     monkeypatch.setattr(socket_module, "create_connection", fake_create_connection)
 
-    context = _RecordingContext(ssl.PROTOCOL_TLS_CLIENT)
+    # Recorded by patching the instance rather than by subclassing SSLContext:
+    # a subclass whose `wrap_socket` takes and returns a stand-in violates the
+    # signature it inherits, and there is no honest way to annotate that.
+    # The context stays a real one, which is what the assertions below check.
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    monkeypatch.setattr(context, "wrap_socket", recording_wrap_socket)
+
     connection = _PinnedHTTPSConnection(FRIENDLY, PUBLIC_ADDRESS, 443, 10.0, context)
     connection.connect()
 
     assert dialed == [(PUBLIC_ADDRESS, 443)]
-    assert context.recorded_hostname == FRIENDLY
+    assert recorded["hostname"] == FRIENDLY
     assert connection.host == FRIENDLY
     # Verification is not weakened to make pinning work.
     assert context.check_hostname is True
