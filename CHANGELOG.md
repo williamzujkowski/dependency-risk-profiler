@@ -216,6 +216,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A two-state measurement, enforced at construction, and a published signal
+  vocabulary pinned to a Scorecard version.** (#164, steps 3 and 4)
+
+  `signals.Measurement` is `MEASURED` with a value or `UNMEASURED` with a
+  reason, and it refuses every other combination in `__init__`. Instances are
+  frozen afterwards, so a value cannot be edited onto an unmeasured signal.
+  That makes #141's confident `0.0` for a signal nobody measured, and #166's
+  composite that degraded to its weakest component while still reporting as
+  measured, unrepresentable rather than merely discouraged. The scorer now
+  carries one per signal per dependency.
+
+  Classification is centralized in `signals.unmeasured_reason_for()`, the only
+  place that decides *why* a signal is unmeasured, from the catalog plus one
+  keyword-only fact the scorer observed — never adapter-local judgment across
+  eight adapters. `NOT_APPLICABLE` is **not** here: it is deferred behind a
+  schema version until a consumer branches on it, because no conformance check
+  can tell a wrong `NOT_APPLICABLE` from a right one. The reason enum is
+  guarded by a test against it coming back under another name.
+
+  `docs/signals.md` publishes the mapping from our stable signal names to
+  OpenSSF Scorecard `v5.5.0`, with every approximate row marked approximate,
+  and `testing/unit/test_signal_catalog.py` fails when the page and the code
+  disagree. Our names are **not** renamed to Scorecard's: `signed_commits` maps
+  to no Scorecard check at all at that tag — the nearest historical one,
+  `Signed-Tags`, was removed after v2.0.0, and the stable `Signed-Releases`
+  inspects release assets rather than git history — so adopting an upstream
+  vocabulary would have traded the stability guarantee this work exists to make
+  for the appearance of interop.
+
+  Two stringly-typed measurement states move out of `additional_info` and onto
+  typed fields: `DependencyMetadata.source_repository_state` (a
+  `SourceRepositoryState`, written only by `record_source_repository`) and
+  `.transitive_source` (written only by `record_transitive_source`, whose
+  `source` argument is keyword-only with no default so the unmeasured state
+  cannot be reached by omission). Maven had been writing the transitive marker
+  as a bare string literal, which is the one spelling a typo would have turned
+  into a permanent "unmeasured". `release_date_source` and `version_source`
+  stay where they are: both record which write path won rather than whether a
+  signal was measured, which is #164's provenance item, gated on its own
+  benchmark and sequenced last.
+
+  No change to the JSON output contract — verified byte-identical against
+  `origin/main` on a fixed population. Cost measured rather than assumed:
+  about +7.6 µs per dependency (11.91 → 19.52 µs), no additional retained
+  memory, numbers and method in `docs/signals.md`.
+
 - **A test that fails when a model field the code reads has no writer.** The
   generalized form of the sweep that found the above: any `models.py` field
   declared `= None`, read somewhere in `src/`, and assigned nowhere is a

@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 from ..models import DependencyMetadata
 from ..parsers.nuget_registry import CatalogEntry, NuGetRegistryClient, NuspecDocument
 from ..release_dates import record_source_repository
-from ..transitive.analyzer_enhanced import TRANSITIVE_SOURCE_KEY
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -178,7 +178,7 @@ class NuGetAnalyzer(BaseAnalyzer):
                 for identifier in nuspec.dependencies
                 if identifier.lower() != name.lower()
             }
-            dep.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_NUSPEC
+            record_transitive_source(dep, source=TRANSITIVE_SOURCE_NUSPEC)
 
     @staticmethod
     def _repository_url(

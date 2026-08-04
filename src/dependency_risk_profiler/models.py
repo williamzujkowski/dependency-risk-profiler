@@ -5,6 +5,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Set
 
+from .signals import SourceRepositoryState
+
 
 class RiskLevel(Enum):
     """Risk level classification for dependencies."""
@@ -104,6 +106,19 @@ class DependencyMetadata:
     community_metrics: Optional[CommunityMetrics] = None
     security_metrics: Optional[SecurityMetrics] = None
     transitive_dependencies: Set[str] = field(default_factory=set)
+
+    # Measurement states, typed. Both used to be stringly-typed entries in
+    # ``additional_info``, where nothing stopped a typo from silently reading
+    # as "unmeasured" and mypy could not see them at all (#164).
+    #
+    # What the registry said about the source repository. None means the lookup
+    # did not happen or did not answer — unmeasured, and never a negative
+    # finding (#182). Written only by ``release_dates.record_source_repository``.
+    source_repository_state: Optional[SourceRepositoryState] = None
+    # How this dependency's transitive set was established, so the scorer can
+    # tell "resolved, and it is empty" from "never resolved". Written only by
+    # ``transitive.analyzer_enhanced.record_transitive_source``.
+    transitive_source: Optional[str] = None
 
     additional_info: Dict[str, str] = field(default_factory=dict)
 

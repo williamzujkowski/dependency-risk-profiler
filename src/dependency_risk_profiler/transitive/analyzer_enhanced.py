@@ -13,13 +13,9 @@ import venv
 from typing import Dict, List, Optional, Set
 
 from ..models import DependencyMetadata
+from ..signals import TRANSITIVE_SOURCE_UNMEASURED
 
 logger = logging.getLogger(__name__)
-
-# Records how a dependency's transitive set was established, so the scorer can
-# tell "resolved, and it is empty" from "never resolved".
-TRANSITIVE_SOURCE_KEY = "transitive_source"
-TRANSITIVE_SOURCE_UNMEASURED = "unmeasured"
 
 
 def create_virtual_env(path: str) -> bool:
@@ -431,6 +427,28 @@ def build_dependency_graph(
     return transitive_deps
 
 
+def record_transitive_source(
+    dependency: DependencyMetadata, *, source: Optional[str]
+) -> None:
+    """Record how a dependency's transitive set was established.
+
+    ``source`` is keyword-only and has no default, which is the #189 pattern:
+    the unmeasured state has to be *asked for*, so it can never be reached by
+    a caller that forgot to say anything. Passing None means nothing resolved
+    this dependency's tree, and the scorer drops the transitive signal from
+    both numerator and denominator (#74) rather than scoring an unearned zero.
+
+    Args:
+        dependency: Dependency metadata to update in place.
+        source: Sanitized logical name of whatever resolved the tree —
+            ``"manifest"``, ``"nuget-nuspec"``, ``"packagist-require"`` — or
+            None when nothing did.
+    """
+    dependency.transitive_source = (
+        TRANSITIVE_SOURCE_UNMEASURED if source is None else source
+    )
+
+
 def mark_unmeasured_transitive(
     dependencies: Dict[str, DependencyMetadata],
 ) -> Dict[str, DependencyMetadata]:
@@ -438,9 +456,9 @@ def mark_unmeasured_transitive(
 
     A dependency that an ecosystem analyzer already populated (Maven reads each
     artifact's published POM, for instance) keeps its data and its source
-    marker. Everything else gets ``TRANSITIVE_SOURCE_UNMEASURED`` so the scorer
-    reports the signal as unavailable rather than as "zero transitive
-    dependencies, therefore zero risk".
+    marker. Everything else is marked unmeasured so the scorer reports the
+    signal as unavailable rather than as "zero transitive dependencies,
+    therefore zero risk".
 
     Args:
         dependencies: Dictionary mapping dependency names to their metadata.
@@ -451,9 +469,9 @@ def mark_unmeasured_transitive(
     for dependency in dependencies.values():
         if dependency.transitive_dependencies:
             continue
-        if dependency.additional_info.get(TRANSITIVE_SOURCE_KEY):
+        if dependency.transitive_source:
             continue
-        dependency.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_UNMEASURED
+        record_transitive_source(dependency, source=None)
     return dependencies
 
 
@@ -519,9 +537,7 @@ def analyze_transitive_dependencies_enhanced(
         for pkg_name, deps in transitive_deps.items():
             if pkg_name in dependencies:
                 dependencies[pkg_name].transitive_dependencies = deps
-                dependencies[pkg_name].additional_info[
-                    TRANSITIVE_SOURCE_KEY
-                ] = "manifest"
+                record_transitive_source(dependencies[pkg_name], source="manifest")
                 logger.info(f"Found {len(deps)} transitive dependencies for {pkg_name}")
 
     except Exception as e:

@@ -119,8 +119,7 @@ from dependency_risk_profiler.models import (
     RiskLevel,
 )
 from dependency_risk_profiler.transitive.analyzer_enhanced import (
-    TRANSITIVE_SOURCE_KEY,
-    TRANSITIVE_SOURCE_UNMEASURED,
+    record_transitive_source,
 )
 
 # Minimum signals an ecosystem must measure from registry metadata alone, set
@@ -271,8 +270,8 @@ def mark_transitive_unmeasured(dependency: DependencyMetadata) -> DependencyMeta
     Returns:
         The same dependency, for chaining.
     """
-    if not dependency.additional_info.get(TRANSITIVE_SOURCE_KEY):
-        dependency.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_UNMEASURED
+    if not dependency.transitive_source:
+        record_transitive_source(dependency, source=None)
     return dependency
 
 

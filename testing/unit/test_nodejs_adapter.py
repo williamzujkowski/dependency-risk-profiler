@@ -43,11 +43,9 @@ from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskSc
 from dependency_risk_profiler.release_dates import (
     RELEASE_DATE_SOURCE_KEY,
     RELEASE_DATE_SOURCE_REGISTRY,
-    SOURCE_REPOSITORY_DECLARED,
-    SOURCE_REPOSITORY_KEY,
-    SOURCE_REPOSITORY_UNDECLARED,
 )
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import SourceRepositoryState
 
 # An unscoped packument: dist-tags carries the release, "repository" is an
 # object whose URL is git+-prefixed and .git-suffixed, and deprecation lives
@@ -346,7 +344,7 @@ def test_a_declared_repository_is_recorded_as_a_measured_signal() -> None:
         {"https://registry.npmjs.org/express": EXPRESS_PACKUMENT},
     )
 
-    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
+    assert dep.source_repository_state == SourceRepositoryState.DECLARED
     assert RiskScorer().score_dependency(dep).source_repository_score == 0.0
 
 
@@ -365,7 +363,7 @@ def test_a_packument_with_no_repository_declares_none() -> None:
         {"https://registry.npmjs.org/orphan": packument},
     )
 
-    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNDECLARED
+    assert dep.source_repository_state == SourceRepositoryState.UNDECLARED
     score = RiskScorer().score_dependency(dep)
     assert score.source_repository_score == 1.0
     assert "Declares no source repository" in score.factors

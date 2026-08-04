@@ -12,7 +12,7 @@ from ..release_dates import (
     parse_registry_timestamp,
     record_source_repository,
 )
-from ..transitive.analyzer_enhanced import TRANSITIVE_SOURCE_KEY
+from ..transitive.analyzer_enhanced import record_transitive_source
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -137,7 +137,7 @@ class ComposerAnalyzer(BaseAnalyzer):
         dep.transitive_dependencies = required_packages(release.get("require")) - {
             dep.name
         }
-        dep.additional_info[TRANSITIVE_SOURCE_KEY] = TRANSITIVE_SOURCE_PACKAGIST
+        record_transitive_source(dep, source=TRANSITIVE_SOURCE_PACKAGIST)
 
         # Packagist marks a replaced package with `abandoned`: either `true` or
         # the name of the package that supersedes it.

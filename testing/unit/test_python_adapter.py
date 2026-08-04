@@ -40,10 +40,9 @@ from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskSc
 from dependency_risk_profiler.release_dates import (
     RELEASE_DATE_SOURCE_KEY,
     RELEASE_DATE_SOURCE_REGISTRY,
-    SOURCE_REPOSITORY_KEY,
-    SOURCE_REPOSITORY_UNDECLARED,
 )
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import SourceRepositoryState
 
 # Fixed reference point so a decade-old release stays a decade old.
 NOW = datetime(2026, 8, 3, tzinfo=timezone.utc)
@@ -325,7 +324,7 @@ def test_a_dead_home_page_cannot_stand_in_for_a_missing_source_url() -> None:
     """home_page is None on every modern package and is not a repository here."""
     dep = _analyze(NOSE_RESPONSE, "1.3.7")
 
-    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNDECLARED
+    assert dep.source_repository_state == SourceRepositoryState.UNDECLARED
 
 
 def test_a_hosted_homepage_project_url_still_resolves_a_repository() -> None:
@@ -352,7 +351,7 @@ def test_a_funding_link_is_not_a_source_repository() -> None:
 
     dep = _analyze(payload, "1.3.7")
 
-    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNDECLARED
+    assert dep.source_repository_state == SourceRepositoryState.UNDECLARED
 
 
 def test_declaring_no_source_repository_is_a_measured_signal() -> None:
@@ -408,6 +407,6 @@ def test_a_failed_registry_lookup_leaves_the_source_signal_unmeasured() -> None:
 
     score = RiskScorer().score_dependency(mark_transitive_unmeasured(analyzed))
 
-    assert SOURCE_REPOSITORY_KEY not in analyzed.additional_info
+    assert analyzed.source_repository_state is None
     assert score.source_repository_score is None
     assert "source_repository" not in score.unknown_signals

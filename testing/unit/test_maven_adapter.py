@@ -8,12 +8,15 @@ import pytest
 from test_maven_version_resolution import MirrorClient
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
-from dependency_risk_profiler.analyzers.maven import MavenAnalyzer, normalize_scm_url
+from dependency_risk_profiler.analyzers.maven import (
+    TRANSITIVE_SOURCE_MAVEN_POM,
+    MavenAnalyzer,
+    normalize_scm_url,
+)
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.maven import MavenPomParser
 from dependency_risk_profiler.parsers.maven_central import MavenCentralClient
-from dependency_risk_profiler.release_dates import SOURCE_REPOSITORY_KEY
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
 POM_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -185,7 +188,7 @@ def test_maven_analyzer_reads_repo_license_and_deps_from_the_artifact_pom() -> N
         "com.google.guava:failureaccess",
         "com.google.code.findbugs:jsr305",
     }
-    assert updated.additional_info["transitive_source"] == "maven-pom"
+    assert updated.transitive_source == TRANSITIVE_SOURCE_MAVEN_POM
 
 
 def test_an_unreadable_pom_leaves_the_source_signal_unmeasured() -> None:
@@ -207,7 +210,7 @@ def test_an_unreadable_pom_leaves_the_source_signal_unmeasured() -> None:
         )
         result = analyzer.analyze({"com.google.guava:guava": dep})
 
-    assert SOURCE_REPOSITORY_KEY not in result["com.google.guava:guava"].additional_info
+    assert result["com.google.guava:guava"].source_repository_state is None
 
 
 def test_maven_analyzer_clones_each_repository_once() -> None:

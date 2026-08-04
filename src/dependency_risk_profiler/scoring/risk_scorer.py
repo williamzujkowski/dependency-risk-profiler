@@ -21,16 +21,30 @@ from ..popularity import (
     STALENESS_POPULARITY_DAMPENING_DEFAULT,
     should_soften_low_release_cadence,
 )
-from ..release_dates import (
-    SOURCE_REPOSITORY_DECLARED,
-    SOURCE_REPOSITORY_KEY,
-    SOURCE_REPOSITORY_UNDECLARED,
+from ..signals import (
+    SIGNAL_BRANCH_PROTECTION,
+    SIGNAL_COMMUNITY_ACTIVITY,
+    SIGNAL_COMMUNITY_POPULARITY,
+    SIGNAL_DEPENDENCY_UPDATE,
+    SIGNAL_DEPRECATION,
+    SIGNAL_EXPLOIT,
+    SIGNAL_HEALTH_INDICATORS,
+    SIGNAL_LICENSE,
+    SIGNAL_MAINTAINED,
+    SIGNAL_MAINTAINER,
+    SIGNAL_SECURITY_POLICY,
+    SIGNAL_SIGNED_COMMITS,
+    SIGNAL_SOURCE_REPOSITORY,
+    SIGNAL_STALENESS,
+    SIGNAL_TRANSITIVE,
+    SIGNAL_VERSION,
     SOURCE_REPOSITORY_UNREADABLE,
-    SOURCE_REPOSITORY_UNUSABLE,
-)
-from ..transitive.analyzer_enhanced import (
-    TRANSITIVE_SOURCE_KEY,
     TRANSITIVE_SOURCE_UNMEASURED,
+    Measurement,
+    MeasurementState,
+    SourceRepositoryState,
+    UnmeasuredReason,
+    unmeasured_reason_for,
 )
 from ..versioning import (
     calendar_drift_days,
@@ -44,29 +58,11 @@ from ..vulnerabilities.aggregator import (
 
 logger = logging.getLogger(__name__)
 
-# Signals that can only be answered by reading the package's source repository.
-# When a registry states outright that the package declares no repository,
-# these eight are not eight independent gaps in our knowledge — they are one
-# measured fact, and counting it eight times over is what scored the abandoned
-# packages this tool exists to flag as UNKNOWN (#146).
-REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
-    {
-        "health_indicators",
-        "community_popularity",
-        "community_activity",
-        "security_policy",
-        "dependency_update",
-        "signed_commits",
-        "branch_protection",
-        "maintained",
-    }
-)
-
 # The two halves of the community signal. Split apart so a measured popularity
 # cannot carry an unmeasured cadence (#166), but a package we have no community
 # data for at all is still one gap rather than two — the #146 rule.
 COMMUNITY_SIGNALS: FrozenSet[str] = frozenset(
-    {"community_popularity", "community_activity"}
+    {SIGNAL_COMMUNITY_POPULARITY, SIGNAL_COMMUNITY_ACTIVITY}
 )
 
 # What "declared a source repository that is not a reachable git forge" scores.
@@ -187,6 +183,12 @@ class RiskScorer:
         Returns:
             Risk score for the dependency.
         """
+        # The registry's answer about the source repository is read first
+        # because it is the one measured fact that explains why several other
+        # signals are silent, and the reason table needs it (#146).
+        source_repository_state = dependency.source_repository_state
+        unreadable = source_repository_state in SOURCE_REPOSITORY_UNREADABLE
+
         staleness_score = self._calculate_staleness_score(dependency.last_updated)
         staleness_score = self._dampen_staleness_for_popularity(
             dependency,
@@ -226,8 +228,7 @@ class RiskScorer:
         )
         transitive_score = self._calculate_transitive_score(
             dependency.transitive_dependencies,
-            measured=dependency.additional_info.get(TRANSITIVE_SOURCE_KEY)
-            != TRANSITIVE_SOURCE_UNMEASURED,
+            measured=dependency.transitive_source != TRANSITIVE_SOURCE_UNMEASURED,
         )
 
         # OpenSSF Scorecard-inspired risk scores
@@ -249,44 +250,94 @@ class RiskScorer:
             maintained_score,
         )
 
-        # Calculate weighted score
-        weighted_scores = [
-            ("staleness", staleness_score, self.staleness_weight),
-            ("maintainer", maintainer_score, self.maintainer_weight),
-            ("deprecation", deprecation_score, self.deprecation_weight),
-            ("exploit", exploit_score, self.exploit_weight),
-            ("version", version_score, self.version_difference_weight),
-            ("health_indicators", health_score, self.health_indicators_weight),
+        # Every signal is now a MEASURED value or an UNMEASURED reason, and the
+        # type refuses anything else (#164). ``_measure`` routes each absence
+        # through the one centralized reason table, so no adapter and no branch
+        # of this method gets to decide independently what an absence means.
+        measure = self._measure
+        weighted_scores: List[Tuple[str, Measurement, float]] = [
+            (
+                SIGNAL_STALENESS,
+                measure(SIGNAL_STALENESS, staleness_score, unreadable),
+                self.staleness_weight,
+            ),
+            (
+                SIGNAL_MAINTAINER,
+                measure(SIGNAL_MAINTAINER, maintainer_score, unreadable),
+                self.maintainer_weight,
+            ),
+            (
+                SIGNAL_DEPRECATION,
+                measure(SIGNAL_DEPRECATION, deprecation_score, unreadable),
+                self.deprecation_weight,
+            ),
+            (
+                SIGNAL_EXPLOIT,
+                measure(SIGNAL_EXPLOIT, exploit_score, unreadable),
+                self.exploit_weight,
+            ),
+            (
+                SIGNAL_VERSION,
+                measure(SIGNAL_VERSION, version_score, unreadable),
+                self.version_difference_weight,
+            ),
+            (
+                SIGNAL_HEALTH_INDICATORS,
+                measure(SIGNAL_HEALTH_INDICATORS, health_score, unreadable),
+                self.health_indicators_weight,
+            ),
             # Enhanced risk factors
-            ("license", license_score, self.license_weight),
+            (
+                SIGNAL_LICENSE,
+                measure(SIGNAL_LICENSE, license_score, unreadable),
+                self.license_weight,
+            ),
             # The community budget splits evenly across its two halves. When
             # both are measured this is arithmetically identical to weighting
             # their average; when only one is, the missing half drops out of the
             # denominator instead of being silently carried by the other (#74).
-            ("community_popularity", popularity_score, self.community_weight / 2),
             (
-                "community_activity",
-                development_activity_score,
+                SIGNAL_COMMUNITY_POPULARITY,
+                measure(SIGNAL_COMMUNITY_POPULARITY, popularity_score, unreadable),
                 self.community_weight / 2,
             ),
-            ("transitive", transitive_score, self.transitive_weight),
             (
-                "security_policy",
-                security_policy_score,
+                SIGNAL_COMMUNITY_ACTIVITY,
+                measure(
+                    SIGNAL_COMMUNITY_ACTIVITY, development_activity_score, unreadable
+                ),
+                self.community_weight / 2,
+            ),
+            (
+                SIGNAL_TRANSITIVE,
+                measure(SIGNAL_TRANSITIVE, transitive_score, unreadable),
+                self.transitive_weight,
+            ),
+            (
+                SIGNAL_SECURITY_POLICY,
+                measure(SIGNAL_SECURITY_POLICY, security_policy_score, unreadable),
                 self.security_policy_weight,
             ),
             (
-                "dependency_update",
-                dependency_update_score,
+                SIGNAL_DEPENDENCY_UPDATE,
+                measure(SIGNAL_DEPENDENCY_UPDATE, dependency_update_score, unreadable),
                 self.dependency_update_weight,
             ),
-            ("signed_commits", signed_commits_score, self.signed_commits_weight),
             (
-                "branch_protection",
-                branch_protection_score,
+                SIGNAL_SIGNED_COMMITS,
+                measure(SIGNAL_SIGNED_COMMITS, signed_commits_score, unreadable),
+                self.signed_commits_weight,
+            ),
+            (
+                SIGNAL_BRANCH_PROTECTION,
+                measure(SIGNAL_BRANCH_PROTECTION, branch_protection_score, unreadable),
                 self.branch_protection_weight,
             ),
-            ("maintained", maintained_score, self.maintained_weight),
+            (
+                SIGNAL_MAINTAINED,
+                measure(SIGNAL_MAINTAINED, maintained_score, unreadable),
+                self.maintained_weight,
+            ),
         ]
 
         # "Declares no source repository" is a leading indicator in its own
@@ -296,13 +347,12 @@ class RiskScorer:
         # registry's answer has not measured it, and #74's rule is that an
         # unavailable signal leaves both the numerator and the denominator
         # rather than being assumed either way.
-        source_repository_state = dependency.additional_info.get(SOURCE_REPOSITORY_KEY)
         source_repository_score = self._calculate_source_repository_score(dependency)
         if source_repository_score is not None:
             weighted_scores.append(
                 (
-                    "source_repository",
-                    source_repository_score,
+                    SIGNAL_SOURCE_REPOSITORY,
+                    Measurement.measured(source_repository_score),
                     self.source_repository_weight,
                 )
             )
@@ -313,21 +363,19 @@ class RiskScorer:
         # (e.g. Go has no maintainer concept) is treated as unavailable, never a
         # confident zero that would make a sparsely-covered package look safer.
         total_score = 0.0
-        for _, score, weight in weighted_scores:
-            if score is not None:  # Only count available scores
-                total_score += score * weight
+        available_weights = 0.0
+        for _, measurement, weight in weighted_scores:
+            if measurement.value is not None:  # Only count available scores
+                total_score += measurement.value * weight
+                available_weights += weight
 
-        available_weights = sum(
-            weight for _, score, weight in weighted_scores if score is not None
-        )
         if available_weights > 0:
             total_score = (total_score / available_weights) * self.max_score
 
         unknown_signals = self._determine_unknown_signals(weighted_scores)
         measured_signal_count = len(weighted_scores) - len(unknown_signals)
         insufficient_data = (
-            self._unexplained_unknown_count(unknown_signals, source_repository_state)
-            > measured_signal_count
+            self._unexplained_unknown_count(weighted_scores) > measured_signal_count
         )
 
         risk_level = (
@@ -355,9 +403,9 @@ class RiskScorer:
             branch_protection_score,
             maintained_score,
         )
-        if source_repository_state == SOURCE_REPOSITORY_UNDECLARED:
+        if source_repository_state is SourceRepositoryState.UNDECLARED:
             risk_factors.append("Declares no source repository")
-        elif source_repository_state == SOURCE_REPOSITORY_UNUSABLE:
+        elif source_repository_state is SourceRepositoryState.UNUSABLE:
             risk_factors.append(
                 "Declares a source repository that is not a reachable git forge"
             )
@@ -455,11 +503,55 @@ class RiskScorer:
             overall_risk_score=overall_score,
         )
 
+    @staticmethod
+    def _measure(
+        signal: str, score: Optional[float], source_repository_unreadable: bool
+    ) -> Measurement:
+        """Lift one scorer result into a measurement, with its reason.
+
+        Args:
+            signal: The stable signal name.
+            score: The computed score, or None when it could not be measured.
+            source_repository_unreadable: Whether the registry answered and no
+                readable source repository came out of it — the one fact the
+                centralized reason table branches on.
+
+        Returns:
+            A MEASURED measurement carrying the score, or an UNMEASURED one
+            carrying the reason the table assigns.
+        """
+        # The measured branch constructs directly rather than through
+        # ``Measurement.measured``: this runs sixteen times per dependency
+        # across an org scan's thousands and the classmethod hop was
+        # measurable. The constructor is the same gate either way. The
+        # unmeasured branch goes through the classmethod because that is where
+        # the shared per-reason instances live, which is cheaper still.
+        if score is not None:
+            return Measurement(MeasurementState.MEASURED, score, None)
+        return Measurement.unmeasured(
+            unmeasured_reason_for(
+                signal, source_repository_unreadable=source_repository_unreadable
+            )
+        )
+
     def _determine_unknown_signals(
-        self, weighted_scores: Sequence[Tuple[str, Optional[float], float]]
+        self, weighted_scores: Sequence[Tuple[str, Measurement, float]]
     ) -> List[str]:
-        """Return names for signals that could not be measured."""
-        return [name for name, score, _ in weighted_scores if score is None]
+        """Return names for signals that could not be measured.
+
+        Args:
+            weighted_scores: The scored signals, in report order.
+
+        Returns:
+            The names of the unmeasured ones, in the same order.
+        """
+        # ``state is UNMEASURED`` rather than ``not is_measured``: identical by
+        # construction, and this runs per signal per dependency in an org scan.
+        return [
+            name
+            for name, measurement, _ in weighted_scores
+            if measurement.state is MeasurementState.UNMEASURED
+        ]
 
     @staticmethod
     def _calculate_source_repository_score(
@@ -489,19 +581,18 @@ class RiskScorer:
             1.0 when the registry answered and declares none, or None when this
             ecosystem's adapter reports nothing either way.
         """
-        declared = dependency.additional_info.get(SOURCE_REPOSITORY_KEY)
-        if declared == SOURCE_REPOSITORY_DECLARED:
+        declared = dependency.source_repository_state
+        if declared is SourceRepositoryState.DECLARED:
             return 0.0
-        if declared == SOURCE_REPOSITORY_UNUSABLE:
+        if declared is SourceRepositoryState.UNUSABLE:
             return SOURCE_REPOSITORY_UNUSABLE_SCORE
-        if declared == SOURCE_REPOSITORY_UNDECLARED:
+        if declared is SourceRepositoryState.UNDECLARED:
             return 1.0
         return None
 
     @staticmethod
     def _unexplained_unknown_count(
-        unknown_signals: Sequence[str],
-        source_repository_state: Optional[str],
+        weighted_scores: Sequence[Tuple[str, Measurement, float]],
     ) -> int:
         """Count unmeasured signals that are not explained by a measured fact.
 
@@ -515,26 +606,26 @@ class RiskScorer:
         is one absent community record, not two independent gaps. Every other
         unmeasured signal still counts in full.
 
-        The collapse keys off the recorded *state*, not off the score, because
-        "declared an unusable repository" explains the same eight gaps as
-        "declared none" while deliberately scoring lower than it (#176).
+        Since #164 the collapse reads each signal's recorded *reason* rather
+        than re-deriving it from the registry state and a second list of
+        repository-derived signal names. Same arithmetic, one source of truth:
+        ``SOURCE_REPOSITORY_UNREADABLE`` is assigned by the centralized table
+        exactly when the registry answered, no repository could be read, and
+        the signal needed one — which covers "declared an unusable repository"
+        and "declared none" alike, as #176 requires.
 
         Args:
-            unknown_signals: Names of the signals that came back unmeasured.
-            source_repository_state: The adapter's record of what the registry
-                answered, or None when it reports nothing either way.
+            weighted_scores: The scored signals, each carrying its measurement.
 
         Returns:
             The number of unmeasured signals that remain unexplained.
         """
-        if source_repository_state in SOURCE_REPOSITORY_UNREADABLE:
-            remaining = [
-                name
-                for name in unknown_signals
-                if name not in REPOSITORY_DERIVED_SIGNALS
-            ]
-        else:
-            remaining = list(unknown_signals)
+        remaining = [
+            name
+            for name, measurement, _ in weighted_scores
+            if measurement.state is MeasurementState.UNMEASURED
+            and measurement.reason is not UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
+        ]
 
         community_unknown = sum(1 for name in remaining if name in COMMUNITY_SIGNALS)
         if community_unknown == len(COMMUNITY_SIGNALS):

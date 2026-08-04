@@ -22,12 +22,8 @@ from dependency_risk_profiler.models import (
     RiskLevel,
 )
 from dependency_risk_profiler.parsers.composer import ComposerLockParser
-from dependency_risk_profiler.release_dates import (
-    SOURCE_REPOSITORY_DECLARED,
-    SOURCE_REPOSITORY_KEY,
-    SOURCE_REPOSITORY_UNUSABLE,
-)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import SourceRepositoryState
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
 COMPOSER_LOCK = {
@@ -293,7 +289,7 @@ def test_a_failed_packagist_lookup_leaves_the_source_signal_unmeasured() -> None
 
     score = RiskScorer().score_dependency(mark_transitive_unmeasured(analyzed))
 
-    assert SOURCE_REPOSITORY_KEY not in analyzed.additional_info
+    assert analyzed.source_repository_state is None
     assert score.source_repository_score is None
     assert "source_repository" not in score.unknown_signals
     assert "Declares no source repository" not in score.factors
@@ -316,7 +312,7 @@ def test_a_lock_declared_source_is_recorded_even_when_packagist_is_silent() -> N
     with mock.patch.object(analyzer, "_get_latest_release", return_value=None):
         analyzed = analyzer.analyze({"acme/private": dep})["acme/private"]
 
-    assert analyzed.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
+    assert analyzed.source_repository_state == SourceRepositoryState.DECLARED
 
 
 def test_a_non_forge_source_url_is_declared_but_unusable() -> None:
@@ -333,10 +329,7 @@ def test_a_non_forge_source_url_is_declared_but_unusable() -> None:
 
     score = _score_package_offline(release)
 
-    assert (
-        score.dependency.additional_info[SOURCE_REPOSITORY_KEY]
-        == SOURCE_REPOSITORY_UNUSABLE
-    )
+    assert score.dependency.source_repository_state == SourceRepositoryState.UNUSABLE
     assert score.source_repository_score == 0.75
     assert "Declares no source repository" not in score.factors
     assert (
