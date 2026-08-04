@@ -21,6 +21,7 @@ check or argue the rule in review -- do not silence it.
 from __future__ import annotations
 
 import ast
+import fnmatch
 import re
 import subprocess
 from pathlib import Path
@@ -310,6 +311,131 @@ def test_uv_lock_is_tracked_and_not_ignored() -> None:
             "person to delete it locally will not see it come back.\n\n"
             + "\n".join(ignored)
         )
+
+
+# --------------------------------------------------------------------------
+# Rule 6 -- a required check must analyse its own subject
+# --------------------------------------------------------------------------
+
+# File extensions CodeQL associates with each language we enrol. Only the
+# languages this repository actually enrols need an entry; an unmapped language
+# fails loudly below rather than being skipped, because a silent skip here would
+# be the very defect this check exists to catch.
+_CODEQL_LANGUAGE_SUFFIXES: Dict[str, Tuple[str, ...]] = {
+    "python": (".py",),
+    "actions": (".yml", ".yaml"),
+    "go": (".go",),
+    "javascript-typescript": (".js", ".jsx", ".ts", ".tsx"),
+    "java-kotlin": (".java", ".kt"),
+    "ruby": (".rb",),
+    "csharp": (".cs",),
+}
+
+# `actions` only ever analyses workflow definitions, wherever they live.
+_CODEQL_LANGUAGE_ROOTS: Dict[str, str] = {"actions": ".github/workflows"}
+
+
+def _fnmatch_any(path: str, patterns: List[str]) -> bool:
+    """Return whether a repo-relative path matches any CodeQL ignore pattern.
+
+    CodeQL's ``paths-ignore`` uses ``**`` to mean any number of directories.
+    ``fnmatch`` treats ``*`` as crossing separators, which is close enough to
+    over-match rather than under-match -- and over-matching here can only make
+    this check stricter, never laxer.
+
+    Args:
+        path: Repository-relative path with forward slashes.
+        patterns: Raw ``paths-ignore`` entries.
+
+    Returns:
+        True when the path is excluded from analysis.
+    """
+    for raw in patterns:
+        pattern = raw.strip().strip('"')
+        if fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch("/" + path, pattern):
+            return True
+        # `**/testing/**` should also exclude a top-level `testing/...`.
+        if pattern.startswith("**/") and fnmatch.fnmatch(path, pattern[3:]):
+            return True
+    return False
+
+
+def test_every_required_codeql_language_has_something_to_analyse() -> None:
+    """AGENTS.md rule 6: a required check must analyse its own subject.
+
+    ``Analyze (go)`` was one of six required merge-gate checks and reported
+    SUCCESS for months while analysing **zero lines of Go**. Every ``.go`` file
+    in the repository sat under ``testing/``, which ``codeql-config.yml``
+    excludes, so the check's own scope excluded its own subject. It became a
+    hard failure the moment that directory was deleted (#231) -- not because
+    anything regressed, but because the emptiness finally became visible.
+
+    A check that measures nothing is worse than an absent one: it occupies a
+    slot in the required list and answers for a language nobody is analysing.
+    """
+    root = PYPROJECT.parent
+    workflow = root / ".github" / "workflows" / "codeql.yml"
+    config = root / ".github" / "codeql" / "codeql-config.yml"
+    if not workflow.exists():  # pragma: no cover - workflow is committed
+        return
+
+    # Read the enrolled languages without a YAML dependency: the matrix entries
+    # are `- language: <name>` lines under `include:`.
+    languages = re.findall(
+        r"^\s*-\s*language:\s*([\w-]+)", workflow.read_text(encoding="utf-8"), re.M
+    )
+    assert languages, (
+        "AGENTS.md rule 6: could not read any CodeQL language from "
+        f"{workflow.relative_to(root)}. If the matrix moved, move this check "
+        "with it -- a parser that silently finds nothing is the defect."
+    )
+
+    ignore: List[str] = []
+    if config.exists():
+        block = re.search(
+            r"^paths-ignore:\s*\n((?:\s*-\s*.+\n)+)",
+            config.read_text(encoding="utf-8"),
+            re.M,
+        )
+        if block:
+            ignore = re.findall(r"-\s*(.+)", block.group(1))
+
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=False
+    )
+    assert tracked.returncode == 0, "git ls-files failed; cannot verify check scope"
+    paths = tracked.stdout.splitlines()
+
+    empty: List[str] = []
+    for language in languages:
+        suffixes = _CODEQL_LANGUAGE_SUFFIXES.get(language)
+        assert suffixes is not None, (
+            f"AGENTS.md rule 6: CodeQL language {language!r} is enrolled but this "
+            "check does not know which files it analyses, so it cannot tell "
+            "whether the check is vacuous. Add it to _CODEQL_LANGUAGE_SUFFIXES."
+        )
+        prefix = _CODEQL_LANGUAGE_ROOTS.get(language)
+        analysed = [
+            p
+            for p in paths
+            if p.endswith(suffixes)
+            and (prefix is None or p.startswith(prefix))
+            and not _fnmatch_any(p, ignore)
+        ]
+        if not analysed:
+            empty.append(
+                f"{language}: 0 tracked files survive paths-ignore "
+                f"(suffixes {suffixes})"
+            )
+
+    assert not empty, (
+        "AGENTS.md rule 6: a required check must analyse its own subject.\n"
+        "One or more enrolled CodeQL languages have nothing left to analyse "
+        "after paths-ignore. The check will report SUCCESS over an empty set, "
+        "which is what `Analyze (go)` did for months.\n"
+        "Either remove the language from the matrix, or fix the scope so it "
+        "reaches the files it claims to cover.\n\n" + "\n".join(empty)
+    )
 
 
 def test_mypy_first_party_exemption_list_stays_empty() -> None:
