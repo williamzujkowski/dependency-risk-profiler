@@ -37,10 +37,6 @@ jobs:
     - name: Test with pytest
       run: pytest testing/unit testing/integration --cov=src --cov-report=xml
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
-      with:
-        file: ./coverage.xml
 
   security:
     runs-on: ubuntu-latest
@@ -66,9 +62,12 @@ jobs:
     - name: Check uv.lock agrees with pyproject.toml
       run: uv lock --check
 
+    # Bandit is a static analyser of OUR OWN source. It says nothing whatsoever
+    # about dependencies. Two `echo` lines used to sit here claiming otherwise —
+    # "Using bandit for security scanning instead" — which made this job's name
+    # promise coverage the job does not have. Deleted rather than reworded: a
+    # build step whose output is a claim about what it is not doing is worse
+    # than silence. Real dependency scanning is #234; the honest state until
+    # then is that this job checks our code and the lockfile, and nothing else.
     - name: Run security checks
-      run: |
-        bandit -r src -c .bandit.yml
-        # safety check is deprecated, use a more modern approach
-        echo "Skipping safety dependency check due to known compatibility issues with recent versions"
-        echo "Using bandit for security scanning instead"
+      run: bandit -r src -c .bandit.yml

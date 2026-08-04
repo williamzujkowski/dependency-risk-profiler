@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Two CI steps reported success while doing nothing.** The `security` job
+  ended with `echo "Using bandit for security scanning instead"` — bandit is a
+  static analyser of our own source and says nothing whatsoever about
+  dependencies, so the job's name promised coverage its own output disclaimed.
+  Deleted rather than reworded: a build step whose output is a claim about what
+  it is not doing is worse than silence. Real dependency scanning is #234.
+
+  The Codecov upload was worse, because it looked like it worked. Every run, on
+  all three matrix legs, `Commit creating failed: {"message":"Token required -
+  not valid tokenless upload"}` twice — and the step concluded **success**. Six
+  errors per run, invisible, since at least 2026-08-02. The repository is not
+  registered with Codecov and holds no secrets, so this was never an expired
+  token; it had never uploaded anything. Removed rather than repaired: the
+  coverage bar that bites is `fail_under = 82.5`, enforced in-process since
+  #237. Re-adding it is one block plus a token if the reporting is wanted
+  (#249).
+
+  Neither was found by CI going red. Both were found by reading a log that had
+  been green for days.
+
+
 - **`testing/projects/` is gone: 4.4 MB of vendored Flask, Express and Gin that
   no test has ever opened, exempted by name in nine places, costing 35 standing
   Dependabot alerts.** It was described everywhere as the scan corpus — pinned
