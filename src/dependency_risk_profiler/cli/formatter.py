@@ -524,6 +524,7 @@ class JsonFormatter(BaseFormatter):
                 "license_score": dep.license_score,
                 "community_score": dep.community_score,
                 "transitive_score": dep.transitive_score,
+                "source_repository_score": dep.source_repository_score,
                 "security_policy_score": dep.security_policy_score,
                 "dependency_update_score": dep.dependency_update_score,
                 "signed_commits_score": dep.signed_commits_score,

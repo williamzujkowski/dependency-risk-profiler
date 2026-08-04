@@ -3,12 +3,16 @@
 import json
 import logging
 from collections.abc import Mapping
-from datetime import datetime
 from typing import Dict, Optional, Sequence
 
 import requests
 
 from ..models import DependencyMetadata
+from ..release_dates import (
+    apply_registry_release_date,
+    parse_registry_timestamp,
+    record_source_repository,
+)
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -115,14 +119,17 @@ class CratesIOAnalyzer(BaseAnalyzer):
         repository_url = self._repository_url(metadata)
         if repository_url:
             dep.repository_url = repository_url
+        record_source_repository(dep, repository_url)
 
         # The newest release date is the publication cadence a consumer of the
-        # crate actually sees; a cloned repo refines it to the last commit.
-        released_at = self._parse_timestamp(
-            metadata.get("released_at") or metadata.get("updated_at")
+        # crate actually sees, and it now wins over a clone's last commit
+        # rather than being overwritten by it (#146).
+        apply_registry_release_date(
+            dep,
+            parse_registry_timestamp(
+                metadata.get("released_at") or metadata.get("updated_at")
+            ),
         )
-        if released_at is not None:
-            dep.last_updated = released_at
 
         # A yanked release is crates.io's explicit "do not use this" marker.
         if metadata.get("yanked") is True:
@@ -174,17 +181,6 @@ class CratesIOAnalyzer(BaseAnalyzer):
                 return entry
         # crates.io lists versions newest-first, so entry zero is the fallback.
         return entries[0]
-
-    @staticmethod
-    def _parse_timestamp(value: object) -> Optional[datetime]:
-        """Parse a crates.io ISO-8601 timestamp, or None if unparseable."""
-        if not isinstance(value, str) or not value:
-            return None
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            logger.debug("Unparseable crates.io timestamp: %s", value)
-            return None
 
     def _get_crate_info(self, crate_name: str) -> Optional[Mapping[str, object]]:
         """Get crate information from crates.io.

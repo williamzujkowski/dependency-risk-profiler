@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 
 from .models import DependencyMetadata, SecurityMetrics
+from .release_dates import apply_repository_activity_date
 from .scorecard.branch_protection import check_branch_protection
 from .scorecard.dependency_update import check_dependency_update_tools
 from .scorecard.maintained import check_maintained_status
@@ -31,13 +32,18 @@ def analyze_repository(
         Updated dependency metadata.
     """
     try:
-        # Get last commit date
+        # Last commit date, applied only when the registry published no release
+        # date of its own (#146). A commit says when someone touched the
+        # source; the registry says when consumers last received anything, and
+        # that is what a manifest pins.
         last_commit_date = get_last_commit_date(repo_dir)
         if last_commit_date:
             # get_last_commit_date returns str; last_updated stores datetime.
             # We'll convert the ISO format string to datetime here
             try:
-                dependency.last_updated = datetime.fromisoformat(last_commit_date)
+                apply_repository_activity_date(
+                    dependency, datetime.fromisoformat(last_commit_date)
+                )
             except ValueError:
                 logger.warning(f"Could not parse date format: {last_commit_date}")
                 # Keep as is if we can't parse it

@@ -12,7 +12,11 @@ from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.composer import ComposerAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
 from dependency_risk_profiler.license.analyzer import analyze_license
-from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
+from dependency_risk_profiler.models import (
+    DependencyMetadata,
+    DependencyRiskScore,
+    RiskLevel,
+)
 from dependency_risk_profiler.parsers.composer import ComposerLockParser
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.vulnerabilities import ecosystems
@@ -234,6 +238,24 @@ def test_package_without_a_repository_stays_honestly_unmeasured() -> None:
 
     assert score.dependency.repository_url is None
     assert "health_indicators" in score.unknown_signals
+
+
+def test_a_dist_only_package_is_scored_rather_than_shrugged_at() -> None:
+    """phpstan/phpstan was #132's one residual UNKNOWN: dist-only, no source.
+
+    Declaring no repository is now the measured finding, so the seven signals
+    that absence silences no longer add up to "we know nothing" (#146).
+    """
+    release = copy.deepcopy(CONSOLE_RELEASE)
+    del release["source"]
+    release["homepage"] = ""
+
+    score = _score_package_offline(release)
+
+    assert score.source_repository_score == 1.0
+    assert score.insufficient_data is False
+    assert score.risk_level is not RiskLevel.UNKNOWN
+    assert "Declares no source repository" in score.factors
 
 
 def test_package_without_declared_authors_leaves_maintainers_unmeasured() -> None:

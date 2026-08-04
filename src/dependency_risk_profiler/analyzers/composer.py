@@ -1,12 +1,16 @@
 """Analyzer for PHP (Composer / Packagist) dependencies."""
 
 import logging
-from datetime import datetime
 from typing import Dict, List, Optional
 
 import requests
 
 from ..models import DependencyMetadata
+from ..release_dates import (
+    apply_registry_release_date,
+    parse_registry_timestamp,
+    record_source_repository,
+)
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -56,6 +60,7 @@ class ComposerAnalyzer(BaseAnalyzer):
                 repository_url = canonical_repository_url(dep.repository_url)
                 if repository_url:
                     dep.repository_url = repository_url
+                record_source_repository(dep, repository_url)
 
                 # Repository-derived signals (last commit, tests/CI, the
                 # OpenSSF-style security checks) come from the source repo, the
@@ -98,11 +103,9 @@ class ComposerAnalyzer(BaseAnalyzer):
             dep.repository_url = repository_url
 
         # Packagist dates the release, not the repository; it is the release
-        # cadence a consumer of the package actually sees. A cloned repo refines
-        # this to the last commit date further down.
-        released_at = self._parse_timestamp(release.get("time"))
-        if released_at is not None:
-            dep.last_updated = released_at
+        # cadence a consumer of the package actually sees, and it now wins over
+        # a clone's last commit rather than being overwritten by it (#146).
+        apply_registry_release_date(dep, parse_registry_timestamp(release.get("time")))
 
         # Packagist marks a replaced package with `abandoned`: either `true` or
         # the name of the package that supersedes it.
@@ -137,17 +140,6 @@ class ComposerAnalyzer(BaseAnalyzer):
             return None
         named = [author for author in authors if isinstance(author, dict)]
         return len(named) if named else None
-
-    @staticmethod
-    def _parse_timestamp(value: object) -> Optional[datetime]:
-        """Parse a Packagist ISO-8601 timestamp, or None if unparseable."""
-        if not isinstance(value, str) or not value:
-            return None
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            logger.debug("Unparseable Packagist timestamp: %s", value)
-            return None
 
     def _get_latest_release(self, package_name: str) -> Optional[Dict[str, object]]:
         """Return the newest Packagist release entry for a package, or None.
