@@ -55,7 +55,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip 'setuptools==69.0.2' 'wheel>=0.42.0'
-        pip install bandit
+        pip install bandit uv
+
+    # `uv.lock` is committed but nothing installs from it (#232), so on its own
+    # it is a file that looks like a pin and is not one. This step is the half
+    # that can land safely today: it fails if the lockfile has drifted out of
+    # agreement with pyproject.toml, which is what happens when someone edits a
+    # dependency and never relocks. It does NOT make CI reproducible — the test
+    # job still resolves from PyPI with pip. See #232 for that half.
+    - name: Check uv.lock agrees with pyproject.toml
+      run: uv lock --check
 
     - name: Run security checks
       run: |

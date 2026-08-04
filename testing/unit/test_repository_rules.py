@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import re
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
@@ -262,6 +263,53 @@ def test_explicit_any_never_increases() -> None:
         "A new Any needs a real type instead. If a module drops to zero, "
         "remove its entry -- ceilings only move down.\n\n" + "\n".join(regressions)
     )
+
+
+def test_uv_lock_is_tracked_and_not_ignored() -> None:
+    """AGENTS.md rule 7: ``uv.lock`` is committed.
+
+    The rule used to say the opposite, and the commit that introduced it
+    committed ``uv.lock`` in the same change -- a bar and its violation
+    shipping together. A 7-0 consensus vote resolved the contradiction in
+    favour of committing the lockfile: it never reaches a consumer of this
+    library, so it pins only the development environment, and a tool that
+    scores other projects on pinning does not get to except itself.
+
+    This check exists because the direction of the rule is not the lesson.
+    The lesson is that three separate bars in this repository were stated and
+    never enforced, so a fourth prose sentence was not going to hold either.
+    """
+    root = PYPROJECT.parent
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "uv.lock"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert tracked.returncode == 0, (
+        "AGENTS.md rule 7: `uv.lock` is committed.\n"
+        "It pins the development environment, which is the only environment it "
+        "can reach -- the lockfile is not packaged into the wheel or the sdist.\n"
+        "If this rule should change, change AGENTS.md and this test in the same "
+        "diff. That coupling is the entire point of this check.\n\n"
+        f"git ls-files said: {tracked.stderr.strip() or 'not tracked'}"
+    )
+
+    gitignore = root / ".gitignore"
+    if gitignore.exists():
+        ignored = [
+            line
+            for line in gitignore.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.strip().startswith("#")
+            and line.strip().lstrip("/") == "uv.lock"
+        ]
+        assert not ignored, (
+            "AGENTS.md rule 7: `uv.lock` is committed, so .gitignore must not "
+            "list it. A tracked file that is also ignored is a trap: the next "
+            "person to delete it locally will not see it come back.\n\n"
+            + "\n".join(ignored)
+        )
 
 
 def test_mypy_first_party_exemption_list_stays_empty() -> None:
