@@ -1,0 +1,222 @@
+{
+  "payload": {
+    "@context": {
+      "@vocab": "http://schema.nuget.org/schema#",
+      "catalog": "http://schema.nuget.org/catalog#",
+      "commitId": {
+        "@id": "catalog:commitId"
+      },
+      "commitTimeStamp": {
+        "@id": "catalog:commitTimeStamp",
+        "@type": "xsd:dateTime"
+      },
+      "count": {
+        "@id": "catalog:count"
+      },
+      "dependencies": {
+        "@container": "@set",
+        "@id": "dependency"
+      },
+      "dependencyGroups": {
+        "@container": "@set",
+        "@id": "dependencyGroup"
+      },
+      "items": {
+        "@container": "@set",
+        "@id": "catalog:item"
+      },
+      "packageContent": {
+        "@type": "@id"
+      },
+      "packageTargetFrameworks": {
+        "@container": "@set",
+        "@id": "packageTargetFramework"
+      },
+      "parent": {
+        "@id": "catalog:parent",
+        "@type": "@id"
+      },
+      "published": {
+        "@type": "xsd:dateTime"
+      },
+      "reasons": {
+        "@container": "@set"
+      },
+      "registration": {
+        "@type": "@id"
+      },
+      "tags": {
+        "@container": "@set",
+        "@id": "tag"
+      },
+      "xsd": "http://www.w3.org/2001/XMLSchema#"
+    },
+    "@id": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json",
+    "@type": [
+      "catalog:CatalogRoot",
+      "PackageRegistration",
+      "catalog:Permalink"
+    ],
+    "commitId": "8890c4fd-4769-41bc-9304-aaee4f37e572",
+    "commitTimeStamp": "2026-05-08T17:39:40.6121236+00:00",
+    "count": 1,
+    "items": [
+      {
+        "@id": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json#page/2.0.0/3.5.7",
+        "@type": "catalog:CatalogPage",
+        "commitId": "8890c4fd-4769-41bc-9304-aaee4f37e572",
+        "commitTimeStamp": "2026-05-08T17:39:40.6121236+00:00",
+        "count": 40,
+        "items": [
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/2.0.0.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2018.10.05.03.57.34/referencetrimmer.2.0.0.json",
+              "@type": "PackageDetails",
+              "authors": "David Federman",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2018.10.05.03.57.34/referencetrimmer.2.0.0.json#dependencygroup/.netframework4.6.1",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETFramework4.6.1"
+                }
+              ],
+              "description": "Package Description",
+              "iconUrl": "",
+              "id": "ReferenceTrimmer",
+              "language": "",
+              "licenseExpression": "",
+              "licenseUrl": "https://github.com/dfederm/ReferenceTrimmer/blob/master/LICENSE",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/2.0.0/referencetrimmer.2.0.0.nupkg",
+              "projectUrl": "https://github.com/dfederm/ReferenceTrimmer",
+              "published": "2018-10-05T03:53:02.017+00:00",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "",
+              "version": "2.0.0"
+            },
+            "commitId": "a2e6fbbe-f71d-45cb-9c16-1225e64cc8f8",
+            "commitTimeStamp": "2020-02-08T04:34:44.7541573+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/2.0.0/referencetrimmer.2.0.0.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/3.5.2.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.27.21.22.41/referencetrimmer.3.5.2.json",
+              "@type": "PackageDetails",
+              "authors": "David Federman",
+              "description": "Easily identify which dependencies can be removed from an MSBuild project.",
+              "iconUrl": "",
+              "id": "ReferenceTrimmer",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/ReferenceTrimmer/3.5.2/license",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.2/referencetrimmer.3.5.2.nupkg",
+              "projectUrl": "https://github.com/dfederm/ReferenceTrimmer",
+              "published": "2026-04-27T21:19:43.92+00:00",
+              "readmeUrl": "https://www.nuget.org/packages/ReferenceTrimmer/3.5.2#show-readme-container",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "",
+              "version": "3.5.2"
+            },
+            "commitId": "cb136de4-0792-4bb0-ae59-a9996aa5e4fd",
+            "commitTimeStamp": "2026-04-27T21:24:52.8134798+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.2/referencetrimmer.3.5.2.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/3.5.6.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2026.05.01.23.57.12/referencetrimmer.3.5.6.json",
+              "@type": "PackageDetails",
+              "authors": "David Federman",
+              "description": "Easily identify which dependencies can be removed from an MSBuild project.",
+              "iconUrl": "",
+              "id": "ReferenceTrimmer",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/ReferenceTrimmer/3.5.6/license",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.6/referencetrimmer.3.5.6.nupkg",
+              "projectUrl": "https://github.com/dfederm/ReferenceTrimmer",
+              "published": "2026-05-01T23:53:14.42+00:00",
+              "readmeUrl": "https://www.nuget.org/packages/ReferenceTrimmer/3.5.6#show-readme-container",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "",
+              "version": "3.5.6"
+            },
+            "commitId": "ebfecf20-f1b4-41a4-be91-faa446909096",
+            "commitTimeStamp": "2026-05-01T23:59:03.9743592+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.6/referencetrimmer.3.5.6.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/3.5.7.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2026.05.08.17.37.37/referencetrimmer.3.5.7.json",
+              "@type": "PackageDetails",
+              "authors": "David Federman",
+              "description": "Easily identify which dependencies can be removed from an MSBuild project.",
+              "iconUrl": "",
+              "id": "ReferenceTrimmer",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/ReferenceTrimmer/3.5.7/license",
+              "listed": true,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.7/referencetrimmer.3.5.7.nupkg",
+              "projectUrl": "https://github.com/dfederm/ReferenceTrimmer",
+              "published": "2026-05-08T17:34:31.583+00:00",
+              "readmeUrl": "https://www.nuget.org/packages/ReferenceTrimmer/3.5.7#show-readme-container",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "",
+              "version": "3.5.7"
+            },
+            "commitId": "8890c4fd-4769-41bc-9304-aaee4f37e572",
+            "commitTimeStamp": "2026-05-08T17:39:40.6121236+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.7/referencetrimmer.3.5.7.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json"
+          }
+        ],
+        "lower": "2.0.0",
+        "parent": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json",
+        "upper": "3.5.7"
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "nuget-registration",
+    "source_url": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json",
+    "trimming": [
+      "items[-1].items: kept the oldest leaf and the newest 3, dropped 36 others (volume only; retained leaves keep every key)"
+    ]
+  }
+}

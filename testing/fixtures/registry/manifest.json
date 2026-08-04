@@ -266,6 +266,57 @@
           "url": "https://api.nuget.org/v3-flatcontainer/microsoft.azure.servicebus/5.2.0/microsoft.azure.servicebus.nuspec",
           "reducer": "none",
           "format": "text"
+        },
+        "dapper.directory.packages.props": {
+          "url": "https://raw.githubusercontent.com/DapperLib/Dapper/2.1.79/Directory.Packages.props",
+          "reducer": "none",
+          "format": "text"
+        },
+        "dapper.directory.build.props": {
+          "url": "https://raw.githubusercontent.com/DapperLib/Dapper/2.1.79/Directory.Build.props",
+          "reducer": "none",
+          "format": "text"
+        },
+        "dapper.csproj": {
+          "url": "https://raw.githubusercontent.com/DapperLib/Dapper/2.1.79/Dapper/Dapper.csproj",
+          "reducer": "none",
+          "format": "text"
+        },
+        "referencetrimmer.versions": {
+          "url": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/index.json",
+          "reducer": "none"
+        },
+        "referencetrimmer.registration": {
+          "url": "https://api.nuget.org/v3/registration5-gz-semver2/referencetrimmer/index.json",
+          "reducer": "nuget-registration"
+        },
+        "referencetrimmer.nuspec": {
+          "url": "https://api.nuget.org/v3-flatcontainer/referencetrimmer/3.5.7/referencetrimmer.nuspec",
+          "reducer": "none",
+          "format": "text"
+        },
+        "newtonsoft.json.csproj": {
+          "url": "https://raw.githubusercontent.com/JamesNK/Newtonsoft.Json/13.0.4/Src/Newtonsoft.Json/Newtonsoft.Json.csproj",
+          "reducer": "none",
+          "format": "text"
+        },
+        "newtonsoft.json.directory.build.props": {
+          "url": "https://raw.githubusercontent.com/JamesNK/Newtonsoft.Json/13.0.4/Src/Directory.Build.props",
+          "reducer": "none",
+          "format": "text"
+        },
+        "microsoft.csharp.versions": {
+          "url": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/index.json",
+          "reducer": "none"
+        },
+        "microsoft.csharp.registration": {
+          "url": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json",
+          "reducer": "nuget-registration"
+        },
+        "microsoft.csharp.nuspec": {
+          "url": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0/microsoft.csharp.nuspec",
+          "reducer": "none",
+          "format": "text"
         }
       }
     },

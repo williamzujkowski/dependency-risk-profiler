@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **NuGet collects `<GlobalPackageReference>` packages, which appear in no
+  project file at all.** Central Package Management lets a
+  `Directory.Packages.props` apply a package to *every* project under it
+  without any `<PackageReference>` in the `.csproj`. Dapper does this with
+  ReferenceTrimmer; the convention is analyzers, source-link and versioning
+  tools. They run during the build, which is exactly the supply-chain position
+  this tool exists to examine, and they were invisible to the scanner while
+  every count stayed green.
+
+  Each is marked `build_dependency` in `DependencyMetadata.additional_info` —
+  the same key `parsers/toml.py` already writes for pyproject's
+  `build-system.requires`, rather than a new spelling for one ecosystem. The
+  marker stops at the Python API: the unified `ScoredDependency` has no field
+  for a dependency's kind or scope, and `additional_info` reaches neither
+  reporter, so nothing here changes the JSON contract. Adding such a field
+  concerns all nine ecosystems and belongs in its own issue.
+
+  One #129 property is gone deliberately: a fully inline-pinned project used to
+  read no file but its own manifest. A global package is a dependency of the
+  pinned projects too, and there is no way to know one is there without
+  reading the props file, so the lookup now always runs. Resolved versions for
+  pinned and centrally-managed projects are unchanged.
+
 - **Four more ecosystems measure transitive dependencies, and the fifth says
   why it cannot.** nodejs, python, cargo and rubygems never populated
   `transitive_dependencies` at all. Since the fail-closed read landed, that
@@ -195,6 +218,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   live in a module-level `advisory_risk_factors` with their explanation. Scoring
   ends up 5% slower than before under instrumentation and 4% slower without it,
   against an unchanged threshold.
+- **NuGet resolves version properties defined in `Directory.Build.props`.** A
+  `.csproj` that declares `Version="$(SomethingPackageVersion)"` and defines the
+  property one directory up resolved to `unmanaged` — honest under the #141
+  contract, and a total loss of the version-drift signal for a repository shape
+  that is not rare. Newtonsoft.Json's own project is exactly it: seven package
+  references, seven properties, none of them defined in the file that uses
+  them, all seven unmeasured.
+
+  Precedence follows MSBuild's evaluation order rather than convenience.
+  `Directory.Build.props` is imported first, so anything the project defines
+  wins over what it inherits, and so does anything the
+  `Directory.Packages.props` defines. `ManagePackageVersionsCentrally` is read
+  from it too — Dapper sets the switch there — because reading a file for
+  versions and not for the property that decides whether those versions apply
+  is how a confident wrong answer gets produced. Only `<PropertyGroup>` content
+  is taken; `<Import>` chains and `<PackageReference>` items in that file are
+  still not followed, and anything unresolved stays `unmanaged` rather than
+  becoming a guess.
+
+  Both walks share one traversal, both files are read through the XXE-safe
+  reader, and an unparseable or missing one leaves the versions that needed it
+  unmeasured instead of taking the parse down.
 
 - **A package npm removed for malware read as current and undeprecated.** npm's
   security team does not delete a package it pulls; it republishes the name as

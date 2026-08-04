@@ -1,0 +1,11 @@
+{
+  "payload": "\ufeff<Project Sdk=\"Microsoft.NET.Sdk\">\r\n  <PropertyGroup>\r\n    <AssemblyName>Dapper</AssemblyName>\r\n    <Title>Dapper</Title>\r\n    <PackageTags>orm;sql;micro-orm</PackageTags>\r\n    <Description>A high performance Micro-ORM supporting SQL Server, MySQL, Sqlite, SqlCE, Firebird etc. Major Sponsor: Dapper Plus from ZZZ Projects.</Description>\r\n    <Authors>Sam Saffron;Marc Gravell;Nick Craver</Authors>\r\n    <TargetFrameworks>net461;netstandard2.0;net8.0;net10.0</TargetFrameworks>\r\n    <Nullable>enable</Nullable>\r\n    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>\r\n  </PropertyGroup>\r\n  <ItemGroup>\r\n    <!-- common base API goes here -->\r\n    <AdditionalFiles Include=\"PublicAPI.*.txt\" />\r\n    <!-- TFM-specific additions go here; in reality this just means \"current\" (to avoid DisposeAsync etc in netfx/netstandard) -->\r\n    <AdditionalFiles Include=\"PublicAPI/$(TargetFramework)/PublicAPI.*.txt\" />\r\n  </ItemGroup>\r\n  <ItemGroup>\r\n    <Folder Include=\"Properties\\\" />\r\n\r\n    <PackageReference Include=\"Microsoft.CodeAnalysis.PublicApiAnalyzers\">\r\n      <PrivateAssets>all</PrivateAssets>\r\n      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>\r\n    </PackageReference>\r\n  </ItemGroup>\r\n\r\n  <ItemGroup Condition=\" '$(TargetFramework)' == 'net461'\">\r\n    <PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\" />\r\n    <PackageReference Include=\"System.Threading.Tasks.Extensions\" />\r\n  </ItemGroup>\r\n  \r\n  <ItemGroup Condition=\" '$(TargetFramework)' == 'netstandard2.0'\">\r\n    <PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\" />\r\n    <PackageReference Include=\"System.Reflection.Emit.Lightweight\" />\r\n    <PackageReference Include=\"System.Threading.Tasks.Extensions\" />\r\n  </ItemGroup>\r\n</Project>\r\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://raw.githubusercontent.com/DapperLib/Dapper/2.1.79/Dapper/Dapper.csproj",
+    "trimming": []
+  }
+}

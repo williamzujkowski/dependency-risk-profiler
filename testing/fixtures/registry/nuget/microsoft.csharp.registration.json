@@ -1,0 +1,659 @@
+{
+  "payload": {
+    "@context": {
+      "@vocab": "http://schema.nuget.org/schema#",
+      "catalog": "http://schema.nuget.org/catalog#",
+      "commitId": {
+        "@id": "catalog:commitId"
+      },
+      "commitTimeStamp": {
+        "@id": "catalog:commitTimeStamp",
+        "@type": "xsd:dateTime"
+      },
+      "count": {
+        "@id": "catalog:count"
+      },
+      "dependencies": {
+        "@container": "@set",
+        "@id": "dependency"
+      },
+      "dependencyGroups": {
+        "@container": "@set",
+        "@id": "dependencyGroup"
+      },
+      "items": {
+        "@container": "@set",
+        "@id": "catalog:item"
+      },
+      "packageContent": {
+        "@type": "@id"
+      },
+      "packageTargetFrameworks": {
+        "@container": "@set",
+        "@id": "packageTargetFramework"
+      },
+      "parent": {
+        "@id": "catalog:parent",
+        "@type": "@id"
+      },
+      "published": {
+        "@type": "xsd:dateTime"
+      },
+      "reasons": {
+        "@container": "@set"
+      },
+      "registration": {
+        "@type": "@id"
+      },
+      "tags": {
+        "@container": "@set",
+        "@id": "tag"
+      },
+      "xsd": "http://www.w3.org/2001/XMLSchema#"
+    },
+    "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json",
+    "@type": [
+      "catalog:CatalogRoot",
+      "PackageRegistration",
+      "catalog:Permalink"
+    ],
+    "commitId": "97294429-33e9-48e3-9551-d094af53cc01",
+    "commitTimeStamp": "2026-04-10T00:16:27.253926+00:00",
+    "count": 1,
+    "items": [
+      {
+        "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json#page/1.0.0/4.7.0",
+        "@type": "catalog:CatalogPage",
+        "commitId": "97294429-33e9-48e3-9551-d094af53cc01",
+        "commitTimeStamp": "2026-04-10T00:16:27.253926+00:00",
+        "count": 40,
+        "items": [
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/1.0.0.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2018.12.13.22.41.57/microsoft.csharp.1.0.0.json",
+              "@type": "PackageDetails",
+              "authors": "Lucas Saliba",
+              "description": "The Microsoft.CSharp namespace contains classes that support compilation and code generation using the C# language.",
+              "iconUrl": "",
+              "id": "Microsoft.CSharp",
+              "language": "",
+              "licenseExpression": "",
+              "licenseUrl": "",
+              "listed": false,
+              "minClientVersion": "",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/1.0.0/microsoft.csharp.1.0.0.nupkg",
+              "projectUrl": "",
+              "published": "1900-01-01T00:00:00+00:00",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "",
+              "version": "1.0.0"
+            },
+            "commitId": "b1416cfb-3457-44ac-b54f-2f3121147550",
+            "commitTimeStamp": "2020-02-08T00:40:03.0334342+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/1.0.0/microsoft.csharp.1.0.0.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/4.7.0-preview2.19523.17.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/monoandroid1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "MonoAndroid1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/monotouch1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "MonoTouch1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netframework4.5",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETFramework4.5"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netcore5.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netcore5.0/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netcore5.0/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netcore5.0/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.7.0-preview2.19523.17, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETCore5.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netcoreapp2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETCoreApp2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.0/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.0/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.3",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.3/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.3/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard1.3/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.7.0-preview2.19523.17, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.3"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netstandard2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETStandard2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/.netportable0.0-profile259",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETPortable0.0-Profile259"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/uap10.0.16299",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "UAP10.0.16299"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/windows8.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Windows8.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/windowsphone8.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "WindowsPhone8.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/windowsphoneapp8.1",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "WindowsPhoneApp8.1"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/xamarin.ios1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.iOS1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/xamarin.mac2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.Mac2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/xamarin.tvos1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.TVOS1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.01.22.12.37/microsoft.csharp.4.7.0-preview2.19523.17.json#dependencygroup/xamarin.watchos1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.WatchOS1.0"
+                }
+              ],
+              "description": "Provides support for compilation and code generation, including dynamic, using the C# language.\n\nCommonly Used Types:\nMicrosoft.CSharp.RuntimeBinder.Binder\nMicrosoft.CSharp.RuntimeBinder.RuntimeBinderException\nMicrosoft.CSharp.RuntimeBinder.CSharpArgumentInfo\nMicrosoft.CSharp.RuntimeBinder.CSharpArgumentInfoFlags\nMicrosoft.CSharp.RuntimeBinder.CSharpBinderFlags\n \nWhen using NuGet 3.x this package requires at least version 3.4.",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0-preview2.19523.17/icon",
+              "id": "Microsoft.CSharp",
+              "language": "",
+              "licenseExpression": "",
+              "licenseUrl": "https://github.com/dotnet/corefx/blob/master/LICENSE.TXT",
+              "listed": true,
+              "minClientVersion": "2.12",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0-preview2.19523.17/microsoft.csharp.4.7.0-preview2.19523.17.nupkg",
+              "projectUrl": "https://github.com/dotnet/corefx",
+              "published": "2019-11-01T22:08:37.66+00:00",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "Microsoft.CSharp",
+              "version": "4.7.0-preview2.19523.17"
+            },
+            "commitId": "b1416cfb-3457-44ac-b54f-2f3121147550",
+            "commitTimeStamp": "2020-02-08T00:40:03.0334342+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0-preview2.19523.17/microsoft.csharp.4.7.0-preview2.19523.17.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/4.7.0-preview3.19551.4.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/monoandroid1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "MonoAndroid1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/monotouch1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "MonoTouch1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netframework4.5",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETFramework4.5"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netcore5.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netcore5.0/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netcore5.0/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netcore5.0/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.7.0-preview3.19551.4, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETCore5.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netcoreapp2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETCoreApp2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.0/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.0/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.3",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.3/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.3/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard1.3/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.7.0-preview3.19551.4, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.3"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netstandard2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETStandard2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/.netportable0.0-profile259",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETPortable0.0-Profile259"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/uap10.0.16299",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "UAP10.0.16299"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/windows8.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Windows8.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/windowsphone8.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "WindowsPhone8.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/windowsphoneapp8.1",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "WindowsPhoneApp8.1"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/xamarin.ios1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.iOS1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/xamarin.mac2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.Mac2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/xamarin.tvos1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.TVOS1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2019.11.13.23.09.51/microsoft.csharp.4.7.0-preview3.19551.4.json#dependencygroup/xamarin.watchos1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.WatchOS1.0"
+                }
+              ],
+              "description": "Provides support for compilation and code generation, including dynamic, using the C# language.\n\nCommonly Used Types:\nMicrosoft.CSharp.RuntimeBinder.Binder\nMicrosoft.CSharp.RuntimeBinder.RuntimeBinderException\nMicrosoft.CSharp.RuntimeBinder.CSharpArgumentInfo\nMicrosoft.CSharp.RuntimeBinder.CSharpArgumentInfoFlags\nMicrosoft.CSharp.RuntimeBinder.CSharpBinderFlags\n \nWhen using NuGet 3.x this package requires at least version 3.4.",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0-preview3.19551.4/icon",
+              "id": "Microsoft.CSharp",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/Microsoft.CSharp/4.7.0-preview3.19551.4/license",
+              "listed": true,
+              "minClientVersion": "2.12",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0-preview3.19551.4/microsoft.csharp.4.7.0-preview3.19551.4.nupkg",
+              "projectUrl": "https://github.com/dotnet/corefx",
+              "published": "2019-11-13T23:07:42.883+00:00",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "Microsoft.CSharp",
+              "version": "4.7.0-preview3.19551.4"
+            },
+            "commitId": "b1416cfb-3457-44ac-b54f-2f3121147550",
+            "commitTimeStamp": "2020-02-08T00:40:03.0334342+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0-preview3.19551.4/microsoft.csharp.4.7.0-preview3.19551.4.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json"
+          },
+          {
+            "@id": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/4.7.0.json",
+            "@type": "Package",
+            "catalogEntry": {
+              "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json",
+              "@type": "PackageDetails",
+              "authors": "Microsoft",
+              "dependencyGroups": [
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/monoandroid1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "MonoAndroid1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/monotouch1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "MonoTouch1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netframework4.5",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETFramework4.5"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netcore5.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netcore5.0/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netcore5.0/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netcore5.0/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.7.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETCore5.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netcoreapp2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETCoreApp2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.0",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.0/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.0/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.3",
+                  "@type": "PackageDependencyGroup",
+                  "dependencies": [
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.3/netstandard.library",
+                      "@type": "PackageDependency",
+                      "id": "NETStandard.Library",
+                      "range": "[1.6.1, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/netstandard.library/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.3/system.dynamic.runtime",
+                      "@type": "PackageDependency",
+                      "id": "System.Dynamic.Runtime",
+                      "range": "[4.3.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.dynamic.runtime/index.json"
+                    },
+                    {
+                      "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard1.3/system.reflection.typeextensions",
+                      "@type": "PackageDependency",
+                      "id": "System.Reflection.TypeExtensions",
+                      "range": "[4.7.0, )",
+                      "registration": "https://api.nuget.org/v3/registration5-gz-semver2/system.reflection.typeextensions/index.json"
+                    }
+                  ],
+                  "targetFramework": ".NETStandard1.3"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netstandard2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETStandard2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/.netportable0.0-profile259",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": ".NETPortable0.0-Profile259"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/uap10.0.16299",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "UAP10.0.16299"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/windows8.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Windows8.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/windowsphone8.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "WindowsPhone8.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/windowsphoneapp8.1",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "WindowsPhoneApp8.1"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/xamarin.ios1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.iOS1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/xamarin.mac2.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.Mac2.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/xamarin.tvos1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.TVOS1.0"
+                },
+                {
+                  "@id": "https://api.nuget.org/v3/catalog0/data/2026.04.10.00.14.45/microsoft.csharp.4.7.0.json#dependencygroup/xamarin.watchos1.0",
+                  "@type": "PackageDependencyGroup",
+                  "targetFramework": "Xamarin.WatchOS1.0"
+                }
+              ],
+              "description": "Provides support for compilation and code generation, including dynamic, using the C# language.\n\nCommonly Used Types:\nMicrosoft.CSharp.RuntimeBinder.Binder\nMicrosoft.CSharp.RuntimeBinder.RuntimeBinderException\nMicrosoft.CSharp.RuntimeBinder.CSharpArgumentInfo\nMicrosoft.CSharp.RuntimeBinder.CSharpArgumentInfoFlags\nMicrosoft.CSharp.RuntimeBinder.CSharpBinderFlags\n \nWhen using NuGet 3.x this package requires at least version 3.4.",
+              "iconUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0/icon",
+              "id": "Microsoft.CSharp",
+              "language": "",
+              "licenseExpression": "MIT",
+              "licenseUrl": "https://www.nuget.org/packages/Microsoft.CSharp/4.7.0/license",
+              "listed": true,
+              "minClientVersion": "2.12",
+              "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0/microsoft.csharp.4.7.0.nupkg",
+              "projectUrl": "https://github.com/dotnet/corefx",
+              "published": "2019-12-03T16:39:33.15+00:00",
+              "requireLicenseAcceptance": false,
+              "summary": "",
+              "tags": [
+                ""
+              ],
+              "title": "Microsoft.CSharp",
+              "version": "4.7.0"
+            },
+            "commitId": "97294429-33e9-48e3-9551-d094af53cc01",
+            "commitTimeStamp": "2026-04-10T00:16:27.253926+00:00",
+            "packageContent": "https://api.nuget.org/v3-flatcontainer/microsoft.csharp/4.7.0/microsoft.csharp.4.7.0.nupkg",
+            "registration": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json"
+          }
+        ],
+        "lower": "1.0.0",
+        "parent": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json",
+        "upper": "4.7.0"
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "nuget-registration",
+    "source_url": "https://api.nuget.org/v3/registration5-gz-semver2/microsoft.csharp/index.json",
+    "trimming": [
+      "items[-1].items: kept the oldest leaf and the newest 3, dropped 36 others (volume only; retained leaves keep every key)"
+    ]
+  }
+}

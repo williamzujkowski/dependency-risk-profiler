@@ -78,6 +78,8 @@ from dependency_risk_profiler.parsers import nuget_registry as nuget_registry_mo
 from dependency_risk_profiler.parsers.gradle import GradleParser
 from dependency_risk_profiler.parsers.gradle_dsl import BUILD_FILE_NAMES
 from dependency_risk_profiler.parsers.maven_central import pom_url
+from dependency_risk_profiler.parsers.nuget import NuGetParser
+from dependency_risk_profiler.parsers.nuget_cpm import BUILD_DEPENDENCY_KEY
 from dependency_risk_profiler.parsers.nuget_registry import (
     FLAT_CONTAINER_BASE,
     NuGetRegistryClient,
@@ -105,10 +107,12 @@ GITHUB_REPO_HTML = (
 )
 
 # Where the captured *project* files come from, as opposed to the captured
-# registry documents. Gradle is the one ecosystem whose manifest is itself a
+# registry documents. Gradle was the first ecosystem whose manifest is itself a
 # capture — a build script is a source file in somebody's repository, not a
-# document a registry serves — and the driver partitions its fixtures on this
-# prefix rather than on a hand-kept list of which fixture is which.
+# document a registry serves — and nuget joined it in #151, because a
+# ``Directory.Packages.props`` and a ``Directory.Build.props`` are the same kind
+# of thing. Both drivers partition their fixtures on this prefix rather than on
+# a hand-kept list of which fixture is which.
 _PROJECT_FILE_BASE = "https://raw.githubusercontent.com/"
 
 
@@ -206,12 +210,20 @@ class FixtureCase:
     expected_license_id: Optional[str] = None
     expected_deprecated: Optional[bool] = None
     # How the manifest-reading ecosystems must have established the installed
-    # version — one of the ``version_sources`` constants. Only gradle asserts
-    # it today, because it is the only case whose *manifest* is captured: the
-    # difference between reading 3.17.0 off the declaration and resolving it
-    # through a version catalog is invisible in the score and is the whole of
-    # what #101 added.
+    # version — one of the ``version_sources`` constants. Asserted by the two
+    # ecosystems whose *manifest* is captured, gradle and nuget: the difference
+    # between reading 3.17.0 off the declaration and resolving it through a
+    # version catalog is invisible in the score and is the whole of what #101
+    # added, and the same is true of a NuGet version that came from a
+    # Directory.Packages.props rather than the project (#129, #151).
     expected_version_source: Optional[str] = None
+    # Whether the captured project declares this package as build-time tooling
+    # rather than something that ships. nuget only: a
+    # ``<GlobalPackageReference>`` applies to every project in the tree and
+    # appears in none of them, and the marker is the only thing separating it
+    # from a runtime package once it is in the dependency map (#151). None
+    # means the case does not assert either way.
+    expected_build_dependency: Optional[bool] = None
     # The exact runtime dependency set the adapter must have recorded. A score
     # is a five-bucket function of a count, so it cannot tell a correct read
     # from one that lost four packages and gained four others, and it cannot
@@ -748,9 +760,18 @@ def _score_nuget(
     one recording set, so the client's own budget, host allowlist and page-walk
     all run for real.
 
+    A case may also capture the *project* the package is a dependency of, in
+    which case the real ``.csproj`` reader runs over the real repository layout
+    first and the version it resolves is what gets scored — the same end-to-end
+    shape ``_score_gradle`` uses, and for the same reason. A NuGet version can
+    come from four places and only one of them is the project file, so a case
+    that hands the analyzer a version by hand proves nothing about #129's
+    ``Directory.Packages.props`` walk or #151's ``Directory.Build.props`` one.
+
     Args:
         case: The conformance case, naming the nuspec fixture, with the version
-            index and registration index in ``extra_fixtures``.
+            index, the registration index, and any project files in
+            ``extra_fixtures``.
         fixtures: Every fixture captured for the ecosystem.
 
     Returns:
@@ -760,7 +781,19 @@ def _score_nuget(
     for extra in case.extra_fixtures:
         served[extra] = fixtures[extra]
 
-    package_id, version = _nuspec_identity(served[case.fixture])
+    project = {
+        name: fixture
+        for name, fixture in served.items()
+        if fixture.source_url.startswith(_PROJECT_FILE_BASE)
+    }
+    registry = {
+        name: fixture for name, fixture in served.items() if name not in project
+    }
+
+    package_id, version = _nuspec_identity(registry[case.fixture])
+    if project:
+        _assert_nuget_project_resolves(case, project, package_id)
+
     analyzer = NuGetAnalyzer(client=NuGetRegistryClient(enabled=True))
     analyzer.clone_repos = False
     dep = DependencyMetadata(name=package_id, installed_version=case.installed_version)
@@ -773,10 +806,77 @@ def _score_nuget(
             f"{lowered}.nuspec"
         )
 
-    get = replay_requests_get(served, absent=absent)
+    get = replay_requests_get(registry, absent=absent)
     with mock.patch.object(nuget_registry_module.requests, "get", side_effect=get):
         dep = analyzer.analyze({package_id: dep})[package_id]
     return _finish(dep, analyzer.metadata_cache.get(package_id, {"name": package_id}))
+
+
+def _assert_nuget_project_resolves(
+    case: FixtureCase, project: Mapping[str, RegistryFixture], package_id: str
+) -> None:
+    """Parse a captured .NET project and check what it says about one package.
+
+    Each file is written to the path its source URL describes relative to the
+    repository root, so the ``Directory.Packages.props`` and the
+    ``Directory.Build.props`` land where the walk-up expects to find them
+    rather than where a test author decided to put them. The layout is the
+    repository's, not the harness's, which is the property that makes a walk
+    testable at all.
+
+    Args:
+        case: The conformance case, which states the version the parse must
+            produce, how it must have been established, and whether the package
+            is build-time tooling.
+        project: The captured project files.
+        package_id: The package id the ``.nuspec`` declares.
+
+    Raises:
+        AssertionError: If the parse does not name the package, resolves it to
+            a different version, establishes it by a different route, or
+            disagrees about whether it is a build dependency.
+    """
+    projects: List[Path] = []
+    with tempfile.TemporaryDirectory(prefix="nuget-conformance-") as directory:
+        root = Path(directory)
+        for fixture in project.values():
+            relative = fixture.source_url[len(_PROJECT_FILE_BASE) :]
+            # owner/repo/ref/<path within the repository>
+            path = root / "/".join(relative.split("/")[3:])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(fixture.body)
+            if path.suffix.lower() == ".csproj":
+                projects.append(path)
+
+        assert len(projects) == 1, (
+            f"expected exactly one .csproj among {sorted(project)}, "
+            f"found {[str(path) for path in projects]}"
+        )
+        dependencies = NuGetParser(str(projects[0])).parse()
+
+    assert package_id in dependencies, (
+        f"{case.slug}: the NuGet parser did not name {package_id} at all. It "
+        f"read {len(dependencies)} dependencies: {sorted(dependencies)[:10]}"
+    )
+    parsed = dependencies[package_id]
+    assert parsed.installed_version == case.installed_version, (
+        f"{case.slug}: the parser resolved {package_id} to "
+        f"{parsed.installed_version!r}, but the case expects "
+        f"{case.installed_version!r}. The parse is the thing under test here; "
+        f"a mismatch means the project, one of the props files above it, or "
+        f"the reader changed."
+    )
+    source = parsed.additional_info[VERSION_SOURCE_KEY]
+    assert source == case.expected_version_source, (
+        f"{case.slug}: {package_id}'s version was established via {source!r}, "
+        f"expected {case.expected_version_source!r}"
+    )
+    if case.expected_build_dependency is not None:
+        marked = parsed.additional_info.get(BUILD_DEPENDENCY_KEY) == "true"
+        assert marked is case.expected_build_dependency, (
+            f"{case.slug}: {package_id} is marked build-time={marked}, "
+            f"expected {case.expected_build_dependency}"
+        )
 
 
 def _nuspec_identity(fixture: RegistryFixture) -> Tuple[str, str]:
@@ -2971,6 +3071,197 @@ NUGET_CASES: Tuple[FixtureCase, ...] = (
             ),
         ),
     ),
+    FixtureCase(
+        ecosystem="nuget",
+        fixture="referencetrimmer.nuspec",
+        extra_fixtures=(
+            "referencetrimmer.versions",
+            "referencetrimmer.registration",
+            "dapper.csproj",
+            "dapper.directory.build.props",
+            "dapper.directory.packages.props",
+        ),
+        installed_version="3.5.7",
+        expected_version_source="central-package-management",
+        expected_build_dependency=True,
+        purpose=(
+            "The GlobalPackageReference case (#151), and the first nuget case "
+            "whose *manifest* is captured. Dapper's Directory.Packages.props "
+            "ends with one <GlobalPackageReference Include='ReferenceTrimmer'>, "
+            "which MSBuild applies to every project in the repository; "
+            "Dapper.csproj names four packages and this is not one of them. "
+            "#129 read the project file and the version table and never the "
+            "global item, so a package that runs during Dapper's build was "
+            "invisible to the scanner while every count stayed green. Parsed "
+            "here from the real three-file layout — project, "
+            "Directory.Build.props, Directory.Packages.props — and then scored "
+            "against recorded nuget.org bytes."
+        ),
+        expected_latest_version="3.5.7",
+        expected_repository_url="https://github.com/dfederm/ReferenceTrimmer",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        expected_transitive_dependencies=frozenset(),
+        meets_signal_floor=True,
+        ground_truth=(
+            "Dapper/Dapper.csproj contains no reference to ReferenceTrimmer, "
+            "in any spelling; the only mention in the repository is the "
+            "GlobalPackageReference two directories up.",
+            "Dapper sets ManagePackageVersionsCentrally in Directory.Build.props "
+            "rather than in Directory.Packages.props, so the switch that "
+            "decides whether any of this applies is itself in the file #151 "
+            "taught the reader to read.",
+            "the nuspec declares <developmentDependency>true</developmentDependency> "
+            "and no <dependencies> at all — nuget.org agreeing, independently "
+            "of MSBuild, that this package is build tooling.",
+        ),
+        signals=(
+            SignalValue(
+                "version",
+                equals=0.0,
+                because=(
+                    "THE #151 assertion for gap 1. 3.5.7 is both what the "
+                    "global item pins and what nuget.org lists as newest, so "
+                    "the drift is zero — a *measured* zero, which is a "
+                    "different payload from the unmeasured this package "
+                    "produced when it was not collected at all"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because=(
+                    "the nuspec carries no <dependencies> element and someone "
+                    "looked; build tooling with no runtime tail is the honest "
+                    "answer, not a fail-open default (#199)"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT, from the nuspec's SPDX <license type='expression'>",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=1.0,
+                because="one author on the nuspec, and one is a bus factor",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="the nuspec's <repository url> is declared and resolvable",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="ReferenceTrimmer is not deprecated; the default branch",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off the catalog entry's publication date; the step "
+                    "moves with the calendar"
+                ),
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="nuget",
+        fixture="microsoft.csharp.nuspec",
+        extra_fixtures=(
+            "microsoft.csharp.versions",
+            "microsoft.csharp.registration",
+            "newtonsoft.json.csproj",
+            "newtonsoft.json.directory.build.props",
+        ),
+        installed_version="4.3.0",
+        expected_version_source="declared",
+        expected_build_dependency=False,
+        purpose=(
+            "The Directory.Build.props case (#151, gap 2), and the reason the "
+            "gap was worth closing rather than documenting. Newtonsoft.Json's "
+            "own project declares all seven of its package versions as "
+            "$(SomethingPackageVersion) and defines none of them; every one "
+            "lives in Src/Directory.Build.props, one directory up, which #129 "
+            "did not read. All seven resolved to unmanaged — honest under "
+            "#141, and a total loss of the version-drift signal for a "
+            "repository shape that is not rare. Microsoft.CSharp is the one "
+            "scored here because its property resolves to 4.3.0 against a "
+            "4.7.0 latest, so the signal the fix restores has a non-zero value "
+            "to be wrong about."
+        ),
+        expected_latest_version="4.7.0",
+        expected_repository_url="https://github.com/dotnet/corefx",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        expected_transitive_dependencies=frozenset(
+            {
+                "NETStandard.Library",
+                "System.Dynamic.Runtime",
+                "System.Reflection.TypeExtensions",
+            }
+        ),
+        meets_signal_floor=True,
+        ground_truth=(
+            "Src/Directory.Build.props defines MicrosoftCSharpPackageVersion "
+            "as 4.3.0 and the csproj references it; neither file states the "
+            "number the other needs.",
+            "there is no Directory.Packages.props anywhere in the repository, "
+            "so this is the property walk on its own rather than Central "
+            "Package Management with extra steps.",
+            "the reference sits in an ItemGroup conditioned on netstandard1.0 "
+            "and netstandard1.3. Conditions are not evaluated here by design "
+            "(#129), so it is read regardless — bounded and visible, and the "
+            "alternative is dropping real versions.",
+        ),
+        signals=(
+            SignalValue(
+                "version",
+                equals=0.5,
+                because=(
+                    "THE #151 assertion for gap 2. 4.3.0 against a 4.7.0 "
+                    "latest is a minor-version gap; before the property walk "
+                    "the installed version was the empty string and this "
+                    "signal left both numerator and denominator (#74)"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="4.7.0 shipped in December 2019 and the line stopped",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.1,
+                because=(
+                    "the nuspec's netstandard1.3 group states three runtime "
+                    "dependencies, which is the 1-4 bucket"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT, from the nuspec's SPDX <license type='expression'>",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=1.0,
+                because="the nuspec names one author, 'Microsoft'",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "the nuspec points at dotnet/corefx, an archived "
+                    "repository that is still a declared and resolvable one — "
+                    "this signal asks whether a source pointer exists, not "
+                    "whether it is lively"
+                ),
+            ),
+        ),
+    ),
 )
 
 GRADLE_CASES: Tuple[FixtureCase, ...] = (
@@ -3316,7 +3607,17 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
             "still reported nothing either way about whether one was declared, "
             "which made it the only ecosystem measuring 15 signals where the "
             "rest measured 16; that is now fixed and the floor moved 8 -> 9 in "
-            "the same change (#183, #158)."
+            "the same change (#183, #158). #151 added two more packages and "
+            "the projects they are dependencies of, which makes nuget the "
+            "second ecosystem after gradle whose *manifest* is captured rather "
+            "than assumed: Dapper for the GlobalPackageReference that appears "
+            "in no project file, Newtonsoft.Json for the version properties "
+            "that live in a Directory.Build.props. Both were found by pointing "
+            "the parser at real repositories, and neither is visible in a "
+            "count — the first is a dependency that was missing entirely, the "
+            "second is nine measured signals where the version signal had "
+            "honestly abstained. The floor did not move: both score 9, which "
+            "is what nuget was already floored at."
         ),
     ),
     "maven": ConversionStatus(
