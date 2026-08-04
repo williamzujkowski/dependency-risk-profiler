@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mirror of a Maven Central artifact, for offline resolution tests.
+     Reachable only by following an import inside an import. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.wide</groupId>
+  <artifactId>wide-inner-bom</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.example.deep</groupId>
+        <artifactId>deep-lib</artifactId>
+        <version>5.5.5</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

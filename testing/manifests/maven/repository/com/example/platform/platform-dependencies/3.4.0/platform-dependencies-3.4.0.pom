@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mirror of a Maven Central artifact, for offline resolution tests.
+     The grandparent BOM: this is where most versions actually live. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example.platform</groupId>
+  <artifactId>platform-dependencies</artifactId>
+  <version>3.4.0</version>
+  <packaging>pom</packaging>
+  <properties>
+    <jsoup.version>1.17.2</jsoup.version>
+    <!-- The leaf project overrides this; the leaf must win. -->
+    <overridden.version>1.0.0</overridden.version>
+  </properties>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.example.platform</groupId>
+        <artifactId>platform-starter-web</artifactId>
+        <version>3.4.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jsoup</groupId>
+        <artifactId>jsoup</artifactId>
+        <version>${jsoup.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.example.override</groupId>
+        <artifactId>overridden</artifactId>
+        <version>${overridden.version}</version>
+      </dependency>
+      <!-- Also managed by the leaf project, which is nearer and must win. -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>30.0-jre</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

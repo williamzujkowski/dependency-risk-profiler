@@ -116,3 +116,33 @@ def test_terminal_report_uses_plain_language_table() -> None:
     assert "insufficient data to score" in unknown_line
     assert "score 5 filt" not in output
     assert "1/14" not in output
+
+
+def test_unresolved_installed_version_is_labelled_not_blank() -> None:
+    """REGRESSION #128: a bare " → 2.22.1" read like a rendering bug.
+
+    A Maven artifact whose version lives in an unreachable parent POM has no
+    installed version to show. Say so, rather than printing an arrow with
+    nothing on its left.
+    """
+    dep = DependencyRiskScore(
+        dependency=DependencyMetadata(
+            name="com.fasterxml.jackson.core:jackson-databind",
+            installed_version="",
+            latest_version="2.22.1",
+        ),
+        total_score=1.0,
+        risk_level=RiskLevel.LOW,
+        measured_signal_count=9,
+        total_signal_count=14,
+    )
+    profile = ProjectRiskProfile(
+        manifest_path="/tmp/wg/pom.xml",
+        ecosystem="maven",
+        dependencies=[dep],
+        low_risk_dependencies=1,
+    )
+
+    output = TerminalFormatter(color=False).format_profile(profile)
+
+    assert "unmanaged → 2.22.1" in output

@@ -102,8 +102,31 @@ Example API response structure:
 
 ### Java (Maven)
 
-- **Method**: `maven-metadata.xml` from Maven Central, `https://repo1.maven.org/maven2/{group-path}/{artifact}/maven-metadata.xml`
-- **Information Retrieved**: `<release>` (preferred) or `<latest>` version
+- **Method**: two reads from Maven Central. `maven-metadata.xml`
+  (`https://repo1.maven.org/maven2/{group-path}/{artifact}/maven-metadata.xml`)
+  for the latest version, and the artifact's own published POM
+  (`.../{version}/{artifact}-{version}.pom`) for everything else.
+- **Information Retrieved**: `<release>` (preferred) or `<latest>` version;
+  `<scm>` source-repository URL; `<licenses>`; and the artifact's own shipped
+  (compile/runtime scope) dependencies, which is the transitive signal.
+
+#### Inherited versions
+
+Most Java projects declare dependencies without an inline `<version>` and
+inherit it from `<dependencyManagement>`. Resolution follows Maven's rules
+across the project's own block, its parent POM chain, and any
+`<scope>import</scope>` BOM, fetching parent POMs and BOMs from Maven Central as
+needed. Every remote read is fenced: https and `repo1.maven.org` only, redirects
+refused, coordinates validated against a strict grammar before they become a URL
+path, response bodies streamed and abandoned past 2 MiB, and a hard per-manifest
+fetch budget with a per-import allowance so one sprawling vendor BOM cannot spend
+it all.
+
+Set `DEPENDENCY_RISK_NO_REMOTE_POMS=1` to disable remote resolution. Versions
+then resolve only from what the manifest itself proves; anything inherited is
+reported as `unmanaged` and its version-drift signal is excluded from both the
+numerator and the denominator of the risk score rather than scored as zero
+drift.
 
 ## Repository Analysis
 

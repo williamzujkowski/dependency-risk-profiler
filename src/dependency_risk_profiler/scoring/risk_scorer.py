@@ -21,6 +21,10 @@ from ..popularity import (
     STALENESS_POPULARITY_DAMPENING_DEFAULT,
     should_soften_low_release_cadence,
 )
+from ..transitive.analyzer_enhanced import (
+    TRANSITIVE_SOURCE_KEY,
+    TRANSITIVE_SOURCE_UNMEASURED,
+)
 from ..versioning import (
     calendar_drift_days,
     release_timestamps,
@@ -162,7 +166,9 @@ class RiskScorer:
         license_score = self._calculate_license_score(dependency.license_info)
         community_score = self._calculate_community_score(dependency.community_metrics)
         transitive_score = self._calculate_transitive_score(
-            dependency.transitive_dependencies
+            dependency.transitive_dependencies,
+            measured=dependency.additional_info.get(TRANSITIVE_SOURCE_KEY)
+            != TRANSITIVE_SOURCE_UNMEASURED,
         )
 
         # OpenSSF Scorecard-inspired risk scores
@@ -752,17 +758,23 @@ class RiskScorer:
         return None
 
     def _calculate_transitive_score(
-        self, transitive_dependencies: Collection[str]
-    ) -> float:
+        self, transitive_dependencies: Collection[str], measured: bool = True
+    ) -> Optional[float]:
         """Calculate transitive dependency risk score.
 
         Args:
             transitive_dependencies: Set of transitive dependencies.
+            measured: Whether transitive resolution actually ran. An empty set
+                means "no transitive dependencies" only when someone looked;
+                when nothing looked, the signal is unavailable, not zero (#74).
 
         Returns:
-            Transitive dependency risk score between 0.0 and 1.0.
+            Transitive dependency risk score between 0.0 and 1.0, or None when
+            the signal could not be measured.
         """
         if not transitive_dependencies:
+            if not measured:
+                return None
             return 0.0  # No transitive dependencies = no risk
 
         # Calculate risk based on number of transitive dependencies
@@ -910,7 +922,7 @@ class RiskScorer:
         health_score: Optional[float],
         license_score: Optional[float],
         community_score: Optional[float],
-        transitive_score: float,
+        transitive_score: Optional[float],
         security_policy_score: Optional[float],
         dependency_update_score: Optional[float],
         signed_commits_score: Optional[float],

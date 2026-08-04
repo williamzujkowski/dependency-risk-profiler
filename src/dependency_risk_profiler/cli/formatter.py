@@ -236,9 +236,14 @@ class TerminalFormatter(BaseFormatter):
     def _format_version_summary(self, dep: DependencyRiskScore) -> str:
         """Format installed and latest versions in plain language."""
         metadata = dep.dependency
+        # A blank installed version used to render as a bare arrow, which reads
+        # like a bug. Say what actually happened: the version is declared
+        # somewhere we could not reach (a parent POM, an imported BOM), so drift
+        # is unmeasured rather than zero.
+        installed = metadata.installed_version or "unmanaged"
         if metadata.latest_version:
-            return f"{metadata.installed_version} → {metadata.latest_version}"
-        return f"{metadata.installed_version} → latest unknown"
+            return f"{installed} → {metadata.latest_version}"
+        return f"{installed} → latest unknown"
 
     def _format_leading_signals(self, dep: DependencyRiskScore) -> str:
         """Build a plain-language signal summary from measured risk inputs."""
@@ -271,7 +276,9 @@ class TerminalFormatter(BaseFormatter):
         if dep.version_score is not None and dep.version_score > 0:
             signals.append(self._format_version_signal(dep))
 
-        if dep.deprecation_score > 0:
+        # Every other score here is guarded; this one was not, and a score
+        # object built without a deprecation reading crashed the whole report.
+        if dep.deprecation_score is not None and dep.deprecation_score > 0:
             signals.append("deprecated")
 
         if dep.license_score is not None and dep.license_score > 0.5:
@@ -317,7 +324,7 @@ class TerminalFormatter(BaseFormatter):
             if community_signal:
                 signals.append(community_signal)
 
-        if dep.transitive_score > 0.5:
+        if dep.transitive_score is not None and dep.transitive_score > 0.5:
             signals.append(f"{len(metadata.transitive_dependencies)} transitive deps")
 
         if signals:

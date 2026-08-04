@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Golden fixture for issue #128: a project whose dependency versions come from
+  an imported BOM (<type>pom</type><scope>import</scope>), the shape OWASP
+  wrongsecrets uses. Every remote POM this needs is mirrored under
+  ../repository, so the test suite resolves it without touching the network.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example.app</groupId>
+  <artifactId>bom-user</artifactId>
+  <version>0.1.0</version>
+
+  <properties>
+    <cloud.bom.version>2024.0.1</cloud.bom.version>
+    <!-- Only this POM declares it; the imported BOM must not see it. -->
+    <leaky.version>6.6.6</leaky.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Declared before the import, so this pin wins over the BOM's. -->
+      <dependency>
+        <groupId>com.example.cloud</groupId>
+        <artifactId>cloud-config</artifactId>
+        <version>9.9.9</version>
+      </dependency>
+      <!-- Declared first and it imports a BOM of its own, so it is the one
+           that burns a per-import fetch allowance. The import declared after
+           it must still be reached. -->
+      <dependency>
+        <groupId>com.example.wide</groupId>
+        <artifactId>wide-bom</artifactId>
+        <version>1.0.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.example.cloud</groupId>
+        <artifactId>cloud-bom</artifactId>
+        <version>${cloud.bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- This POM's own pin beats the imported BOM's. -->
+    <dependency>
+      <groupId>com.example.cloud</groupId>
+      <artifactId>cloud-config</artifactId>
+    </dependency>
+    <!-- Straight out of the imported BOM. -->
+    <dependency>
+      <groupId>com.example.cloud</groupId>
+      <artifactId>cloud-gateway</artifactId>
+    </dependency>
+    <!-- The BOM pins this with ${project.version}: the BOM's version, not
+         this project's, because an import is resolved in its own scope. -->
+    <dependency>
+      <groupId>com.example.cloud</groupId>
+      <artifactId>cloud-sibling</artifactId>
+    </dependency>
+    <!-- Managed by the imported BOM's own parent. -->
+    <dependency>
+      <groupId>com.example.nested</groupId>
+      <artifactId>nested-lib</artifactId>
+    </dependency>
+    <!-- The importing project's property must NOT leak into the BOM's scope. -->
+    <dependency>
+      <groupId>com.example.cloud</groupId>
+      <artifactId>cloud-leaky</artifactId>
+    </dependency>
+    <!-- Managed by a BOM imported by a BOM: the first import's own subtree. -->
+    <dependency>
+      <groupId>com.example.deep</groupId>
+      <artifactId>deep-lib</artifactId>
+    </dependency>
+  </dependencies>
+</project>
