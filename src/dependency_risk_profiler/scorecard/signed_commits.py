@@ -4,7 +4,7 @@ import logging
 import re
 import subprocess  # nosec B404
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, TypedDict
 
 from ..models import DependencyMetadata, SecurityMetrics
 
@@ -140,7 +140,14 @@ def check_release_signature_status(
     return result
 
 
-def check_commit_signing_requirement(repo_dir: str) -> Dict[str, bool]:
+class CommitSigningRequirement(TypedDict):
+    """Whether a repository requires signed commits, and how it enforces it."""
+
+    requires_commit_signing: bool
+    commit_signing_mechanism: Optional[str]
+
+
+def check_commit_signing_requirement(repo_dir: str) -> CommitSigningRequirement:
     """Check if the repository requires commit signing.
 
     Args:
@@ -149,7 +156,7 @@ def check_commit_signing_requirement(repo_dir: str) -> Dict[str, bool]:
     Returns:
         Dictionary with commit signing requirement status.
     """
-    result = {
+    result: CommitSigningRequirement = {
         "requires_commit_signing": False,
         "commit_signing_mechanism": None,
     }
@@ -200,7 +207,7 @@ def check_commit_signing_requirement(repo_dir: str) -> Dict[str, bool]:
 def calculate_signed_commits_score(
     commit_signature_data: Dict[str, int],
     tag_signature_data: Dict[str, int],
-    commit_signing_requirement: Dict[str, bool],
+    commit_signing_requirement: CommitSigningRequirement,
 ) -> float:
     """Calculate an overall signed commits score.
 
@@ -243,7 +250,7 @@ def calculate_signed_commits_score(
 def identify_signed_commits_issues(
     commit_signature_data: Dict[str, int],
     tag_signature_data: Dict[str, int],
-    commit_signing_requirement: Dict[str, bool],
+    commit_signing_requirement: CommitSigningRequirement,
 ) -> List[str]:
     """Identify issues with commit signing practices.
 

@@ -17,7 +17,7 @@ import tempfile
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, TypedDict, Union
 
 from .code_signing import SigningMode, sign_artifact
 from .release_management import VersionBumpType, create_release
@@ -30,6 +30,56 @@ class BuildError(Exception):
     """Base exception for build errors."""
 
     pass
+
+
+class ArtifactSignatureInfo(TypedDict):
+    """Signature block recorded for a single build artifact."""
+
+    path: str
+    timestamp: Optional[str]
+    mode: Optional[str]
+
+
+class _ArtifactInfoOptional(TypedDict, total=False):
+    """Manifest artifact keys that are only present for signed artifacts."""
+
+    signature: ArtifactSignatureInfo
+
+
+class ArtifactInfo(_ArtifactInfoOptional):
+    """Manifest entry describing one build artifact."""
+
+    path: str
+    name: str
+    size: int
+    sha256: str
+
+
+class BuildResult(TypedDict):
+    """Summary returned by :func:`run_build_process`."""
+
+    build_id: str
+    build_timestamp: str
+    artifacts: List[str]
+    manifest: str
+    log: str
+    signing_log: str
+
+
+class BuildEnvironmentInfo(TypedDict):
+    """Interpreter/platform provenance recorded in the manifest."""
+
+    python_version: str
+    platform: str
+
+
+class BuildManifest(TypedDict):
+    """Full build manifest written alongside the release artifacts."""
+
+    build_id: str
+    build_timestamp: str
+    artifacts: List[ArtifactInfo]
+    environment: BuildEnvironmentInfo
 
 
 class BuildMode(Enum):
@@ -363,7 +413,7 @@ def create_build_manifest(
     try:
         output_path = Path(output_path)
 
-        manifest = {
+        manifest: BuildManifest = {
             "build_id": build_env.get("BUILD_ID", "unknown"),
             "build_timestamp": build_env.get("BUILD_TIMESTAMP", "unknown"),
             "artifacts": [],
@@ -372,7 +422,7 @@ def create_build_manifest(
 
         # Add artifact information
         for artifact in artifacts:
-            artifact_info = {
+            artifact_info: ArtifactInfo = {
                 "path": str(artifact),
                 "name": artifact.name,
                 "size": artifact.stat().st_size,
@@ -413,7 +463,7 @@ def run_build_process(
     mode: BuildMode,
     version_bump: VersionBumpType,
     artifacts_only: bool = False,
-) -> Dict[str, str]:
+) -> BuildResult:
     """
     Run the full build process with all security gates.
 

@@ -1,7 +1,7 @@
 """Supply chain risk analyzer for dependencies."""
 
 import logging
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, TypedDict
 
 from ..models import DependencyMetadata
 
@@ -9,7 +9,9 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_path_criticality(
-    dependency: str, transitive_deps: Dict[str, Set[str]], visited: Set[str] = None
+    dependency: str,
+    transitive_deps: Dict[str, Set[str]],
+    visited: Optional[Set[str]] = None,
 ) -> int:
     """Calculate dependency criticality from its dependency graph position.
 
@@ -116,9 +118,20 @@ def identify_high_risk_dependencies(
     return risk_scores
 
 
+class SupplyChainRiskReport(TypedDict):
+    """Aggregate supply chain risk findings for a dependency set."""
+
+    high_risk_dependencies: List[Tuple[str, float]]
+    dependency_count: int
+    transitive_dependency_count: int
+    critical_path_dependencies: List[Tuple[str, int]]
+    maintainer_count_histogram: Dict[int, int]
+    unknown_source_dependencies: List[str]
+
+
 def analyze_supply_chain_risk(
     dependencies: Dict[str, DependencyMetadata],
-) -> Dict[str, object]:
+) -> SupplyChainRiskReport:
     """Analyze supply chain risks in the project's dependencies.
 
     Args:
@@ -127,7 +140,7 @@ def analyze_supply_chain_risk(
     Returns:
         Dictionary with supply chain risk analysis results.
     """
-    results = {
+    results: SupplyChainRiskReport = {
         "high_risk_dependencies": [],
         "dependency_count": len(dependencies),
         "transitive_dependency_count": 0,
@@ -141,7 +154,7 @@ def analyze_supply_chain_risk(
         results["transitive_dependency_count"] += len(dep.transitive_dependencies)
 
     # Build maintainer count histogram
-    maintainer_counts = {}
+    maintainer_counts: Dict[int, int] = {}
     for dep in dependencies.values():
         if dep.maintainer_count is not None:
             count = min(10, dep.maintainer_count)  # Cap at 10+ for better visualization

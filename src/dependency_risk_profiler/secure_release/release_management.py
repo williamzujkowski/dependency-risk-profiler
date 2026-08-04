@@ -15,7 +15,7 @@ import sys
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, TypedDict, Union
 
 from .code_signing import SigningMode, sign_artifact
 
@@ -35,6 +35,24 @@ class VersionBumpType(Enum):
     PATCH = "patch"
     MINOR = "minor"
     MAJOR = "major"
+
+
+class _ReleaseMetadataOptional(TypedDict, total=False):
+    """Metadata keys only written when the artifact was signed."""
+
+    signature: str
+    signature_info: Dict[str, str]
+
+
+class ReleaseMetadata(_ReleaseMetadataOptional):
+    """Contents of the ``release-<version>.json`` metadata file."""
+
+    version: str
+    build_id: str
+    timestamp: str
+    artifact: str
+    checksum: str
+    release_notes: str
 
 
 def read_version(version_file: Union[str, Path]) -> str:
@@ -61,8 +79,8 @@ def read_version(version_file: Union[str, Path]) -> str:
         if version_file.suffix in (".json", ".jsonc"):
             with version_file.open("r") as f:
                 data = json.load(f)
-                version = data.get("version")
-                if not version:
+                version = data.get("version") if isinstance(data, dict) else None
+                if not isinstance(version, str) or not version:
                     raise ValueError(f"No version field found in {version_file}")
                 return version
 
@@ -471,7 +489,7 @@ def create_release(
 
         # Step 9: Save release metadata
         metadata_path = output_dir / f"release-{new_version}.json"
-        metadata = {
+        metadata: ReleaseMetadata = {
             "version": new_version,
             "build_id": build_id,
             "timestamp": datetime.datetime.utcnow().isoformat() + "Z",

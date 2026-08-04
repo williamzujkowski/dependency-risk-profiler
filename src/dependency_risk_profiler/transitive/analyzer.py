@@ -19,7 +19,7 @@ def extract_npm_dependencies(package_lock_data: Dict) -> Dict[str, Set[str]]:
     Returns:
         Dictionary mapping package names to their dependencies.
     """
-    dependency_map = {}
+    dependency_map: Dict[str, Set[str]] = {}
 
     # Extract dependencies from different package-lock.json formats
     if "dependencies" in package_lock_data:
@@ -67,7 +67,7 @@ def extract_python_dependencies(requirements_file: str) -> Dict[str, Set[str]]:
     # This is a simplified approach
     # For a complete analysis, we would need to install the packages and inspect them
 
-    dependency_map = {}
+    dependency_map: Dict[str, Set[str]] = {}
 
     try:
         if os.path.exists(requirements_file):

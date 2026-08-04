@@ -1,7 +1,7 @@
 """Dependency graph generation for visualization."""
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from ..models import DependencyMetadata
 
@@ -165,7 +165,7 @@ def _generate_graphviz_graph(
     dot_lines = ["digraph DependencyGraph {", "  rankdir=LR;", "  node [shape=box];"]
     processed_deps = set()
 
-    def add_dependency_to_graph(dep_name, level=0):
+    def add_dependency_to_graph(dep_name: str, level: int = 0) -> None:
         if dep_name in processed_deps or level > depth_limit:
             return
         processed_deps.add(dep_name)
@@ -217,10 +217,10 @@ def _generate_cytoscape_graph(
     Returns:
         Dictionary with elements for Cytoscape.js.
     """
-    elements = {"nodes": [], "edges": []}
+    elements: Dict[str, List[Dict[str, object]]] = {"nodes": [], "edges": []}
     processed_deps = set()
 
-    def add_dependency_to_graph(dep_name, level=0):
+    def add_dependency_to_graph(dep_name: str, level: int = 0) -> None:
         if dep_name in processed_deps or level > depth_limit:
             return
         processed_deps.add(dep_name)
