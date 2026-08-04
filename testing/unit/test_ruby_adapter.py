@@ -120,6 +120,13 @@ TZINFO_GEM_RESPONSE: Dict[str, object] = {
     "version_created_at": "2023-01-28T20:27:53.927Z",
     "platform": "ruby",
     "authors": "Philip Ross",
+    # RubyGems publishes the gemspec description under "info"; it is the only
+    # deprecation evidence the payload carries, the `yanked` key being
+    # unreachable (#170).
+    "info": (
+        "TZInfo provides access to time zone data and allows times to be "
+        "converted using time zone rules."
+    ),
     "licenses": ["MIT"],
     "metadata": {
         "homepage_uri": "https://tzinfo.github.io",
@@ -218,11 +225,62 @@ def test_registry_metadata_lands_on_the_fields_the_scorer_reads() -> None:
 
 
 def test_yanked_gem_is_marked_deprecated() -> None:
-    """A yanked release is RubyGems' explicit do-not-use marker."""
+    """A yanked release is RubyGems' explicit do-not-use marker.
+
+    Kept as the forward-compatibility guard, not as evidence the branch is
+    live: rubygems.org removes a yanked release instead of tombstoning it, so
+    no endpoint it serves today reports yanked: true (#170). See the comment in
+    RubyGemsAnalyzer._apply_registry_metadata for the four endpoints checked.
+    """
     yanked = copy.deepcopy(TZINFO_GEM_RESPONSE)
     yanked["yanked"] = True
 
     assert _score_gem_offline(yanked).dependency.is_deprecated is True
+
+
+def test_description_declaring_deprecation_marks_the_gem_deprecated() -> None:
+    """The reachable deprecation branch: the gem's own blurb says so.
+
+    Verbatim from rubygems.org's payload for the `sass` gem, which is the
+    non-default answer #170 could not obtain from `yanked`.
+    """
+    retired = copy.deepcopy(TZINFO_GEM_RESPONSE)
+    retired["info"] = (
+        "Ruby Sass is deprecated! See https://sass-lang.com/ruby-sass for "
+        "details. Sass makes CSS fun again."
+    )
+
+    assert _score_gem_offline(retired).dependency.is_deprecated is True
+
+
+def test_ordinary_description_does_not_mark_the_gem_deprecated() -> None:
+    """A gem that simply describes itself stays undeprecated."""
+    ordinary = copy.deepcopy(TZINFO_GEM_RESPONSE)
+    ordinary["info"] = (
+        "TZInfo provides access to time zone data and allows times to be "
+        "converted using time zone rules."
+    )
+
+    assert _score_gem_offline(ordinary).dependency.is_deprecated is False
+
+
+def test_unmaintained_and_abandoned_also_count() -> None:
+    """The retirement vocabulary is wider than the word 'deprecated'."""
+    for blurb in (
+        "This gem is unmaintained; use the successor instead.",
+        "Abandoned. No further releases are planned.",
+    ):
+        retired = copy.deepcopy(TZINFO_GEM_RESPONSE)
+        retired["info"] = blurb
+        assert _score_gem_offline(retired).dependency.is_deprecated is True
+
+
+def test_missing_description_is_not_a_deprecation_verdict() -> None:
+    """A payload with no 'info' key must not fabricate a verdict."""
+    silent = copy.deepcopy(TZINFO_GEM_RESPONSE)
+    silent.pop("info", None)
+
+    assert _score_gem_offline(silent).dependency.is_deprecated is False
 
 
 def test_rubygems_meets_minimum_measured_signal_coverage() -> None:
