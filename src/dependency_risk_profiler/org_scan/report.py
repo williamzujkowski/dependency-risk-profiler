@@ -24,6 +24,7 @@ from .models import (
     AggregatedDependency,
     DependencyKey,
     OrgScanReport,
+    RepositoryCoverage,
     RepositoryRef,
     RepositoryRiskSummary,
     risk_rank,
@@ -60,12 +61,14 @@ def render_terminal_summary(report: OrgScanReport) -> str:
     for index, repo in enumerate(report.riskiest_repositories[:5], 1):
         worst = ", ".join(dep.key.name for dep in repo.worst_dependencies[:3])
         if not worst:
-            worst = "none"
+            worst = _no_dependencies_reason(repo.coverage)
         lines.append(
             f"{index}. {repo.repo_full_name} · {repo.risk_points} risk points · "
             f"{repo.critical_risk_dependencies} critical, "
             f"{repo.high_risk_dependencies} high · worst: {worst}"
         )
+
+    lines.extend(_unread_repository_lines(report))
 
     if report.parse_failures:
         lines.extend(
@@ -77,6 +80,81 @@ def render_terminal_summary(report: OrgScanReport) -> str:
         )
 
     return "\n".join(lines)
+
+
+def _no_dependencies_reason(coverage: RepositoryCoverage) -> str:
+    """Say why a repository contributed no dependencies.
+
+    "worst: none" was printed for a repository that declares nothing and for
+    one the scan could not read a single manifest of. Those are opposite facts
+    and they had the same four letters (#262).
+    """
+    reasons = {
+        RepositoryCoverage.READ: "none",
+        RepositoryCoverage.PARTIALLY_READ: "none read",
+        RepositoryCoverage.UNREADABLE: "NOT READ",
+        RepositoryCoverage.NO_MANIFESTS: "no manifests",
+        RepositoryCoverage.DISCOVERY_FAILED: "NOT LISTED",
+    }
+    return reasons[coverage]
+
+
+def _coverage_label(coverage: RepositoryCoverage) -> str:
+    """Return the short human label for a repository's coverage state."""
+    labels = {
+        RepositoryCoverage.READ: "read",
+        RepositoryCoverage.PARTIALLY_READ: "partly read",
+        RepositoryCoverage.UNREADABLE: "not read",
+        RepositoryCoverage.NO_MANIFESTS: "no manifests",
+        RepositoryCoverage.DISCOVERY_FAILED: "not listed",
+    }
+    return labels[coverage]
+
+
+def _unread_repository_lines(report: OrgScanReport) -> List[str]:
+    """Render the repositories the scan measured nothing in, with the next step.
+
+    Named at the top level rather than folded into the methodology notes: an
+    org scan is where nobody is watching any individual repository, so a repo
+    missing from the numbers is a repo nobody notices is missing.
+
+    Args:
+        report: The completed org scan report.
+
+    Returns:
+        The summary lines, empty when every repository was read.
+    """
+    unread = [
+        repo
+        for repo in report.riskiest_repositories
+        if repo.coverage
+        in {RepositoryCoverage.UNREADABLE, RepositoryCoverage.DISCOVERY_FAILED}
+    ]
+    if not unread and not report.unreadable_manifests:
+        return []
+
+    lines = ["", f"Repositories with no measurement: {len(unread)}"]
+    for repo in unread[:10]:
+        if repo.coverage is RepositoryCoverage.DISCOVERY_FAILED:
+            lines.append(f"- {repo.repo_full_name} · repository could not be listed")
+        else:
+            lines.append(
+                f"- {repo.repo_full_name} · dependency manifests found, none readable"
+            )
+    if len(unread) > 10:
+        lines.append(f"- ... and {len(unread) - 10} more")
+
+    if report.unreadable_manifests:
+        lines.append("")
+        lines.append(
+            "Recognized manifests this tool cannot read: "
+            f"{len(report.unreadable_manifests)}"
+        )
+        for entry in report.unreadable_manifests[:5]:
+            lines.append(f"- {entry.display_path} · {entry.guidance}")
+        if len(report.unreadable_manifests) > 5:
+            lines.append(f"- ... and {len(report.unreadable_manifests) - 5} more")
+    return lines
 
 
 def write_json_report(
@@ -261,8 +339,36 @@ def report_to_dict(report: OrgScanReport) -> Dict[str, object]:
             }
             for failure in report.parse_failures
         ],
+        # Present on every scan, empty when everything recognized was read. A
+        # key that only materializes when non-empty is one a consumer cannot
+        # branch on, which is how the count reads the same either way (#262).
+        "unreadable_manifests": [
+            {
+                "repo": entry.repo_full_name,
+                "manifest_path": entry.path,
+                "ecosystem": entry.ecosystem,
+                "guidance": entry.guidance,
+            }
+            for entry in report.unreadable_manifests
+        ],
+        "unread_repository_count": _unread_repository_count(report),
         "warnings": report.warnings,
     }
+
+
+def _unread_repository_count(report: OrgScanReport) -> int:
+    """Count repositories the scan produced no measurement for (#262).
+
+    Counts repositories, not manifests: one repository with four unreadable
+    manifests is one repository nobody measured, and a reader comparing this
+    against ``repository_count`` needs the same unit on both sides.
+    """
+    return sum(
+        1
+        for repo in report.riskiest_repositories
+        if repo.coverage
+        in {RepositoryCoverage.UNREADABLE, RepositoryCoverage.DISCOVERY_FAILED}
+    )
 
 
 def _known_vulnerable_count(report: OrgScanReport) -> int:
@@ -296,6 +402,9 @@ def _header(report: OrgScanReport) -> str:
     </dd></div>
     <div><dt>Unscored</dt><dd class="num unknown">
       {_unscored_count(report)}
+    </dd></div>
+    <div><dt>Unread repos</dt><dd class="num unknown">
+      {_unread_repository_count(report)}
     </dd></div>
   </dl>
 </header>
@@ -360,14 +469,30 @@ def _verdict_sentence(report: OrgScanReport) -> str:
 
 
 def _coverage_caveat(report: OrgScanReport) -> str:
-    """Return the sentence that keeps the high-risk count from reading as a total."""
+    """Return the sentences that keep the counts from reading as totals.
+
+    Two separate caveats, because they are two separate holes. An unscored
+    dependency was found and could not be profiled; an unread repository never
+    contributed a dependency to be counted in the first place, so it depresses
+    the denominator as well as the numerator (#262).
+    """
+    sentences = []
     unscored = _unscored_count(report)
-    if not unscored:
-        return ""
-    return (
-        f" {unscored} of {report.unique_dependency_count} could not be scored, "
-        "so the high-risk count is a floor, not a total."
-    )
+    if unscored:
+        sentences.append(
+            f" {unscored} of {report.unique_dependency_count} could not be scored, "
+            "so the high-risk count is a floor, not a total."
+        )
+    unread = _unread_repository_count(report)
+    if unread:
+        total_repos = len(report.repositories_scanned)
+        sentences.append(
+            f" {unread} of {total_repos} {_pluralize(total_repos, 'repository')} "
+            "produced no measurement at all — dependency manifests were found "
+            "and not read, or the repository could not be listed — so those "
+            "repositories are absent from every number above."
+        )
+    return "".join(sentences)
 
 
 def _account_title(report: OrgScanReport) -> str:
@@ -475,6 +600,30 @@ def _methodology_footer(report: OrgScanReport) -> str:
             f"<p>{len(report.parse_failures)} manifests could not be parsed.</p>"
             f"<ul>{failure_items}</ul>"
         )
+    unreadable = ""
+    if report.unreadable_manifests:
+        unreadable_items = "\n".join(
+            "<li>"
+            f"{escape(entry.display_path)} ({escape(entry.ecosystem)}) — "
+            f"{escape(entry.guidance)}"
+            "</li>"
+            for entry in report.unreadable_manifests[:10]
+        )
+        unreadable = (
+            f"<p>{len(report.unreadable_manifests)} recognized dependency "
+            "manifests were not read, so the repositories holding them are "
+            "under-counted above.</p>"
+            f"<ul>{unreadable_items}</ul>"
+        )
+    warnings = ""
+    if report.warnings:
+        warning_items = "\n".join(
+            f"<li>{escape(warning)}</li>" for warning in report.warnings[:10]
+        )
+        warnings = (
+            f"<p>{len(report.warnings)} repositories could not be listed.</p>"
+            f"<ul>{warning_items}</ul>"
+        )
     return f"""
 <footer class="foot">
   <p>
@@ -496,6 +645,15 @@ def _methodology_footer(report: OrgScanReport) -> str:
     well-maintained dependency pinned to a vulnerable version can therefore be
     medium risk yet known-vulnerable; update the pin.
   </p>
+  <p>
+    <b>Coverage.</b> A repository shown with no dependencies is only good news
+    when it is marked <i>read</i>. <i>not read</i> means dependency manifests
+    were found and none of them could be parsed; <i>not listed</i> means the
+    repository's file tree never came back. Both contribute nothing to every
+    count on this page, which is why they are named rather than left as a zero.
+  </p>
+  {unreadable}
+  {warnings}
   {failures}
 </footer>
 """
@@ -569,7 +727,12 @@ def _repository_row(repo: RepositoryRiskSummary) -> str:
     """Render a repository table row."""
     worst = escape(", ".join(dep.key.name for dep in repo.worst_dependencies[:3]))
     if not worst:
-        worst = "none"
+        worst = escape(_no_dependencies_reason(repo.coverage))
+    if not repo.coverage.is_complete:
+        worst = (
+            f'{worst} <span class="badge unknown tiny">'
+            f"{escape(_coverage_label(repo.coverage))}</span>"
+        )
     if repo.unknown_risk_dependencies > 0:
         worst = (
             f'{worst} <span class="badge unknown tiny">'
@@ -1446,6 +1609,9 @@ def _repository_to_dict(repo: RepositoryRiskSummary) -> Dict[str, object]:
     """
     return {
         "repo": repo.repo_full_name,
+        # Emitted next to the count so the count can never be read alone: zero
+        # under "read" is a real zero, zero under "unreadable" is a gap (#262).
+        "coverage": repo.coverage.value,
         "dependency_count": repo.dependency_count,
         "critical_risk_dependencies": repo.critical_risk_dependencies,
         "high_risk_dependencies": repo.high_risk_dependencies,

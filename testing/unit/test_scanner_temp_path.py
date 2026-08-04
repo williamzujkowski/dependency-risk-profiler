@@ -14,6 +14,7 @@ from dependency_risk_profiler.org_scan.models import (
     DependencyKey,
     DependencyRiskScore,
     ManifestRef,
+    RepositoryManifestListing,
     RepositoryRef,
 )
 from dependency_risk_profiler.org_scan.scanner import OrgScanRunner
@@ -49,9 +50,9 @@ class _DummyClient:
         self,
         repo: RepositoryRef,
         supported_names: Iterable[str],
-    ) -> List[str]:
+    ) -> RepositoryManifestListing:
         """Return no manifest paths."""
-        return []
+        return RepositoryManifestListing(supported=[], unreadable=[])
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return an empty manifest."""

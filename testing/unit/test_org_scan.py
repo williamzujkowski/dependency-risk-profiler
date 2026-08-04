@@ -10,6 +10,10 @@ from typer.testing import CliRunner
 
 from dependency_risk_profiler.cli.typer_cli import app
 from dependency_risk_profiler.contract import Remediation, RemediationAction
+from dependency_risk_profiler.manifest_guidance import (
+    is_recognized_unreadable_name,
+    is_vendored_relative_path,
+)
 from dependency_risk_profiler.models import (
     CommunityMetrics,
     DependencyMetadata,
@@ -23,6 +27,8 @@ from dependency_risk_profiler.org_scan.github import GitHubOrgClient, RepoSignal
 from dependency_risk_profiler.org_scan.models import (
     DependencyKey,
     DependencyProfiler,
+    RepositoryCoverage,
+    RepositoryManifestListing,
     RepositoryRef,
 )
 from dependency_risk_profiler.org_scan.pipeline import (
@@ -133,14 +139,27 @@ class FixtureGitHubClient(GitHubDiscoveryClient):
         self,
         repo: RepositoryRef,
         supported_names: Iterable[str],
-    ) -> List[str]:
-        """Return fixture manifest paths."""
-        supported = {name.lower() for name in supported_names}
-        return [
-            path
-            for path in self.manifests.get(repo.full_name, {})
-            if path.rsplit("/", 1)[-1].lower() in supported
-        ]
+    ) -> RepositoryManifestListing:
+        """Split fixture manifest paths the way the real client does.
+
+        The classification is the real one — ``is_recognized_unreadable_name``
+        and the vendored-directory table — so a fixture repository holding only
+        a ``package.json`` behaves here exactly as it does against GitHub.
+        """
+        supported_lookup = {name.lower() for name in supported_names}
+        supported: List[str] = []
+        unreadable: List[str] = []
+        for path in self.manifests.get(repo.full_name, {}):
+            leaf = path.rsplit("/", 1)[-1]
+            if leaf.lower() in supported_lookup:
+                supported.append(path)
+            elif is_vendored_relative_path(path):
+                continue
+            elif is_recognized_unreadable_name(leaf):
+                unreadable.append(path)
+        return RepositoryManifestListing(
+            supported=sorted(supported), unreadable=sorted(unreadable)
+        )
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return fixture manifest content."""

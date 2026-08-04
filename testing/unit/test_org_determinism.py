@@ -43,6 +43,7 @@ from dependency_risk_profiler.models import (
 from dependency_risk_profiler.org_scan.models import (
     DependencyKey,
     DependencyProfiler,
+    RepositoryManifestListing,
     RepositoryRef,
 )
 from dependency_risk_profiler.org_scan.report import report_to_dict
@@ -137,9 +138,9 @@ class _FixtureGitHubClient(GitHubDiscoveryClient):
 
     def list_manifest_paths(
         self, repo: RepositoryRef, supported_names: Iterable[str]
-    ) -> List[str]:
+    ) -> RepositoryManifestListing:
         """Return the single fixture manifest path."""
-        return ["requirements.txt"]
+        return RepositoryManifestListing(supported=["requirements.txt"], unreadable=[])
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return the fixture manifest body."""
