@@ -3,6 +3,7 @@
 import logging
 
 from ..utils import (
+    canonical_repository_url,
     check_health_indicators,
     clone_repo,
     cloned_repo,
@@ -21,6 +22,7 @@ __all__ = [
     "fetch_json",
     "clone_repo",
     "cloned_repo",
+    "canonical_repository_url",
     "is_cloneable_repo_url",
     "get_last_commit_date",
     "count_contributors",

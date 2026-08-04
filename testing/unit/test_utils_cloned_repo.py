@@ -49,6 +49,36 @@ def test_is_cloneable_repo_url(url: Optional[str], expected: bool) -> None:
     assert utils.is_cloneable_repo_url(url) is expected
 
 
+@pytest.mark.parametrize(
+    "url, expected",
+    [
+        # RubyGems publishes source_code_uri pinned to the released tag; both
+        # git clone and the GitHub API reject the deeper path (#127).
+        (
+            "https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+            "https://github.com/tzinfo/tzinfo",
+        ),
+        (
+            "https://github.com/rails/rails/blob/main/README.md",
+            "https://github.com/rails/rails",
+        ),
+        ("git+https://github.com/foo/bar.git", "https://github.com/foo/bar"),
+        ("git@github.com:owner/repo.git", "https://github.com/owner/repo"),
+        ("https://gitlab.com/a/b/-/tree/v1", "https://gitlab.com/a/b"),
+        ("https://github.com/a/b", "https://github.com/a/b"),
+        # Not a repository URL: no owner/repo pair, or an unsupported host.
+        ("https://github.com/orgs/rails", "https://github.com/orgs/rails"),
+        ("https://github.com/rails", None),
+        ("https://rubygems.org/gems/tzinfo", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_canonical_repository_url(url: Optional[str], expected: Optional[str]) -> None:
+    """Repository URLs are trimmed back to their owner/repo root."""
+    assert utils.canonical_repository_url(url) == expected
+
+
 def test_clone_repo_skips_uncloneable_url_without_running_git() -> None:
     """A non-cloneable URL returns None and never shells out to git."""
     with mock.patch.object(utils.subprocess, "run") as run:

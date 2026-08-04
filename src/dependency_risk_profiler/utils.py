@@ -261,6 +261,37 @@ def normalize_clone_url(repo_url: str) -> Optional[str]:
     return url
 
 
+def canonical_repository_url(repo_url: Optional[str]) -> Optional[str]:
+    """Return the ``https://host/owner/repo`` root of a hosted repository URL.
+
+    Registry metadata routinely points *inside* a repository rather than at it:
+    RubyGems gems publish ``source_code_uri`` as
+    ``https://github.com/tzinfo/tzinfo/tree/v2.0.6``, and monorepo packages
+    point at a subdirectory. Both ``git clone`` and the GitHub API reject those
+    deeper paths, which silently drops every repository-derived signal for the
+    dependency. Trimming to the repository root restores them.
+
+    Returns ``None`` when the URL is not a repository on a supported host or
+    carries no ``owner/repo`` pair.
+    """
+    if not repo_url:
+        return None
+    normalized = normalize_clone_url(repo_url)
+    if normalized is None:
+        return None
+    parsed = urlparse(normalized)
+    path_parts = [part for part in parsed.path.split("/") if part]
+    if len(path_parts) < 2:
+        return None
+    owner, repo = path_parts[0], path_parts[1]
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+    if not repo:
+        return None
+    host = parsed.netloc.split("@")[-1].lower()
+    return f"https://{host}/{owner}/{repo}"
+
+
 def is_cloneable_repo_url(repo_url: Optional[str]) -> bool:
     """Return True if the URL is a cloneable https repo on a supported host.
 
