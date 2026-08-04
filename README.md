@@ -108,6 +108,8 @@ Nine ecosystems, routed to OSV (and, where available, deps.dev) for advisories:
 - Java (Maven): `pom.xml`
 - Java / Kotlin / Android (Gradle): `build.gradle`, `build.gradle.kts`, with versions resolved from `gradle/libs.versions.toml`
 
+Which file each ecosystem is read from is a fact about that ecosystem, not a lockfile policy — `package-lock.json` and `Cargo.toml` are the same choice (read the file that names the whole dependency set) made in opposite directions. [`docs/signals.md`](docs/signals.md#which-manifests-are-read-and-why-it-is-not-the-lock-file) has the table of what is *not* read for each, and the argument. Anything on that list is recognized rather than skipped: `analyze` names it, says what it reads instead, and exits non-zero if it could not read anything else either — a scan that read nothing must not look like a scan that found nothing.
+
 Gradle deserves a footnote, because it is the one entry here that is not a manifest format. `build.gradle` and `build.gradle.kts` are Groovy and Kotlin *programs*, and nothing in this tool executes them. The declarative shapes are read — string and map notation in either DSL, version-catalog aliases and bundles, `platform(...)` wrappers, `$property` interpolation from `ext { }` and `gradle.properties` — and anything computed at build time is reported with its version marked unmanaged rather than guessed at. A dynamic `1.+`, a version from an unreachable catalog, and a coordinate assembled by a helper function are all recorded as unmeasured, which drops version drift from that dependency's score instead of scoring a fabricated zero. `src/dependency_risk_profiler/parsers/gradle_dsl.py` enumerates every shape that is and is not read.
 
 ## Honest Limits

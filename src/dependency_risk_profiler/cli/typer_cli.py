@@ -15,7 +15,11 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from ..analyzers.base import BaseAnalyzer
 from ..config import Config
 from ..contract import schema_deprecation_notice
-from ..manifest_guidance import unsupported_manifest_guidance
+from ..manifest_guidance import (
+    UnreadableManifest,
+    recognise_unreadable_manifest,
+    unsupported_manifest_guidance,
+)
 from ..models import DependencyMetadata, ProjectRiskProfile, RiskLevel
 from ..org_scan import (
     ExistingDependencyProfiler,
@@ -309,33 +313,110 @@ def _emit_json_report(
     profiles: List[ProjectRiskProfile],
     manifest_path: str,
     warnings: List[str],
+    unreadable: List[UnreadableManifest],
     schema: SchemaVersion = SchemaVersion.V2,
 ) -> None:
     """Write the one JSON document a JSON-mode run always owes its caller.
+
+    ``unreadable`` is required rather than defaulted, so a caller cannot leave
+    a scan looking complete by forgetting to mention what it could not read
+    (AGENTS.md rule 4: a state must not be settable by omission).
 
     Args:
         profiles: Successfully analyzed manifest profiles, possibly empty.
         manifest_path: The path the user pointed the tool at.
         warnings: Human-readable notes about skipped or refused inputs.
+        unreadable: Manifests recognized during the scan that could not be read.
         schema: Which output schema to emit.
     """
     # Branched rather than a ternary: the two formatters share no base class,
     # so the conditional expression collapsed to `object` and the call below
     # went unchecked.
     if schema is SchemaVersion.V1:
+        # v1 is frozen (see contract.py) and gets no new key. The distinction
+        # still reaches a v1 caller two ways that are not schema-shaped: the
+        # exit code, and the warnings list.
         report = JsonFormatterV1().format_report(profiles, manifest_path, warnings)
     else:
-        report = JsonFormatter().format_report(profiles, manifest_path, warnings)
+        report = JsonFormatter().format_report(
+            profiles,
+            manifest_path,
+            warnings,
+            [
+                {
+                    "manifest_path": str(entry.path),
+                    "ecosystem": entry.ecosystem,
+                    "guidance": entry.guidance,
+                }
+                for entry in unreadable
+            ],
+        )
     print(report)
 
 
 # A manifest that parsed but declared nothing is "nothing to do", not a refusal.
-_REFUSAL_REASONS = frozenset({"unsupported", "no-analyzer", "timeout", "error"})
+# "unreadable" is: the scan found a dependency manifest and could not read it,
+# which is the opposite of a clean zero (#243).
+_REFUSAL_REASONS = frozenset(
+    {"unsupported", "unreadable", "no-analyzer", "timeout", "error"}
+)
 
 
 def _refused_manifests(failed_files: List[Dict[str, object]]) -> bool:
     """Whether any manifest was actively refused rather than merely empty."""
     return any(failed.get("reason") in _REFUSAL_REASONS for failed in failed_files)
+
+
+# Directories whose contents are installed dependencies rather than the project
+# being scanned. A recursive walk that recognizes `package.json` would otherwise
+# report one per installed package — thousands of them, all noise.
+#
+# Scoped to the unreadable-manifest sweep only. Which files the registry finds
+# and scores is unchanged by #243, because narrowing that is a change to what
+# gets analyzed and needs its own evidence (filed as a follow-up).
+_VENDORED_DIRECTORIES = frozenset(
+    {
+        ".bundle",
+        ".git",
+        ".gradle",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "bower_components",
+        "node_modules",
+        "site-packages",
+        "vendor",
+        "venv",
+    }
+)
+
+
+def _is_vendored(path: str, scan_root: str) -> bool:
+    """Whether a path sits inside an installed-dependency directory."""
+    try:
+        relative = Path(path).relative_to(scan_root)
+    except ValueError:
+        return False
+    return any(part in _VENDORED_DIRECTORIES for part in relative.parts[:-1])
+
+
+def _record_unreadable(
+    unreadable: List[UnreadableManifest], manifest_path: str
+) -> None:
+    """Record a refused manifest the guidance table recognizes, once.
+
+    The directory sweep and the per-file parse loop can both reach the same
+    path — the sweep only in ``--recursive`` mode, the loop for a file the user
+    named. Recording it twice would inflate the count a consumer reads.
+    """
+    recognised = recognise_unreadable_manifest(manifest_path)
+    if recognised is None:
+        return
+    if any(str(entry.path) == str(recognised.path) for entry in unreadable):
+        return
+    unreadable.append(recognised)
 
 
 @app.callback()
@@ -662,6 +743,10 @@ def analyze(
         input_path = manifest_path
         warnings: List[str] = []
         manifest_files = []
+        # Manifests the scan recognized and could not read. Empty means "I read
+        # everything I recognized"; that is the distinction #243 is about, and
+        # it has to survive into both the summary and the JSON.
+        unreadable: List[UnreadableManifest] = []
 
         if os.path.isdir(manifest_path):
             logger.info(f"Scanning directory: {manifest_path}")
@@ -689,30 +774,60 @@ def analyze(
                     if EcosystemRegistry.detect_ecosystem(Path(file_path)):
                         manifest_files.append(file_path)
                         logger.debug(f"Found manifest file: {file_path}")
+                        continue
+
+                    # Not a manifest the registry reads. Before treating it as
+                    # an ordinary file, ask whether it is a dependency manifest
+                    # we recognize and cannot read — a `package.json` with no
+                    # lock file beside it is the case #243 was filed about, and
+                    # ignoring it is what turned "I could not read your project"
+                    # into a clean zero.
+                    if _is_vendored(file_path, manifest_path):
+                        continue
+                    recognised = recognise_unreadable_manifest(file_path)
+                    if recognised is None or recognised.supported_input_present:
+                        # A supported input for the same ecosystem sits in the
+                        # same directory, so the ecosystem was read and this
+                        # file is not a gap. Saying otherwise on every scan of
+                        # a healthy project is how a warning stops being read.
+                        continue
+                    unreadable.append(recognised)
+                    logger.debug(f"Recognized but unreadable manifest: {file_path}")
 
                 # If not recursive, break after the first directory
                 if not recursive:
                     break
 
-            if not manifest_files:
+            if not manifest_files and not unreadable:
                 status_console.print(
                     "[bold yellow]No supported manifest files found.[/bold yellow]"
                 )
                 # An empty directory is a legitimate, successful outcome (#20,
                 # #68) — but a successful JSON run still owes stdout a document
-                # (#147).
+                # (#147). This branch now requires `not unreadable`: a directory
+                # whose only manifests were unreadable is a refusal, and falls
+                # through to the exit-1 path below (#243).
                 if json_output:
                     _emit_json_report(
-                        [], input_path, ["No supported manifest files found"], schema
+                        [],
+                        input_path,
+                        ["No supported manifest files found"],
+                        [],
+                        schema,
                     )
                 else:
                     display_ecosystem_list()
                 raise typer.Exit(code=0)
 
-            status_console.print(
-                "[bold green]Found "
-                f"{len(manifest_files)} manifest files to analyze[/bold green]"
-            )
+            if manifest_files:
+                status_console.print(
+                    "[bold green]Found "
+                    f"{len(manifest_files)} manifest files to analyze[/bold green]"
+                )
+            else:
+                status_console.print(
+                    "[bold red]No readable manifest files found.[/bold red]"
+                )
         else:
             # Single file mode
             manifest_files = [manifest_path]
@@ -720,6 +835,34 @@ def analyze(
         # Track overall results and failures
         overall_results: List[ProjectRiskProfile] = []
         failed_files: List[Dict[str, object]] = []
+
+        # Seed the failure list with what the scan could not read, before any
+        # parsing runs. These are refusals, so they reach `_refused_manifests`
+        # and keep a scan that read nothing off exit 0.
+        if unreadable:
+            _note(
+                status_console,
+                f"{len(unreadable)} file(s) look like dependency manifests but "
+                "could not be read:",
+                "bold yellow",
+            )
+        for entry in unreadable:
+            note = f"Unreadable manifest file: {entry.path}. {entry.guidance}"
+            warnings.append(note)
+            _note(status_console, f"  - {entry.guidance}", "yellow")
+            failed_files.append(
+                {
+                    "manifest_path": str(entry.path),
+                    "reason": "unreadable",
+                    "ecosystem": entry.ecosystem,
+                }
+            )
+
+        # How many distinct files this run considered. Captured here because the
+        # parse loop below appends to `unreadable` for files that are already
+        # counted in `manifest_files`, and counting a file twice in "analyzed 0
+        # of N" is its own small lie.
+        considered = len(manifest_files) + len(unreadable)
 
         # Process each manifest file
         for manifest_path in manifest_files:
@@ -789,6 +932,13 @@ def analyze(
                                 warnings.append(note)
                                 # stderr in JSON mode: stdout is the report.
                                 _note(status_console, note, "bold yellow")
+                                if reason == "unsupported":
+                                    # Same fact as the directory sweep records,
+                                    # reached down the single-file path: without
+                                    # this the JSON for `analyze package.json`
+                                    # exits 1 while reporting no unreadable
+                                    # manifests, which is a contradiction (#243).
+                                    _record_unreadable(unreadable, manifest_path)
                                 failed_files.append(
                                     {
                                         "manifest_path": manifest_path,
@@ -839,6 +989,7 @@ def analyze(
                         logger.error(note)
                         warnings.append(note)
                         _note(status_console, note, "bold yellow")
+                        _record_unreadable(unreadable, manifest_path)
                         # Add unsupported file to failed list
                         failed_file = {
                             "manifest_path": manifest_path,
@@ -1239,10 +1390,12 @@ def analyze(
                 failed_files.append(failed_file)
 
         if json_output:
-            _emit_json_report(overall_results, input_path, warnings, schema)
+            _emit_json_report(overall_results, input_path, warnings, unreadable, schema)
 
-        # Display summary if manifest files were scanned
-        if len(manifest_files) > 0 and not json_output:
+        # Display summary if anything was scanned or refused. `failed_files` is
+        # in the condition because a directory whose only manifests were
+        # unreadable has no manifest files and still owes the user a summary.
+        if (manifest_files or failed_files) and not json_output:
             console.print("\n[bold]Overall Summary[/bold]")
 
             # Calculate total dependencies and risk levels
@@ -1270,6 +1423,11 @@ def analyze(
                 f"Total manifest files found: [bold]{len(manifest_files)}[/bold]"
             )
             console.print(f"Successfully analyzed: [bold]{len(overall_results)}[/bold]")
+            if unreadable:
+                console.print(
+                    "Manifest files recognized but not readable: "
+                    f"[bold red]{len(unreadable)}[/bold red]"
+                )
             if failed_files:
                 console.print(
                     f"Failed analysis: [bold red]{len(failed_files)}[/bold red]"
@@ -1370,6 +1528,20 @@ def analyze(
                         )
                         for failed_entry in reason_files[:3]:  # Show first 3
                             console.print(f"    - {failed_entry['manifest_path']}")
+                    elif reason == "unreadable":
+                        # Named for what happened rather than lumped in with
+                        # "unsupported": the ecosystem *is* supported for most
+                        # of these, and the file is not (#243).
+                        console.print(
+                            "  [bold magenta]Recognized but not readable"
+                            f"[/bold magenta]: {len(reason_files)} file(s)"
+                        )
+                        for failed_entry in reason_files[:3]:  # Show first 3
+                            ecosystem_label = failed_entry.get("ecosystem", "unknown")
+                            console.print(
+                                f"    - {failed_entry['manifest_path']} "
+                                f"({ecosystem_label})"
+                            )
                     elif reason == "error":
                         console.print(
                             "  [bold red]Errors[/bold red]: "
@@ -1394,13 +1566,18 @@ def analyze(
 
         # "I refused every file you gave me" is not success (#125). Two cases
         # stay at exit 0 because they are genuinely "nothing to do", not a
-        # refusal (#20, #68): a directory with no manifests (handled above),
-        # and a manifest that parsed fine and simply declares no dependencies.
+        # refusal (#20, #68): a directory with no manifests at all (handled
+        # above), and a manifest that parsed fine and simply declares no
+        # dependencies.
+        #
+        # A directory whose only manifests were recognized-but-unreadable is
+        # neither of those. It used to land in the first case and exit 0 with a
+        # zero-dependency report, which reads as "nothing to worry about" when
+        # the truth is "I could not read your project" (#243).
         if not overall_results and _refused_manifests(failed_files):
             _note(
                 status_console,
-                f"Analyzed 0 of {len(manifest_files)} manifest file(s); "
-                "nothing was scored.",
+                f"Analyzed 0 of {considered} manifest file(s); nothing was scored.",
                 "bold red",
             )
             raise typer.Exit(code=1)

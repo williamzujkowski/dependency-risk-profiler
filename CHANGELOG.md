@@ -548,6 +548,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`analyze <dir>` over a project it could not read reported zero dependencies
+  and exited 0.** Point it at an npm project — a `package.json`, no lock file —
+  and it printed "No supported manifest files found", a catalogue of the ten
+  ecosystems it does support, a JSON document with `dependency_count: 0` and
+  `dependencies: []`, and exit code 0. A CI job branching on that exit code
+  recorded a clean scan. A person reading it concluded there was nothing to
+  worry about. Both were reading a reassuring answer produced from an absence
+  of measurement, which is the same defect as scoring an unmeasured signal
+  `0.0` — one level up, on the input rather than the signal (#243).
+
+  A scan that read nothing is now structurally distinct from a scan that found
+  nothing, in three places at once. `unreadable_manifests[]` is a new v2 key
+  carrying every recognized manifest the run could not read, with its ecosystem
+  and what to do about it; empty means everything recognized *was* read, so a
+  consumer can branch on it rather than inferring from a count that reads the
+  same either way. The terminal summary names the files and the next step. And
+  a directory whose only manifests were unreadable now exits 1, joining the
+  "every file you named was refused" case from #125 — the two are the same
+  outcome and had two different exit codes.
+
+  Two cases deliberately stay at exit 0, because they are genuinely "nothing to
+  do" rather than a refusal (#20, #68): a directory with no manifests at all,
+  and a manifest that parsed and declares nothing. A scan that reads one
+  ecosystem and cannot read another also stays at 0 — it produced a real
+  answer — but `unreadable_manifests` says which half is missing, because a
+  Python count presented as the whole project is its own quiet lie.
+
+  The rejection message also stopped being a dead end. It used to name one
+  companion file or nothing at all; it now names what *is* read for the
+  ecosystem it identified — "npm projects are read from package-lock.json", and
+  whether that file is sitting right there or how to generate it. For the
+  ecosystems with no parser here at all (sbt, CocoaPods, Swift PM, pub, Hex) it
+  says so outright instead of implying a supported format was almost found.
+
+  **The sweep is the point, not the npm fix.** `package.json` was one instance
+  of a shape that recurs in every ecosystem, and the table covers all of it:
+  `Gemfile` and `*.gemspec` against `Gemfile.lock`, `composer.json` against
+  `composer.lock`, `Pipfile`/`poetry.lock`/`uv.lock`/`setup.py`/`setup.cfg`
+  against the three Python inputs, `go.sum` against `go.mod`, `Cargo.lock`
+  against `Cargo.toml`, `packages.config`/`*.vbproj`/`*.fsproj`/
+  `Directory.Packages.props` against `packages.lock.json` and `*.csproj`, and
+  `settings.gradle` plus `gradle/libs.versions.toml` against the build files.
+  A unit test asserts the table is disjoint from what the registry actually
+  reads, so a parser added for one of these fails the build instead of leaving
+  the tool telling users to go find a file it no longer needs.
+
+  **There is no lockfile rule, and the issue was right that there never was
+  one** — `docs/signals.md` now says so with the argument. Fifteen of the
+  sixteen signals need only a package name; they are properties of the package,
+  read from the registry and its source repository, which is the whole thesis
+  of a leading-indicator tool. Only `version` needs a resolved version, and
+  `exploit` degrades to `applicability_unknown` without one rather than going
+  silent. What each ecosystem is chosen on is which file names the dependencies
+  at all: npm's lock file names the resolved tree and `package.json` names only
+  the direct set, while Cargo is the same choice made in the opposite
+  direction. Accepting `package.json` with `unmanaged` versions is not refused
+  on principle; it changes what gets parsed, its cost is a coverage question,
+  and it is filed separately rather than folded in.
+
+  One behaviour is deliberately scoped narrower than it could be: vendored
+  directories (`node_modules`, `vendor`, `.venv`, and nine more) are pruned
+  from the unreadable sweep only, not from manifest discovery. Without the
+  pruning, a recursive scan of any real npm project reports one warning per
+  installed package, which is a different way of telling the user nothing.
+  Narrowing discovery itself would change which files get *scored*, and that
+  needs its own evidence.
+
 - **Six scorecard handlers answered from records they could not interpret, and
   one unreadable directory threw away every signal that was readable.** The
   narrower residue of #218, split out because it is a different root cause:
