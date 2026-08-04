@@ -5,6 +5,7 @@ This module provides functions to store and retrieve vulnerability data from a
 disk-based cache, reducing the need for frequent network calls to vulnerability APIs.
 """
 
+import hashlib
 import json
 import logging
 import time
@@ -24,8 +25,44 @@ DEFAULT_CACHE_EXPIRY = 24 * 60 * 60
 # emitting a field that scoring depends on, so an upgrade does not spend a
 # whole expiry window scoring against records that predate it. Version 2 adds
 # ``affected_versions``, without which every advisory reads as applying to
-# every installed version (#61).
-CACHE_SCHEMA_VERSION = 2
+# every installed version (#61). Version 3 changes how a cache entry is
+# addressed (see ``advisory_cache_key``) and normalizes ``cvss_score`` before
+# it is written, so a version-2 record read through a version-3 key would be
+# claiming a shape it does not have; the discard-on-read guard below rejects
+# any that survive a shared cache directory (#212, #213).
+CACHE_SCHEMA_VERSION = 3
+
+
+def advisory_cache_key(package_name: str, ecosystem: str) -> str:
+    """Return the cache key identifying one package's advisory record.
+
+    Derived by hashing rather than by sanitizing, because sanitizing lost
+    information and two packages then shared one entry — serving one package's
+    advisories for another, in either direction (#212):
+
+    * ``/`` was rewritten to ``__``, so composer's ``foo/bar`` and a literal
+      ``foo__bar`` produced the same filename.
+    * The key kept the source casing, so ``Foo`` and ``foo`` were one file on
+      the case-insensitive filesystems macOS and Windows default to, while npm,
+      cargo and maven all treat those as different packages (#173).
+
+    The NUL separator is what makes ``("b/c", "a")`` and ``("c", "a/b")``
+    distinct: it cannot appear in either input, so no pair of inputs can
+    produce the same joined string. The hex digest is then fixed-length
+    (no ``NAME_MAX`` ceiling), case-exact, and composed only of characters that
+    are legal in a filename on every platform, so a package name can neither
+    escape the cache directory nor fail to open.
+
+    Args:
+        package_name: Package name, used exactly as given.
+        ecosystem: Package ecosystem, used exactly as given.
+
+    Returns:
+        Lowercase hex SHA-256 digest. Not a security boundary: it is a
+        collision-resistant identity for a (ecosystem, package) pair.
+    """
+    joined = f"{ecosystem}\x00{package_name}".encode("utf-8")
+    return hashlib.sha256(joined).hexdigest()
 
 
 class VulnerabilityCache:
@@ -59,6 +96,11 @@ class VulnerabilityCache:
     def _get_cache_path(self, package_name: str, ecosystem: str) -> Path:
         """Get the path to the cache file for a package.
 
+        The filename is the digest from :func:`advisory_cache_key` and nothing
+        else. Cache files are consequently not browsable by eye; the ``package``
+        and ``ecosystem`` fields stored inside each record carry that, and
+        nothing reads the filename for meaning.
+
         Args:
             package_name: Name of the package
             ecosystem: Package ecosystem
@@ -66,12 +108,7 @@ class VulnerabilityCache:
         Returns:
             Path to the cache file
         """
-        # Sanitize the package name and ecosystem for use in a filename
-        safe_package = package_name.replace("/", "__").replace("\\", "__")
-        safe_ecosystem = ecosystem.replace("/", "_").replace("\\", "_")
-
-        # Generate a cache file name
-        return self.cache_dir / f"{safe_ecosystem}_{safe_package}.json"
+        return self.cache_dir / f"{advisory_cache_key(package_name, ecosystem)}.json"
 
     def get(
         self, package_name: str, ecosystem: str
@@ -196,9 +233,13 @@ class VulnerabilityCache:
                     logger.warning(f"Error clearing cache for {package_name}: {e}")
 
         elif ecosystem:
-            # Clear all packages in a specific ecosystem
-            prefix = f"{ecosystem}_"
-            for cache_file in self.cache_dir.glob(f"{prefix}*.json"):
+            # Clear all packages in a specific ecosystem. The ecosystem is read
+            # back out of each record rather than matched against a filename
+            # prefix: filenames are digests now, and the prefix match was never
+            # exact anyway (``npm_`` also matched an ecosystem named ``npm_x``).
+            for cache_file in self.cache_dir.glob("*.json"):
+                if self._entry_ecosystem(cache_file) != ecosystem:
+                    continue
                 try:
                     cache_file.unlink()
                     count += 1
@@ -219,6 +260,22 @@ class VulnerabilityCache:
             logger.debug(f"Cleared all {count} cache entries")
 
         return count
+
+    def _entry_ecosystem(self, cache_file: Path) -> Optional[str]:
+        """Return the ecosystem a cache file records, or None if unreadable."""
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return None
+
+        if not isinstance(cache_data, dict):
+            return None
+
+        ecosystem = cache_data.get("ecosystem")
+        if isinstance(ecosystem, str) and ecosystem:
+            return ecosystem
+        return None
 
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about the cache.
@@ -257,16 +314,12 @@ class VulnerabilityCache:
                 file_stat = entry.stat()
                 sizes.append(file_stat.st_size)
                 mtimes.append(file_stat.st_mtime)
-
-                # Read file to get ecosystem
-                with open(entry, "r", encoding="utf-8") as f:
-                    cache_data = json.load(f)
-                    ecosystem = cache_data.get("ecosystem")
-                    if isinstance(ecosystem, str) and ecosystem:
-                        ecosystems.add(ecosystem)
-
-            except (OSError, json.JSONDecodeError):
+            except OSError:
                 continue
+
+            ecosystem = self._entry_ecosystem(entry)
+            if ecosystem is not None:
+                ecosystems.add(ecosystem)
 
         if sizes:
             stats["total_size_bytes"] = sum(sizes)

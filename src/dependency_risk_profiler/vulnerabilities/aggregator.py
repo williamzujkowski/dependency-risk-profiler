@@ -14,6 +14,7 @@ import requests
 from ..models import DependencyMetadata
 from ..versioning import VersionScheme
 from . import affected_ranges, ecosystems
+from .cache import advisory_cache_key
 from .cache import default_cache as disk_cache
 
 logger = logging.getLogger(__name__)
@@ -365,29 +366,35 @@ class OSVSource(VulnerabilitySource):
         normalized = []
 
         for vuln in results:
-            severity = None
-            cvss_score = None
-
-            if "database_specific" in vuln and "severity" in vuln["database_specific"]:
-                severity = vuln["database_specific"]["severity"]
+            # A severity OSV states as anything but a string is not a severity
+            # this code can read; leave it None and let the CVSS block decide.
+            severity = _payload_optional_str(
+                _payload_mapping(vuln.get("database_specific")).get("severity")
+            )
 
             # Extract CVSS score if available
             cvss_score = _extract_osv_cvss_score(vuln.get("severity"))
 
             # Determine fixed versions
             fixed_versions = []
-            if "affected" in vuln and vuln["affected"]:
-                for affected in vuln["affected"]:
-                    for range_obj in affected.get("ranges", []):
-                        # OSV range events are one of introduced/fixed/
-                        # last_affected/limit; only "fixed" carries a fixed
-                        # version. Guard against events missing "introduced"
-                        # (which used to raise KeyError and silently drop the
-                        # whole advisory) and don't restrict to SEMVER ranges
-                        # (npm advisories use ECOSYSTEM ranges).
-                        for event in range_obj.get("events", []):
-                            if "fixed" in event:
-                                fixed_versions.append(event["fixed"])
+            for affected in _payload_sequence(vuln.get("affected")):
+                for range_obj in _payload_sequence(
+                    _payload_mapping(affected).get("ranges")
+                ):
+                    # OSV range events are one of introduced/fixed/
+                    # last_affected/limit; only "fixed" carries a fixed
+                    # version. Guard against events missing "introduced"
+                    # (which used to raise KeyError and silently drop the
+                    # whole advisory) and don't restrict to SEMVER ranges
+                    # (npm advisories use ECOSYSTEM ranges).
+                    for event in _payload_sequence(
+                        _payload_mapping(range_obj).get("events")
+                    ):
+                        fixed = _payload_str(_payload_mapping(event).get("fixed"))
+                        # A non-string here would enter the fixed-version list
+                        # as something no version scheme can order.
+                        if fixed:
+                            fixed_versions.append(fixed)
 
             # The affected block is what makes an advisory answerable against a
             # pin. Dropping it is how every advisory ever published came to be
@@ -398,25 +405,25 @@ class OSVSource(VulnerabilitySource):
 
             normalized.append(
                 {
-                    "id": vuln.get("id", ""),
+                    "id": _payload_str(vuln.get("id")),
                     "source": "OSV",
-                    "published": vuln.get("published", ""),
-                    "summary": vuln.get("summary", "No summary available"),
-                    "details": vuln.get("details", ""),
+                    "published": _payload_str(vuln.get("published")),
+                    "summary": _payload_str(
+                        vuln.get("summary"), "No summary available"
+                    ),
+                    "details": _payload_str(vuln.get("details")),
                     "severity": severity,
                     "normalized_severity": normalize_vulnerability_severity(
                         severity, cvss_score
                     ),
                     "cvss_score": cvss_score,
-                    "withdrawn": bool(vuln.get("withdrawn")),
+                    "withdrawn": _withdrawn_timestamp(vuln.get("withdrawn")),
                     "confidence": "HIGH",
                     "fixed_versions": fixed_versions,
                     "affected_versions": (
                         None if affected.is_empty() else affected.to_payload()
                     ),
-                    "references": [
-                        ref.get("url", "") for ref in vuln.get("references", [])
-                    ],
+                    "references": _payload_reference_urls(vuln.get("references")),
                 }
             )
 
@@ -506,47 +513,27 @@ class NVDSource(VulnerabilitySource):
         normalized = []
 
         for vuln_entry in results:
-            vuln = vuln_entry.get("cve", {})
+            vuln = _payload_mapping(_payload_mapping(vuln_entry).get("cve"))
 
             # Extract base data
-            vuln_id = vuln.get("id", "")
-            published = vuln.get("published", "")
-            status = vuln.get("vulnStatus", "")
+            vuln_id = _payload_str(vuln.get("id"))
+            published = _payload_str(vuln.get("published"))
+            status = _payload_str(vuln.get("vulnStatus"))
 
             # Extract description
-            descriptions = vuln.get("descriptions", [])
             summary = "No description available"
             details = ""
 
-            for desc in descriptions:
-                if desc.get("lang") == "en":
-                    summary = desc.get("value", summary)
+            for desc in _payload_sequence(vuln.get("descriptions")):
+                description = _payload_mapping(desc)
+                if description.get("lang") == "en":
+                    summary = _payload_str(description.get("value"), summary)
                     break
 
             # Extract CVSS score
-            metrics = vuln.get("metrics", {})
-            cvss_score = None
-            severity = None
+            cvss_score, severity = self._extract_cvss(vuln.get("metrics"))
 
-            # Try CVSS 3.1 first, then 3.0, then 2.0
-            if "cvssMetricV31" in metrics and metrics["cvssMetricV31"]:
-                cvss_data = metrics["cvssMetricV31"][0]
-                cvss_score = cvss_data.get("cvssData", {}).get("baseScore")
-                severity = cvss_data.get("cvssData", {}).get("baseSeverity")
-            elif "cvssMetricV30" in metrics and metrics["cvssMetricV30"]:
-                cvss_data = metrics["cvssMetricV30"][0]
-                cvss_score = cvss_data.get("cvssData", {}).get("baseScore")
-                severity = cvss_data.get("cvssData", {}).get("baseSeverity")
-            elif "cvssMetricV2" in metrics and metrics["cvssMetricV2"]:
-                cvss_data = metrics["cvssMetricV2"][0]
-                cvss_score = cvss_data.get("cvssData", {}).get("baseScore")
-                severity = cvss_data.get("baseSeverity")
-
-            # Extract references
-            references = []
-            for ref in vuln.get("references", []):
-                if "url" in ref:
-                    references.append(ref["url"])
+            references = _payload_reference_urls(vuln.get("references"))
 
             normalized.append(
                 {
@@ -561,7 +548,11 @@ class NVDSource(VulnerabilitySource):
                     ),
                     "cvss_score": cvss_score,
                     "withdrawn": status.lower() in ("rejected", "withdrawn"),
-                    "confidence": "MEDIUM" if severity or cvss_score else "LOW",
+                    # `cvss_score is not None` rather than truthiness: a
+                    # measured 0.0 is a score NVD published, not a missing one.
+                    "confidence": (
+                        "MEDIUM" if severity or cvss_score is not None else "LOW"
+                    ),
                     "fixed_versions": [],  # NVD doesn't provide this easily
                     # NVD's CPE match criteria are not version ranges in any
                     # ecosystem's ordering, so applicability stays unknown and
@@ -572,6 +563,42 @@ class NVDSource(VulnerabilitySource):
             )
 
         return normalized
+
+    def _extract_cvss(self, metrics: object) -> Tuple[Optional[float], Optional[str]]:
+        """Return (score, severity) from an NVD metrics block, newest first.
+
+        The score goes through ``normalize_cvss_score`` here rather than only
+        at annotation time, so the value written to the cache and handed to
+        consumers is a real CVSS score or nothing. A ``baseScore`` of ``true``
+        used to be copied out verbatim and, because ``bool`` is an ``int``,
+        read as 1.0 wherever it was not re-normalized (#213).
+
+        Args:
+            metrics: The CVE's ``metrics`` block, as decoded from the response.
+
+        Returns:
+            Tuple of normalized CVSS score and source severity string, either
+            of which is None when NVD did not supply a usable one.
+        """
+        metrics_map = _payload_mapping(metrics)
+        # CVSS 2.0 keeps baseSeverity on the metric, not inside cvssData.
+        for key, severity_on_metric in (
+            ("cvssMetricV31", False),
+            ("cvssMetricV30", False),
+            ("cvssMetricV2", True),
+        ):
+            entries = _payload_sequence(metrics_map.get(key))
+            if not entries:
+                continue
+            metric = _payload_mapping(entries[0])
+            cvss_data = _payload_mapping(metric.get("cvssData"))
+            severity_source = metric if severity_on_metric else cvss_data
+            return (
+                normalize_cvss_score(cvss_data.get("baseScore")),
+                _payload_optional_str(severity_source.get("baseSeverity")),
+            )
+
+        return None, None
 
 
 class GitHubAdvisorySource(VulnerabilitySource):
@@ -763,50 +790,116 @@ class GitHubAdvisorySource(VulnerabilitySource):
         """
         normalized = []
 
-        for vuln in results:
-            advisory = vuln.get("advisory", {})
+        for vuln_entry in results:
+            vuln = _payload_mapping(vuln_entry)
+            advisory = _payload_mapping(vuln.get("advisory"))
 
-            # Extract CVSS score
-            cvss_score = None
-            if "cvss" in advisory and advisory["cvss"]:
-                cvss_score = advisory["cvss"].get("score")
+            # Extract CVSS score. Normalized here, not just at annotation time:
+            # GitHub's `cvss.score` is a payload field like any other, and a
+            # `true` in it read as 1.0 anywhere the raw record was consumed.
+            cvss_score = normalize_cvss_score(
+                _payload_mapping(advisory.get("cvss")).get("score")
+            )
 
             # Extract fixed version
             fixed_versions = []
-            if "firstPatchedVersion" in vuln and vuln["firstPatchedVersion"]:
-                version = vuln["firstPatchedVersion"].get("identifier")
-                if version:
-                    fixed_versions.append(version)
+            version = _payload_str(
+                _payload_mapping(vuln.get("firstPatchedVersion")).get("identifier")
+            )
+            if version:
+                fixed_versions.append(version)
 
             affected = affected_ranges.affected_versions_from_github_range(
                 vuln.get("vulnerableVersionRange")
             )
 
+            # `.upper()` on whatever the payload held raised AttributeError for
+            # a null or boolean severity, and the broad handler upstream turned
+            # that into "this package has no advisories".
+            severity = _payload_str(vuln.get("severity"))
+
             normalized.append(
                 {
-                    "id": advisory.get("id", ""),
+                    "id": _payload_str(advisory.get("id")),
                     "source": "GitHub Advisory",
-                    "published": advisory.get("publishedAt", ""),
-                    "summary": advisory.get("summary", "No summary available"),
-                    "details": advisory.get("description", ""),
-                    "severity": vuln.get("severity", "").upper(),
+                    "published": _payload_str(advisory.get("publishedAt")),
+                    "summary": _payload_str(
+                        advisory.get("summary"), "No summary available"
+                    ),
+                    "details": _payload_str(advisory.get("description")),
+                    "severity": severity.upper(),
                     "normalized_severity": normalize_vulnerability_severity(
-                        vuln.get("severity"), cvss_score
+                        severity, cvss_score
                     ),
                     "cvss_score": cvss_score,
-                    "withdrawn": bool(advisory.get("withdrawnAt")),
+                    "withdrawn": _withdrawn_timestamp(advisory.get("withdrawnAt")),
                     "confidence": "HIGH",
                     "fixed_versions": fixed_versions,
                     "affected_versions": (
                         None if affected.is_empty() else affected.to_payload()
                     ),
-                    "references": [
-                        ref.get("url", "") for ref in advisory.get("references", [])
-                    ],
+                    "references": _payload_reference_urls(advisory.get("references")),
                 }
             )
 
         return normalized
+
+
+def _payload_str(value: object, default: str = "") -> str:
+    """Return a registry payload field as text, or ``default`` if it is not.
+
+    Every normalizer reads out of a ``Dict[str, object]`` decoded straight from
+    a registry response, so a field an ecosystem's schema declares as a string
+    can still arrive as ``true``, a number, or null. Two things went wrong when
+    it did: ``.upper()``/``.lower()`` raised AttributeError inside a broad
+    ``except Exception`` that turned the whole lookup into "no advisories", and
+    the value was copied verbatim into a normalized record, so a JSON ``true``
+    surfaced in a field every consumer renders as a string (#213).
+    """
+    return value if isinstance(value, str) else default
+
+
+def _payload_optional_str(value: object) -> Optional[str]:
+    """Return a registry payload field as text, or None if it is not text."""
+    return value if isinstance(value, str) else None
+
+
+def _payload_mapping(value: object) -> Dict[str, Any]:
+    """Return a registry payload field as a mapping, or an empty one."""
+    return value if isinstance(value, dict) else {}
+
+
+def _payload_sequence(value: object) -> List[Any]:
+    """Return a registry payload field as a list, or an empty one."""
+    return value if isinstance(value, list) else []
+
+
+def _payload_reference_urls(value: object) -> List[str]:
+    """Return the reference URLs a payload lists, dropping non-string entries.
+
+    ``[ref.get("url", "") for ref in ...]`` assumed every entry was a mapping
+    and every URL a string; neither is guaranteed by a decoded JSON body.
+    """
+    urls = []
+    for reference in _payload_sequence(value):
+        url = _payload_str(_payload_mapping(reference).get("url"))
+        if url:
+            urls.append(url)
+    return urls
+
+
+def _withdrawn_timestamp(value: object) -> bool:
+    """Return whether a payload's withdrawal timestamp says it was withdrawn.
+
+    OSV's ``withdrawn`` and GitHub's ``withdrawnAt`` are both RFC 3339 strings,
+    absent when the advisory stands. The previous ``bool(...)`` accepted any
+    truthy JSON value, so a payload carrying ``"withdrawn": true`` — or ``1``,
+    or a non-empty object — suppressed a real advisory from the score without
+    ever having named a withdrawal date. Requiring the timestamp its schema
+    promises fails the other way: an unparseable value leaves the advisory
+    counted (#213).
+    """
+    return bool(_payload_str(value).strip())
 
 
 def normalize_cvss_score(score: object) -> Optional[float]:
@@ -1045,6 +1138,13 @@ def _extract_osv_cvss_score(severity_data: object) -> Optional[float]:
 
 
 def _is_withdrawn(vulnerability: Dict[str, object]) -> bool:
+    """Return whether an already-normalized record is a withdrawn advisory.
+
+    A bool is honored here, unlike in :func:`_withdrawn_timestamp`, because
+    this reads a record the normalizers wrote and they write a bool. The
+    distinction is the layer: registry payloads state a withdrawal date,
+    normalized records state a decision.
+    """
     withdrawn = vulnerability.get("withdrawn")
     if isinstance(withdrawn, bool):
         return withdrawn
@@ -1081,6 +1181,19 @@ def _normalize_confidence(vulnerability: Dict[str, object]) -> str:
 def get_cache_key(package_name: str, ecosystem: str) -> str:
     """Generate a cache key for vulnerability data.
 
+    Shares :func:`advisory_cache_key` with the disk cache. The previous
+    ``f"{ecosystem.lower()}:{package_name.lower()}"`` collided the same two
+    ways the disk cache did, and the case collision was worse here because
+    lowercasing is unconditional: npm's ``Foo`` and ``foo`` shared one
+    in-memory entry on every platform, not just the case-insensitive ones. The
+    ``:`` separator collided maven coordinates as well, where the package name
+    is itself ``group:artifact`` — ``("b:c", "a")`` and ``("c", "a:b")`` both
+    keyed ``a:b:c`` (#212).
+
+    Case-exact keying means ``Flask`` and ``flask`` now occupy two entries on
+    registries that fold case. That costs a lookup, where the collision cost
+    correctness.
+
     Args:
         package_name: Package name
         ecosystem: Package ecosystem
@@ -1088,7 +1201,7 @@ def get_cache_key(package_name: str, ecosystem: str) -> str:
     Returns:
         Cache key
     """
-    return f"{ecosystem.lower()}:{package_name.lower()}"
+    return advisory_cache_key(package_name, ecosystem)
 
 
 def get_cached_data(
