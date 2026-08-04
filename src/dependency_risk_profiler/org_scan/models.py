@@ -80,11 +80,11 @@ class DependencyOccurrence:
 class RepositoryManifestListing:
     """What one repository's tree listing contains, split by whether we read it.
 
-    One request produces both halves. ``unreadable`` is not an afterthought to
-    ``supported``: a repository whose tree holds only ``package.json`` used to
+    One request produces all three fields. ``unreadable`` is not an afterthought
+    to ``supported``: a repository whose tree holds only ``package.json`` used to
     return an empty list here, which the scanner could not tell apart from a
-    repository holding no manifests at all (#262). Neither field has a default,
-    so a client cannot answer only the reassuring half.
+    repository holding no manifests at all (#262). No field has a default, so a
+    client cannot answer only the reassuring half.
     """
 
     # Paths the tool fetches and parses.
@@ -92,6 +92,12 @@ class RepositoryManifestListing:
     # Paths recognized as dependency manifests this tool does not read. Never
     # fetched — recognition is by file name — so this costs no extra request.
     unreadable: List[str]
+    # Whether GitHub truncated the tree, making both lists above a prefix of
+    # some unknown larger set. Required and undefaulted for the same reason
+    # ``unreadable`` is: a caller that answers "here is what I found" without
+    # answering "did I see all of it" is asserting completeness it does not
+    # have. GitHub used to say this only to the log (#266).
+    truncated: bool
 
 
 @dataclass
@@ -144,6 +150,24 @@ class RepositoryCoverage(Enum):
     #: At least one manifest was read and at least one was not, so this
     #: repository's dependency count is a floor rather than a total.
     PARTIALLY_READ = "partially_read"
+    #: GitHub truncated the git tree, so the manifest list is a prefix of an
+    #: unknown larger set and everything below is a claim about that prefix
+    #: only.
+    #:
+    #: Distinct from ``PARTIALLY_READ`` on purpose, and the difference is what
+    #: a consumer can do next. ``PARTIALLY_READ`` names every manifest it did
+    #: not read, in ``unreadable_manifests[]``, each with a remedy: generate
+    #: the lock file and the gap closes. Here the unread manifests have no
+    #: names, because they were never listed. It is also not the same shape:
+    #: a truncated repository may have read every manifest it was shown, so
+    #: "at least one was read and at least one was not" is not even true of it.
+    #:
+    #: It outranks every state below and is outranked only by
+    #: ``DISCOVERY_FAILED``, so "this repository's dependency list is a prefix"
+    #: is exactly one comparison for a consumer. The per-manifest facts are not
+    #: lost to that: ``unreadable_manifests[]`` and ``parse_failures[]`` still
+    #: carry everything the prefix contained.
+    PARTIALLY_LISTED = "partially_listed"
     #: Dependency manifests were found and none of them could be read. The
     #: scan measured nothing here.
     UNREADABLE = "unreadable"
@@ -286,6 +310,7 @@ def build_headline(
     high_risk_count: int,
     unscored_count: int,
     unread_repository_count: int,
+    partially_listed_repository_count: int,
     dependency_count: int,
     repository_count: int,
 ) -> str:
@@ -307,6 +332,8 @@ def build_headline(
         unscored_count: Dependencies found but not scorable.
         unread_repository_count: Repositories the scan could not read, whether
             because their manifests are unreadable or the tree never listed.
+        partially_listed_repository_count: Repositories whose git tree GitHub
+            truncated, so their dependency list is a prefix.
         dependency_count: Unique dependencies in the inventory.
         repository_count: Repositories the scan was asked to cover.
 
@@ -323,6 +350,15 @@ def build_headline(
         parts.append(
             f"{unread_repository_count} "
             f"{_plural(unread_repository_count, 'repo')} could not be read"
+        )
+    # A third coverage caveat, kept apart from "could not be read" for the same
+    # reason that one was kept apart from "could not be scored": this is a
+    # repository the scan read part of and cannot say how much of (#266).
+    if partially_listed_repository_count:
+        parts.append(
+            f"{partially_listed_repository_count} "
+            f"{_plural(partially_listed_repository_count, 'repo')} "
+            "listed only in part"
         )
     parts.append(
         f"{dependency_count} {_plural(dependency_count, 'dependency')} across "

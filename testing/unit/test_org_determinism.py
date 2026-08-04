@@ -140,7 +140,9 @@ class _FixtureGitHubClient(GitHubDiscoveryClient):
         self, repo: RepositoryRef
     ) -> RepositoryManifestListing:
         """Return the single fixture manifest path."""
-        return RepositoryManifestListing(supported=["requirements.txt"], unreadable=[])
+        return RepositoryManifestListing(
+            supported=["requirements.txt"], unreadable=[], truncated=False
+        )
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return the fixture manifest body."""

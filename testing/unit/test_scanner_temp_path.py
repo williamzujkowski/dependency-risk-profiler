@@ -51,7 +51,7 @@ class _DummyClient:
         repo: RepositoryRef,
     ) -> RepositoryManifestListing:
         """Return no manifest paths."""
-        return RepositoryManifestListing(supported=[], unreadable=[])
+        return RepositoryManifestListing(supported=[], unreadable=[], truncated=False)
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return an empty manifest."""

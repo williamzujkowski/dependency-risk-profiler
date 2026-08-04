@@ -55,11 +55,23 @@ class CannedTreeSession:
     given raises rather than quietly serving somebody else's tree.
     """
 
-    def __init__(self, trees: Mapping[str, Iterable[str]]) -> None:
-        """Build one tree document per repository from its blob paths."""
+    def __init__(
+        self,
+        trees: Mapping[str, Iterable[str]],
+        truncated: Iterable[str] = (),
+    ) -> None:
+        """Build one tree document per repository from its blob paths.
+
+        Args:
+            trees: Repository full name to the blob paths its tree contains.
+            truncated: Repositories whose tree document carries GitHub's
+                ``"truncated": true`` — the paths given for them are a prefix,
+                exactly as GitHub serves one.
+        """
+        cut = set(truncated)
         self._responses = {
             full_name: CannedTreeResponse(
-                {"truncated": False, "tree": _tree_entries(paths)}
+                {"truncated": full_name in cut, "tree": _tree_entries(paths)}
             )
             for full_name, paths in trees.items()
         }
@@ -107,14 +119,20 @@ def _repository_from_tree_url(url: str) -> str:
     return f"{owner}/{name}"
 
 
-def tree_client(trees: Mapping[str, Iterable[str]]) -> GitHubOrgClient:
+def tree_client(
+    trees: Mapping[str, Iterable[str]],
+    truncated: Iterable[str] = (),
+) -> GitHubOrgClient:
     """Return a production client whose git trees come from ``trees``.
 
     Args:
         trees: Repository full name to the repository-relative blob paths its
             git tree contains.
+        truncated: Repositories GitHub answers for with ``"truncated": true``.
 
     Returns:
         A :class:`GitHubOrgClient` that reaches no network.
     """
-    return GitHubOrgClient(token="fixture-token", session=CannedTreeSession(trees))
+    return GitHubOrgClient(
+        token="fixture-token", session=CannedTreeSession(trees, truncated)
+    )
