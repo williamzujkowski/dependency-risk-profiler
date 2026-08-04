@@ -111,8 +111,15 @@ reported as one of exactly two states:
 `reason` is one of `no_data_from_source` (the input this signal reads was
 absent from whatever answered), `source_repository_unreadable` (the registry
 answered and named no readable source repository, which silences every
-repository-derived signal at once), or `lookup_not_attempted` (the pipeline
-step never ran for this manifest).
+repository-derived signal at once), `lookup_not_attempted` (the pipeline
+step never ran for this manifest), or `source_lookup_failed` (it ran and the
+source did not answer — an outage, an error status, an unreadable body).
+
+The last one is the one to watch on `exploit`. `exploit: unmeasured` with
+`source_lookup_failed` means the advisory databases could not be reached for
+that package, so `known_vulnerable: false` is "we could not tell", not "we
+checked". Nothing from such a run is cached, so a later scan re-asks rather
+than replaying the gap (#219).
 
 **Do not treat `unmeasured` as good news.** An unmeasured signal is excluded
 from both the numerator and the denominator of `risk_score`, so a

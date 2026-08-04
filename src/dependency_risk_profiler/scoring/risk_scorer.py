@@ -22,6 +22,7 @@ from ..popularity import (
     should_soften_low_release_cadence,
 )
 from ..signals import (
+    ADVISORY_LOOKUP_DEGRADED,
     SIGNAL_BRANCH_PROTECTION,
     SIGNAL_COMMUNITY_ACTIVITY,
     SIGNAL_COMMUNITY_POPULARITY,
@@ -39,10 +40,12 @@ from ..signals import (
     SIGNAL_TRANSITIVE,
     SIGNAL_VERSION,
     SOURCE_REPOSITORY_UNREADABLE,
+    AdvisoryLookupState,
     Measurement,
     MeasurementState,
     SourceRepositoryState,
     UnmeasuredReason,
+    advisory_lookup_is_measured,
     transitive_is_measured,
     unmeasured_reason_for,
 )
@@ -71,6 +74,45 @@ COMMUNITY_SIGNALS: FrozenSet[str] = frozenset(
 # real evidence about the package's publishing hygiene and its era. See
 # ``_calculate_source_repository_score`` for the argument (#176).
 SOURCE_REPOSITORY_UNUSABLE_SCORE = 0.75
+
+
+def advisory_risk_factors(dependency: DependencyMetadata) -> List[str]:
+    """Return the risk factors describing an advisory lookup that fell short.
+
+    A gap the reader can act on: "we could not tell" is a different instruction
+    from "we found nothing", and before #219 the two rendered as the same blank
+    line. ``FAILED`` says the exposure is unknown; ``PARTIAL`` says what is
+    listed is a floor rather than a total.
+
+    A module-level function rather than four inline branches in
+    ``RiskScorer.score_dependency``, and that is a measured decision rather than
+    a stylistic one. That method is enforced by a 50ms-per-100-dependencies SLA
+    measured **with coverage instrumentation active**, and it sits on a cliff:
+    adding as few as five physical lines to it — comments included, which
+    generate no bytecode at all — costs ~30% of the budget under
+    instrumentation, while the same lines added at the end of the file or in a
+    helper cost nothing measurable. So the branches, and the paragraphs
+    explaining them, live out here.
+
+    Args:
+        dependency: The scored dependency.
+
+    Returns:
+        Zero or one factor, in report order.
+    """
+    advisory = dependency.advisory_lookup_state
+    if advisory not in ADVISORY_LOOKUP_DEGRADED:
+        return []
+    unavailable = ", ".join(dependency.advisory_sources_unavailable)
+    if advisory is AdvisoryLookupState.FAILED:
+        return [
+            f"Advisory lookup did not answer ({unavailable}); "
+            "exposure is unknown, not absent"
+        ]
+    return [
+        f"Advisory lookup was incomplete ({unavailable} did not answer); "
+        "advisories listed are a floor"
+    ]
 
 
 class RiskScorer:
@@ -188,6 +230,7 @@ class RiskScorer:
         # signals are silent, and the reason table needs it (#146).
         source_repository_state = dependency.source_repository_state
         unreadable = source_repository_state in SOURCE_REPOSITORY_UNREADABLE
+        advisory = dependency.advisory_lookup_state
 
         staleness_score = self._calculate_staleness_score(dependency.last_updated)
         staleness_score = self._dampen_staleness_for_popularity(
@@ -197,7 +240,7 @@ class RiskScorer:
         maintainer_score = self._calculate_maintainer_score(dependency.maintainer_count)
         deprecation_score = self._calculate_deprecation_score(dependency.is_deprecated)
         exploit_score = self._calculate_exploit_score(
-            dependency.has_known_exploits, dependency.security_metrics
+            dependency.has_known_exploits, dependency.security_metrics, advisory
         )
         installed_release_date, latest_release_date = release_timestamps(dependency)
         version_score = self._calculate_version_difference_score(
@@ -255,41 +298,42 @@ class RiskScorer:
         # through the one centralized reason table, so no adapter and no branch
         # of this method gets to decide independently what an absence means.
         measure = self._measure
+        context = (unreadable, advisory)
         weighted_scores: List[Tuple[str, Measurement, float]] = [
             (
                 SIGNAL_STALENESS,
-                measure(SIGNAL_STALENESS, staleness_score, unreadable),
+                measure(SIGNAL_STALENESS, staleness_score, context),
                 self.staleness_weight,
             ),
             (
                 SIGNAL_MAINTAINER,
-                measure(SIGNAL_MAINTAINER, maintainer_score, unreadable),
+                measure(SIGNAL_MAINTAINER, maintainer_score, context),
                 self.maintainer_weight,
             ),
             (
                 SIGNAL_DEPRECATION,
-                measure(SIGNAL_DEPRECATION, deprecation_score, unreadable),
+                measure(SIGNAL_DEPRECATION, deprecation_score, context),
                 self.deprecation_weight,
             ),
             (
                 SIGNAL_EXPLOIT,
-                measure(SIGNAL_EXPLOIT, exploit_score, unreadable),
+                measure(SIGNAL_EXPLOIT, exploit_score, context),
                 self.exploit_weight,
             ),
             (
                 SIGNAL_VERSION,
-                measure(SIGNAL_VERSION, version_score, unreadable),
+                measure(SIGNAL_VERSION, version_score, context),
                 self.version_difference_weight,
             ),
             (
                 SIGNAL_HEALTH_INDICATORS,
-                measure(SIGNAL_HEALTH_INDICATORS, health_score, unreadable),
+                measure(SIGNAL_HEALTH_INDICATORS, health_score, context),
                 self.health_indicators_weight,
             ),
             # Enhanced risk factors
             (
                 SIGNAL_LICENSE,
-                measure(SIGNAL_LICENSE, license_score, unreadable),
+                measure(SIGNAL_LICENSE, license_score, context),
                 self.license_weight,
             ),
             # The community budget splits evenly across its two halves. When
@@ -298,44 +342,42 @@ class RiskScorer:
             # denominator instead of being silently carried by the other (#74).
             (
                 SIGNAL_COMMUNITY_POPULARITY,
-                measure(SIGNAL_COMMUNITY_POPULARITY, popularity_score, unreadable),
+                measure(SIGNAL_COMMUNITY_POPULARITY, popularity_score, context),
                 self.community_weight / 2,
             ),
             (
                 SIGNAL_COMMUNITY_ACTIVITY,
-                measure(
-                    SIGNAL_COMMUNITY_ACTIVITY, development_activity_score, unreadable
-                ),
+                measure(SIGNAL_COMMUNITY_ACTIVITY, development_activity_score, context),
                 self.community_weight / 2,
             ),
             (
                 SIGNAL_TRANSITIVE,
-                measure(SIGNAL_TRANSITIVE, transitive_score, unreadable),
+                measure(SIGNAL_TRANSITIVE, transitive_score, context),
                 self.transitive_weight,
             ),
             (
                 SIGNAL_SECURITY_POLICY,
-                measure(SIGNAL_SECURITY_POLICY, security_policy_score, unreadable),
+                measure(SIGNAL_SECURITY_POLICY, security_policy_score, context),
                 self.security_policy_weight,
             ),
             (
                 SIGNAL_DEPENDENCY_UPDATE,
-                measure(SIGNAL_DEPENDENCY_UPDATE, dependency_update_score, unreadable),
+                measure(SIGNAL_DEPENDENCY_UPDATE, dependency_update_score, context),
                 self.dependency_update_weight,
             ),
             (
                 SIGNAL_SIGNED_COMMITS,
-                measure(SIGNAL_SIGNED_COMMITS, signed_commits_score, unreadable),
+                measure(SIGNAL_SIGNED_COMMITS, signed_commits_score, context),
                 self.signed_commits_weight,
             ),
             (
                 SIGNAL_BRANCH_PROTECTION,
-                measure(SIGNAL_BRANCH_PROTECTION, branch_protection_score, unreadable),
+                measure(SIGNAL_BRANCH_PROTECTION, branch_protection_score, context),
                 self.branch_protection_weight,
             ),
             (
                 SIGNAL_MAINTAINED,
-                measure(SIGNAL_MAINTAINED, maintained_score, unreadable),
+                measure(SIGNAL_MAINTAINED, maintained_score, context),
                 self.maintained_weight,
             ),
         ]
@@ -403,6 +445,7 @@ class RiskScorer:
             branch_protection_score,
             maintained_score,
         )
+        risk_factors.extend(advisory_risk_factors(dependency))
         if source_repository_state is SourceRepositoryState.UNDECLARED:
             risk_factors.append("Declares no source repository")
         elif source_repository_state is SourceRepositoryState.UNUSABLE:
@@ -509,16 +552,24 @@ class RiskScorer:
 
     @staticmethod
     def _measure(
-        signal: str, score: Optional[float], source_repository_unreadable: bool
+        signal: str,
+        score: Optional[float],
+        context: Tuple[bool, Optional[AdvisoryLookupState]],
     ) -> Measurement:
         """Lift one scorer result into a measurement, with its reason.
 
         Args:
             signal: The stable signal name.
             score: The computed score, or None when it could not be measured.
-            source_repository_unreadable: Whether the registry answered and no
-                readable source repository came out of it — the one fact the
-                centralized reason table branches on.
+            context: The two facts the centralized reason table branches on:
+                whether the registry answered and no readable source repository
+                came out of it (#146), and what the advisory sources
+                established, which is None when no lookup ran (#219).
+
+                One tuple rather than two arguments because a two-argument tail
+                does not fit on one line at fifteen call sites, and each one
+                spread over four lines costs the SLA more than the work on it —
+                see ``advisory_risk_factors`` for the measurement.
 
         Returns:
             A MEASURED measurement carrying the score, or an UNMEASURED one
@@ -532,9 +583,12 @@ class RiskScorer:
         # the shared per-reason instances live, which is cheaper still.
         if score is not None:
             return Measurement(MeasurementState.MEASURED, score, None)
+        unreadable, advisory = context
         return Measurement.unmeasured(
             unmeasured_reason_for(
-                signal, source_repository_unreadable=source_repository_unreadable
+                signal,
+                source_repository_unreadable=unreadable,
+                advisory_lookup=advisory,
             )
         )
 
@@ -743,16 +797,32 @@ class RiskScorer:
         self,
         has_known_exploits: bool,
         security_metrics: Optional[SecurityMetrics] = None,
-    ) -> float:
-        """Calculate exploit score.
+        advisory_lookup: Optional[AdvisoryLookupState] = None,
+    ) -> Optional[float]:
+        """Calculate exploit score, or None when nobody could measure one.
+
+        The ``None`` return is the point of #219. Every path through this
+        method used to end at a number: a lookup that never happened, a lookup
+        that failed, and a package with no advisories all scored ``0.0``, the
+        most reassuring value in the range, at the tool's highest-weighted
+        signal. A lookup that established nothing now measures nothing, and the
+        reason travels with it through ``unmeasured_reason_for``.
 
         Args:
             has_known_exploits: Whether the dependency has known exploits.
             security_metrics: Optional vulnerability metrics from aggregation.
+            advisory_lookup: What the advisory sources established. ``None``
+                means no lookup ran, which keeps the pre-#219 behaviour — see
+                ``signals.advisory_lookup_is_measured`` for why that is not the
+                same as a lookup that failed.
 
         Returns:
-            Exploit score between 0.0 and 1.0.
+            Exploit score between 0.0 and 1.0, or None when the advisory
+            lookup established nothing.
         """
+        if not advisory_lookup_is_measured(advisory_lookup):
+            return None
+
         if security_metrics is not None:
             counted_count = security_metrics.counted_vulnerability_count
             if counted_count is not None:
@@ -1202,7 +1272,7 @@ class RiskScorer:
         staleness_score: Optional[float],
         maintainer_score: Optional[float],
         deprecation_score: float,
-        exploit_score: float,
+        exploit_score: Optional[float],
         version_score: Optional[float],
         health_score: Optional[float],
         license_score: Optional[float],

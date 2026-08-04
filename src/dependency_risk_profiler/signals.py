@@ -27,9 +27,10 @@ a value cannot be grafted on afterwards.
 
 **3. Classification is centralized, never adapter-local.** :func:`
 unmeasured_reason_for` is the only place that decides *why* a signal came back
-unmeasured, and it decides from the catalog plus one keyword-only fact the
-scorer already knows. Eight adapters making that judgment independently is how
-a table of eight right answers becomes a table of eight opinions.
+unmeasured, and it decides from the catalog plus the keyword-only facts the
+scorer already knows — whether the source repository was readable, and what the
+advisory lookup established. Eight adapters making that judgment independently
+is how a table of eight right answers becomes a table of eight opinions.
 
 **``NOT_APPLICABLE`` is deliberately absent.** The design deferred it behind a
 schema version until a consumer demonstrably branches on it, on an argument
@@ -123,6 +124,19 @@ class UnmeasuredReason(Enum):
     #: The pipeline step that answers this signal never ran for this manifest.
     #: Distinct from "it ran and found nothing", which is a measured zero.
     LOOKUP_NOT_ATTEMPTED = "lookup_not_attempted"
+
+    #: The lookup ran and the source did not answer: it was unreachable, the
+    #: retries were exhausted, it returned an error status, or it sent a body
+    #: this code cannot read. Distinct from :attr:`NO_DATA_FROM_SOURCE`, which
+    #: is a source that *answered* and had nothing to say.
+    #:
+    #: Collapsing those two is the #219 defect: every advisory source returned
+    #: the empty list for a connection failure, a 4xx, a GraphQL error block, a
+    #: junk body and a genuinely clean package alike, so an OSV outage reported
+    #: every package in a scan as advisory-clean — and cached the verdict.
+    #: Decided from an observed fact (the request did not produce a readable
+    #: answer), never from a judgment about the package.
+    SOURCE_LOOKUP_FAILED = "source_lookup_failed"
 
 
 class Measurement:
@@ -349,6 +363,85 @@ def transitive_is_measured(source: Optional[str]) -> bool:
         True only when something positively claimed to have resolved the tree.
     """
     return source is not None and source != TRANSITIVE_SOURCE_UNMEASURED
+
+
+class AdvisoryLookupState(Enum):
+    """What the advisory sources established about one package.
+
+    The advisory path used to have exactly one way to say "nothing" — the empty
+    list — and it used it for a connection failure, a 4xx, a GraphQL error, an
+    unreadable body, a source that does not cover the ecosystem, and a
+    genuinely clean package. Six facts, one answer, and the answer was the
+    reassuring one, cached to disk so it outlived the outage (#219).
+
+    These four members are the distinction that was missing. ``COMPLETE`` and
+    ``PARTIAL`` are measurements; ``FAILED`` and ``NOT_ATTEMPTED`` are not, and
+    :data:`ADVISORY_LOOKUP_UNMEASURED` is what reads them that way.
+
+    There is deliberately no "this ecosystem is not covered" member. A source
+    that does not cover an ecosystem *abstains*, which is a fact about the
+    source rather than about the package: the aggregate is ``COMPLETE`` when
+    somebody else answered and ``NOT_ATTEMPTED`` when nobody could be asked at
+    all. That is #164's ratified position — an honest unknown with a reason
+    beats a ``NOT_APPLICABLE`` no gate can check.
+    """
+
+    #: Every source that was asked answered. The only cacheable state: a cache
+    #: entry means "this is the whole answer", and nothing weaker.
+    COMPLETE = "complete"
+
+    #: At least one source did not answer, but what came back is still a
+    #: measurement — either the sources that failed cannot establish absence
+    #: anyway (see ``VulnerabilitySource.establishes_absence``), or advisories
+    #: were found, and a found advisory is not un-found by an outage elsewhere.
+    #: The advisory set is a floor rather than a total, so it is not cached.
+    PARTIAL = "partial"
+
+    #: A source that establishes absence did not answer and nothing was found.
+    #: "No advisories" is exactly the claim that cannot be made here.
+    FAILED = "failed"
+
+    #: No source could be asked: every one was disabled, unauthenticated, or
+    #: does not cover the ecosystem. Nothing was measured and nothing failed.
+    NOT_ATTEMPTED = "not_attempted"
+
+
+#: The states in which the advisory lookup established nothing. Read through
+#: :func:`advisory_lookup_is_measured`.
+ADVISORY_LOOKUP_UNMEASURED: FrozenSet[AdvisoryLookupState] = frozenset(
+    {AdvisoryLookupState.FAILED, AdvisoryLookupState.NOT_ATTEMPTED}
+)
+
+#: The states in which at least one source was asked and did not answer, so the
+#: report owes the reader a line about it. Deliberately not the same set as
+#: :data:`ADVISORY_LOOKUP_UNMEASURED`: a ``PARTIAL`` lookup is a measurement and
+#: still an incomplete one, and a ``NOT_ATTEMPTED`` one had nothing to fail.
+ADVISORY_LOOKUP_DEGRADED: FrozenSet[AdvisoryLookupState] = frozenset(
+    {AdvisoryLookupState.FAILED, AdvisoryLookupState.PARTIAL}
+)
+
+
+def advisory_lookup_is_measured(state: Optional[AdvisoryLookupState]) -> bool:
+    """Decide whether the advisory lookup produced a measurement.
+
+    Unlike :func:`transitive_is_measured`, ``None`` here reads as measured, and
+    the asymmetry is deliberate rather than an oversight. ``None`` means the
+    aggregator never ran for this dependency at all — vulnerability lookup is
+    opt-in on the analyze path and is switched off entirely in the offline
+    adapter-conformance runs — and in that configuration the exploit signal has
+    always come from ``has_known_exploits``. #219 is about a lookup that *ran*
+    and did not answer; widening it to cover "nobody looked" would drop the
+    exploit signal out of every registry-only run and take nine per-ecosystem
+    floors down with it, which #158 forbids in that direction.
+
+    Args:
+        state: The dependency's ``advisory_lookup_state``, as written by
+            ``DependencyMetadata.record_advisory_lookup``.
+
+    Returns:
+        False only when a lookup ran and established nothing.
+    """
+    return state not in ADVISORY_LOOKUP_UNMEASURED
 
 
 # --- Field provenance ------------------------------------------------------
@@ -771,23 +864,28 @@ REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
 
 
 def unmeasured_reason_for(
-    signal: str, *, source_repository_unreadable: bool
+    signal: str,
+    *,
+    source_repository_unreadable: bool,
+    advisory_lookup: Optional[AdvisoryLookupState],
 ) -> UnmeasuredReason:
     """Decide why a signal came back unmeasured. The only place that decides.
 
     The design's binding condition: classification lives in a centralized
     table, never in adapter-local judgment across eight adapters. This is that
-    table's read side, and it takes facts rather than opinions —
-    ``source_repository_unreadable`` is something the scorer *observed* from a
-    recorded registry answer, not an inference about the package.
+    table's read side, and it takes facts rather than opinions — both arguments
+    are states the pipeline *recorded*, not inferences about the package.
 
-    ``source_repository_unreadable`` is keyword-only and has no default so a
-    caller cannot reach the fallback by forgetting it.
+    Both are keyword-only and neither has a default, so a caller cannot reach a
+    fallback by forgetting one. ``advisory_lookup`` may be ``None``; that is
+    itself the recorded fact that no lookup ran.
 
     Args:
         signal: A stable signal name from :data:`SIGNAL_CATALOG`.
         source_repository_unreadable: Whether the registry answered and no
             readable source repository came out of it.
+        advisory_lookup: What the advisory sources established, or None when
+            the aggregator never ran for this dependency.
 
     Returns:
         The reason to record. Defaults to the signal's own catalog reason,
@@ -801,4 +899,13 @@ def unmeasured_reason_for(
     spec = SIGNAL_CATALOG[signal]
     if source_repository_unreadable and spec.repository_derived:
         return UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
+    if signal == SIGNAL_EXPLOIT:
+        # The two ways an advisory lookup produces no measurement are different
+        # facts and get different reasons. "The sources were asked and did not
+        # answer" is not "the sources answered and had nothing" — reporting the
+        # second for the first is the whole of #219.
+        if advisory_lookup is AdvisoryLookupState.FAILED:
+            return UnmeasuredReason.SOURCE_LOOKUP_FAILED
+        if advisory_lookup is AdvisoryLookupState.NOT_ATTEMPTED:
+            return UnmeasuredReason.LOOKUP_NOT_ATTEMPTED
     return spec.unmeasured_reason

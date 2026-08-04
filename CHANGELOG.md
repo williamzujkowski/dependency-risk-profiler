@@ -144,6 +144,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **An advisory source that failed read exactly like one that found nothing.**
+  `get_vulnerabilities` returned the empty list for a connection failure, a
+  4xx, a GraphQL `errors` block, an unreadable body, an ecosystem the source
+  does not cover, and a genuinely clean package. Six facts, one answer, and the
+  answer was the reassuring one — at the tool's highest-weighted signal.
+
+  It was also cached. An OSV outage during a scan did not merely report every
+  package advisory-clean; it wrote that verdict to disk, where it was served
+  back as a measurement until the TTL expired. A transient network failure
+  became a persistent wrong answer, and nothing in the output told the two
+  apart.
+
+  Every source now answers with a result record rather than a list, so the
+  three outcomes are distinguishable: advisories found, measured and none
+  found, and lookup failed. The third leaves `exploit` **unmeasured** with the
+  new `source_lookup_failed` reason, writes no advisory counts at all, adds a
+  risk factor naming the sources that did not answer, and is **not written to
+  the cache**. The cache schema version is bumped to 4 so that clean verdicts
+  written by the old code are discarded rather than served past the fix.
+
+  Partial failures are decided rather than lumped together. OSV and the GitHub
+  Advisory Database are asked about a package by identity in an ecosystem, so
+  their silence is an answer and their failure unmeasures the absence claim.
+  NVD is reached by keyword search over CPE strings and can only ever add, so
+  its failure degrades completeness — the result is not cached — without
+  unmeasuring anything. A finding survives any failure and is reported as a
+  floor: no outage elsewhere un-finds an advisory. A package is therefore never
+  called clean because two sources of three answered, and a scan is never made
+  unmeasured because NVD was slow.
+
+  An ecosystem a source does not cover is an abstention, not a failure and not
+  an answer. Per #164, no `NOT_APPLICABLE` is invented for it: if nobody could
+  be asked at all, the signal is unmeasured with `lookup_not_attempted`.
+
+  Measured on a seven-package Python manifest with OSV forced offline: before,
+  all seven scored `exploit: 0.0`, `known_vulnerable: false`, and seven cache
+  entries were written. After, all seven report `exploit: unmeasured
+  (source_lookup_failed)` and nothing is cached. With OSV reachable, four of
+  those seven are in fact known-vulnerable.
+
+  One shape note for whoever edits `RiskScorer.score_dependency` next. Its
+  50ms-per-100-dependencies SLA is enforced *with coverage instrumentation
+  active*, and under instrumentation that method sits on a cliff: adding as few
+  as five physical lines to it — comments included, which generate no bytecode
+  at all — costs about 30% of the budget, while the same lines in a helper or at
+  the end of the file cost nothing measurable. So the second fact travels to
+  `_measure` as one tuple rather than as two arguments (a two-argument tail puts
+  fifteen call sites onto four lines apiece), and the new risk-factor branches
+  live in a module-level `advisory_risk_factors` with their explanation. Scoring
+  ends up 5% slower than before under instrumentation and 4% slower without it,
+  against an unchanged threshold.
+
 - **A package npm removed for malware read as current and undeprecated.** npm's
   security team does not delete a package it pulls; it republishes the name as
   a placeholder described `security holding package` at a version carrying a
