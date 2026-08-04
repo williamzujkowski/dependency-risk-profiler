@@ -1,12 +1,16 @@
 """Analyzer for Ruby (RubyGems) dependencies."""
 
 import logging
-from datetime import datetime
 from typing import Dict, List, Optional
 
 import requests
 
 from ..models import DependencyMetadata
+from ..release_dates import (
+    apply_registry_release_date,
+    parse_registry_timestamp,
+    record_source_repository,
+)
 from .base import BaseAnalyzer
 from .common import canonical_repository_url, collect_repository_signals
 
@@ -86,13 +90,14 @@ class RubyGemsAnalyzer(BaseAnalyzer):
         repo = self._repository_url(info)
         if repo:
             dep.repository_url = repo
+        record_source_repository(dep, repo)
 
         # RubyGems dates the latest release, not the repository; it is the
-        # release cadence a consumer of the gem actually sees. A cloned repo
-        # refines this to the last commit date further down.
-        released_at = self._parse_timestamp(info.get("version_created_at"))
-        if released_at is not None:
-            dep.last_updated = released_at
+        # release cadence a consumer of the gem actually sees, and it now wins
+        # over a clone's last commit rather than being overwritten by it (#146).
+        apply_registry_release_date(
+            dep, parse_registry_timestamp(info.get("version_created_at"))
+        )
 
         # A yanked gem is RubyGems' explicit "do not use this" marker.
         if info.get("yanked") is True:
@@ -120,17 +125,6 @@ class RubyGemsAnalyzer(BaseAnalyzer):
             if canonical:
                 return canonical
         return None
-
-    @staticmethod
-    def _parse_timestamp(value: object) -> Optional[datetime]:
-        """Parse a rubygems.org ISO-8601 timestamp, or None if unparseable."""
-        if not isinstance(value, str) or not value:
-            return None
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            logger.debug("Unparseable rubygems.org timestamp: %s", value)
-            return None
 
     def _get_gem_info(self, gem_name: str) -> Optional[Dict[str, object]]:
         """Return rubygems.org metadata for a gem, or None on failure."""

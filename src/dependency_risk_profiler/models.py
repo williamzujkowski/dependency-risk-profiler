@@ -135,6 +135,9 @@ class DependencyRiskScore:
     license_score: Optional[float] = None
     community_score: Optional[float] = None
     transitive_score: Optional[float] = None
+    # Whether the registry declares a source repository at all. None when the
+    # ecosystem's adapter reports nothing either way (#146).
+    source_repository_score: Optional[float] = None
 
     # OpenSSF Scorecard-inspired risk scores
     security_policy_score: Optional[float] = None

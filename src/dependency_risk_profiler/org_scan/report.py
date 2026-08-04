@@ -1331,6 +1331,7 @@ def _component_scores_to_dict(score: DependencyRiskScore) -> Dict[str, object]:
         "license": score.license_score,
         "community": score.community_score,
         "transitive": score.transitive_score,
+        "source_repository": score.source_repository_score,
         "security_policy": score.security_policy_score,
         "dependency_update": score.dependency_update_score,
         "signed_commits": score.signed_commits_score,

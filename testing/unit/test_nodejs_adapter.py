@@ -21,6 +21,13 @@ import pytest
 
 from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer, npm_registry_path
 from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.release_dates import (
+    RELEASE_DATE_SOURCE_KEY,
+    RELEASE_DATE_SOURCE_REGISTRY,
+    SOURCE_REPOSITORY_DECLARED,
+    SOURCE_REPOSITORY_KEY,
+    SOURCE_REPOSITORY_UNDECLARED,
+)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 # An unscoped packument: dist-tags carries the release, "repository" is an
@@ -249,3 +256,90 @@ def test_missing_latest_version_keeps_the_drift_score_unmeasured() -> None:
     score = RiskScorer().score_dependency(dep)
 
     assert score.version_score is None
+
+
+def test_release_cadence_comes_from_the_latest_tagged_version() -> None:
+    """Cadence is the publication date of dist-tags.latest, off the time map (#146)."""
+    dep = _analyze(
+        "express",
+        "4.17.1",
+        {"https://registry.npmjs.org/express": EXPRESS_PACKUMENT},
+    )
+
+    assert dep.last_updated is not None
+    assert dep.last_updated.date().isoformat() == "2026-06-11"
+    assert dep.additional_info[RELEASE_DATE_SOURCE_KEY] == RELEASE_DATE_SOURCE_REGISTRY
+
+
+def test_time_modified_does_not_stand_in_for_a_publication_date() -> None:
+    """`request` last shipped in 2020; `modified` moved when it was deprecated.
+
+    Reading ``time.modified`` would score the most famous abandoned package in
+    the registry as freshly maintained — crates.io's ``created_at`` trap in
+    reverse (#139).
+    """
+    packument: Dict[str, object] = {
+        "name": "request",
+        "dist-tags": {"latest": "2.88.2"},
+        "versions": {"2.88.2": {"name": "request", "version": "2.88.2"}},
+        "time": {
+            "modified": "2026-07-17T17:10:13.431Z",
+            "created": "2011-01-22T18:26:36.023Z",
+            "2.88.2": "2020-02-11T16:35:36.122Z",
+        },
+    }
+
+    dep = _analyze(
+        "request",
+        "2.88.2",
+        {"https://registry.npmjs.org/request": packument},
+    )
+
+    assert dep.last_updated is not None
+    assert dep.last_updated.date().isoformat() == "2020-02-11"
+
+
+def test_a_packument_without_a_time_map_stays_honestly_unmeasured() -> None:
+    """No published date means no invented one (#74)."""
+    dep = _analyze(
+        "@cypress/xvfb",
+        "1.2.3",
+        {"https://registry.npmjs.org/@cypress%2Fxvfb": CYPRESS_XVFB_PACKUMENT},
+    )
+
+    assert dep.last_updated is None
+    assert RELEASE_DATE_SOURCE_KEY not in dep.additional_info
+    assert RiskScorer().score_dependency(dep).staleness_score is None
+
+
+def test_a_declared_repository_is_recorded_as_a_measured_signal() -> None:
+    """The npm adapter reports the registry's answer, so the signal scores (#146)."""
+    dep = _analyze(
+        "express",
+        "4.17.1",
+        {"https://registry.npmjs.org/express": EXPRESS_PACKUMENT},
+    )
+
+    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_DECLARED
+    assert RiskScorer().score_dependency(dep).source_repository_score == 0.0
+
+
+def test_a_packument_with_no_repository_declares_none() -> None:
+    """A package that no longer says where its source lives is a finding."""
+    packument: Dict[str, object] = {
+        "name": "orphan",
+        "dist-tags": {"latest": "1.0.0"},
+        "versions": {"1.0.0": {"name": "orphan", "version": "1.0.0"}},
+        "time": {"1.0.0": "2016-03-23T02:52:00.000Z"},
+    }
+
+    dep = _analyze(
+        "orphan",
+        "1.0.0",
+        {"https://registry.npmjs.org/orphan": packument},
+    )
+
+    assert dep.additional_info[SOURCE_REPOSITORY_KEY] == SOURCE_REPOSITORY_UNDECLARED
+    score = RiskScorer().score_dependency(dep)
+    assert score.source_repository_score == 1.0
+    assert "Declares no source repository" in score.factors

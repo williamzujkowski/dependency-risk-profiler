@@ -1,18 +1,19 @@
 """Analyzer for Node.js dependencies."""
 
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional
 from urllib.parse import quote
 
-from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
-from .base import BaseAnalyzer
-from .common import (
-    canonical_repository_url,
-    cloned_repo,
-    fetch_json,
-    is_cloneable_repo_url,
+from ..release_dates import (
+    apply_registry_release_date,
+    newest_timestamp,
+    parse_registry_timestamp,
+    record_source_repository,
 )
+from .base import BaseAnalyzer
+from .common import canonical_repository_url, collect_repository_signals, fetch_json
 
 logger = logging.getLogger(__name__)
 
@@ -82,16 +83,12 @@ class NodeJSAnalyzer(BaseAnalyzer):
                 self.metadata_cache[name] = npm_data
                 self._apply_registry_metadata(dep, npm_data)
 
-                # Get additional info from GitHub if available
-                repository_url = dep.repository_url
-                if self.clone_repos and is_cloneable_repo_url(repository_url):
-                    # Clone the repository into a self-cleaning temp dir.
-                    with cloned_repo(str(repository_url)) as clone_result:
-                        if clone_result:
-                            repo_dir, _ = clone_result
-
-                            # Helper avoids circular imports.
-                            dep = analyze_repository(dep, repo_dir)
+                # Repository-derived signals refine what the registry already
+                # answered; they no longer decide whether the package has a
+                # measurable release cadence at all.
+                dependencies[name] = collect_repository_signals(
+                    dep, dep.repository_url, self.clone_repos
+                )
 
             except Exception as e:
                 logger.error(f"Error analyzing {name}: {e}")
@@ -127,6 +124,52 @@ class NodeJSAnalyzer(BaseAnalyzer):
         repository_url = self._repository_url(npm_data)
         if repository_url:
             dep.repository_url = repository_url
+        record_source_repository(dep, repository_url)
+
+        apply_registry_release_date(dep, self._released_at(npm_data, latest))
+
+    @staticmethod
+    def _released_at(
+        npm_data: Dict[str, object], latest_version: Optional[str]
+    ) -> Optional[datetime]:
+        """Return when the package last published a version, or None.
+
+        npm's ``time`` map carries a ``modified`` entry, and it is a trap: it
+        moves whenever *any* metadata changes, including the deprecation notice
+        itself. ``request`` was last published in February 2020 and its
+        ``time.modified`` reads July 2026, which would score the most famous
+        abandoned package in the registry as freshly maintained. So the
+        latest-tagged version's own timestamp is preferred, then the newest
+        per-version timestamp, and ``modified`` only as a last resort — the
+        same trap crates.io's crate-level ``created_at`` sets in reverse
+        (#139).
+
+        Args:
+            npm_data: ``registry.npmjs.org/<package>`` packument.
+            latest_version: Latest version, when one resolved.
+
+        Returns:
+            The publication timestamp, or None when the registry publishes no
+            usable date.
+        """
+        times = npm_data.get("time")
+        if not isinstance(times, dict):
+            return None
+
+        if latest_version:
+            tagged = parse_registry_timestamp(times.get(latest_version))
+            if tagged is not None:
+                return tagged
+
+        versioned = newest_timestamp(
+            value
+            for key, value in times.items()
+            if key not in ("created", "modified", "unpublished")
+        )
+        if versioned is not None:
+            return versioned
+
+        return parse_registry_timestamp(times.get("modified"))
 
     def _latest_version(
         self, package_name: str, npm_data: Dict[str, object]

@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from ..analyzers.base import BaseAnalyzer
 from ..models import CommunityMetrics, DependencyMetadata, DependencyRiskScore
 from ..popularity import GITHUB_REPOSITORY_ARCHIVED_KEY
+from ..release_dates import apply_repository_activity_date
 from ..scoring.risk_scorer import RiskScorer
 from .github import RepoSignals
 from .models import DependencyKey, DependencyProfiler, canonical_ecosystem
@@ -252,8 +253,9 @@ class ExistingDependencyProfiler(DependencyProfiler):
             )
         # These replace what the per-dependency git clone used to provide, so an
         # org scan gets maintenance cadence and test/CI presence from the API.
-        if signals.pushed_at is not None:
-            dependency.last_updated = signals.pushed_at
+        # Repository activity is the fallback for cadence, not the primary: a
+        # registry release date wins where the adapter found one (#146).
+        apply_repository_activity_date(dependency, signals.pushed_at)
         if signals.has_tests is not None:
             dependency.has_tests = signals.has_tests
         if signals.has_ci is not None:

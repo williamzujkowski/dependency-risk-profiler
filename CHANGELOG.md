@@ -54,6 +54,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   re-validated against the same host before it is fetched.
   `DEPENDENCY_RISK_NO_REMOTE_POMS=1` disables remote reads for NuGet too.
 
+- **Maintenance cadence is now read from the registry first, and abandoned
+  packages are scored instead of shrugged at.** Staleness was derived from the
+  package's *repository*, which fails on exactly the packages the signal exists
+  to catch: the more abandoned a package is, the more likely its repository is
+  archived, renamed, deleted, or was never declared, so the more likely the
+  lookup returned nothing and the dependency fell through to `UNKNOWN` with no
+  cadence at all. `nose`, `pycrypto` and `distribute` each reported
+  `staleness=None` — `pycrypto` while carrying two counted CRITICAL advisories.
+  Every registry publishes when the package last shipped, and that answer
+  cannot be broken by a repository rename, so it now wins and repository
+  activity fills in only where the registry published no date. PyPI's per-file
+  upload timestamps and `yanked` flag are read for the first time; npm's
+  release date comes from the latest-tagged version rather than `time.modified`
+  (which moves whenever any metadata changes, and reads July 2026 for a package
+  last published in February 2020); Packagist, crates.io and RubyGems keep the
+  dates they already read but stop having them overwritten by a clone. **Scores
+  change for any dependency whose repository was unreachable, and shift
+  slightly for the rest**, since release cadence and last-commit date are not
+  the same number. Where a registry genuinely publishes no date the signal
+  stays unmeasured (#74) rather than defaulting.
+
+  Two supporting changes. PyPI's repository lookup now prefers a labelled
+  `Source`/`Repository` project URL, trims it to its `owner/repo` root, ignores
+  funding and issue-tracker links, and treats `home_page` — `None` on every
+  modern package — as a genuine last resort instead of a way to mask a missing
+  source URL. And "declares no source repository" is now a measured signal in
+  its own right rather than a silent cause of `UNKNOWN`: a package that no
+  longer says where its source lives is a leading indicator, and because that
+  one fact explains why the seven repository-derived signals are quiet, it is
+  no longer counted as seven separate gaps in the evidence. Packages with no
+  declared repository — `phpstan/phpstan` on Packagist, all three abandoned
+  PyPI packages above — now receive a risk level.
+
+  The description-substring deprecation heuristic is gone. On a modern package
+  `info.description` is the whole rendered README, so any project documenting a
+  deprecated API of its own tripped it, and it still caught only one of five
+  known-deprecated packages. It is replaced by `info.yanked` plus a strictly
+  additive check of the one-line `info.summary`, which keeps the one true
+  positive without the README's false-positive surface.
+
 - **Maven dependencies that inherit their version now resolve it.** Java
   projects overwhelmingly declare a dependency without an inline `<version>`
   and inherit it from `<dependencyManagement>` — the project's own block, a

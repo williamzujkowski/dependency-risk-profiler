@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Collection, Dict, List, Optional, Sequence, Tuple
+from typing import Collection, Dict, FrozenSet, List, Optional, Sequence, Tuple
 
 from packaging import version
 
@@ -21,6 +21,11 @@ from ..popularity import (
     STALENESS_POPULARITY_DAMPENING_DEFAULT,
     should_soften_low_release_cadence,
 )
+from ..release_dates import (
+    SOURCE_REPOSITORY_DECLARED,
+    SOURCE_REPOSITORY_KEY,
+    SOURCE_REPOSITORY_UNDECLARED,
+)
 from ..transitive.analyzer_enhanced import (
     TRANSITIVE_SOURCE_KEY,
     TRANSITIVE_SOURCE_UNMEASURED,
@@ -36,6 +41,23 @@ from ..vulnerabilities.aggregator import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Signals that can only be answered by reading the package's source repository.
+# When a registry states outright that the package declares no repository,
+# these eight are not eight independent gaps in our knowledge — they are one
+# measured fact, and counting it eight times over is what scored the abandoned
+# packages this tool exists to flag as UNKNOWN (#146).
+REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
+    {
+        "health_indicators",
+        "community",
+        "security_policy",
+        "dependency_update",
+        "signed_commits",
+        "branch_protection",
+        "maintained",
+    }
+)
 
 
 class RiskScorer:
@@ -53,6 +75,7 @@ class RiskScorer:
         license_weight: float = 0.3,
         community_weight: float = 0.2,
         transitive_weight: float = 0.15,
+        source_repository_weight: float = 0.15,
         # OpenSSF Scorecard-inspired risk factors
         security_policy_weight: float = 0.25,
         dependency_update_weight: float = 0.2,
@@ -80,6 +103,13 @@ class RiskScorer:
             license_weight: Weight for license risk score.
             community_weight: Weight for community health risk score.
             transitive_weight: Weight for transitive dependency risk score.
+            source_repository_weight: Weight for the "declares a source
+                repository" risk score. Scored only for ecosystems whose
+                adapter reports the registry's answer; elsewhere the signal is
+                absent rather than assumed (#74). Deliberately at the low end
+                of the scale: a fifteenth signal shifts the weighted average
+                for every already-scored dependency, and this one is a leading
+                indicator, not a finding in itself.
             security_policy_weight: Weight for security policy risk score.
             dependency_update_weight: Weight for dependency update tools risk score.
             maintained_weight: Weight for the maintained-status risk score. Kept
@@ -105,6 +135,7 @@ class RiskScorer:
         self.license_weight = license_weight
         self.community_weight = community_weight
         self.transitive_weight = transitive_weight
+        self.source_repository_weight = source_repository_weight
         self.security_policy_weight = security_policy_weight
         self.dependency_update_weight = dependency_update_weight
         self.signed_commits_weight = signed_commits_weight
@@ -221,6 +252,23 @@ class RiskScorer:
             ("maintained", maintained_score, self.maintained_weight),
         ]
 
+        # "Declares no source repository" is a leading indicator in its own
+        # right — a package that no longer says where its source lives — and
+        # until #146 it was only ever a silent cause of UNKNOWN. It is appended
+        # rather than listed above because an adapter that does not report the
+        # registry's answer has not measured it, and #74's rule is that an
+        # unavailable signal leaves both the numerator and the denominator
+        # rather than being assumed either way.
+        source_repository_score = self._calculate_source_repository_score(dependency)
+        if source_repository_score is not None:
+            weighted_scores.append(
+                (
+                    "source_repository",
+                    source_repository_score,
+                    self.source_repository_weight,
+                )
+            )
+
         # Cross-ecosystem score normalization (#74): an unmeasured component is
         # excluded from BOTH the numerator and the denominator (renormalized
         # over available weights), so a signal an ecosystem doesn't provide
@@ -239,7 +287,10 @@ class RiskScorer:
 
         unknown_signals = self._determine_unknown_signals(weighted_scores)
         measured_signal_count = len(weighted_scores) - len(unknown_signals)
-        insufficient_data = len(unknown_signals) > measured_signal_count
+        insufficient_data = (
+            self._unexplained_unknown_count(unknown_signals, source_repository_score)
+            > measured_signal_count
+        )
 
         risk_level = (
             RiskLevel.UNKNOWN
@@ -265,6 +316,8 @@ class RiskScorer:
             branch_protection_score,
             maintained_score,
         )
+        if source_repository_score == 1.0:
+            risk_factors.append("Declares no source repository")
         if insufficient_data:
             risk_factors.insert(0, "Insufficient data for confident risk level")
 
@@ -284,6 +337,7 @@ class RiskScorer:
             signed_commits_score=signed_commits_score,
             branch_protection_score=branch_protection_score,
             maintained_score=maintained_score,
+            source_repository_score=source_repository_score,
             total_score=total_score,
             risk_level=risk_level,
             factors=risk_factors,
@@ -363,6 +417,57 @@ class RiskScorer:
     ) -> List[str]:
         """Return names for signals that could not be measured."""
         return [name for name, score, _ in weighted_scores if score is None]
+
+    @staticmethod
+    def _calculate_source_repository_score(
+        dependency: DependencyMetadata,
+    ) -> Optional[float]:
+        """Score whether the registry declares a source repository.
+
+        Args:
+            dependency: Dependency metadata, carrying the adapter's record of
+                what the registry answered.
+
+        Returns:
+            0.0 when a usable repository is declared, 1.0 when the registry
+            answered and declares none, or None when this ecosystem's adapter
+            reports nothing either way.
+        """
+        declared = dependency.additional_info.get(SOURCE_REPOSITORY_KEY)
+        if declared == SOURCE_REPOSITORY_DECLARED:
+            return 0.0
+        if declared == SOURCE_REPOSITORY_UNDECLARED:
+            return 1.0
+        return None
+
+    @staticmethod
+    def _unexplained_unknown_count(
+        unknown_signals: Sequence[str],
+        source_repository_score: Optional[float],
+    ) -> int:
+        """Count unmeasured signals that are not explained by a measured fact.
+
+        ``insufficient_data`` asks "do we know less about this package than we
+        know?". A package that declares no source repository cannot answer the
+        seven repository-derived signals, and that inability is not seven
+        separate holes in the evidence — it is one thing we measured. Counting
+        it seven times is what made an abandoned crypto library carrying two
+        CRITICAL advisories report "insufficient data" (#146). Every other
+        unmeasured signal still counts in full.
+
+        Args:
+            unknown_signals: Names of the signals that came back unmeasured.
+            source_repository_score: The source-repository score, when the
+                ecosystem reports one.
+
+        Returns:
+            The number of unmeasured signals that remain unexplained.
+        """
+        if source_repository_score != 1.0:
+            return len(unknown_signals)
+        return sum(
+            1 for name in unknown_signals if name not in REPOSITORY_DERIVED_SIGNALS
+        )
 
     def _calculate_staleness_score(
         self, last_updated: Optional[datetime]
