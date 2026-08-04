@@ -319,8 +319,14 @@ def _emit_json_report(
         warnings: Human-readable notes about skipped or refused inputs.
         schema: Which output schema to emit.
     """
-    formatter = JsonFormatterV1() if schema is SchemaVersion.V1 else JsonFormatter()
-    print(formatter.format_report(profiles, manifest_path, warnings))
+    # Branched rather than a ternary: the two formatters share no base class,
+    # so the conditional expression collapsed to `object` and the call below
+    # went unchecked.
+    if schema is SchemaVersion.V1:
+        report = JsonFormatterV1().format_report(profiles, manifest_path, warnings)
+    else:
+        report = JsonFormatter().format_report(profiles, manifest_path, warnings)
+    print(report)
 
 
 # A manifest that parsed but declared nothing is "nothing to do", not a refusal.
@@ -355,8 +361,10 @@ def callback(
     ctx.obj = Config(config_path)
 
     # Update debug setting from config
+    # `Config.get` hands back whatever the config file held, so coerce here:
+    # `debug` is declared bool and is about to select a logging level.
     debug_from_config = ctx.obj.get("general", "debug", False)
-    debug = debug or debug_from_config
+    debug = debug or bool(debug_from_config)
 
     # Set up logging
     setup_logging(debug)
@@ -571,7 +579,11 @@ def analyze(
         help="Generate visualization data for the specified trend type",
     ),
     # Context and config
-    ctx: typer.Context = typer.Context,
+    # Keyword-only, and with no default: Typer fills this in from the click
+    # context by annotation and ignores whatever default is written here, so
+    # `= typer.Context` was a class masquerading as an instance of itself.
+    *,
+    ctx: typer.Context,
 ) -> None:
     """Analyze dependencies and generate risk profile."""
     # Get configuration
@@ -767,15 +779,20 @@ def analyze(
                                 )
                             )
 
-                            if error in ("unsupported", "empty"):
-                                note = _skip_reason(manifest_path, error)
+                            # Keyed on `dependencies`, not on `error`: those are
+                            # the same condition (the parser returns None with a
+                            # reason or a dict with none), but only this spelling
+                            # tells the type checker the dict below is real.
+                            if dependencies is None:
+                                reason = error or "unsupported"
+                                note = _skip_reason(manifest_path, reason)
                                 warnings.append(note)
                                 # stderr in JSON mode: stdout is the report.
                                 _note(status_console, note, "bold yellow")
                                 failed_files.append(
                                     {
                                         "manifest_path": manifest_path,
-                                        "reason": error,
+                                        "reason": reason,
                                     }
                                 )
                                 continue
@@ -1067,16 +1084,20 @@ def analyze(
 
                         # Extract risk scores for graph coloring
                         risk_scores: Dict[str, float] = {}
-                        for dep in profile.dependencies:
-                            risk_scores[dep.dependency.name] = (
-                                dep.total_score / 5.0
+                        # `scored`, not `dep`: the loops above bind `dep` to a
+                        # DependencyMetadata, and reusing the name here made
+                        # every attribute read on a DependencyRiskScore
+                        # unresolvable.
+                        for scored in profile.dependencies:
+                            risk_scores[scored.dependency.name] = (
+                                scored.total_score / 5.0
                             )  # Normalize to 0-1
 
                         # Generate the graph
                         graph_data = generate_dependency_graph(
                             dependencies={
-                                dep.dependency.name: dep.dependency
-                                for dep in profile.dependencies
+                                scored.dependency.name: scored.dependency
+                                for scored in profile.dependencies
                             },
                             output_format=graph_format_config,
                             risk_scores=risk_scores,
@@ -1331,8 +1352,11 @@ def analyze(
                 logger.debug(f"Failed files: {len(failed_files)}")
 
                 # Print failed files directly when debugging to diagnose issues.
-                for f in failed_files:
-                    logger.debug(f"Failed file: {f}")
+                # `failed_entry`, not `f`: `f` is the file handle opened for the
+                # visualization dump above, and rebinding it here made every
+                # dict operation below type-check against a TextIOWrapper.
+                for failed_entry in failed_files:
+                    logger.debug(f"Failed file: {failed_entry}")
 
                 # Track failure reasons
                 failure_reasons: Dict[str, List[Dict[str, object]]] = {}
@@ -1347,43 +1371,48 @@ def analyze(
                         failure_reasons[reason] = []
                     failure_reasons[reason].append(failed)
 
-                # Show counts by reason
-                for reason, files in failure_reasons.items():
+                # Show counts by reason. `reason_files`, not `files`: `files` is
+                # the os.walk filename list from the directory scan above.
+                for reason, reason_files in failure_reasons.items():
                     if reason == "timeout":
                         console.print(
                             "  [bold yellow]Timed out[/bold yellow]: "
-                            f"{len(files)} file(s)"
+                            f"{len(reason_files)} file(s)"
                         )
-                        for f in files[:3]:  # Show first 3
-                            timeout = f.get("timeout", "unknown")
+                        for failed_entry in reason_files[:3]:  # Show first 3
+                            elapsed = failed_entry.get("timeout", "unknown")
                             console.print(
-                                f"    - {f['manifest_path']} (timeout: {timeout}s)"
+                                f"    - {failed_entry['manifest_path']} "
+                                f"(timeout: {elapsed}s)"
                             )
                     elif reason == "empty":
                         console.print(
                             "  [bold blue]No dependencies[/bold blue]: "
-                            f"{len(files)} file(s)"
+                            f"{len(reason_files)} file(s)"
                         )
-                        for f in files[:3]:  # Show first 3
-                            console.print(f"    - {f['manifest_path']}")
+                        for failed_entry in reason_files[:3]:  # Show first 3
+                            console.print(f"    - {failed_entry['manifest_path']}")
                     elif reason == "unsupported":
                         console.print(
                             "  [bold magenta]Unsupported format[/bold magenta]: "
-                            f"{len(files)} file(s)"
+                            f"{len(reason_files)} file(s)"
                         )
-                        for f in files[:3]:  # Show first 3
-                            console.print(f"    - {f['manifest_path']}")
+                        for failed_entry in reason_files[:3]:  # Show first 3
+                            console.print(f"    - {failed_entry['manifest_path']}")
                     elif reason == "error":
                         console.print(
-                            f"  [bold red]Errors[/bold red]: {len(files)} file(s)"
+                            "  [bold red]Errors[/bold red]: "
+                            f"{len(reason_files)} file(s)"
                         )
-                        for f in files[:3]:  # Show first 3
-                            error = f.get("error", "unknown error")
-                            console.print(f"    - {f['manifest_path']}: {error}")
+                        for failed_entry in reason_files[:3]:  # Show first 3
+                            detail = failed_entry.get("error", "unknown error")
+                            console.print(
+                                f"    - {failed_entry['manifest_path']}: {detail}"
+                            )
 
                     # Show ellipsis if more than 3 files of this reason
-                    if len(files) > 3:
-                        console.print(f"    ... and {len(files) - 3} more")
+                    if len(reason_files) > 3:
+                        console.print(f"    ... and {len(reason_files) - 3} more")
 
                 # Show tip for timeouts
                 if "timeout" in failure_reasons:
@@ -1486,7 +1515,11 @@ def scan_org(
         min=1,
         max=32,
     ),
-    ctx: typer.Context = typer.Context,
+    # Keyword-only, and with no default: Typer fills this in from the click
+    # context by annotation and ignores whatever default is written here, so
+    # `= typer.Context` was a class masquerading as an instance of itself.
+    *,
+    ctx: typer.Context,
 ) -> None:
     """Scan a GitHub organization and write org-wide dependency risk reports."""
     _scan_github_account(
@@ -1580,7 +1613,11 @@ def scan_user(
         min=1,
         max=32,
     ),
-    ctx: typer.Context = typer.Context,
+    # Keyword-only, and with no default: Typer fills this in from the click
+    # context by annotation and ignores whatever default is written here, so
+    # `= typer.Context` was a class masquerading as an instance of itself.
+    *,
+    ctx: typer.Context,
 ) -> None:
     """Scan a GitHub user and write account-wide dependency risk reports."""
     _scan_github_account(

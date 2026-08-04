@@ -10,7 +10,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -226,13 +226,16 @@ class VulnerabilityCache:
         Returns:
             Dictionary with cache statistics
         """
-        stats = {
+        # Accumulated separately: the stats mapping is heterogeneous, so
+        # reading a set back out of it loses the element type.
+        ecosystems: Set[str] = set()
+        stats: Dict[str, object] = {
             "cache_dir": str(self.cache_dir),
             "entry_count": 0,
             "total_size_bytes": 0,
             "oldest_entry": None,
             "newest_entry": None,
-            "ecosystems": set(),
+            "ecosystems": [],
         }
 
         if not self.cache_dir.exists():
@@ -259,8 +262,8 @@ class VulnerabilityCache:
                 with open(entry, "r", encoding="utf-8") as f:
                     cache_data = json.load(f)
                     ecosystem = cache_data.get("ecosystem")
-                    if ecosystem:
-                        stats["ecosystems"].add(ecosystem)
+                    if isinstance(ecosystem, str) and ecosystem:
+                        ecosystems.add(ecosystem)
 
             except (OSError, json.JSONDecodeError):
                 continue
@@ -272,7 +275,7 @@ class VulnerabilityCache:
             stats["oldest_entry"] = datetime.fromtimestamp(min(mtimes)).isoformat()
             stats["newest_entry"] = datetime.fromtimestamp(max(mtimes)).isoformat()
 
-        stats["ecosystems"] = list(stats["ecosystems"])
+        stats["ecosystems"] = sorted(ecosystems)
         return stats
 
 

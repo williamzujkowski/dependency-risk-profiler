@@ -165,20 +165,10 @@ ignore_missing_imports = true
 module = ["numpy", "numpy.*"]
 follow_imports = "skip"
 
-# Modules still awaiting type cleanup. Every entry here is a debt, not a policy:
-# testing/unit/test_mypy_config.py ratchets the per-module error counts down and
-# fails if any of them grows. Delete entries as modules are cleaned; do not add new ones.
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.config"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.vulnerabilities.*"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
-module = "dependency_risk_profiler.cli.*"
-ignore_errors = true
+# There are deliberately no `ignore_errors` overrides for first-party modules.
+# There used to be eleven (#143); the last three went in #154. `src` type-checks
+# clean, and testing/unit/test_mypy_config.py fails the build if a new mask
+# appears without a ratchet entry. Fix the errors instead of adding one back.
 
 [tool.pytest.ini_options]
 testpaths = ["testing/unit", "testing/integration"]

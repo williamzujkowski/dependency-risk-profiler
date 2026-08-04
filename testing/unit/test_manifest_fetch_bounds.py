@@ -5,7 +5,7 @@ lock file, reading it unbounded would exhaust memory before a parser ever runs.
 ``fetch_manifest_content`` streams the body and rejects anything past the cap.
 """
 
-from typing import Iterable, Iterator, Optional
+from typing import Dict, Iterable, Iterator, Mapping, Optional
 
 import pytest
 import requests
@@ -19,17 +19,17 @@ from dependency_risk_profiler.org_scan.models import RepositoryRef
 
 
 class _FakeStreamResponse:
-    """Minimal streaming stand-in for ``requests.Response``."""
+    """Minimal streaming stand-in satisfying ``github.HttpResponse``."""
 
     def __init__(
         self,
         chunks: Iterable[bytes],
-        headers: Optional[dict] = None,
+        headers: Optional[Dict[str, str]] = None,
         status_code: int = 200,
         encoding: Optional[str] = "utf-8",
     ) -> None:
         self.status_code = status_code
-        self.headers = headers or {}
+        self.headers: Dict[str, str] = headers or {}
         self.encoding = encoding
         self._chunks = chunks
         self.closed = False
@@ -39,6 +39,10 @@ class _FakeStreamResponse:
         for chunk in self._chunks:
             self.consumed_bytes += len(chunk)
             yield chunk
+
+    def json(self) -> object:
+        # Part of the protocol, but these tests only drive the streaming path.
+        raise NotImplementedError("this fake serves manifest bodies, not JSON")
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
@@ -58,8 +62,9 @@ class _FakeSession:
     def get(
         self,
         url: str,
-        headers: dict,
-        params: dict,
+        *,
+        headers: Mapping[str, str],
+        params: Mapping[str, str],
         timeout: int,
         stream: bool,
     ) -> _FakeStreamResponse:
@@ -80,7 +85,7 @@ def _repo() -> RepositoryRef:
 
 def _client(response: _FakeStreamResponse) -> tuple[GitHubOrgClient, _FakeSession]:
     session = _FakeSession(response)
-    client = GitHubOrgClient(token="t", session=session)  # type: ignore[arg-type]
+    client = GitHubOrgClient(token="t", session=session)
     return client, session
 
 

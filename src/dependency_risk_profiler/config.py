@@ -32,8 +32,13 @@ CONFIG_PATHS = [
     Path("~/.config/dependency-risk-profiler/config.yml").expanduser(),
 ]
 
-# Default configuration
-DEFAULT_CONFIG = {
+# Default configuration.
+#
+# The annotation is load-bearing. Without it mypy joins the section literals
+# (one is all floats, the rest are mixed) down to a bare `object`, and every
+# `self._config["general"]["debug"] = ...` below became uncheckable — 48 of the
+# 77 errors this module was masked for were that one inference, repeated.
+DEFAULT_CONFIG: Dict[str, Dict[str, object]] = {
     "general": {
         "output_format": "terminal",
         "use_color": True,
@@ -215,25 +220,26 @@ class Config:
         Args:
             config_data: Configuration data to merge
         """
-        # Merge general settings
-        if "general" in config_data:
-            self._config["general"].update(config_data["general"])
-
-        # Merge scoring weights
-        if "scoring_weights" in config_data:
-            self._config["scoring_weights"].update(config_data["scoring_weights"])
-
-        # Merge vulnerability settings
-        if "vulnerability" in config_data:
-            self._config["vulnerability"].update(config_data["vulnerability"])
-
-        # Merge trends settings
-        if "trends" in config_data:
-            self._config["trends"].update(config_data["trends"])
-
-        # Merge graph settings
-        if "graph" in config_data:
-            self._config["graph"].update(config_data["graph"])
+        # A config file is user-edited text: `general = "yes"` parses fine and
+        # would previously have been handed straight to `dict.update`, which
+        # raises. Skip sections that are not tables and say so.
+        for section in (
+            "general",
+            "scoring_weights",
+            "vulnerability",
+            "trends",
+            "graph",
+        ):
+            if section not in config_data:
+                continue
+            values = config_data[section]
+            if not isinstance(values, dict):
+                logger.warning(
+                    f"Ignoring config section '{section}': expected a table, "
+                    f"got {type(values).__name__}"
+                )
+                continue
+            self._config[section].update(values)
 
     def update_from_args(self, args: Dict[str, object]) -> None:
         """Update configuration with command-line arguments.
@@ -374,6 +380,25 @@ class Config:
         """
         return self._config.copy()
 
+    @staticmethod
+    def _weight(weights: Dict[str, object], key: str, default: float) -> float:
+        """Return a numeric scoring weight, falling back when it is not one.
+
+        Weights come from a user-edited TOML/YAML file, so a key can hold a
+        string, a list, or `true`. The declared `Dict[str, float]` return type
+        was a promise this method could not keep; keep it by rejecting values
+        that are not numbers instead of handing them to the scorer.
+        """
+        value = weights.get(key, default)
+        # `bool` is an `int` subclass; `staleness = true` is a typo, not a 1.0.
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            logger.warning(
+                f"Ignoring scoring weight '{key}': expected a number, got "
+                f"{type(value).__name__}. Using default {default}."
+            )
+            return default
+        return float(value)
+
     def get_scoring_weights(self) -> Dict[str, float]:
         """Get scoring weights from configuration.
 
@@ -384,26 +409,34 @@ class Config:
 
         # Map config keys to RiskScorer parameter names
         return {
-            "staleness_weight": weights.get("staleness", 0.25),
-            "maintainer_weight": weights.get("maintainer", 0.2),
-            "deprecation_weight": weights.get("deprecation", 0.3),
-            "exploit_weight": weights.get("exploit", 0.5),
-            "version_difference_weight": weights.get("version_difference", 0.15),
-            "health_indicators_weight": weights.get("health_indicators", 0.1),
-            "license_weight": weights.get("license", 0.3),
-            "community_weight": weights.get("community", 0.2),
-            "transitive_weight": weights.get("transitive", 0.15),
-            "security_policy_weight": weights.get("security_policy", 0.25),
-            "dependency_update_weight": weights.get("dependency_update", 0.2),
-            "signed_commits_weight": weights.get("signed_commits", 0.2),
-            "branch_protection_weight": weights.get("branch_protection", 0.15),
-            "maintained_weight": weights.get("maintained", 0.20),
-            "popularity_high_stars": weights.get("popularity_high_stars", 2000),
-            "popularity_high_contributors": weights.get(
+            "staleness_weight": self._weight(weights, "staleness", 0.25),
+            "maintainer_weight": self._weight(weights, "maintainer", 0.2),
+            "deprecation_weight": self._weight(weights, "deprecation", 0.3),
+            "exploit_weight": self._weight(weights, "exploit", 0.5),
+            "version_difference_weight": self._weight(
+                weights, "version_difference", 0.15
+            ),
+            "health_indicators_weight": self._weight(weights, "health_indicators", 0.1),
+            "license_weight": self._weight(weights, "license", 0.3),
+            "community_weight": self._weight(weights, "community", 0.2),
+            "transitive_weight": self._weight(weights, "transitive", 0.15),
+            "security_policy_weight": self._weight(weights, "security_policy", 0.25),
+            "dependency_update_weight": self._weight(weights, "dependency_update", 0.2),
+            "signed_commits_weight": self._weight(weights, "signed_commits", 0.2),
+            "branch_protection_weight": self._weight(
+                weights, "branch_protection", 0.15
+            ),
+            "maintained_weight": self._weight(weights, "maintained", 0.20),
+            "popularity_high_stars": self._weight(
+                weights, "popularity_high_stars", 2000
+            ),
+            "popularity_high_contributors": self._weight(
+                weights,
                 "popularity_high_contributors",
                 25,
             ),
-            "staleness_popularity_dampening": weights.get(
+            "staleness_popularity_dampening": self._weight(
+                weights,
                 "staleness_popularity_dampening",
                 0.5,
             ),
@@ -424,15 +457,20 @@ class Config:
             Dictionary of API keys
         """
         vuln_config = self.get_vulnerability_config()
-        api_keys = {}
+        api_keys: Dict[str, str] = {}
 
-        if vuln_config.get("enable_github_advisory") and vuln_config.get(
-            "github_token"
-        ):
-            api_keys["github"] = vuln_config["github_token"]
+        # A credential read out of a config file is only a credential if it is
+        # a string; a non-string here would have been passed to the HTTP layer
+        # as an `Authorization` header and failed somewhere far from the cause.
+        github_token = vuln_config.get("github_token")
+        if vuln_config.get("enable_github_advisory") and isinstance(github_token, str):
+            if github_token:
+                api_keys["github"] = github_token
 
-        if vuln_config.get("enable_nvd") and vuln_config.get("nvd_api_key"):
-            api_keys["nvd"] = vuln_config["nvd_api_key"]
+        nvd_api_key = vuln_config.get("nvd_api_key")
+        if vuln_config.get("enable_nvd") and isinstance(nvd_api_key, str):
+            if nvd_api_key:
+                api_keys["nvd"] = nvd_api_key
 
         return api_keys
 

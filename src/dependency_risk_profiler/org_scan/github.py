@@ -6,7 +6,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Iterable, List, Mapping, Optional
+from typing import Iterable, Iterator, List, Mapping, Optional, Protocol
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -83,6 +83,69 @@ class RepoSignals:
     has_ci: Optional[bool] = None
 
 
+class HttpResponse(Protocol):
+    """The slice of ``requests.Response`` this client actually reads.
+
+    A concrete ``requests.Response`` satisfies this structurally, so nothing
+    changes at runtime. It exists so a test can hand the client a canned
+    response without inheriting from a third-party class.
+    """
+
+    @property
+    def status_code(self) -> int:
+        """HTTP status code."""
+        raise NotImplementedError
+
+    @property
+    def headers(self) -> Mapping[str, str]:
+        """Response headers."""
+        raise NotImplementedError
+
+    @property
+    def encoding(self) -> Optional[str]:
+        """Body encoding the server declared, if any."""
+        raise NotImplementedError
+
+    def iter_content(self, chunk_size: int) -> Iterator[bytes]:
+        """Yield the body in bounded chunks."""
+        raise NotImplementedError
+
+    def json(self) -> object:
+        """Decode the body as JSON."""
+        raise NotImplementedError
+
+    def raise_for_status(self) -> None:
+        """Raise for a 4xx/5xx status."""
+        raise NotImplementedError
+
+    def close(self) -> None:
+        """Release the underlying connection."""
+        raise NotImplementedError
+
+
+class HttpSession(Protocol):
+    """The one call this client makes against a ``requests.Session``.
+
+    ``session`` used to be typed as the nominal ``requests.Session``, which
+    meant a test could not substitute a lightweight fake without subclassing
+    the real thing or suppressing the error. That is the third time a nominal
+    type stood where a structural one belonged (#153, #156, #202), so this
+    spells the contract out: only ``get`` is used, and only these arguments.
+    """
+
+    def get(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        params: Mapping[str, str],
+        timeout: int,
+        stream: bool,
+    ) -> HttpResponse:
+        """Issue a GET request."""
+        raise NotImplementedError
+
+
 class GitHubOrgClient:
     """Small GitHub REST client with pagination and rate-limit backoff."""
 
@@ -93,13 +156,13 @@ class GitHubOrgClient:
         token: str,
         timeout: int = 30,
         max_retries: int = 3,
-        session: Optional[requests.Session] = None,
+        session: Optional[HttpSession] = None,
     ) -> None:
         """Initialize the GitHub client."""
         self.token = token
         self.timeout = timeout
         self.max_retries = max_retries
-        self.session = session or requests.Session()
+        self.session: HttpSession = session or requests.Session()
 
     def list_org_repositories(
         self,
@@ -328,7 +391,7 @@ class GitHubOrgClient:
         params: Mapping[str, str],
         accept: str,
         stream: bool = False,
-    ) -> requests.Response:
+    ) -> HttpResponse:
         """GET a GitHub endpoint with bounded retry/backoff.
 
         When ``stream`` is set the response body is left unread so the caller can
@@ -372,13 +435,13 @@ class GitHubOrgClient:
 
         raise GitHubRateLimitError("GitHub request retry loop exhausted")
 
-    def _should_backoff(self, response: requests.Response) -> bool:
+    def _should_backoff(self, response: HttpResponse) -> bool:
         """Return whether a response should trigger rate-limit backoff."""
         remaining = response.headers.get("X-RateLimit-Remaining")
         retry_after = response.headers.get("Retry-After")
         return retry_after is not None or remaining == "0"
 
-    def _backoff_seconds(self, response: requests.Response, attempt: int) -> float:
+    def _backoff_seconds(self, response: HttpResponse, attempt: int) -> float:
         """Compute backoff delay from GitHub headers."""
         retry_after = response.headers.get("Retry-After")
         if retry_after is not None:
