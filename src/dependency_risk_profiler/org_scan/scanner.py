@@ -46,6 +46,14 @@ SUPPORTED_MANIFEST_NAMES = (
     "composer.lock",
     "packages.lock.json",
     "pom.xml",
+    # Gradle scripts are fetched one file at a time, so the version catalog
+    # beside them is out of reach and catalog-declared versions come back
+    # unmanaged. That is the honest answer rather than a reason to skip the
+    # repository: the dependency set, the advisories and every registry signal
+    # are still measured, and only version drift is reported as unmeasured
+    # (#101).
+    "build.gradle",
+    "build.gradle.kts",
 )
 
 
@@ -539,6 +547,7 @@ class OrgScanRunner:
             "composer",
             "nuget",
             "maven",
+            "gradle",
         }
         available = set(EcosystemRegistry.get_available_ecosystems())
         if not required.issubset(available):

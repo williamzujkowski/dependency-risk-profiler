@@ -66,22 +66,10 @@ _COMPANION_RULES: Dict[str, _CompanionRule] = {
         companion="Pipfile.lock",
         reason="declares version constraints, not resolved versions",
     ),
-    "build.gradle": _CompanionRule(
-        companion=None,
-        reason="declares version ranges and dynamic versions, not resolved versions",
-        fallback=(
-            "Gradle lock file support is not implemented yet (see issue #101). "
-            "pom.xml works today for Maven-built projects."
-        ),
-    ),
-    "build.gradle.kts": _CompanionRule(
-        companion=None,
-        reason="declares version ranges and dynamic versions, not resolved versions",
-        fallback=(
-            "Gradle lock file support is not implemented yet (see issue #101). "
-            "pom.xml works today for Maven-built projects."
-        ),
-    ),
+    # build.gradle / build.gradle.kts used to live here, told that Gradle
+    # support was unimplemented. They are parsed directly now (#101): versions
+    # come from the declaration or from gradle/libs.versions.toml, and the ones
+    # that come from neither are reported as unmanaged rather than refused.
 }
 
 

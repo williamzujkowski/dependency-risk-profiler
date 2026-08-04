@@ -224,9 +224,41 @@ showed it, which is why both are captured — `nuget/servicebus.registration` an
 `nuget/servicebus.registration-semver1`, same package, same version, differing
 by exactly that key.
 
+## When the new ecosystem has no registry of its own
+
+gradle (#101) is the first entry in the ledger that adds no registry. Gradle
+publishes Maven coordinates, resolves against Maven Central and routes to OSV's
+Maven ecosystem, so scoring it through `MavenAnalyzer` against captured Maven
+Central documents would restate maven's cases with extra steps. What it adds is
+a **route**, and the route is what can break: the build-script parser produces a
+key, and that key has to be exactly the `groupId:artifactId` Maven Central is
+addressed by. Get it subtly wrong and every Gradle dependency 404s into
+all-UNKNOWN while every count stays green — #127's collapse from a new cause.
+
+So its driver starts at the *manifest*. Two real projects are captured as
+fixtures alongside the registry documents — okhttp's Kotlin Multiplatform module
+script plus its `gradle/libs.versions.toml`, and RxJava's Groovy `build.gradle`
+— materialised in the layout their source URLs describe, parsed for real, and
+only then handed to the analyzer. `FixtureCase.expected_version_source` asserts
+*how* the version was established, because "read 3.17.0 off the declaration" and
+"resolved it through a version catalog" produce an identical score and are the
+whole of what the adapter does.
+
+Two consequences to copy if you do this again:
+
+- Its floor is maven's floor and maven's signal set, to the letter. A lower
+  number would mean the route lost something on the way through the parser,
+  which is exactly what the entry exists to catch.
+- The project captures are pinned to a **tag**, not a branch. A build script and
+  the artifact version it names are one fact, and a moving branch lets the two
+  drift apart between runs — the build script bumps its catalog and the
+  version-pinned POM URL beside it does not. The cost is that those fixtures
+  cannot surface a new DSL shape on their own, so the refresh cadence has to be
+  spent bumping the tag and reading the diff.
+
 ## Converting the next ecosystem
 
-All eight are converted, so this is now the procedure for a *new* ecosystem —
+All nine are converted, so this is now the procedure for a *new* ecosystem —
 and for re-doing one whose registry changed shape.
 
 1. Add its packages to `testing/fixtures/registry/manifest.json`. Pick at least

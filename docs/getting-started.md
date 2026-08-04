@@ -6,7 +6,7 @@ Dependency Risk Profiler is built for dependency triage. It looks beyond CVEs an
 
 - Python 3.9 or newer
 - `pip`
-- A supported manifest such as `requirements.txt`, `package-lock.json`, `go.mod`, `Cargo.toml`, `Gemfile.lock`, `composer.lock`, `packages.lock.json` / `*.csproj`, or `pom.xml`
+- A supported manifest such as `requirements.txt`, `package-lock.json`, `go.mod`, `Cargo.toml`, `Gemfile.lock`, `composer.lock`, `packages.lock.json` / `*.csproj`, `pom.xml`, or `build.gradle` / `build.gradle.kts`
 
 ## Installation
 

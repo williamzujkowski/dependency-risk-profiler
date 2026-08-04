@@ -12,6 +12,12 @@ AccountType = Literal["organization", "user"]
 
 _CANONICAL_ECOSYSTEM_ALIASES = {
     "pyproject": "python",
+    # A Gradle build declares Maven coordinates, and the Maven analyzer stamps
+    # every one of them "maven". Without this row the OSV prewarm would write
+    # under "gradle" and the profiling read would look under "maven", so the
+    # prewarm would buy nothing and every Gradle dependency would re-query OSV
+    # — #116's failure, which test_prewarm_ecosystem_key exists to catch (#101).
+    "gradle": "maven",
 }
 
 

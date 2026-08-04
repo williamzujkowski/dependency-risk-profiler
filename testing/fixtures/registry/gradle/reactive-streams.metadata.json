@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<metadata modelVersion=\"1.1.0\">\n  <groupId>org.reactivestreams</groupId>\n  <artifactId>reactive-streams</artifactId>\n  <versioning>\n    <latest>1.0.4</latest>\n    <release>1.0.4</release>\n    <versions>\n      <version>0.4.0.M1</version>\n      <version>0.4.0.M2</version>\n      <version>0.4.0</version>\n      <version>1.0.0.M1</version>\n      <version>1.0.0.M2</version>\n      <version>1.0.0.M3</version>\n      <version>1.0.0.RC1</version>\n      <version>1.0.0.RC2</version>\n      <version>1.0.0.RC3</version>\n      <version>1.0.0.RC4</version>\n      <version>1.0.0.RC5</version>\n      <version>1.0.0</version>\n      <version>1.0.1-RC1</version>\n      <version>1.0.1-RC2</version>\n      <version>1.0.1</version>\n      <version>1.0.2-RC1</version>\n      <version>1.0.2-RC2</version>\n      <version>1.0.2</version>\n      <version>1.0.3-RC1</version>\n      <version>1.0.3</version>\n      <version>1.0.4</version>\n    </versions>\n    <lastUpdated>20220526202157</lastUpdated>\n  </versioning>\n</metadata>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/maven-metadata.xml",
+    "trimming": []
+  }
+}

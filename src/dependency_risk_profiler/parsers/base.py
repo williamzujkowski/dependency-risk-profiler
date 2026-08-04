@@ -58,6 +58,7 @@ class BaseParser(ABC):
         """Initialize the ecosystem registry with built-in parsers."""
         from .composer import ComposerLockParser
         from .golang import GoParser
+        from .gradle import GradleParser
         from .maven import MavenPomParser
         from .nodejs import NodeJSParser
         from .nuget import NuGetParser
@@ -145,6 +146,19 @@ class BaseParser(ABC):
             MavenPomParser,
             [
                 {"type": "filename", "pattern": "pom.xml"},
+            ],
+        )
+
+        # Register Gradle parser. Gradle publishes Maven coordinates, so
+        # "gradle" is an alias onto the maven ecosystem in
+        # ``vulnerabilities.ecosystems`` and routes to the same analyzer and the
+        # same OSV Maven advisories; only the reading is new (#101).
+        EcosystemRegistry.register_parser(
+            "gradle",
+            GradleParser,
+            [
+                {"type": "filename", "pattern": "build.gradle"},
+                {"type": "filename", "pattern": "build.gradle.kts"},
             ],
         )
 

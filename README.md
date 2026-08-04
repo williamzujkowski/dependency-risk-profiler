@@ -6,7 +6,7 @@
 [![Python Versions](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages dependencies across eight ecosystems — Python, JavaScript/TypeScript (npm), Go, Rust, Ruby, PHP, .NET, and Java — on leading signals — release cadence, maintainer concentration, provenance, version drift, and license risk — while reporting unknown signals as unknown and filtering advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure.
+CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages dependencies across nine ecosystems — Python, JavaScript/TypeScript (npm), Go, Rust, Ruby, PHP, .NET, Java/Maven, and Java/Kotlin/Android via Gradle — on leading signals — release cadence, maintainer concentration, provenance, version drift, and license risk — while reporting unknown signals as unknown and filtering advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure.
 
 It works on a single manifest (`analyze`) or across every repository in a GitHub organization or user account (`scan-org` / `scan-user`), so you can see which risky dependencies you are most exposed to — and where — before an advisory forces the issue.
 
@@ -96,7 +96,7 @@ Two behaviors are intentionally conservative:
 
 ## Supported Ecosystems
 
-Eight ecosystems, routed to OSV (and, where available, deps.dev) for advisories:
+Nine ecosystems, routed to OSV (and, where available, deps.dev) for advisories:
 
 - Python: `requirements.txt`, `Pipfile.lock`, `pyproject.toml`
 - JavaScript / TypeScript (npm): `package-lock.json`
@@ -106,6 +106,9 @@ Eight ecosystems, routed to OSV (and, where available, deps.dev) for advisories:
 - PHP (Composer): `composer.lock`
 - .NET / C# (NuGet): `packages.lock.json`, `*.csproj`
 - Java (Maven): `pom.xml`
+- Java / Kotlin / Android (Gradle): `build.gradle`, `build.gradle.kts`, with versions resolved from `gradle/libs.versions.toml`
+
+Gradle deserves a footnote, because it is the one entry here that is not a manifest format. `build.gradle` and `build.gradle.kts` are Groovy and Kotlin *programs*, and nothing in this tool executes them. The declarative shapes are read — string and map notation in either DSL, version-catalog aliases and bundles, `platform(...)` wrappers, `$property` interpolation from `ext { }` and `gradle.properties` — and anything computed at build time is reported with its version marked unmanaged rather than guessed at. A dynamic `1.+`, a version from an unreachable catalog, and a coordinate assembled by a helper function are all recorded as unmeasured, which drops version drift from that dependency's score instead of scoring a fabricated zero. `src/dependency_risk_profiler/parsers/gradle_dsl.py` enumerates every shape that is and is not read.
 
 ## Honest Limits
 

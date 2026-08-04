@@ -15,7 +15,7 @@ Three layers, each failing on a different kind of regression:
    carry no credentials, sizes are bounded, and no test reaches the network.
 
 Deliberately not here: the ecosystems still pending. ``CONVERSION_STATUS``
-carries all eight with a note on what each still needs, and
+carries all nine with a note on what each still needs, and
 ``test_the_conversion_ledger_is_honest`` keeps that list from quietly claiming
 more than it has.
 """
@@ -792,13 +792,13 @@ def test_trimming_removed_volume_and_never_a_schema_key() -> None:
 def test_the_conversion_ledger_is_honest() -> None:
     """Every ecosystem is listed, converted ones have a driver, pending say why.
 
-    The ledger claims all eight are converted, so this checks the claim from
+    The ledger claims all nine are converted, so this checks the claim from
     both ends: nothing is marked converted without a driver, a polarity table,
     a coverage-floor case and at least one value assertion behind it, and
     nothing with a floor is missing from the ledger.
     """
     assert set(CONVERSION_STATUS) == set(MIN_MEASURED_SIGNALS), (
-        "the ledger and the floor table describe the same eight ecosystems; a "
+        "the ledger and the floor table describe the same nine ecosystems; a "
         "key in one and not the other is a half-registered adapter"
     )
     assert set(CONVERSION_STATUS) >= set(DRIVERS)

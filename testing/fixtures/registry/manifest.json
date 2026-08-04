@@ -9,6 +9,7 @@
     "crates.io",
     "proxy.golang.org",
     "pypi.org",
+    "raw.githubusercontent.com",
     "registry.npmjs.org",
     "repo.packagist.org",
     "repo1.maven.org",
@@ -52,6 +53,45 @@
         "mailgun-php": {
           "url": "https://repo.packagist.org/p2/mailgun/mailgun-php.json",
           "reducer": "packagist-p2"
+        }
+      }
+    },
+    "gradle": {
+      "fixtures": {
+        "okhttp.build.gradle.kts": {
+          "url": "https://raw.githubusercontent.com/square/okhttp/parent-5.4.0/okhttp/build.gradle.kts",
+          "reducer": "none",
+          "format": "text"
+        },
+        "okhttp.libs.versions.toml": {
+          "url": "https://raw.githubusercontent.com/square/okhttp/parent-5.4.0/gradle/libs.versions.toml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "okio.pom": {
+          "url": "https://repo1.maven.org/maven2/com/squareup/okio/okio/3.17.0/okio-3.17.0.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "okio.metadata": {
+          "url": "https://repo1.maven.org/maven2/com/squareup/okio/okio/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "rxjava.build.gradle": {
+          "url": "https://raw.githubusercontent.com/ReactiveX/RxJava/v3.1.12/build.gradle",
+          "reducer": "none",
+          "format": "text"
+        },
+        "reactive-streams.pom": {
+          "url": "https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "reactive-streams.metadata": {
+          "url": "https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
         }
       }
     },

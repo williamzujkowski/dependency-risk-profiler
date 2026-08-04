@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from dependency_risk_profiler.manifest_guidance import unsupported_manifest_guidance
+from dependency_risk_profiler.parsers.base import BaseParser
 
 PACKAGE_LOCK = json.dumps(
     {
@@ -67,16 +68,25 @@ def test_gemfile_and_composer_json_have_companions_too(tmp_path: Path) -> None:
     assert composer_guidance is not None and "composer.lock" in composer_guidance
 
 
-def test_build_gradle_says_there_is_no_companion_yet(tmp_path: Path) -> None:
-    """HYPOTHESIS: with no supported lock file, say so rather than invent one."""
+def test_build_gradle_no_longer_needs_guidance_because_it_is_parsed(
+    tmp_path: Path,
+) -> None:
+    """REGRESSION: this file used to be refused with a 'not implemented' note.
+
+    #101 made it a supported manifest, so the guidance rule that redirected it
+    to pom.xml was deleted rather than left to contradict the parser. The
+    dynamic ``1.+`` in the fixture is the interesting half: it is read, named,
+    and reported as unmanaged, which is the point — the file being unscannable
+    and one version in it being unresolvable are different facts.
+    """
     manifest = tmp_path / "build.gradle"
     manifest.write_text("dependencies { implementation 'a:b:1.+' }\n", encoding="utf-8")
 
-    guidance = unsupported_manifest_guidance(str(manifest))
+    parser = BaseParser.get_parser_for_file(str(manifest))
 
-    assert guidance is not None
-    assert "not implemented yet" in guidance
-    assert "#101" in guidance
+    assert parser is not None
+    assert unsupported_manifest_guidance(str(manifest)) is None
+    assert parser.parse()["a:b"].installed_version == ""
 
 
 def test_manifest_under_a_nonstandard_name_names_the_parser(tmp_path: Path) -> None:

@@ -1,0 +1,11 @@
+{
+  "payload": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\" xmlns=\"http://maven.apache.org/POM/4.0.0\"\n    xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n  <modelVersion>4.0.0</modelVersion>\n  <groupId>org.reactivestreams</groupId>\n  <artifactId>reactive-streams</artifactId>\n  <version>1.0.4</version>\n  <name>reactive-streams</name>\n  <description>A Protocol for Asynchronous Non-Blocking Data Sequence</description>\n  <url>http://www.reactive-streams.org/</url>\n  <inceptionYear>2014</inceptionYear>\n  <licenses>\n    <license>\n      <name>MIT-0</name>\n      <url>https://spdx.org/licenses/MIT-0.html</url>\n      <distribution>repo</distribution>\n    </license>\n  </licenses>\n  <developers>\n    <developer>\n      <id>reactive-streams-sig</id>\n      <name>Reactive Streams SIG</name>\n      <url>http://www.reactive-streams.org/</url>\n    </developer>\n  </developers>\n  <scm>\n    <connection>scm:git:git@github.com:reactive-streams/reactive-streams.git</connection>\n    <url>git@github.com:reactive-streams/reactive-streams.git</url>\n  </scm>\n</project>\n",
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.pom",
+    "trimming": []
+  }
+}

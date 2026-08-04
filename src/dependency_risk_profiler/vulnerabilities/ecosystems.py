@@ -152,6 +152,13 @@ _ALIASES: Mapping[str, str] = MappingProxyType(
         "crates": "cargo",
         "rust": "cargo",
         "maven": "maven",
+        # Gradle is a build tool, not a package ecosystem: it publishes and
+        # consumes Maven coordinates, resolves against Maven Central and is
+        # served by OSV's Maven ecosystem. So it is an alias here rather than a
+        # tenth Ecosystem entry — an advisory against com.squareup.okio:okio
+        # does not become a different advisory because a Kotlin project
+        # declared it (#101).
+        "gradle": "maven",
         "java": "java",
         "nuget": "nuget",
         "dotnet": "nuget",

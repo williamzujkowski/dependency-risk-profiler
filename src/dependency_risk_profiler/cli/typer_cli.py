@@ -233,6 +233,8 @@ def get_ecosystem_from_manifest(manifest_path: str) -> str:
         return "nuget"
     elif file_name == "pom.xml":
         return "maven"
+    elif file_name in ["build.gradle", "build.gradle.kts"]:
+        return "gradle"
     else:
         return "unknown"
 

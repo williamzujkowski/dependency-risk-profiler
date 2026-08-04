@@ -37,6 +37,10 @@ MANIFEST_ECOSYSTEM_FETCHERS = (
     ("composer", "_get_latest_release"),
     ("nuget", "_get_latest_version"),
     ("maven", "_get_latest_version"),
+    # Gradle declares Maven coordinates and dispatches to the Maven analyzer,
+    # which stamps them "maven"; the prewarm therefore has to canonicalize
+    # "gradle" -> "maven" or it writes a key nothing reads (#101).
+    ("gradle", "_get_latest_version"),
 )
 
 

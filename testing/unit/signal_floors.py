@@ -22,7 +22,10 @@ registries are the exception, because each publishes the package's own
 dependency list beside it: nuget in the ``.nuspec`` (#129), maven in the POM's
 ``<dependencies>``, and — since #180 — composer in the p2 entry's ``require``
 block, minus the platform constraints (``php``, ``ext-*``) that are runtimes
-rather than packages.
+rather than packages. gradle inherits maven's exception rather than earning its
+own; it reaches the same POM through the same analyzer, and it is listed
+explicitly in ``TRANSITIVE_RECORDING_ECOSYSTEMS`` so that the route going quiet
+fails there instead of passing as a plausible ``None``.
 
 **The floor sits at the measured value, not below it.** Every number here was
 read off the offline adapter test it guards, and it is the exact count that
@@ -60,6 +63,18 @@ were below the floor rather than at it. The re-baseline there is in
 ``adapter_conformance``, where both cases now assert the floor instead of
 asserting their own blindness.
 
+gradle is the one entry here that is not a registry. Gradle publishes Maven
+coordinates and resolves against Maven Central, so its floor is maven's floor
+and its signal set is maven's signal set, deliberately and to the letter — a
+different number would mean the route had lost something on the way through the
+build-script parser, which is precisely what this entry exists to catch. #127's
+collapse arrived through registry metadata never reaching the scorer; the Gradle
+equivalent arrives through a parse producing a key Maven Central is not
+addressed by, and it looks identical from here: every dependency UNKNOWN, every
+other count green. That is why an ecosystem with no registry of its own still
+gets a floor, and why its conformance case runs the real parser over a captured
+build script rather than handing the analyzer a coordinate by hand (#101).
+
 The Go module proxy is the outlier at six, and its floor is set where it is on
 purpose. ``proxy.golang.org`` publishes a version, a release date and a
 ``go.mod``; it publishes no licence and no owner list, because Go has neither
@@ -94,7 +109,7 @@ below rather than restating them, adds per-signal *value* assertions against
 provenance-dated payloads captured from the live registries, and enforces the
 rule the npm case generalizes to: every signal whose read collapses to a fixed
 default when its key is absent needs at least one fixture where the correct
-answer is the non-default value. All eight ecosystems are now converted;
+answer is the non-default value. All nine ecosystems are now converted;
 ``adapter_conformance.CONVERSION_STATUS`` carries the ledger, and
 ``unproven_branches()`` names every polarized branch no captured payload can
 reach, with the reason.
@@ -134,6 +149,7 @@ MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "cargo": 8,
     "composer": 9,
     "golang": 6,
+    "gradle": 8,
     "maven": 8,
     "nuget": 9,
     "nodejs": 7,
@@ -172,6 +188,7 @@ REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "cargo": _REGISTRY_CORE | {"maintainer", "source_repository"},
     "composer": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
     "golang": (_REGISTRY_CORE - {"license"}) | {"source_repository"},
+    "gradle": _REGISTRY_CORE | {"transitive", "source_repository"},
     "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
     "nuget": _REGISTRY_CORE | {"maintainer", "transitive", "source_repository"},
     "nodejs": _REGISTRY_CORE | {"source_repository"},
@@ -197,6 +214,7 @@ SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "cargo": True,
     "composer": True,
     "golang": False,
+    "gradle": True,
     "maven": True,
     "nodejs": False,
     "nuget": True,
