@@ -13,6 +13,7 @@ from ..utils import (
     fetch_url,
     github_contributor_count,
 )
+from ..versioning import match_release_date
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +241,25 @@ def analyze_npm_community_metrics(
                 except ValueError:
                     pass
 
+                # Same payload, one more read: the installed version's
+                # publication date drives elapsed-time drift for CalVer (#126).
+                parsed_release_dates: Dict[str, datetime] = {}
+                for release_version, published in release_dates.items():
+                    try:
+                        parsed_release_dates[release_version] = datetime.fromisoformat(
+                            published.replace("Z", "+00:00")
+                        )
+                    except (AttributeError, ValueError):
+                        continue
+
+                installed_release_date = match_release_date(
+                    parsed_release_dates, dependency.installed_version
+                )
+                if installed_release_date:
+                    dependency.community_metrics.installed_release_date = (
+                        installed_release_date
+                    )
+
     return dependency
 
 
@@ -263,7 +283,11 @@ def analyze_pypi_community_metrics(
         dependency.community_metrics.releases_count = len(pypi_data["releases"])
 
         latest_release_date = None
-        for releases in pypi_data["releases"].values():
+        # Publication date per version, taken from the payload already fetched
+        # above. The installed version's date is what makes elapsed-time drift
+        # measurable for calendar-versioned packages (#126).
+        release_dates: Dict[str, datetime] = {}
+        for release_version, releases in pypi_data["releases"].items():
             if releases:
                 for release in releases:
                     if "upload_time" in release:
@@ -271,16 +295,25 @@ def analyze_pypi_community_metrics(
                             release_date = datetime.fromisoformat(
                                 release["upload_time"].replace("Z", "+00:00")
                             )
-                            if (
-                                latest_release_date is None
-                                or release_date > latest_release_date
-                            ):
-                                latest_release_date = release_date
                         except ValueError:
-                            pass
+                            continue
+                        if (
+                            latest_release_date is None
+                            or release_date > latest_release_date
+                        ):
+                            latest_release_date = release_date
+                        existing = release_dates.get(release_version)
+                        if existing is None or release_date < existing:
+                            release_dates[release_version] = release_date
 
         if latest_release_date:
             dependency.community_metrics.last_release_date = latest_release_date
+
+        installed_release_date = match_release_date(
+            release_dates, dependency.installed_version
+        )
+        if installed_release_date:
+            dependency.community_metrics.installed_release_date = installed_release_date
 
     # PyPI does not provide this directly; PyPI Stats is a simple fallback.
     try:

@@ -21,6 +21,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Calendar-versioned packages are no longer scored as SemVer.** A leading
+  four-digit year in a date shape (`certifi 2022.12.7`, `pytz 2020.1`,
+  `tzdata`, Go `vYYYY.MM.DD` tags) is now detected before version distance is
+  computed, and drift is measured as elapsed time between the installed release
+  and the latest release rather than as component distance. `certifi 2022.12.7`
+  previously reported "4 major versions behind" and `pytz 2020.1` "6 major
+  versions behind", warning about breaking upgrades that do not exist; they now
+  read "3 years behind (calendar versioning)" and "6 years behind (calendar
+  versioning)". **Version-difference scores drop for calendar-versioned
+  dependencies**, most sharply for ones that are only months behind (previously
+  a full major-version penalty, now scored on elapsed time), so a scan diff
+  across this version can show lower scores without anything having changed
+  upstream. When release timestamps are unavailable the drift signal is marked
+  unmeasured and excluded from both the numerator and the denominator instead
+  of being guessed at. SemVer packages and Go pseudo-versions
+  (`v0.0.0-20210428235338-…`) are unaffected: detection requires the calendar
+  *shape*, not merely a large leading number.
 - **Unknown ecosystems no longer silently default to PyPI.** `infer_ecosystem`
   returned `"python"` for any URL it could not classify, so non-Python packages
   were queried against the wrong advisory source and came back clean. It now

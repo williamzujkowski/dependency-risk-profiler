@@ -21,6 +21,11 @@ from ..popularity import (
     STALENESS_POPULARITY_DAMPENING_DEFAULT,
     should_soften_low_release_cadence,
 )
+from ..versioning import (
+    calendar_drift_days,
+    release_timestamps,
+    uses_calendar_versioning,
+)
 from ..vulnerabilities.aggregator import (
     exploit_score_from_cvss,
     exploit_score_from_severity,
@@ -140,8 +145,12 @@ class RiskScorer:
         exploit_score = self._calculate_exploit_score(
             dependency.has_known_exploits, dependency.security_metrics
         )
+        installed_release_date, latest_release_date = release_timestamps(dependency)
         version_score = self._calculate_version_difference_score(
-            dependency.installed_version, dependency.latest_version
+            dependency.installed_version,
+            dependency.latest_version,
+            installed_release_date,
+            latest_release_date,
         )
         health_score = self._calculate_health_indicators_score(
             dependency.has_tests,
@@ -485,16 +494,25 @@ class RiskScorer:
         return 1.0 if has_known_exploits else 0.0
 
     def _calculate_version_difference_score(
-        self, installed_version: Optional[str], latest_version: Optional[str]
+        self,
+        installed_version: Optional[str],
+        latest_version: Optional[str],
+        installed_release_date: Optional[datetime] = None,
+        latest_release_date: Optional[datetime] = None,
     ) -> Optional[float]:
         """Calculate version difference score.
 
         Args:
             installed_version: Installed version string.
             latest_version: Latest version string.
+            installed_release_date: Publication date of the installed version,
+                used only for calendar-versioned packages.
+            latest_release_date: Publication date of the latest version, used
+                only for calendar-versioned packages.
 
         Returns:
-            Version difference score between 0.0 and 1.0.
+            Version difference score between 0.0 and 1.0, or None when the
+            signal could not be measured.
         """
         if not installed_version or not latest_version:
             return None
@@ -506,6 +524,15 @@ class RiskScorer:
             # Handle version ranges and non-standard version strings
             if any(op in installed_version for op in ["<", ">", "~", "^"]):
                 return 0.25  # Assume minimal risk for version ranges
+
+            # Calendar versioning carries no compatibility semantics, so
+            # component distance is meaningless here: a four-year gap in
+            # certifi is four years of stale CA data, not four breaking
+            # upgrades. Score it by elapsed time instead (#126).
+            if uses_calendar_versioning(installed_version, latest_version):
+                return self._calculate_calendar_drift_score(
+                    installed_release_date, latest_release_date
+                )
 
             # Try to parse as standard versions
             current = version.parse(installed_version)
@@ -541,6 +568,42 @@ class RiskScorer:
             if installed_version != latest_version:
                 return 0.5
             return 0.0
+
+    def _calculate_calendar_drift_score(
+        self,
+        installed_release_date: Optional[datetime],
+        latest_release_date: Optional[datetime],
+    ) -> Optional[float]:
+        """Score calendar-version drift by elapsed time between releases.
+
+        Args:
+            installed_release_date: Publication date of the installed version.
+            latest_release_date: Publication date of the latest version.
+
+        Returns:
+            Drift score between 0.0 and 1.0, or None when the release
+            timestamps are unavailable. A None result marks the signal
+            unmeasured, which #74's normalization drops from both the numerator
+            and the denominator rather than scoring it as a confident zero.
+        """
+        drift_days = calendar_drift_days(installed_release_date, latest_release_date)
+        if drift_days is None:
+            return None
+
+        # Deliberately gentler than the SemVer ladder at every step. Under
+        # SemVer a single major bump hits the 1.0 ceiling because a breaking
+        # upgrade sits in the way; no CalVer gap has that property, so the
+        # ceiling is reserved for a genuinely enormous stretch of missed
+        # releases and the residual risk is carried by the staleness signal.
+        if drift_days < 90:  # Less than a quarter
+            return 0.0
+        if drift_days < 365:  # Under a year
+            return 0.25
+        if drift_days < 730:  # 1-2 years
+            return 0.5
+        if drift_days < 1460:  # 2-4 years
+            return 0.75
+        return 1.0  # 4+ years of missed releases
 
     def _calculate_health_indicators_score(
         self,

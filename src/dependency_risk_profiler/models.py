@@ -49,6 +49,10 @@ class CommunityMetrics:
     issue_close_time_days: Optional[float] = None  # Average days to close issues
     commit_frequency: Optional[float] = None  # Commits per month
     last_release_date: Optional[datetime] = None  # Date of last release
+    # Publication date of the *installed* version. Paired with last_release_date
+    # this measures elapsed-time drift for calendar-versioned packages, where
+    # component distance carries no compatibility meaning (#126).
+    installed_release_date: Optional[datetime] = None
     releases_count: Optional[int] = None  # Number of releases
     downloads_count: Optional[int] = None  # Number of downloads
     dependent_repos_count: Optional[int] = None  # Number of dependent repositories
