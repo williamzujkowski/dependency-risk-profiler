@@ -58,7 +58,15 @@ parseable. Migrate.
   "known_vulnerable": true,         // scored advisories apply to installed_version
   "maintainer_count": 2,
   "risk_level": "MEDIUM",           // CRITICAL | HIGH | MEDIUM | LOW | UNKNOWN
-  "risk_score": 3.2,                // 0..5
+  "verdict_floor": {                // why risk_level is where it is (#242)
+    "applied": true,                // a live advisory raised it
+    "max_counted_severity": "HIGH",
+    "advisory_id": "GHSA-…",        // the advisory carrying that severity
+    "floor": "MEDIUM",              // the verdict it may not sit below
+    "from": "LOW",                  // what the weighted mean said alone
+    "to": "MEDIUM"                  // null when applied is false
+  },
+  "risk_score": 3.2,                // 0..5, and never moved by the floor
   "risk_factors": ["Known security issues (1 counted, max severity HIGH)"],
   "insufficient_data": false,
   "license":   { "id": "BSD-3-Clause", "category": "PERMISSIVE",
@@ -97,6 +105,43 @@ parseable. Migrate.
   "extensions": { }                            // see below
 }
 ```
+
+### `verdict_floor` — whether a fact or a forecast set `risk_level`
+
+`risk_score` is a weighted mean over sixteen signals, most of them leading
+indicators about how a package is being maintained. A live advisory against the
+**installed** version is not that kind of evidence, and averaging it against
+forecasts used to bury it: `exploit` could contribute at most `0.5 / 3.5 =
+0.143` of the normalized score against a LOW boundary of `0.25`, so a package
+with 29 confirmed advisories and a maximum severity of HIGH printed
+`risk_level: LOW` beside `known_vulnerable: true` (#242).
+
+A counted advisory now puts a **floor** under the verdict, one rung under its
+maximum counted severity: `CRITICAL` → at least `HIGH`, `HIGH` → at least
+`MEDIUM`. Leading indicators may raise a verdict above that floor; they may
+never lower it below. `docs/signals.md` states the rule and the argument for
+the one-rung discount.
+
+The block is always present and every key is always there, so read `applied`
+rather than inferring state from which key is null:
+
+| `applied` | `floor` | Means |
+|---|---|---|
+| `true` | non-null | A counted advisory raised the verdict. `from` → `to`. |
+| `false` | non-null | A floor was computed and the leading indicators had already carried the verdict past it. `to` is null. |
+| `false` | `null` | No counted advisory established a floor. |
+
+`risk_score` is **not** touched by the floor. A record where `applied` is true
+carries a `risk_score` that still reflects the weighted mean alone — which is
+what makes the two fields worth having separately.
+
+Two consequences for a gate:
+
+* `--fail-on medium` and above can now trip on a package whose leading
+  indicators are clean. That is the point.
+* The floor keys only on `advisories.counted_in_score`. Filtered advisories —
+  fixed before your version, withdrawn, informational, below the severity
+  threshold — floor nothing.
 
 ### `signals` — measured zero is not the same as unmeasured
 

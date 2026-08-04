@@ -175,7 +175,21 @@ Evaluates security practices in the repository:
    | 50% - 75% (2.5 - 3.75) | HIGH       |
    | 75% - 100% (3.75 - 5.0) | CRITICAL   |
 
-5. **Risk Factors Identification**: The tool identifies specific risk factors that contribute to the score, such as "Single maintainer", "Not updated in X days", or "Known security issues".
+5. **Severity Floor**: The weighted mean is compensatory — a clean answer on one signal pays for a bad answer on another — and that is the wrong shape for a fact about the version you have installed. An advisory confirmed to affect the installed version therefore puts a **floor** under the verdict, one rung under its severity:
+
+   | Maximum counted severity | Verdict may not sit below |
+   |--------------------------|---------------------------|
+   | CRITICAL                 | HIGH                      |
+   | HIGH                     | MEDIUM                    |
+   | MEDIUM / LOW             | LOW (no-op)               |
+
+   ```
+   risk_level = max(weighted_mean_verdict, severity_floor(max_counted_severity))
+   ```
+
+   Leading indicators may raise a verdict above that floor; they may never lower it below. `total_score` is **not** changed by the floor, and the `verdict_floor` block in the JSON output records whether the floor fired, which advisory carried the severity, and what the weighted mean said on its own. Only advisories in `counted_in_score` — confirmed to affect the installed version — set a floor. See `docs/signals.md` for the rule and the argument for the one-rung discount (#242).
+
+6. **Risk Factors Identification**: The tool identifies specific risk factors that contribute to the score, such as "Single maintainer", "Not updated in X days", or "Known security issues".
 
 ## Customizing the Scoring
 
