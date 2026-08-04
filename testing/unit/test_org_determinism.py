@@ -137,7 +137,7 @@ class _FixtureGitHubClient(GitHubDiscoveryClient):
         return [self._repo]
 
     def list_manifest_paths(
-        self, repo: RepositoryRef, supported_names: Iterable[str]
+        self, repo: RepositoryRef
     ) -> RepositoryManifestListing:
         """Return the single fixture manifest path."""
         return RepositoryManifestListing(supported=["requirements.txt"], unreadable=[])

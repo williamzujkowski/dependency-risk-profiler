@@ -13,9 +13,10 @@ against the pre-fix scanner.
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Mapping, Optional, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import pytest
+from org_tree_fixture import CannedTreeSession, tree_client
 from typer.testing import CliRunner, Result
 
 from dependency_risk_profiler.cli.typer_cli import app
@@ -102,13 +103,17 @@ def _repo(full_name: str) -> RepositoryRef:
 
 
 class _FixtureClient(GitHubDiscoveryClient):
-    """Offline client that classifies fixture trees the way the real one does.
+    """Offline client whose tree listing is the *production* classifier.
 
-    The split between ``supported`` and ``unreadable`` runs through the same
-    ``manifest_guidance`` predicates ``GitHubOrgClient`` uses, so a fixture
-    repository behaves here exactly as the real one does against GitHub. It
-    also records every fetch, which is how the "costs no extra request" claim
-    is checked rather than asserted.
+    It used to reimplement the supported/unreadable split against the same
+    ``manifest_guidance`` predicates, which read as faithful and was not: it
+    copied the scanner's exact-name matching, so it hid the ``*.csproj`` gap
+    (#265) exactly as production did and every test agreed with the bug. Now
+    ``list_manifest_paths`` delegates to a real :class:`GitHubOrgClient` over a
+    canned tree document — delete the classifier and these tests fail.
+
+    It still records every fetch, which is how the "costs no extra request"
+    claim is checked rather than asserted.
     """
 
     def __init__(self, repositories: Optional[List[str]] = None) -> None:
@@ -116,6 +121,9 @@ class _FixtureClient(GitHubDiscoveryClient):
         self.repositories = list(_TREES) if repositories is None else repositories
         self.fetched: List[Tuple[str, str]] = []
         self.listed: List[str] = []
+        self._client = tree_client(
+            {full_name: list(tree) for full_name, tree in _TREES.items()}
+        )
 
     def list_org_repositories(
         self,
@@ -138,26 +146,12 @@ class _FixtureClient(GitHubDiscoveryClient):
     def list_manifest_paths(
         self,
         repo: RepositoryRef,
-        supported_names: Iterable[str],
     ) -> RepositoryManifestListing:
         """Split one fixture tree into what is read and what is not."""
         self.listed.append(repo.full_name)
         if repo.full_name == _UNLISTABLE:
             raise RuntimeError("404 Not Found")
-        supported_lookup = {name.lower() for name in supported_names}
-        supported: List[str] = []
-        unreadable: List[str] = []
-        for path in _TREES[repo.full_name]:
-            leaf = path.rsplit("/", 1)[-1]
-            if leaf.lower() in supported_lookup:
-                supported.append(path)
-            elif is_vendored_relative_path(path):
-                continue
-            elif is_recognized_unreadable_name(leaf):
-                unreadable.append(path)
-        return RepositoryManifestListing(
-            supported=sorted(supported), unreadable=sorted(unreadable)
-        )
+        return self._client.list_manifest_paths(repo)
 
     def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
         """Return one fixture manifest body, recording the fetch."""
@@ -440,61 +434,6 @@ def test_manifest_globs_do_not_hide_the_coverage_gap() -> None:
     )
 
 
-class _TreeResponse:
-    """A canned git-tree response satisfying ``github.HttpResponse``."""
-
-    def __init__(self, payload: Dict[str, object]) -> None:
-        """Store the tree document this response serves."""
-        self.status_code = 200
-        self.headers: Dict[str, str] = {}
-        self.encoding: Optional[str] = "utf-8"
-        self._payload = payload
-        self.closed = False
-
-    def iter_content(self, chunk_size: int) -> Iterator[bytes]:
-        """Part of the protocol; these tests only drive the JSON path."""
-        raise NotImplementedError("this fake serves a git tree, not a body")
-
-    def json(self) -> object:
-        """Return the canned git tree."""
-        return self._payload
-
-    def raise_for_status(self) -> None:
-        """Never fail: the canned response is always a 200."""
-
-    def close(self) -> None:
-        """Record that the response was closed."""
-        self.closed = True
-
-
-class _TreeSession:
-    """Session returning one canned git-tree response."""
-
-    def __init__(self, paths: List[str]) -> None:
-        """Build a tree document from repository-relative blob paths."""
-        self._response = _TreeResponse(
-            {
-                "truncated": False,
-                "tree": [{"type": "blob", "path": path} for path in paths]
-                + [{"type": "tree", "path": "frontend"}],
-            }
-        )
-        self.requested_urls: List[str] = []
-
-    def get(
-        self,
-        url: str,
-        *,
-        headers: Mapping[str, str],
-        params: Mapping[str, str],
-        timeout: int,
-        stream: bool,
-    ) -> _TreeResponse:
-        """Serve the canned tree and record the request."""
-        self.requested_urls.append(url)
-        return self._response
-
-
 def test_the_real_client_returns_the_unreadable_half_of_the_tree() -> None:
     """HYPOTHESIS (#262): the defect lived in the client's pre-fetch filter.
 
@@ -503,19 +442,21 @@ def test_the_real_client_returns_the_unreadable_half_of_the_tree() -> None:
     its own fixture would pass with this filter still dropping everything it
     cannot read.
     """
-    session = _TreeSession(
-        [
-            "package.json",
-            "pnpm-lock.yaml",
-            "requirements.txt",
-            "node_modules/left-pad/package.json",
-            "README.md",
-            "src/Widget.fsproj",
-        ]
+    client = tree_client(
+        {
+            "acme/frontend": [
+                "package.json",
+                "pnpm-lock.yaml",
+                "requirements.txt",
+                "node_modules/left-pad/package.json",
+                "README.md",
+                "src/Widget.fsproj",
+            ]
+        }
     )
-    client = GitHubOrgClient(token="t", session=session)
+    session = cast(CannedTreeSession, client.session)
 
-    listing = client.list_manifest_paths(_repo("acme/frontend"), ["requirements.txt"])
+    listing = client.list_manifest_paths(_repo("acme/frontend"))
 
     assert listing.supported == ["requirements.txt"]
     assert listing.unreadable == [

@@ -49,7 +49,6 @@ class _DummyClient:
     def list_manifest_paths(
         self,
         repo: RepositoryRef,
-        supported_names: Iterable[str],
     ) -> RepositoryManifestListing:
         """Return no manifest paths."""
         return RepositoryManifestListing(supported=[], unreadable=[])
