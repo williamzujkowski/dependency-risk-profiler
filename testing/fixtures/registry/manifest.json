@@ -5,10 +5,32 @@
   "warn_after_days": 180,
   "fail_after_days": 545,
   "allowed_hosts": [
+    "crates.io",
+    "pypi.org",
     "registry.npmjs.org",
     "rubygems.org"
   ],
   "ecosystems": {
+    "cargo": {
+      "fixtures": {
+        "acid-store": {
+          "url": "https://crates.io/api/v1/crates/acid-store",
+          "reducer": "crates-io"
+        },
+        "acid-store.owners": {
+          "url": "https://crates.io/api/v1/crates/acid-store/owners",
+          "reducer": "none"
+        },
+        "serde": {
+          "url": "https://crates.io/api/v1/crates/serde",
+          "reducer": "crates-io"
+        },
+        "serde.owners": {
+          "url": "https://crates.io/api/v1/crates/serde/owners",
+          "reducer": "none"
+        }
+      }
+    },
     "nodejs": {
       "fixtures": {
         "express": {
@@ -22,6 +44,22 @@
         "indexof": {
           "url": "https://registry.npmjs.org/indexof",
           "reducer": "npm-packument"
+        }
+      }
+    },
+    "python": {
+      "fixtures": {
+        "flask": {
+          "url": "https://pypi.org/pypi/Flask/json",
+          "reducer": "pypi-project"
+        },
+        "requests": {
+          "url": "https://pypi.org/pypi/requests/json",
+          "reducer": "pypi-project"
+        },
+        "sklearn": {
+          "url": "https://pypi.org/pypi/sklearn/json",
+          "reducer": "pypi-project"
         }
       }
     },

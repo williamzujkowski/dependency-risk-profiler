@@ -1,0 +1,21 @@
+{
+  "payload": {
+    "users": [
+      {
+        "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+        "id": 77792,
+        "kind": "user",
+        "login": "lostatc",
+        "name": "Wren",
+        "url": "https://github.com/lostatc"
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "none",
+    "source_url": "https://crates.io/api/v1/crates/acid-store/owners",
+    "trimming": []
+  }
+}

@@ -135,6 +135,14 @@ class PythonAnalyzer(BaseAnalyzer):
         # a 2016 patch to an older line, three years after its final 0.7.3.
         apply_registry_release_date(dep, newest_timestamp(_upload_times(pypi_data)))
 
+        # PyPI publishes the project's role assignments beside `info`, at the
+        # top level of the payload. The adapter read `info`, `urls` and
+        # `releases` and ignored it, which is why the maintainer signal was
+        # recorded as unavailable for PyPI (#171).
+        maintainer_count = _maintainer_count(pypi_data)
+        if maintainer_count is not None:
+            dep.maintainer_count = maintainer_count
+
         # A yanked release is PyPI's explicit "do not use this" marker, the
         # same field RubyGems and crates.io publish and this adapter never read.
         if info_map.get("yanked") is True:
@@ -276,6 +284,48 @@ def _upload_times(pypi_data: Mapping[str, object]) -> Iterator[object]:
         for entry in entries:
             if isinstance(entry, Mapping):
                 yield entry.get("upload_time_iso_8601")
+
+
+def _maintainer_count(pypi_data: Mapping[str, object]) -> Optional[int]:
+    """Return how many accounts hold a role on the project, or None.
+
+    PyPI's ``ownership`` object is ``{"organization": ..., "roles": [...]}``,
+    where each role entry names a user and the role they hold (``Owner`` or
+    ``Maintainer``). Counting the distinct users answers the maintainer signal
+    from registry metadata alone, which is what PyPI was recorded as unable to
+    do (#171).
+
+    An empty ``roles`` list is **not** zero maintainers. A project transferred
+    to a PyPI organization carries its permissions on the organization instead,
+    and this payload does not publish the organization's membership: Flask,
+    Django and Click all report ``{"organization": "...", "roles": []}``. Zero
+    would score as a single-maintainer bus factor, which is the worst possible
+    answer and one nobody measured, so the signal stays honestly unmeasured
+    (#74, #141). This mirrors the crates.io and RubyGems owner reads, which
+    return None on an empty owner list for the same reason.
+
+    Args:
+        pypi_data: ``pypi.org/pypi/<name>/json`` payload.
+
+    Returns:
+        The number of distinct accounts holding a role, or None when the
+        payload does not answer it.
+    """
+    ownership = pypi_data.get("ownership")
+    if not isinstance(ownership, Mapping):
+        return None
+    roles = ownership.get("roles")
+    if not isinstance(roles, Sequence) or isinstance(roles, (str, bytes)):
+        return None
+
+    users = set()
+    for entry in roles:
+        if not isinstance(entry, Mapping):
+            continue
+        user = _string_or_none(entry.get("user"))
+        if user:
+            users.add(user)
+    return len(users) or None
 
 
 def _is_non_source_label(key: str) -> bool:

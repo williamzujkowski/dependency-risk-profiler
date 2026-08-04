@@ -7,11 +7,13 @@ degraded exactly as the risk it measures increased: ``nose``, ``pycrypto``, and
 ``distribute`` each reported ``staleness=None`` and scored UNKNOWN, while
 ``pycrypto`` was carrying two CRITICAL advisories.
 
-Recorded responses are trimmed to the keys the adapter reads — which is why
-they are shape probes and not coverage evidence, and why python is still
-PENDING in ``adapter_conformance.CONVERSION_STATUS``. A payload cut down to
-what the parser already reads cannot reveal a key the parser *should* read; see
-``registry_fixtures`` for the captured alternative. Refresh with:
+Recorded responses here are trimmed to the keys the adapter reads, which makes
+them shape probes and not coverage evidence: a payload cut down to what the
+parser already reads cannot reveal a key the parser *should* read. That job now
+belongs to the captured fixtures under ``testing/fixtures/registry/python/``,
+which python was converted onto in #73 — and which promptly found two keys this
+file could never have shown, ``ownership`` (#171) and PEP 639's
+``license_expression``. Refresh with:
   curl https://pypi.org/pypi/nose/json
   curl https://pypi.org/pypi/pycrypto/json
   curl https://pypi.org/pypi/distribute/json
@@ -129,6 +131,18 @@ REQUESTS_RESPONSE: Dict[str, object] = {
     "releases": {
         "2.34.1": [{"upload_time_iso_8601": "2026-05-13T19:20:24.662635Z"}],
         "2.34.2": [{"upload_time_iso_8601": "2026-05-14T19:25:27.735762Z"}],
+    },
+    # The maintainer count, published at the top level beside `info` and never
+    # read until #171. The whole payload, unabridged, is captured as
+    # testing/fixtures/registry/python/requests.json; this probe carries the
+    # block because the floor it guards now counts the maintainer signal.
+    "ownership": {
+        "organization": None,
+        "roles": [
+            {"role": "Owner", "user": "Lukasa"},
+            {"role": "Owner", "user": "graffatcolmingov"},
+            {"role": "Owner", "user": "nateprewitt"},
+        ],
     },
 }
 

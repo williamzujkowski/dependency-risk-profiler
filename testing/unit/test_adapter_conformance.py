@@ -44,7 +44,7 @@ from registry_fixtures import (
     load_fixture,
     replay_fetcher,
 )
-from signal_floors import MIN_MEASURED_SIGNALS
+from signal_floors import MIN_MEASURED_SIGNALS, SCORES_FROM_REGISTRY_ALONE
 
 CASE_IDS = [case.slug for case in CASES]
 
@@ -103,6 +103,146 @@ def test_the_gem_license_is_read_from_the_list_shape() -> None:
     assert score.dependency.license_info is not None
     assert score.dependency.license_info.license_id == "MIT"
     assert score.license_score == 0.0
+
+
+def test_the_pypi_maintainer_count_comes_from_the_ownership_object() -> None:
+    """#171, settled against the payload PyPI actually serves.
+
+    ``SCORES_FROM_REGISTRY_ALONE['python']`` was False for one stated reason:
+    PyPI publishes no cheap maintainer count. It does — in a top-level
+    ``ownership`` object beside ``info``, which the adapter read straight past.
+    Both halves are asserted: the payload's shape (there is no ``maintainers``
+    key to have read instead) and the resulting count.
+    """
+    fixture = load_fixture("python", "requests")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    assert "maintainers" not in payload
+    ownership = payload["ownership"]
+    assert isinstance(ownership, Mapping)
+    assert {entry["user"] for entry in ownership["roles"]} == {
+        "Lukasa",
+        "graffatcolmingov",
+        "nateprewitt",
+    }
+
+    score = score_case(next(c for c in CASES if c.slug == "python/requests"))
+
+    assert score.dependency.maintainer_count == 3
+    assert score.maintainer_score == 0.25
+    assert SCORES_FROM_REGISTRY_ALONE["python"] is True
+
+
+def test_an_org_owned_project_reports_no_maintainer_count_rather_than_zero() -> None:
+    """An empty roles list is unmeasured, not a single-maintainer verdict.
+
+    A project transferred to a PyPI organization carries its permissions on the
+    organization, and this payload does not publish who is in it. ``len([])``
+    is zero, zero scores 1.0 — the worst answer the maintainer signal has — and
+    it would come from a fact nobody measured. #141 is the precedent: the
+    transitive analyzer scored the empty set as a confident 0.0.
+    """
+    fixture = load_fixture("python", "flask")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    ownership = payload["ownership"]
+    assert isinstance(ownership, Mapping)
+    assert ownership["organization"] == "pallets"
+    assert ownership["roles"] == []
+
+    score = score_case(next(c for c in CASES if c.slug == "python/flask"))
+
+    assert score.dependency.maintainer_count is None
+    assert score.maintainer_score is None
+    assert "maintainer" in score.unknown_signals
+
+
+def test_the_pypi_licence_is_read_from_the_pep_639_expression() -> None:
+    """The dead read the python capture found: metadata 2.4 moved the licence.
+
+    flask publishes ``license_expression: "BSD-3-Clause"`` with ``license``
+    null and no ``License ::`` classifier, so neither the singular spelling nor
+    the classifier fallback had anything to reach. 17 of 30 sampled popular
+    packages are in the same shape. This one a count-based floor *could* have
+    caught, because an unread licence goes to None — but only if the floor's
+    fixture were an affected package, and the floor's fixture was requests,
+    which still publishes the legacy spelling.
+    """
+    fixture = load_fixture("python", "flask")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    info = payload["info"]
+    assert isinstance(info, Mapping)
+    assert info["license"] is None
+    assert info["license_expression"] == "BSD-3-Clause"
+    assert not [c for c in info["classifiers"] if "License ::" in c]
+
+    score = score_case(next(c for c in CASES if c.slug == "python/flask"))
+
+    assert score.dependency.license_info is not None
+    assert score.dependency.license_info.license_id == "BSD-3-CLAUSE"
+    assert score.license_score == 0.0
+
+
+def test_the_fully_yanked_crate_is_flagged_deprecated() -> None:
+    """The branch rubygems has no capture for (#170), proven one registry over.
+
+    crates.io answers 200 for a crate whose every release is yanked and reports
+    ``yanked: true`` on the release entry. rubygems.org answers 404 for the
+    equivalent gem, so its adapter returns before the read — which is why
+    ``POLARIZED_SIGNALS['rubygems']['deprecation']`` is still a waiver and this
+    one is not. Same idea, different endpoint.
+    """
+    fixture = load_fixture("cargo", "acid-store")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    assert payload["crate"]["yanked"] is True
+    assert all(entry["yanked"] is True for entry in payload["versions"])
+
+    score = score_case(next(c for c in CASES if c.slug == "cargo/acid-store"))
+
+    assert score.dependency.is_deprecated is True
+    assert score.deprecation_score == 1.0
+
+
+def test_a_withdrawn_crate_is_not_reported_as_current() -> None:
+    """#139's shape, second field: max_version is a sentinel on a yanked crate.
+
+    crates.io answers ``max_version: "0.0.0"`` when nothing installable
+    remains, and no release is numbered 0.0.0. Read as the latest version it
+    makes an installed 0.10.0 look like a trivial patch behind — a value that
+    was present and wrong, which is exactly why cargo was chosen for this
+    conversion.
+    """
+    fixture = load_fixture("cargo", "acid-store")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    assert payload["crate"]["max_version"] == "0.0.0"
+    assert "0.0.0" not in {entry["num"] for entry in payload["versions"]}
+
+    score = score_case(next(c for c in CASES if c.slug == "cargo/acid-store"))
+
+    assert score.dependency.latest_version == "0.14.2"
+    assert score.version_score == 0.5
+
+
+def test_the_serde_release_date_is_not_the_crates_first_publication() -> None:
+    """#139 itself, pinned by value on a captured payload.
+
+    serde's crate object was created in December 2014 and its newest release
+    shipped this year. Reading ``crate.created_at`` as the release date scores
+    the most actively maintained crate in the registry at maximum staleness.
+    """
+    fixture = load_fixture("cargo", "serde")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    assert payload["crate"]["created_at"].startswith("2014-")
+
+    score = score_case(next(c for c in CASES if c.slug == "cargo/serde"))
+
+    assert score.dependency.last_updated is not None
+    assert score.dependency.last_updated.year >= 2026
+    assert score.staleness_score is not None and score.staleness_score < 1.0
 
 
 # --- 2. The non-default-branch rule ----------------------------------------

@@ -1,0 +1,143 @@
+{
+  "payload": {
+    "info": {
+      "author": "",
+      "author_email": "",
+      "bugtrack_url": null,
+      "classifiers": [],
+      "description": "# \u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f Summary \u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f\n\n\u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f The **`sklearn` PyPI package is deprecated use `scikit-learn` instead** \u26a0\ufe0f\u26a0\ufe0f\u26a0\ufe0f\n\n# How to fix the error for the main use cases\n\n- use `pip install scikit-learn` rather than `pip install sklearn`\n- replace `sklearn` by `scikit-learn` in your pip requirements files\n  (`requirements.txt`, `setup.py,` `setup.cfg`, `Pipfile`, etc ...)\n- if the `sklearn` package is used by one of your dependencies\n  it would be great if you take some time to track which package uses\n  `sklearn` instead of `scikit-learn` and report it to their issue tracker\n- as a last resort, set the environment variable\n  `SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True` to avoid this error\n\n# Reason for the deprecation\n\n`sklearn` package on PyPI exists to prevent malicious actors from using the\n`sklearn` package, since `sklearn` (the import name) and `scikit-learn` (the\nproject name) are sometimes used interchangeably. `scikit-learn` is the actual\npackage name and should be used with pip, e.g. for:\n- pip commands: `pip install scikit-learn`\n- pip requirement files (`requirements.txt`, `setup.py,` `setup.cfg`,\n  `Pipfile`, etc ...)\n\nAt the time of writing (October 2022) `sklearn` downloads is about 1/5 of the\n`scikit-learn` downloads on PyPI so a lot of people are using it.\n\nThere are some edge cases with the way the PyPI `sklearn` package is\nimplemented:\n- `pip install sklearn==1.1.3` will say that the 1.1.3 version does not exist,\n  which is confusing. The only available version at the time of writing of\n  `sklearn` is 0.0.\n- `pip uninstall sklearn` will actually not uninstall `scikit-learn`, you can\n  still do `import sklearn` afterwards\n- it can be confusing to have both `sklearn` and `scikit-learn` in the `pip\n  list` output, prompting questions like \"why do I have scikit-learn 1.1.3 and\n  sklearn 0.0, and what does it even mean\"?\n\n# Historical brownout schedule\n\nStarting 2023 December 1st, trying to install the `sklearn` PyPI package will\nraise an error.\n\nThe fo\u2026[truncated-by-capture]",
+      "description_content_type": "text/markdown",
+      "docs_url": null,
+      "download_url": "",
+      "downloads": {
+        "last_day": -1,
+        "last_month": -1,
+        "last_week": -1
+      },
+      "dynamic": null,
+      "home_page": "",
+      "keywords": "",
+      "license": "",
+      "license_expression": null,
+      "license_files": null,
+      "maintainer": "",
+      "maintainer_email": "",
+      "name": "sklearn",
+      "package_url": "https://pypi.org/project/sklearn/",
+      "platform": null,
+      "project_url": "https://pypi.org/project/sklearn/",
+      "project_urls": null,
+      "provides_extra": null,
+      "release_url": "https://pypi.org/project/sklearn/0.0.post12/",
+      "requires_dist": null,
+      "requires_python": "",
+      "summary": "deprecated sklearn package, use scikit-learn instead",
+      "version": "0.0.post12",
+      "yanked": false,
+      "yanked_reason": null
+    },
+    "last_serial": 20870692,
+    "ownership": {
+      "organization": null,
+      "roles": [
+        {
+          "role": "Owner",
+          "user": "filo"
+        },
+        {
+          "role": "Owner",
+          "user": "lesteve"
+        },
+        {
+          "role": "Owner",
+          "user": "t3kcit"
+        }
+      ]
+    },
+    "releases": {
+      "0.0": [
+        {
+          "comment_text": "",
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "1e7adbb3be0ce9bd5c8b7e3d87328e79063f8b263b2b1bfa4774cb1147bfcd3f",
+            "md5": "2f838446781e075ca99dfab2643a3199",
+            "sha256": "e23001573aa194b834122d2b9562459bf5ae494a2d59ca6b8aa22c85a44c0e31"
+          },
+          "downloads": -1,
+          "filename": "sklearn-0.0.tar.gz",
+          "has_sig": false,
+          "md5_digest": "2f838446781e075ca99dfab2643a3199",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": null,
+          "size": 1148,
+          "upload_time": "2015-07-15T14:17:46",
+          "upload_time_iso_8601": "2015-07-15T14:17:46.609926Z",
+          "url": "https://files.pythonhosted.org/packages/1e/7a/dbb3be0ce9bd5c8b7e3d87328e79063f8b263b2b1bfa4774cb1147bfcd3f/sklearn-0.0.tar.gz",
+          "yanked": false,
+          "yanked_reason": null
+        }
+      ],
+      "0.0.post12": [
+        {
+          "comment_text": "",
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "461c395a83ee7b2d2ad7a05b453872053d41449564477c81dc356f720b16eac4",
+            "md5": "58a7624648e854318beb9c17d6521bc8",
+            "sha256": "54cff9e20839b7b202321178228af4d9388bedf78425d9299fd9ee170d68802e"
+          },
+          "downloads": -1,
+          "filename": "sklearn-0.0.post12.tar.gz",
+          "has_sig": false,
+          "md5_digest": "58a7624648e854318beb9c17d6521bc8",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": null,
+          "size": 2578,
+          "upload_time": "2023-12-01T14:30:39",
+          "upload_time_iso_8601": "2023-12-01T14:30:39.945835Z",
+          "url": "https://files.pythonhosted.org/packages/46/1c/395a83ee7b2d2ad7a05b453872053d41449564477c81dc356f720b16eac4/sklearn-0.0.post12.tar.gz",
+          "yanked": false,
+          "yanked_reason": null
+        }
+      ]
+    },
+    "urls": [
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "461c395a83ee7b2d2ad7a05b453872053d41449564477c81dc356f720b16eac4",
+          "md5": "58a7624648e854318beb9c17d6521bc8",
+          "sha256": "54cff9e20839b7b202321178228af4d9388bedf78425d9299fd9ee170d68802e"
+        },
+        "downloads": -1,
+        "filename": "sklearn-0.0.post12.tar.gz",
+        "has_sig": false,
+        "md5_digest": "58a7624648e854318beb9c17d6521bc8",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 2578,
+        "upload_time": "2023-12-01T14:30:39",
+        "upload_time_iso_8601": "2023-12-01T14:30:39.945835Z",
+        "url": "https://files.pythonhosted.org/packages/46/1c/395a83ee7b2d2ad7a05b453872053d41449564477c81dc356f720b16eac4/sklearn-0.0.post12.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "vulnerabilities": []
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "pypi-project",
+    "source_url": "https://pypi.org/pypi/sklearn/json",
+    "trimming": [
+      "releases: kept ['0.0', '0.0.post12'], dropped 8 other per-version file lists (volume only; retained releases keep every key, including the newest upload the cadence reads)",
+      "truncated 1 string values to 2000 characters"
+    ]
+  }
+}

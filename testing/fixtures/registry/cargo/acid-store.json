@@ -1,0 +1,357 @@
+{
+  "payload": {
+    "categories": [
+      {
+        "category": "Cryptography",
+        "crates_cnt": 6799,
+        "created_at": "2017-01-17T19:13:05.112025Z",
+        "description": "Algorithms intended for securing data.",
+        "id": "cryptography",
+        "slug": "cryptography"
+      },
+      {
+        "category": "Filesystem",
+        "crates_cnt": 3578,
+        "created_at": "2017-01-17T19:13:05.112025Z",
+        "description": "Crates for dealing with files and filesystems.",
+        "id": "filesystem",
+        "slug": "filesystem"
+      }
+    ],
+    "crate": {
+      "badges": [],
+      "categories": [
+        "cryptography",
+        "filesystem"
+      ],
+      "created_at": "2020-02-09T00:06:10.614077Z",
+      "default_version": "0.14.2",
+      "description": "A transactional and deduplicating virtual file system",
+      "documentation": "https://docs.rs/acid-store",
+      "downloads": 41966,
+      "exact_match": false,
+      "homepage": "https://github.com/lostatc/acid-store",
+      "id": "acid-store",
+      "keywords": [
+        "transaction",
+        "filesystem",
+        "security",
+        "database",
+        "storage"
+      ],
+      "links": {
+        "owner_team": "/api/v1/crates/acid-store/owner_team",
+        "owner_user": "/api/v1/crates/acid-store/owner_user",
+        "owners": "/api/v1/crates/acid-store/owners",
+        "reverse_dependencies": "/api/v1/crates/acid-store/reverse_dependencies",
+        "version_downloads": "/api/v1/crates/acid-store/downloads",
+        "versions": null
+      },
+      "max_stable_version": null,
+      "max_version": "0.0.0",
+      "name": "acid-store",
+      "newest_version": "0.0.0",
+      "num_versions": 25,
+      "recent_downloads": 167,
+      "repository": "https://github.com/lostatc/acid-store",
+      "trustpub_only": false,
+      "updated_at": "2024-03-03T15:23:27.004334Z",
+      "versions": [
+        1070885,
+        847075,
+        829755,
+        762005,
+        697412,
+        628230,
+        625835,
+        620645,
+        559123,
+        457602,
+        416093,
+        410078,
+        407623,
+        407302,
+        403776,
+        389222,
+        389087,
+        299229,
+        236381,
+        232883,
+        216765,
+        216230,
+        215590,
+        210869,
+        210864
+      ],
+      "yanked": true
+    },
+    "keywords": [
+      {
+        "crates_cnt": 117,
+        "created_at": "2016-02-28T17:18:23.743873Z",
+        "id": "transaction",
+        "keyword": "transaction"
+      },
+      {
+        "crates_cnt": 1093,
+        "created_at": "2014-12-20T07:53:19.367140Z",
+        "id": "filesystem",
+        "keyword": "filesystem"
+      },
+      {
+        "crates_cnt": 2765,
+        "created_at": "2015-02-11T15:15:30.090432Z",
+        "id": "security",
+        "keyword": "security"
+      },
+      {
+        "crates_cnt": 3780,
+        "created_at": "2014-11-20T20:17:27.672220Z",
+        "id": "database",
+        "keyword": "database"
+      },
+      {
+        "crates_cnt": 1035,
+        "created_at": "2015-03-22T20:59:50.700909Z",
+        "id": "storage",
+        "keyword": "storage"
+      }
+    ],
+    "versions": [
+      {
+        "audit_actions": [
+          {
+            "action": "publish",
+            "time": "2024-03-03T15:23:27.004334Z",
+            "user": {
+              "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+              "created_at": "2016-06-12T14:00:01Z",
+              "id": 77792,
+              "login": "lostatc",
+              "name": "Wren",
+              "url": "https://github.com/lostatc"
+            }
+          },
+          {
+            "action": "yank",
+            "time": "2024-03-04T03:46:51.709208Z",
+            "user": {
+              "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+              "created_at": "2016-06-12T14:00:01Z",
+              "id": 77792,
+              "login": "lostatc",
+              "name": "Wren",
+              "url": "https://github.com/lostatc"
+            }
+          }
+        ],
+        "bin_names": [],
+        "checksum": "195adeb53e54da5094ec96b363840fac1d94c249f3e4441b29ad491c34606560",
+        "crate": "acid-store",
+        "crate_size": 126770,
+        "created_at": "2024-03-03T15:23:27.004334Z",
+        "description": "A transactional and deduplicating virtual file system",
+        "dl_path": "/api/v1/crates/acid-store/0.14.2/download",
+        "documentation": "https://docs.rs/acid-store",
+        "downloads": 1620,
+        "edition": "2021",
+        "features": {
+          "compression": [
+            "dep:lz4"
+          ],
+          "default": [],
+          "encryption": [
+            "dep:sodiumoxide",
+            "dep:rand"
+          ],
+          "file-metadata": [
+            "repo-file",
+            "dep:nix",
+            "dep:filetime",
+            "dep:xattr",
+            "dep:users",
+            "dep:exacl"
+          ],
+          "fuse-mount": [
+            "dep:fuser",
+            "dep:bimap",
+            "dep:tempfile",
+            "file-metadata"
+          ],
+          "repo-file": [
+            "dep:relative-path",
+            "dep:walkdir",
+            "dep:hole-punch"
+          ],
+          "repo-value": [],
+          "store-directory": [],
+          "store-rclone": [
+            "store-sftp",
+            "dep:rand"
+          ],
+          "store-redis": [
+            "dep:redis"
+          ],
+          "store-s3": [
+            "dep:rust-s3"
+          ],
+          "store-sftp": [
+            "dep:ssh2"
+          ],
+          "store-sqlite": [
+            "dep:rusqlite"
+          ]
+        },
+        "has_lib": true,
+        "homepage": "https://github.com/lostatc/acid-store",
+        "id": 1070885,
+        "lib_links": null,
+        "license": "Apache-2.0",
+        "linecounts": {
+          "languages": {
+            "Rust": {
+              "code_lines": 8427,
+              "comment_lines": 394,
+              "files": 58
+            }
+          },
+          "total_code_lines": 8427,
+          "total_comment_lines": 394
+        },
+        "links": {
+          "authors": "/api/v1/crates/acid-store/0.14.2/authors",
+          "dependencies": "/api/v1/crates/acid-store/0.14.2/dependencies",
+          "version_downloads": "/api/v1/crates/acid-store/0.14.2/downloads"
+        },
+        "num": "0.14.2",
+        "published_by": {
+          "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+          "created_at": "2016-06-12T14:00:01Z",
+          "id": 77792,
+          "login": "lostatc",
+          "name": "Wren",
+          "url": "https://github.com/lostatc"
+        },
+        "readme_path": "/api/v1/crates/acid-store/0.14.2/readme",
+        "repository": "https://github.com/lostatc/acid-store",
+        "rust_version": "1.70.0",
+        "trustpub_data": null,
+        "updated_at": "2024-03-04T03:46:51.703368Z",
+        "yank_message": null,
+        "yanked": true
+      },
+      {
+        "audit_actions": [
+          {
+            "action": "publish",
+            "time": "2020-02-09T00:06:10.614077Z",
+            "user": {
+              "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+              "created_at": "2016-06-12T14:00:01Z",
+              "id": 77792,
+              "login": "lostatc",
+              "name": "Wren",
+              "url": "https://github.com/lostatc"
+            }
+          },
+          {
+            "action": "yank",
+            "time": "2024-03-04T03:44:57.058047Z",
+            "user": {
+              "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+              "created_at": "2016-06-12T14:00:01Z",
+              "id": 77792,
+              "login": "lostatc",
+              "name": "Wren",
+              "url": "https://github.com/lostatc"
+            }
+          }
+        ],
+        "bin_names": [
+          "main"
+        ],
+        "checksum": "33899f99e2b761ef2a674384731d08226c1767f76ad40fa81b244214f8f8385d",
+        "crate": "acid-store",
+        "crate_size": 64472,
+        "created_at": "2020-02-09T00:06:10.614077Z",
+        "description": "A library for secure, deduplicated, transactional, and verifiable data storage",
+        "dl_path": "/api/v1/crates/acid-store/0.1.0/download",
+        "documentation": "https://docs.rs/acid-store",
+        "downloads": 1465,
+        "edition": "2018",
+        "features": {
+          "default": [],
+          "repo-file": [
+            "path-slash",
+            "walkdir"
+          ],
+          "repo-value": [],
+          "repo-version": [],
+          "store-directory": [
+            "walkdir"
+          ],
+          "store-redis": [
+            "redis"
+          ],
+          "store-s3": [
+            "rust-s3"
+          ],
+          "store-sqlite": [
+            "rusqlite"
+          ]
+        },
+        "has_lib": true,
+        "homepage": "https://github.com/lostatc/acid-store",
+        "id": 210864,
+        "lib_links": null,
+        "license": "Apache-2.0",
+        "linecounts": {
+          "languages": {
+            "Pan": {
+              "code_lines": 3,
+              "comment_lines": 1,
+              "files": 1
+            },
+            "Rust": {
+              "code_lines": 2542,
+              "comment_lines": 577,
+              "files": 32
+            }
+          },
+          "total_code_lines": 2545,
+          "total_comment_lines": 578
+        },
+        "links": {
+          "authors": "/api/v1/crates/acid-store/0.1.0/authors",
+          "dependencies": "/api/v1/crates/acid-store/0.1.0/dependencies",
+          "version_downloads": "/api/v1/crates/acid-store/0.1.0/downloads"
+        },
+        "num": "0.1.0",
+        "published_by": {
+          "avatar": "https://avatars.githubusercontent.com/u/19890498?v=4",
+          "created_at": "2016-06-12T14:00:01Z",
+          "id": 77792,
+          "login": "lostatc",
+          "name": "Wren",
+          "url": "https://github.com/lostatc"
+        },
+        "readme_path": "/api/v1/crates/acid-store/0.1.0/readme",
+        "repository": "https://github.com/lostatc/acid-store",
+        "rust_version": null,
+        "trustpub_data": null,
+        "updated_at": "2024-03-04T03:44:57.051140Z",
+        "yank_message": null,
+        "yanked": true
+      }
+    ]
+  },
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "reducer": "crates-io",
+    "source_url": "https://crates.io/api/v1/crates/acid-store",
+    "trimming": [
+      "versions: kept ['0.1.0', '0.14.2'], dropped 23 other release entries (volume only; retained entries keep every key and their original order)"
+    ]
+  }
+}

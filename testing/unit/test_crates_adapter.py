@@ -17,10 +17,11 @@ from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskSc
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 
 # Recorded crates.io responses, trimmed to the keys the adapter reads — shape
-# probes, not coverage evidence, which is why cargo is still PENDING in
-# adapter_conformance.CONVERSION_STATUS (a payload cut down to what the parser
-# reads cannot reveal a key it should read but doesn't). Refresh
-# with:
+# probes, not coverage evidence (a payload cut down to what the parser reads
+# cannot reveal a key it should read but doesn't). That job belongs to the
+# captured fixtures under testing/fixtures/registry/cargo/, which cargo was
+# converted onto in #73; capturing them found max_version answering the
+# sentinel "0.0.0" on a fully yanked crate. Refresh with:
 #   curl https://crates.io/api/v1/crates/anyhow
 #   curl https://crates.io/api/v1/crates/anyhow/owners
 # The split is the point: the `crate` object carries the repository and the

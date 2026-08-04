@@ -299,7 +299,152 @@ def reduce_npm_packument(payload: object, limit: int) -> Tuple[object, List[str]
     return reduced, notes
 
 
-REDUCERS = {"none": reduce_none, "npm-packument": reduce_npm_packument}
+def reduce_pypi_project(payload: object, limit: int) -> Tuple[object, List[str]]:
+    """Sample a PyPI project document's ``releases`` map down to size.
+
+    ``releases`` maps every version to its uploaded files, and requests carries
+    163 of them. The retained set is the version ``info`` names as current, the
+    oldest release by upload date, and the release holding the **newest** upload
+    of any version — that last one is load-bearing, because the adapter derives
+    the release cadence from the newest ``upload_time_iso_8601`` anywhere in the
+    payload and distribute's newest upload sits on an older line than its final
+    version. Retained releases keep all of their files and all of their keys,
+    and every top-level key survives, ``ownership`` and ``vulnerabilities``
+    included.
+
+    Args:
+        payload: Decoded ``pypi.org/pypi/<name>/json`` document.
+        limit: Maximum characters to keep in any single string.
+
+    Returns:
+        The reduced document and human-readable notes about what was dropped.
+    """
+    if not isinstance(payload, dict):
+        return payload, []
+
+    releases = payload.get("releases")
+    notes: List[str] = []
+    reduced = dict(payload)
+
+    if isinstance(releases, dict):
+        keep = set()
+        info = payload.get("info")
+        if isinstance(info, dict):
+            current = info.get("version")
+            if isinstance(current, str):
+                keep.add(current)
+
+        dated: List[Tuple[str, str]] = []
+        for name, files in releases.items():
+            if not isinstance(files, list):
+                continue
+            stamps = [
+                entry["upload_time_iso_8601"]
+                for entry in files
+                if isinstance(entry, dict)
+                and isinstance(entry.get("upload_time_iso_8601"), str)
+            ]
+            if stamps:
+                dated.append((max(stamps), str(name)))
+        if dated:
+            dated.sort()
+            keep.add(dated[0][1])
+            keep.add(dated[-1][1])
+
+        keep &= set(releases)
+        if not keep and releases:
+            keep = {sorted(releases)[-1]}
+
+        dropped = len(releases) - len(keep)
+        if dropped > 0:
+            notes.append(
+                f"releases: kept {sorted(keep)}, dropped {dropped} other "
+                f"per-version file lists (volume only; retained releases keep "
+                f"every key, including the newest upload the cadence reads)"
+            )
+        reduced["releases"] = {name: releases[name] for name in sorted(keep)}
+
+    counter = [0]
+    result = truncate_strings(reduced, limit, counter)
+    if counter[0]:
+        notes.append(f"truncated {counter[0]} string values to {limit} characters")
+    return result, notes
+
+
+def reduce_crates_io(payload: object, limit: int) -> Tuple[object, List[str]]:
+    """Sample a crates.io crate document's ``versions`` list down to size.
+
+    serde publishes 316 release entries and the raw document is 432 KB, over
+    the fixture bound. The retained set is the entry ``crate.max_version``
+    points at, the entry ``crate.default_version`` names, the newest and oldest
+    by ``created_at``, and the list's first entry — which is the one the
+    adapter falls back to when ``max_version`` resolves to nothing, as it does
+    on a fully yanked crate. Original order is preserved so that fallback still
+    lands on the same release. Retained entries keep every key, ``yanked``,
+    ``yank_message`` and ``audit_actions`` included.
+
+    Args:
+        payload: Decoded ``crates.io/api/v1/crates/<name>`` document.
+        limit: Maximum characters to keep in any single string.
+
+    Returns:
+        The reduced document and human-readable notes about what was dropped.
+    """
+    if not isinstance(payload, dict):
+        return payload, []
+
+    versions = payload.get("versions")
+    notes: List[str] = []
+    reduced = dict(payload)
+
+    if isinstance(versions, list):
+        entries = [entry for entry in versions if isinstance(entry, dict)]
+        crate = payload.get("crate")
+        summary: Dict[str, object] = crate if isinstance(crate, dict) else {}
+
+        keep = set()
+        for key in ("max_version", "default_version", "newest_version"):
+            pointer = summary.get(key)
+            if isinstance(pointer, str):
+                keep.add(pointer)
+        dated = sorted(
+            (entry["created_at"], entry["num"])
+            for entry in entries
+            if isinstance(entry.get("created_at"), str)
+            and isinstance(entry.get("num"), str)
+        )
+        if dated:
+            keep.add(dated[0][1])
+            keep.add(dated[-1][1])
+        if entries and isinstance(entries[0].get("num"), str):
+            keep.add(str(entries[0]["num"]))
+
+        kept = [entry for entry in entries if entry.get("num") in keep]
+        if not kept:
+            kept = entries[:1]
+
+        dropped = len(versions) - len(kept)
+        if dropped > 0:
+            notes.append(
+                f"versions: kept {sorted(str(e.get('num')) for e in kept)}, "
+                f"dropped {dropped} other release entries (volume only; "
+                f"retained entries keep every key and their original order)"
+            )
+        reduced["versions"] = kept
+
+    counter = [0]
+    result = truncate_strings(reduced, limit, counter)
+    if counter[0]:
+        notes.append(f"truncated {counter[0]} string values to {limit} characters")
+    return result, notes
+
+
+REDUCERS = {
+    "none": reduce_none,
+    "npm-packument": reduce_npm_packument,
+    "pypi-project": reduce_pypi_project,
+    "crates-io": reduce_crates_io,
+}
 
 
 def capture_one(

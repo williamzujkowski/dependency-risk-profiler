@@ -42,7 +42,13 @@ trigger rather than depending on memory.
 
 Reducers may remove **volume**. They may never remove **key diversity**.
 
+Four exist, one per document shape: `none`, `npm-packument`, `pypi-project`
+(samples the `releases` map), and `crates-io` (samples the `versions` list).
+Each keeps the entries the adapter resolves against plus the oldest and newest,
+in their original order, with every key intact.
+
 - Dropping 285 of express's 288 release manifests is volume.
+- Dropping 314 of serde's 316 release entries is volume.
 - Capping a 40 KB `readme` string at 2000 characters is volume; the key stays.
 - Dropping a key the adapter does not parse yet is **not allowed**. Those are
   precisely the keys that reveal the next dead read — `versions[<latest>]

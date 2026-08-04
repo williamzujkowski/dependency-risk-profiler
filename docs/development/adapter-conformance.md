@@ -76,23 +76,70 @@ reintroducing #142 — making `NodeJSAnalyzer._is_deprecated` read a top-level
 
 That is the claim, demonstrated rather than asserted.
 
-## Status: 2 of 8 converted
+Repeated for cargo when it was converted, by putting #139 back — making
+`_apply_registry_metadata` read the crate object's own `created_at` again:
+
+| Gate | With #139 reintroduced |
+|---|---|
+| `test_signal_floors.py` (counts) | **passed** (6/6) |
+| `test_crates_adapter.py` floor + named-signal assertions | **passed** (2/2) |
+| `test_adapter_conformance.py` value assertions | **FAILED** on `cargo/serde` |
+
+And for the second read the cargo capture found, restoring `max_version` as the
+latest-version source:
+
+| Gate | With the `"0.0.0"` sentinel read restored |
+|---|---|
+| `test_signal_floors.py` (counts) | **passed** |
+| `test_crates_adapter.py` (all 10) | **passed** |
+| `test_adapter_conformance.py` value assertions | **FAILED** on `cargo/acid-store` |
+
+Same for the PEP 639 licence read, removed again:
+
+| Gate | With `license_expression` unread |
+|---|---|
+| `test_signal_floors.py` (counts) | **passed** |
+| `test_python_adapter.py` floor + named-signal assertions | **passed** |
+| `test_adapter_conformance.py` value assertions | **FAILED** on `python/flask` |
+
+The `ownership` read is the instructive contrast: remove it and the count-based
+floor fails *too*, because an unread maintainer count goes to `None` and `None`
+leaves the measured set. That is the line between the two layers, and it only
+holds because the floor was re-baselined to 8 in the same change. A floor left
+at 7 would have gone green on the signal it had just started measuring.
+
+## Status: 4 of 8 converted
 
 | Ecosystem | State | Notes |
 |---|---|---|
 | **nodejs** | converted | 3 captured packuments. Proves the mechanism against #142's phantom top-level `deprecated`. |
 | **rubygems** | converted | 2 gem payloads + owners docs. A *different* dead-read shape (#134: registry sends a `licenses` list, adapter read a `license` string), on the other side of `SCORES_FROM_REGISTRY_ALONE` from npm, and small enough to capture whole. |
-| python | pending | Highest-value next one. #145 names PyPI as the ecosystem never audited against a live payload. |
-| cargo | pending | Carried #139 (a *wrong-value* dead read — the third distinct shape). The one ecosystem where the deprecation non-default branch looks capturable. |
+| **python** | converted | 3 captured project documents. #145's named blind spot, and the capture found two dead reads in it: `ownership` (#171 — the maintainer count PyPI was recorded as not publishing) and `license_expression` (PEP 639; 17 of 30 sampled popular packages publish it with a null `license` and no `License ::` classifier). |
+| **cargo** | converted | 2 crate documents + owners docs. #139's *wrong-value* shape, and the only ecosystem whose deprecation non-default branch is capturable at all — crates.io answers 200 for a fully yanked crate where rubygems answers 404 (#170). Capturing it found `max_version` answering the sentinel `"0.0.0"` when nothing installable remains. |
 | composer | pending | Never closely audited. Packagist's p2 document needs a reducer like `npm-packument`'s. |
 | nuget | pending | Multi-document; its catalog `deprecation` block is a real enum. |
-| maven | pending | #141 left 10 of 11 signals structurally unreachable. Needs a `signal_floors` entry before it can have a value gate. |
+| maven | pending | #141 left 10 of 11 signals structurally unreachable. Still has **no `signal_floors` entry at all**, so it needs a floor before it can have a value gate — the only one of the four in that position. |
 | golang | pending | Uses `proxy.golang.org`, so both the reducer and the replay seam differ. Converting it first is what makes #160's narrowed-B migration verifiable. |
+
+### What the two conversions in this round changed
+
+| Ecosystem | Floor before | Floor after | Reaches a verdict unaided |
+|---|---|---|---|
+| python | 7 | **8** (`+ maintainer`) | False → **True** |
+| cargo | 8 | 8 (unchanged) | True (unchanged) |
+
+python's floor moved because `ownership` answers the maintainer count, and a
+floor below measured coverage is a permission slip, not a floor (#158). The
+honest caveat is captured rather than rounded off: a project owned by a PyPI
+*organization* reports `roles: []`, and `python/flask` is that fixture — its
+maintainer count stays unmeasured, so it lands back at seven and does not clear
+the insufficient-data bar. Zero would have scored the single-maintainer
+verdict from a fact nobody measured.
 
 `adapter_conformance.CONVERSION_STATUS` carries the same table in code, and
 `test_the_conversion_ledger_is_honest` stops it claiming more than it has.
 
-## Converting the seventh ecosystem
+## Converting the next ecosystem
 
 1. Add its packages to `testing/fixtures/registry/manifest.json`. Pick at least
    a healthy one (the coverage-floor case) plus one per polarized signal whose
