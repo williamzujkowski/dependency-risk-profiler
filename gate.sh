@@ -2,8 +2,21 @@
 # Merge gate: every required check must be PRESENT and SUCCESS.
 # "Nothing failed" is not green -- a PR that conflicts with main gets zero CI
 # runs, and absence then reads as pass. Assert presence explicitly.
+#
+#   ./gate.sh <pr>            report only, exit 0 pass / 1 fail
+#   ./gate.sh <pr> --merge    squash-merge, and ONLY if the gate passes
+#
+# Use --merge. Do not write `./gate.sh N && gh pr merge N` yourself, and above
+# all never pipe this script into anything: `./gate.sh N | tail -3 && gh pr
+# merge N` merges on a FAILING gate, because the pipeline's exit status is
+# tail's. That is not hypothetical -- it happened on #254, and it is the same
+# defect as #173, where `gh pr merge` was chained after a `jq` that exits 0
+# whatever it prints. Both times the `&&` gated nothing and the merge was
+# saved by luck rather than by the check. Keeping the decision and the action
+# in one process is the only version of this that cannot be mis-invoked.
 set -uo pipefail
-PR="$1"
+PR="${1:?usage: gate.sh <pr-number> [--merge]}"
+MERGE="${2:-}"
 REPO=williamzujkowski/dependency-risk-profiler
 # "Analyze (go)" was here until #231. It passed for months while analysing zero
 # lines -- every .go file was under testing/, which codeql-config.yml ignores --
@@ -40,4 +53,18 @@ for name in "${REQUIRED[@]}"; do
   fi
 done
 [ "$FAIL" = "0" ] && echo "GATE: PASS" || echo "GATE: FAIL"
+
+if [ "$MERGE" = "--merge" ]; then
+  if [ "$FAIL" != "0" ]; then
+    echo "REFUSING TO MERGE: gate failed above."
+    exit 1
+  fi
+  echo "--- merging #$PR ---"
+  gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
+  exit $?
+elif [ -n "$MERGE" ]; then
+  echo "unknown argument: $MERGE (expected --merge)"
+  exit 2
+fi
+
 exit $FAIL
