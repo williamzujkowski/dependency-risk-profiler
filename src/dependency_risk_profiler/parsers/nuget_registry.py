@@ -79,6 +79,10 @@ _LICENSE_URL_PREFIX = "https://licenses.nuget.org/"
 # NuGet's own placeholder for a package that declares no author.
 _PLACEHOLDER_AUTHORS = {"", "unknown", "n/a", "none"}
 
+# The fractional-seconds group of an ISO-8601 timestamp, anchored on the seconds
+# field so a date-only value cannot match.
+_FRACTIONAL_SECONDS = re.compile(r"(?<=:\d\d)\.(\d+)")
+
 
 @dataclass(frozen=True)
 class NuspecDocument:
@@ -556,11 +560,46 @@ def _read_catalog_fields(entry: Dict[str, object]) -> CatalogEntry:
 
 
 def _parse_timestamp(value: object) -> Optional[datetime]:
-    """Parse a NuGet ISO-8601 timestamp, or None when it is unusable."""
+    """Parse a NuGet ISO-8601 timestamp, or None when it is unusable.
+
+    Args:
+        value: A raw ``published`` value from a catalog entry.
+
+    Returns:
+        The parsed timestamp, or None when the value is absent or malformed.
+    """
     if not isinstance(value, str) or not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(normalize_iso_timestamp(value))
     except ValueError:
         logger.debug("Unparseable nuget.org timestamp: %s", value)
         return None
+
+
+def normalize_iso_timestamp(value: str) -> str:
+    """Pad a timestamp's fractional seconds to what ``fromisoformat`` accepts.
+
+    nuget.org writes fractional seconds at whatever precision the value happens
+    to need — ``2026-07-02T13:53:56.29+00:00`` is a real catalog entry. Before
+    Python 3.11, :meth:`datetime.fromisoformat` accepted exactly three or six
+    fractional digits and raised on anything else, which silently cost every
+    package its publication date (and therefore its staleness signal) on 3.9 and
+    3.10 while working fine on 3.11.
+
+    Args:
+        value: The raw timestamp.
+
+    Returns:
+        The same timestamp with ``Z`` spelled as an offset and the fractional
+        part padded or truncated to six digits. Values without a fractional part
+        are returned unchanged.
+    """
+    normalized = value.strip()
+    if normalized.endswith("Z") or normalized.endswith("z"):
+        normalized = normalized[:-1] + "+00:00"
+
+    def pad(match: "re.Match[str]") -> str:
+        return "." + match.group(1)[:6].ljust(6, "0")
+
+    return _FRACTIONAL_SECONDS.sub(pad, normalized, count=1)

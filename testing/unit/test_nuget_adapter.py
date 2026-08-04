@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Dict, Optional
 from unittest import mock
 
+import pytest
 from signal_floors import assert_meets_signal_floor
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
@@ -550,6 +551,44 @@ def test_nuget_measures_the_signals_the_registry_provides() -> None:
         "transitive",
     }
     assert registry_backed.isdisjoint(score.unknown_signals)
+
+
+@pytest.mark.parametrize(
+    ("published", "expected_microsecond"),
+    [
+        ("2026-07-02T13:53:56.29+00:00", 290000),
+        ("2026-07-02T13:53:56.123456+00:00", 123456),
+        ("2026-07-02T13:53:56.1234567+00:00", 123456),
+        ("2026-07-02T13:53:56+00:00", 0),
+        ("2026-07-02T13:53:56.29Z", 290000),
+    ],
+    ids=["two-digits", "six-digits", "seven-digits", "none", "zulu"],
+)
+def test_publication_dates_parse_at_any_fractional_precision(
+    published: str, expected_microsecond: int
+) -> None:
+    """nuget.org writes fractional seconds at whatever precision it needs.
+
+    ``.29`` is a real catalog value, and before Python 3.11
+    ``datetime.fromisoformat`` raised on anything but three or six digits — so
+    on 3.9 and 3.10 every package silently lost its publication date, and with
+    it the staleness signal, while 3.11 was fine.
+    """
+    registration = copy.deepcopy(REGISTRATION_INDEX)
+    pages = registration["items"]
+    assert isinstance(pages, list)
+    page = pages[0]
+    assert isinstance(page, dict)
+    leaves = page["items"]
+    assert isinstance(leaves, list)
+    newest = leaves[-1]
+    assert isinstance(newest, dict)
+    newest["catalogEntry"]["published"] = published
+
+    dep, _ = _analyze_offline(_recorded_responses(registration=registration))
+
+    assert dep.last_updated is not None
+    assert dep.last_updated.microsecond == expected_microsecond
 
 
 def test_a_malformed_package_id_is_never_pasted_into_a_url() -> None:
