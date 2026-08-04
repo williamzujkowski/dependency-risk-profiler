@@ -9,7 +9,12 @@ from typing import Sequence
 from urllib.parse import quote
 
 from ..async_http import AsyncHTTPClient
-from .aggregator import OSVSource, cache_data, get_cached_data
+from .aggregator import (
+    OSVSource,
+    cache_data,
+    get_cached_data,
+    merge_alias_duplicates,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +141,11 @@ async def _try_prewarm_chunk(
             normalized = osv_source._normalize_results(
                 full_vulns, query.name, query.osv_ecosystem
             )
-            cache_data(query.name, query.ecosystem, normalized)
+            # This path writes the cache without going through
+            # ``combine_source_lookups``, so it has to collapse alias
+            # duplicates itself — a pre-warmed entry that still carried them
+            # would double-count for the whole of its TTL (#274).
+            cache_data(query.name, query.ecosystem, merge_alias_duplicates(normalized))
         return True
     except OSVBatchChunkError as exc:
         logger.debug("OSV querybatch chunk failed: %s", exc)

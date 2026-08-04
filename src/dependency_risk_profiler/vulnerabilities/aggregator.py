@@ -18,7 +18,7 @@ import os
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import requests
 
@@ -544,6 +544,13 @@ class OSVSource(VulnerabilitySource):
                 {
                     "id": _payload_str(vuln.get("id")),
                     "source": "OSV",
+                    # The other identifiers OSV says name this same
+                    # vulnerability. Read rather than discarded because OSV
+                    # routinely publishes one vulnerability as two records that
+                    # alias each other, and counting both inflates the score
+                    # (#274). ``related`` is deliberately not read: OSV defines
+                    # it as "connected but not the same vulnerability".
+                    "aliases": _payload_identifier_list(vuln.get("aliases")),
                     "published": _payload_str(vuln.get("published")),
                     "summary": _payload_str(
                         vuln.get("summary"), "No summary available"
@@ -683,6 +690,14 @@ class NVDSource(VulnerabilitySource):
                 {
                     "id": vuln_id,
                     "source": "NVD",
+                    # NVD publishes no cross-database identifiers: the record's
+                    # own CVE id is the only name it has for the vulnerability,
+                    # and it is already in ``id``. The empty list is therefore a
+                    # measurement rather than a gap — and it costs nothing,
+                    # because the OSV and GitHub records that *do* list a CVE
+                    # id pull this record into their group from their side
+                    # (#274).
+                    "aliases": [],
                     "published": published,
                     "summary": summary,
                     "details": details,
@@ -807,6 +822,10 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 description
                 publishedAt
                 withdrawnAt
+                identifiers {
+                  type
+                  value
+                }
                 references {
                   url
                 }
@@ -988,6 +1007,13 @@ class GitHubAdvisorySource(VulnerabilitySource):
                 {
                     "id": _payload_str(advisory.get("id")),
                     "source": "GitHub Advisory",
+                    # GitHub's equivalent of OSV ``aliases`` (#274). The block
+                    # includes the advisory's own GHSA id alongside its CVE
+                    # ids, which is what lets a GitHub record collapse into the
+                    # OSV record for the same vulnerability: ``advisory.id`` is
+                    # GraphQL's opaque node id, so the GHSA id only ever
+                    # reaches this record through ``identifiers``.
+                    "aliases": _github_identifier_values(advisory.get("identifiers")),
                     "published": _payload_str(advisory.get("publishedAt")),
                     "summary": _payload_str(
                         advisory.get("summary"), "No summary available"
@@ -1079,6 +1105,52 @@ def _payload_reference_urls(value: object) -> List[str]:
         if url:
             urls.append(url)
     return urls
+
+
+def _payload_identifier_list(value: object) -> List[str]:
+    """Return the advisory identifiers a payload lists, in order, deduplicated.
+
+    Reads OSV's ``aliases``, whose schema declares a list of strings and whose
+    bodies, like every other field here, can still arrive as something else.
+    Non-strings and blanks are dropped rather than carried, because an
+    identifier that is not text cannot name an advisory and would only widen
+    the alias closure with a value nothing else can match.
+
+    Args:
+        value: The payload's identifier list, whatever shape it arrived in.
+
+    Returns:
+        The identifiers, first occurrence order preserved.
+    """
+    identifiers: List[str] = []
+    for entry in _payload_sequence(value):
+        if isinstance(entry, str):
+            identifier = entry.strip()
+            if identifier and identifier not in identifiers:
+                identifiers.append(identifier)
+    return identifiers
+
+
+def _github_identifier_values(value: object) -> List[str]:
+    """Return the identifier values in a GitHub advisory ``identifiers`` block.
+
+    GitHub publishes ``[{"type": "GHSA", "value": "GHSA-..."}, {"type": "CVE",
+    "value": "CVE-..."}]``. The type is not read: every entry names the same
+    vulnerability, which is exactly what the alias closure needs, and typing
+    them would only invite a filter that drops one publisher's naming.
+
+    Args:
+        value: The advisory's ``identifiers`` block.
+
+    Returns:
+        The identifier values, first occurrence order preserved.
+    """
+    values: List[str] = []
+    for entry in _payload_sequence(value):
+        identifier = _payload_str(_payload_mapping(entry).get("value")).strip()
+        if identifier and identifier not in values:
+            values.append(identifier)
+    return values
 
 
 def _withdrawn_timestamp(value: object) -> bool:
@@ -1486,6 +1558,229 @@ class AggregateOutcome:
         return self.state is AdvisoryLookupState.COMPLETE
 
 
+def _advisory_identity(vulnerability: Dict[str, object]) -> str:
+    """Return the record's own advisory ID, or "" when it carries none."""
+    identity = vulnerability.get("id")
+    return identity.strip() if isinstance(identity, str) else ""
+
+
+def _advisory_aliases(vulnerability: Dict[str, object]) -> List[str]:
+    """Return the other identifiers a normalized record claims for itself."""
+    return _payload_identifier_list(vulnerability.get("aliases"))
+
+
+def _severity_evidence_rank(vulnerability: Dict[str, object]) -> Tuple[int, float]:
+    """Rank two records of one vulnerability by how bad each says it is.
+
+    ``-1`` for a tier that is not in :data:`SEVERITY_ORDER` — which is to say
+    for ``UNKNOWN``. That is a tie-break between two records, **not** a claim
+    that an unpublished severity is milder than ``LOW``: it says only that a
+    record which states a severity is better evidence than one that does not,
+    so the stated one wins the merge. Nothing outside this comparison orders
+    ``UNKNOWN`` against a real tier, and ``SEVERITY_ORDER`` deliberately has no
+    key for it so nothing can (#272).
+
+    Args:
+        vulnerability: A normalized advisory record.
+
+    Returns:
+        A sort key; larger is worse.
+    """
+    tier = _get_string(vulnerability, "normalized_severity") or ""
+    score = normalize_cvss_score(vulnerability.get("cvss_score"))
+    return (SEVERITY_ORDER.get(tier, -1), score if score is not None else -1.0)
+
+
+def _confidence_evidence_rank(vulnerability: Dict[str, object]) -> int:
+    """Rank a record by whether its source's confidence would filter it out."""
+    return 0 if _normalize_confidence(vulnerability) in LOW_CONFIDENCE_VALUES else 1
+
+
+def _merge_affected_versions(
+    group: Sequence[Dict[str, object]],
+) -> Optional[Mapping[str, object]]:
+    """Return the affected-version data for a collapsed group of records.
+
+    The union of the group's ranges, because ``AffectedVersions.ranges`` is
+    disjunctive: a version inside any of them is affected. One record saying
+    "not this version" cannot retract another saying "yes, this version" — OSV
+    re-scopes an advisory by publishing a *second* record with narrower ranges
+    and aliasing the two together, and the pair are two descriptions of one
+    vulnerability rather than a correction.
+
+    A group in which any record carries no range data at all collapses to no
+    range data, so applicability comes out ``UNKNOWN`` and the advisory is
+    counted with that reason recorded (#61). Taking the other records' ranges
+    instead could turn a record that was counted into one that is filtered,
+    and a deduplication that filters an advisory none of its members filtered
+    is #274 pointing the wrong way.
+
+    Args:
+        group: The records the alias closure decided are one vulnerability.
+
+    Returns:
+        The merged ``affected_versions`` payload, or None when the group
+        establishes no ranges.
+    """
+    ranges: List[affected_ranges.AffectedRange] = []
+    versions: List[str] = []
+    for vulnerability in group:
+        parsed = affected_ranges.affected_versions_from_payload(
+            vulnerability.get("affected_versions")
+        )
+        if parsed is None:
+            return None
+        for affected_range in parsed.ranges:
+            if affected_range not in ranges:
+                ranges.append(affected_range)
+        for version in parsed.versions:
+            if version not in versions:
+                versions.append(version)
+    return affected_ranges.AffectedVersions(
+        ranges=tuple(ranges), versions=tuple(versions)
+    ).to_payload()
+
+
+def _merge_advisory_group(
+    group: Sequence[Dict[str, object]], identifiers: Sequence[str]
+) -> Dict[str, object]:
+    """Collapse records the alias closure decided are one vulnerability.
+
+    The representative is the **lexicographically first** advisory ID in the
+    group, matching ``_worst_counted_advisory_id``'s tie-break, so the ID a
+    report names does not depend on which source answered first.
+
+    Every field that can filter an advisory out is then merged in the direction
+    that keeps it in, because collapsing two records must never drop a finding
+    either of them carried:
+
+    * severity, CVSS and the raw severity string come as a set from the record
+      that states the worst of them, so a group never scores below its worst
+      member (a re-scoped advisory published at HIGH and LOW is HIGH);
+    * ``withdrawn`` only if *every* record is withdrawn — one live record for a
+      vulnerability means it stands;
+    * ``confidence`` from the most trusted record;
+    * ranges, fixed versions and references are unions.
+
+    A group of one is returned exactly as it arrived. A deduplication that
+    rewrites records it did not deduplicate is doing something other than
+    deduplicating, and the overwhelming majority of advisories are in groups of
+    one — normalization belongs to the normalizers.
+
+    Args:
+        group: The records to collapse, in the order they were collected.
+        identifiers: Every ID and alias the closure gathered for the group.
+
+    Returns:
+        One record standing for the whole group.
+    """
+    if len(group) == 1:
+        return group[0]
+
+    representative = min(group, key=_advisory_identity)
+    worst = max(group, key=_severity_evidence_rank)
+    merged: Dict[str, object] = dict(representative)
+
+    merged["severity"] = worst.get("severity")
+    merged["normalized_severity"] = worst.get("normalized_severity")
+    merged["cvss_score"] = worst.get("cvss_score")
+    merged["withdrawn"] = all(_is_withdrawn(record) for record in group)
+    merged["confidence"] = _normalize_confidence(
+        max(group, key=_confidence_evidence_rank)
+    )
+    merged["affected_versions"] = _merge_affected_versions(group)
+
+    for key in ("fixed_versions", "references"):
+        values: List[str] = []
+        for record in group:
+            for value in _payload_identifier_list(record.get(key)):
+                if value not in values:
+                    values.append(value)
+        merged[key] = values
+
+    # Every name the group answers to, minus the one now in ``id``. This is the
+    # record of what was collapsed: an ID that disappeared from the advisory
+    # list is still findable here, so the merge is auditable rather than silent.
+    merged["aliases"] = sorted(set(identifiers) - {_advisory_identity(representative)})
+    return merged
+
+
+def merge_alias_duplicates(
+    vulnerabilities: Sequence[Dict[str, object]],
+) -> List[Dict[str, object]]:
+    """Collapse advisory records that name each other, into one per vulnerability.
+
+    Deduplicating by exact ``id`` counts one vulnerability once per record that
+    describes it. OSV re-scopes an advisory by publishing a second record and
+    listing each in the other's ``aliases``, so ``lodash 4.17.15`` answered with
+    six records for four vulnerabilities and the tool scored six — inflating
+    ``counted_in_score``, ``known_vulnerable``, the ``N scored`` column and the
+    verdict floor alike (#274).
+
+    The grouping is the transitive closure of ``id`` and ``aliases``: two
+    records join a group if they share any identifier, directly or through a
+    third. Two GHSA records that both alias ``CVE-2021-23337`` are the same
+    vulnerability even though neither names the other, which a pairwise rule
+    would miss. ``related`` is not part of the closure — OSV defines it as
+    connected-but-distinct, and merging on it would drop real findings.
+
+    A record with no readable ``id`` is dropped, exactly as the exact-ID
+    deduplication this replaces dropped it: an advisory nothing can name cannot
+    be grouped, reported or looked up.
+
+    Args:
+        vulnerabilities: Normalized records from every source that answered, in
+            query order.
+
+    Returns:
+        One record per vulnerability, in the order each group's first record
+        was collected.
+    """
+    parent: Dict[str, str] = {}
+
+    def find(node: str) -> str:
+        parent.setdefault(node, node)
+        root = node
+        while parent[root] != root:
+            root = parent[root]
+        while parent[node] != root:
+            parent[node], node = root, parent[node]
+        return root
+
+    def union(left: str, right: str) -> None:
+        left_root, right_root = find(left), find(right)
+        if left_root != right_root:
+            # Smallest identifier wins the root, so the grouping does not
+            # depend on the order the records arrived in.
+            parent[max(left_root, right_root)] = min(left_root, right_root)
+
+    identified: List[Tuple[str, Dict[str, object]]] = []
+    for vulnerability in vulnerabilities:
+        identity = _advisory_identity(vulnerability)
+        if not identity:
+            continue
+        identified.append((identity, vulnerability))
+        find(identity)
+        for alias in _advisory_aliases(vulnerability):
+            union(identity, alias)
+
+    groups: Dict[str, List[Dict[str, object]]] = {}
+    identifiers: Dict[str, List[str]] = {}
+    order: List[str] = []
+    for identity, vulnerability in identified:
+        root = find(identity)
+        if root not in groups:
+            groups[root] = []
+            identifiers[root] = []
+            order.append(root)
+        groups[root].append(vulnerability)
+        for identifier in [identity, *_advisory_aliases(vulnerability)]:
+            if identifier not in identifiers[root]:
+                identifiers[root].append(identifier)
+
+    return [_merge_advisory_group(groups[root], identifiers[root]) for root in order]
+
+
 def combine_source_lookups(
     lookups: Sequence[Tuple[VulnerabilitySource, SourceLookup]],
 ) -> AggregateOutcome:
@@ -1520,8 +1815,7 @@ def combine_source_lookups(
     Returns:
         The combined outcome.
     """
-    seen_ids = set()
-    unique_vulnerabilities: List[Dict[str, object]] = []
+    collected: List[Dict[str, object]] = []
     answered = False
     unavailable: List[str] = []
     absence_broken = False
@@ -1540,11 +1834,13 @@ def combine_source_lookups(
             continue
 
         answered = True
-        for vuln in lookup.vulnerabilities:
-            vuln_id = vuln.get("id", "")
-            if vuln_id and vuln_id not in seen_ids:
-                seen_ids.add(vuln_id)
-                unique_vulnerabilities.append(vuln)
+        collected.extend(lookup.vulnerabilities)
+
+    # One record per vulnerability, not per record describing it (#274). This
+    # is also where two sources describing the same advisory collapse, which is
+    # what the exact-ID deduplication here used to do and no longer needs to:
+    # an ID is its own identifier, so identical IDs land in one group anyway.
+    unique_vulnerabilities = merge_alias_duplicates(collected)
 
     if not unavailable:
         state = (

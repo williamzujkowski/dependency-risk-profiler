@@ -548,6 +548,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **One vulnerability was counted once per advisory record describing it, so
+  `lodash 4.17.15` reported six advisories for four vulnerabilities.**
+  Advisories were deduplicated by exact `id`. OSV re-scopes an advisory by
+  publishing a *second* record with narrower wording and listing each in the
+  other's `aliases` — `GHSA-35jh-r3h4-6jhm` and `GHSA-r5fr-rjxr-66jc` are both
+  CVE-2021-23337, `GHSA-f23m-r3pf-42rh` and `GHSA-xxjr-mmjv-4gpg` are both
+  CVE-2025-13465 — and the `aliases` field was never read, so both halves of
+  each pair survived filtering and both were counted. Everything downstream
+  inherited the inflation: `counted_in_score`, the `N scored` column, the
+  `Known security issues (N counted, ...)` risk factor, and the #242 verdict
+  floor. `npm-user-validate 0.1.5` counted CVE-2020-7754 **twice, at two
+  different severities**, HIGH and LOW.
+
+  Records are now grouped by the transitive closure of `id` and `aliases`, so
+  two records that both name one CVE and never name each other still collapse —
+  which is exactly lodash's shape. `related` is deliberately not part of the
+  closure: OSV defines it as connected-but-distinct, and merging on it would
+  drop real findings.
+
+  Every field that can filter an advisory out is merged in the direction that
+  keeps it in, because collapsing two records must never lose what either
+  carried. The severity, CVSS and raw severity string come as a set from the
+  record stating the worst of them, so `npm-user-validate` keeps HIGH rather
+  than whichever of HIGH and LOW sorts first. `withdrawn` is true only if
+  *every* record is withdrawn. Ranges are unioned, and a group in which any
+  record carries no range data at all collapses to no range data, so the
+  advisory stays counted with `applicability_unknown` rather than being filtered
+  by a sibling's ranges. The surviving record is the lexicographically first ID
+  in its group — matching `_worst_counted_advisory_id`'s existing tie-break, so
+  the ID a report names does not depend on which source answered first — and it
+  carries every collapsed ID in its own `aliases`, so nothing disappears
+  unfindably.
+
+  The advisory cache schema goes to **5**. A version-4 entry has no `aliases` to
+  group on and still holds one record per advisory, so without the bump every
+  inflated count already on disk would go on being served, as a measurement,
+  for the rest of its 24-hour TTL.
+
 - **`overall_risk_score` averaged in the dependencies it could not measure as
   `0.0`, so a manifest scored better the less the tool managed to learn about
   it.** One manifest, `PyYAML==5.1`, scored **2.46**. The same manifest with

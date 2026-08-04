@@ -38,7 +38,12 @@ DEFAULT_CACHE_EXPIRY = 24 * 60 * 60
 # else. Discarding the version-3 entries is the point rather than a side
 # effect: without the bump, every fabricated-clean verdict already on disk
 # would go on being served past the fix, for the rest of its TTL (#219).
-CACHE_SCHEMA_VERSION = 4
+# Version 5 adds ``aliases`` and collapses records that share one before they
+# are written. A version-4 entry carries neither: it has no alias field to
+# group on and it still holds one record per advisory rather than one per
+# vulnerability, so read back under version 5 it would go on reporting six
+# advisories where there are four, for the rest of its TTL (#274).
+CACHE_SCHEMA_VERSION = 5
 
 
 def advisory_cache_key(package_name: str, ecosystem: str) -> str:
