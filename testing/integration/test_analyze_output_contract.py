@@ -55,6 +55,11 @@ REQUIRED_KEYS = {
     "dependency_count",
     "dependencies",
     "overall_risk_score",
+    # The denominator of ``overall_risk_score``, promised on every run for the
+    # same reason ``unreadable_manifests`` is: a key that appears only when the
+    # coverage is partial cannot be branched on, and a mean without its
+    # denominator is what #276 was.
+    "scored_dependency_count",
     "manifests",
     "unreadable_manifests",
     "warnings",
@@ -240,6 +245,7 @@ def test_json_mode_on_empty_directory_is_a_successful_empty_document(
     assert payload["ecosystem"] is None
     # Not 0.0: nothing was measured, and 0.0 would read as "perfectly safe".
     assert payload["overall_risk_score"] is None
+    assert payload["scored_dependency_count"] == 0
     assert payload["warnings"] == ["No supported manifest files found"]
 
 

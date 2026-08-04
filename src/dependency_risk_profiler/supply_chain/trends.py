@@ -70,7 +70,12 @@ class HistoricalTrendAnalyzer:
 
         # Store profile data with timestamp as key
         history["scans"][timestamp] = {
+            # ``None`` for a scan that could score nothing (#276). Recorded as
+            # such rather than as a 0.0, because a history is exactly where a
+            # zero would be read as an improvement.
             "overall_risk_score": profile.overall_risk_score,
+            "scored_dependency_count": profile.scored_dependency_count,
+            "dependency_count": len(profile.dependencies),
             "high_risk_dependencies": profile.high_risk_dependencies,
             "medium_risk_dependencies": profile.medium_risk_dependencies,
             "low_risk_dependencies": profile.low_risk_dependencies,
@@ -514,19 +519,32 @@ class HistoricalTrendAnalyzer:
         Returns:
             Dictionary with average risk metrics
         """
-        if not overall_scores:
-            return {"average": 0, "trend": "stable"}
+        # A scan that could score no dependency at all carries ``None`` here
+        # (#276) and is dropped from both the mean and the trend rather than
+        # averaged in as a zero. A history is the one place where a zero from
+        # a failed scan reads as an improvement, which is the defect this
+        # exclusion exists to prevent.
+        scored = [point for point in overall_scores if point.get("score") is not None]
+        if not scored:
+            return {
+                "average": None,
+                "trend": "unknown",
+                "first": None,
+                "last": None,
+                "scans_scored": 0,
+                "scans_compared": len(overall_scores),
+            }
 
         # Calculate average
-        total = sum(point["score"] for point in overall_scores)
-        average = total / len(overall_scores)
+        total = sum(point["score"] for point in scored)
+        average = total / len(scored)
 
         # Determine trend
-        if len(overall_scores) < 2:
+        if len(scored) < 2:
             trend = "stable"
         else:
-            first = overall_scores[0]["score"]
-            last = overall_scores[-1]["score"]
+            first = scored[0]["score"]
+            last = scored[-1]["score"]
 
             if last < first - 0.3:
                 trend = "improving"
@@ -538,8 +556,12 @@ class HistoricalTrendAnalyzer:
         return {
             "average": average,
             "trend": trend,
-            "first": overall_scores[0]["score"] if overall_scores else 0,
-            "last": overall_scores[-1]["score"] if overall_scores else 0,
+            "first": scored[0]["score"],
+            "last": scored[-1]["score"],
+            # The denominator, beside the mean, for the same reason
+            # ``scored_dependency_count`` sits beside the project score.
+            "scans_scored": len(scored),
+            "scans_compared": len(overall_scores),
         }
 
     def _analyze_security_improvements(

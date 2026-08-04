@@ -14,7 +14,12 @@ from rich.console import Console
 from rich.text import Text
 
 from ..contract import SCHEMA_VERSION, scored_dependency
-from ..models import DependencyRiskScore, ProjectRiskProfile, RiskLevel
+from ..models import (
+    DependencyRiskScore,
+    ProjectRiskProfile,
+    RiskLevel,
+    merged_overall_risk_score,
+)
 from ..popularity import should_soften_low_release_cadence
 from ..versioning import (
     calendar_drift_days,
@@ -76,8 +81,8 @@ class TerminalFormatter(BaseFormatter):
         result = [
             f"Dependency Risk · {manifest_name} ({profile.ecosystem})",
             (
-                f"{len(profile.dependencies)} {dependency_label} · overall "
-                f"{profile.overall_risk_score:.1f} / 5.0 · "
+                f"{len(profile.dependencies)} {dependency_label} · "
+                f"{self._overall_clause(profile)} · "
                 f"{profile.unknown_signal_count} {unknown_signal_label} "
                 "could not be measured"
             ),
@@ -115,6 +120,31 @@ class TerminalFormatter(BaseFormatter):
         )
 
         return "\n".join(result)
+
+    def _overall_clause(self, profile: ProjectRiskProfile) -> str:
+        """Render the headline mean so it cannot be read without its coverage.
+
+        Three states, three sentences. The mean over every dependency reads as
+        it always did. A mean over some of them says how many, in the same
+        breath, because "overall 2.5" and "overall 2.5, from one package in
+        five" are different claims and the second one used to be printed as the
+        first (#276). A mean over none of them is not a number at all.
+
+        Args:
+            profile: The manifest profile being rendered.
+
+        Returns:
+            The ``overall …`` clause for the summary line.
+        """
+        total = len(profile.dependencies)
+        scored = profile.scored_dependency_count
+        overall = profile.overall_risk_score
+        if overall is None:
+            label = self._pluralize(total, "dependency", "dependencies")
+            return f"overall not scored · 0 of {total} {label} could be scored"
+        if scored == total:
+            return f"overall {overall:.1f} / 5.0"
+        return f"overall {overall:.1f} / 5.0 across {scored} of {total} scored"
 
     def _risk_sort_key(self, dep: DependencyRiskScore) -> tuple[int, float, str]:
         """Return the display sort key for a dependency."""
@@ -501,6 +531,9 @@ class JsonFormatter(BaseFormatter):
                 "manifest_path": profile.manifest_path,
                 "ecosystem": profile.ecosystem,
                 "dependency_count": len(profile.dependencies),
+                # The per-manifest sort key of the terminal summary, so it
+                # carries its denominator here too (#276).
+                "scored_dependency_count": profile.scored_dependency_count,
                 "overall_risk_score": profile.overall_risk_score,
             }
             for profile in profiles
@@ -522,6 +555,7 @@ class JsonFormatter(BaseFormatter):
                 "ecosystem": None,
                 "scan_time": datetime.now().isoformat(),
                 "dependency_count": 0,
+                "scored_dependency_count": 0,
                 "high_risk_dependencies": 0,
                 "medium_risk_dependencies": 0,
                 "low_risk_dependencies": 0,
@@ -529,7 +563,10 @@ class JsonFormatter(BaseFormatter):
                 "insufficient_data_dependencies": 0,
                 "unknown_signal_count": 0,
                 # None, not 0.0: nothing was measured, and a 0.0 here would read
-                # as "perfectly safe" (#74, #147).
+                # as "perfectly safe" (#74, #147). Since #276 that is no longer
+                # the only route to a null here — a manifest whose every
+                # dependency was unresolvable reports the same state, because
+                # it is the same state.
                 "overall_risk_score": None,
                 "dependencies": [],
             }
@@ -542,14 +579,7 @@ class JsonFormatter(BaseFormatter):
         dependencies = [dep for profile in profiles for dep in profile.dependencies]
         ecosystems = {profile.ecosystem for profile in profiles}
         total = len(dependencies)
-        if total:
-            weighted = sum(
-                profile.overall_risk_score * len(profile.dependencies)
-                for profile in profiles
-            )
-            overall: Optional[float] = weighted / total
-        else:
-            overall = None
+        overall, scored = merged_overall_risk_score(profiles)
         return {
             "schema_version": SCHEMA_VERSION,
             "manifest_path": manifest_path,
@@ -558,6 +588,7 @@ class JsonFormatter(BaseFormatter):
             "ecosystem": ecosystems.pop() if len(ecosystems) == 1 else None,
             "scan_time": max(profile.scan_time for profile in profiles).isoformat(),
             "dependency_count": total,
+            "scored_dependency_count": scored,
             "high_risk_dependencies": sum(
                 profile.high_risk_dependencies for profile in profiles
             ),
@@ -603,6 +634,11 @@ class JsonFormatter(BaseFormatter):
             "ecosystem": profile.ecosystem,
             "scan_time": profile.scan_time.isoformat(),
             "dependency_count": len(profile.dependencies),
+            # The denominator ``overall_risk_score`` was taken over. Published
+            # beside it so the mean cannot be quoted without its coverage: a
+            # 2.46 over one of five dependencies is not a project's score
+            # (#276).
+            "scored_dependency_count": profile.scored_dependency_count,
             "high_risk_dependencies": profile.high_risk_dependencies,
             "medium_risk_dependencies": profile.medium_risk_dependencies,
             "low_risk_dependencies": profile.low_risk_dependencies,

@@ -714,8 +714,19 @@ class OrgScanRunner:
                 for identity in sorted(identities)
                 if identity in by_identity
             ]
-            total_score = sum(dep.risk_score.total_score for dep in dependencies)
-            average_score = total_score / len(dependencies) if dependencies else 0.0
+            # The same mean, under the same rule as ``analyze``'s (#276): a
+            # dependency the scan could not score leaves both halves of it. It
+            # used to leave only the numerator, so a repository's average fell
+            # toward zero once per package the scan failed to resolve — worst
+            # in exactly the repositories the scan understood least.
+            scored_scores = [
+                dep.risk_score.total_score
+                for dep in dependencies
+                if not dep.is_unscored
+            ]
+            average_score = (
+                sum(scored_scores) / len(scored_scores) if scored_scores else None
+            )
             critical = sum(
                 1 for dep in dependencies if dep.risk_level == RiskLevel.CRITICAL
             )
@@ -732,6 +743,7 @@ class OrgScanRunner:
                 RepositoryRiskSummary(
                     repo_full_name=repo_full_name,
                     dependency_count=len(dependencies),
+                    scored_dependency_count=len(scored_scores),
                     critical_risk_dependencies=critical,
                     high_risk_dependencies=high,
                     medium_risk_dependencies=medium,
@@ -749,7 +761,11 @@ class OrgScanRunner:
                 -repo.risk_points,
                 -repo.critical_risk_dependencies,
                 -repo.high_risk_dependencies,
-                -repo.average_risk_score,
+                # A repository with no scored dependency has no average to
+                # break the tie with. It sorts below one that does rather than
+                # being given a 0.0 to sort on, which would rank "we measured
+                # nothing here" as "nothing to see here" (#276).
+                0 if repo.average_risk_score is None else -repo.average_risk_score,
                 repo.repo_full_name.lower(),
             ),
         )
