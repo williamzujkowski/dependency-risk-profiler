@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Literal, Protocol, Set, Tuple
+from typing import Dict, List, Literal, Optional, Protocol, Set, Tuple
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 
@@ -264,12 +264,19 @@ class RepositoryRiskSummary:
 
     repo_full_name: str
     dependency_count: int
+    # The denominator of ``average_risk_score``, required so the mean and the
+    # population it covers cannot be reported apart (#276). ``dependency_count``
+    # is the population; this is how much of it the scan could score.
+    scored_dependency_count: int
     critical_risk_dependencies: int
     high_risk_dependencies: int
     medium_risk_dependencies: int
     unknown_risk_dependencies: int
     risk_points: int
-    average_risk_score: float
+    # ``None``, not ``0.0``, when nothing in this repository could be scored.
+    # An unscorable dependency leaves both halves of the mean, exactly as an
+    # unmeasured signal leaves both halves of a dependency's score (#74/#276).
+    average_risk_score: Optional[float]
     worst_dependencies: List[AggregatedDependency]
     # Required, and last, so every construction has to answer it. A summary
     # that omitted it would default to the reassuring state, which is the

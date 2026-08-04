@@ -152,11 +152,8 @@ def create_test_profile(manifest_path: str, date_offset: int = 0) -> ProjectRisk
         1 for dep in dependencies if dep.risk_level == RiskLevel.LOW
     )
 
-    # Set overall risk score
-    profile.overall_risk_score = sum(dep.total_score for dep in dependencies) / len(
-        dependencies
-    )
-
+    # ``overall_risk_score`` is derived from ``profile.dependencies`` (#276),
+    # so there is nothing to set here.
     return profile
 
 
@@ -209,10 +206,6 @@ def generate_test_history(project_id: str, num_profiles: int = 5) -> None:
         profile.low_risk_dependencies = sum(
             1 for dep in profile.dependencies if dep.risk_level == RiskLevel.LOW
         )
-        profile.overall_risk_score = sum(
-            dep.total_score for dep in profile.dependencies
-        ) / len(profile.dependencies)
-
         # Save to history
         save_historical_profile(profile)
 

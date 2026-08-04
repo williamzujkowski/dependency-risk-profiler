@@ -16,6 +16,16 @@ Its known defects are the reason v2 exists and are **not** fixed here:
   and again under ``vulnerabilities``;
 * an unmeasured signal is flattened to a bare ``null``, indistinguishable from
   a measured null.
+
+One value it emits *did* change: ``overall_risk_score`` is now the mean over
+the dependencies that could be scored rather than over all of them (#276), and
+is ``null`` when none could be. The freeze is on the **shape** — which keys
+exist and what they are called — because that is what a v1 parser is written
+against, and this key was already ``number | null`` here. It is not a licence
+to keep publishing, under a still-selectable flag, a project score that
+improves every time the scan fails to resolve a package. v1 does not get the
+new ``scored_dependency_count`` key; that is a shape change, and it belongs to
+v2.
 """
 
 import json
@@ -23,7 +33,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
 
-from ..models import DependencyRiskScore, ProjectRiskProfile
+from ..models import (
+    DependencyRiskScore,
+    ProjectRiskProfile,
+    merged_overall_risk_score,
+)
 
 
 class JsonFormatterV1:
@@ -117,14 +131,11 @@ class JsonFormatterV1:
         dependencies = [dep for profile in profiles for dep in profile.dependencies]
         ecosystems = {profile.ecosystem for profile in profiles}
         total = len(dependencies)
-        if total:
-            weighted = sum(
-                profile.overall_risk_score * len(profile.dependencies)
-                for profile in profiles
-            )
-            overall: Optional[float] = weighted / total
-        else:
-            overall = None
+        # Weighted by each manifest's scored count, not its dependency count,
+        # for the reason given in ``merged_overall_risk_score`` (#276). The
+        # frozen writer computing this itself would be the same defect kept
+        # alive under ``--schema v1``.
+        overall, _ = merged_overall_risk_score(profiles)
         return {
             "manifest_path": manifest_path,
             "ecosystem": ecosystems.pop() if len(ecosystems) == 1 else None,

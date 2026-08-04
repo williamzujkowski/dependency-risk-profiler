@@ -1676,11 +1676,16 @@ def _repository_to_dict(repo: RepositoryRiskSummary) -> Dict[str, object]:
         # under "read" is a real zero, zero under "unreadable" is a gap (#262).
         "coverage": repo.coverage.value,
         "dependency_count": repo.dependency_count,
+        # The denominator of ``average_risk_score``, emitted next to it for the
+        # same reason ``coverage`` sits next to the count: a mean over three of
+        # a repository's forty dependencies is not the repository's mean (#276).
+        "scored_dependency_count": repo.scored_dependency_count,
         "critical_risk_dependencies": repo.critical_risk_dependencies,
         "high_risk_dependencies": repo.high_risk_dependencies,
         "medium_risk_dependencies": repo.medium_risk_dependencies,
         "unknown_risk_dependencies": repo.unknown_risk_dependencies,
         "risk_points": repo.risk_points,
+        # ``null`` when nothing here could be scored (#276).
         "average_risk_score": repo.average_risk_score,
         "worst_dependencies": [
             {

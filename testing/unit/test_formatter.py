@@ -85,14 +85,16 @@ def test_terminal_report_uses_plain_language_table() -> None:
         unknown_risk_dependencies=1,
         insufficient_data_dependencies=1,
         unknown_signal_count=10,
-        overall_risk_score=2.4,
     )
 
     output = TerminalFormatter(color=False).format_profile(profile)
     lines = output.splitlines()
 
     assert lines[0] == "Dependency Risk · requirements.txt (python)"
-    assert "3 dependencies · overall 2.4 / 5.0" in lines[1]
+    # (3.2 + 2.0) / 2. ``mostly-unknown`` carries a 4.9 it could not justify
+    # and is excluded, so this headline moves *up* on exclusion — which is why
+    # the coverage has to travel with it (#276).
+    assert "3 dependencies · overall 2.6 / 5.0 across 2 of 3 scored" in lines[1]
     assert "10 signals could not be measured" in lines[1]
     assert "1 dependency had insufficient data to score" in output
     assert "RISK" in output

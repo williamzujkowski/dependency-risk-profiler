@@ -388,5 +388,102 @@ class ProjectRiskProfile:
     unknown_risk_dependencies: int = 0
     insufficient_data_dependencies: int = 0
     unknown_signal_count: int = 0
-    overall_risk_score: float = 0.0
     scan_time: datetime = field(default_factory=datetime.now)
+
+    @property
+    def scored_dependency_count(self) -> int:
+        """Return how many dependencies :attr:`overall_risk_score` averages.
+
+        The denominator of a published mean, published. Its sibling
+        ``dependency_count`` is the population, so a consumer reading both can
+        tell "2.46 across all five" from "2.46 across one of five" without
+        knowing this tool's exclusion rule.
+
+        Derivable from ``dependency_count`` minus
+        ``insufficient_data_dependencies``, and published anyway, on the
+        precedent of ``measured_signal_count`` one layer down: that is exactly
+        ``total_signal_count - len(unknown_signals)`` and is published because
+        the denominator of a mean is part of the measurement rather than a
+        convenience. ``unknown_signal_count`` was deleted from schema v2 for
+        being derivable; it was not anybody's denominator.
+
+        Returns:
+            The number of dependencies that could be scored.
+        """
+        return sum(1 for dep in self.dependencies if not dep.insufficient_data)
+
+    @property
+    def overall_risk_score(self) -> Optional[float]:
+        """Return the mean risk score over the dependencies that were scored.
+
+        #74's rule, applied one layer up (#276). A dependency the tool could
+        not measure leaves both the numerator and the denominator, exactly as
+        an unmeasured *signal* does inside a single dependency's score. It used
+        to leave only the numerator: an ``insufficient_data`` dependency
+        carries ``total_score = 0.0``, so averaging over every dependency
+        pulled the headline number toward zero once per package the scan failed
+        to resolve. A manifest of one HIGH-risk package scored 2.46; the same
+        manifest with four unresolvable packages appended scored 0.49. The
+        number improved as the scan learned less, which is the one direction a
+        risk score must never move for that reason.
+
+        ``None``, not ``0.0``, when nothing could be scored. The run-level
+        envelope already reports ``overall_risk_score: null`` for a manifest
+        with no dependencies at all, so "no score" is a state the contract
+        admits; a manifest of five unresolvable packages simply never reached
+        it. ``0.0`` keeps its one honest meaning: dependencies were scored and
+        the mean of their scores was zero.
+
+        A property rather than a stored field, so the mean cannot be set
+        independently of the dependencies it is a mean *of*. The field version
+        could be handed any float at construction — and was, by a test that
+        computed the average itself, passed it in, and asserted it came back
+        out (AGENTS.md rule 6).
+
+        Returns:
+            The mean ``total_score`` of the scored dependencies, or ``None``
+            when no dependency could be scored.
+        """
+        scored = [
+            dep.total_score for dep in self.dependencies if not dep.insufficient_data
+        ]
+        if not scored:
+            return None
+        return sum(scored) / len(scored)
+
+
+def merged_overall_risk_score(
+    profiles: Sequence[ProjectRiskProfile],
+) -> Tuple[Optional[float], int]:
+    """Return the mean across several manifests, with the count it covers.
+
+    A directory run reports one number over every manifest under it, and it was
+    a mean weighted by each manifest's *dependency* count while the per-manifest
+    means are over its *scored* dependencies. Mixing the two denominators
+    reimports #276 at the run level: a manifest of five packages of which one
+    scored would contribute its honest 2.46 five times over.
+
+    The weights are ``scored_dependency_count`` and the values are
+    ``overall_risk_score``, so this composes the per-manifest definition rather
+    than restating which dependencies count. A manifest that scored nothing
+    weighs nothing, and contributes no zero.
+
+    Args:
+        profiles: The manifest profiles in the run, possibly empty.
+
+    Returns:
+        The mean over every scored dependency in the run and how many that was,
+        or ``(None, 0)`` when no dependency in the run could be scored.
+    """
+    total = 0.0
+    scored = 0
+    for profile in profiles:
+        overall = profile.overall_risk_score
+        if overall is None:
+            continue
+        count = profile.scored_dependency_count
+        total += overall * count
+        scored += count
+    if not scored:
+        return None, 0
+    return total / scored, scored

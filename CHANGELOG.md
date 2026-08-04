@@ -548,6 +548,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`overall_risk_score` averaged in the dependencies it could not measure as
+  `0.0`, so a manifest scored better the less the tool managed to learn about
+  it.** One manifest, `PyYAML==5.1`, scored **2.46**. The same manifest with
+  four names that do not exist on PyPI appended scored **0.49** — an 80%
+  improvement bought entirely with ignorance, on the first line of the terminal
+  report and the sort key of `Manifest files by risk score`.
+
+  An unresolvable dependency carries `total_score = 0.0` and
+  `insufficient_data: true`. The project mean divided by every dependency
+  including those, so each package the scan failed to resolve pulled the
+  headline number one notch toward "safe". The report *disclosed* the ignorance
+  — `4 dependencies had insufficient data to score` sat two lines below — but
+  disclosure next to a number the same fact has already improved is worse than
+  silence: anyone gating on a threshold, sorting manifests, or watching the
+  score over time was reading a number whose gradient points the wrong way. The
+  realistic trigger is not fake package names. It is a private index, a
+  rate-limited token, or an offline run: the score collapses toward zero
+  exactly when the scan is least trustworthy.
+
+  This is #74's rule one layer up. Inside a single dependency's score an
+  unmeasured signal already leaves **both** the numerator and the denominator,
+  which is why `measured_signal_count` / `total_signal_count` exist. The mean
+  across dependencies now does the same, and `null` — not `0.0` — is what a
+  manifest reports when nothing in it could be scored. That state was already
+  in the contract for a manifest with no dependencies at all; a manifest of
+  five unresolvable packages simply never reached it. `0.0` keeps its one
+  honest meaning: dependencies were scored, and their mean was zero.
+
+  **A mean over part of a set is published with its denominator, additively.**
+  `scored_dependency_count` is new on the analyze envelope and on each entry of
+  `manifests[]` and `riskiest_repositories[]`, beside the `dependency_count`
+  that gives it a population. The terminal line says it too: `overall 2.5 / 5.0
+  across 1 of 5 scored`, or `overall not scored · 0 of 5 dependencies could be
+  scored`. It is derivable — `dependency_count` minus
+  `insufficient_data_dependencies` — and published anyway, on the precedent of
+  `measured_signal_count` one layer down, because the denominator of a
+  published mean is part of the measurement rather than a convenience.
+
+  **Every sibling aggregate was checked, and three more had it.** A directory
+  run's merged mean weighted each manifest by its *dependency* count while the
+  per-manifest means were over *scored* dependencies, which would have let one
+  measured package in a manifest of five out-vote a fully-measured manifest
+  beside it. `scan-org`'s per-repository `average_risk_score` averaged
+  unscorable dependencies in the same way, and is now `null` when a repository
+  yielded none — it is also the fourth sort key of `riskiest_repositories`, so
+  an unmeasured repository was being ranked as a quiet one. The historical
+  trend mean now drops scans that scored nothing rather than averaging them in
+  as zeros, which is the one place a failed scan would read as an improvement.
+  `risk_points`, the high-risk counts and `known_vulnerable_dependency_count`
+  were checked and are sound: they are sums and counts, and an unmeasured
+  dependency contributing nothing to a sum cannot lower it.
+
+  `ProjectRiskProfile.overall_risk_score` is now derived from `dependencies`
+  rather than stored beside them, so the mean cannot be set independently of
+  what it is a mean of. It could be before, and was — by a test that computed
+  the average itself, passed it to the constructor, and asserted it came back
+  out.
+
+  **`--schema v1` inherits the corrected number.** The frozen writers guarantee
+  a *shape*, which is what a v1 parser is written against, and this key was
+  already `number | null` there. The freeze is not a licence to keep
+  publishing, under a still-selectable flag, a project score that improves
+  every time the scan fails to resolve a package. v1 does not gain
+  `scored_dependency_count`; that is a shape change and belongs to v2.
+
+  Across the existing manifest corpus, every score that moved moved by exactly
+  `total / scored` and no dependency's own score moved at all: `large` 0.0086 →
+  1.7230 (1 of 200 scorable), `maven/parent-managed` 0.4604 → 1.3813 (2 of 6),
+  `nuget/central-managed` 1.3124 → 1.4317 (11 of 12), `maven/bom-import` 0.0 →
+  `null` (0 of 6). The seven fully-measured manifests are unchanged to the last
+  digit.
+
 - **A git tree GitHub truncated was reported as `coverage: read`, which claims
   the scan saw all of it.** GitHub caps the recursive tree response and sets
   `"truncated": true` when it does. `GitHubOrgClient.list_manifest_paths`

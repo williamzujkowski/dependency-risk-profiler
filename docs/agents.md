@@ -278,8 +278,9 @@ guard. Every run emits exactly one document with the same top-level keys:
 |-------|----------------|
 | `schema_version` | Yes; `2`. |
 | `dependency_count`, `dependencies` | Yes; `0` and `[]` when there was nothing to report. |
-| `overall_risk_score` | Yes, but `null` when nothing was measured — never `0.0`, which would read as "safe". |
-| `manifests[]` | Every manifest that was successfully analyzed, with its own path, ecosystem, and count. Empty when none were. |
+| `overall_risk_score` | Yes, but `null` when nothing could be scored — never `0.0`, which would read as "safe". The mean over the dependencies that *were* scored; unscorable ones leave both halves of it (#276). |
+| `scored_dependency_count` | Yes. How many dependencies `overall_risk_score` averages. Read it with `dependency_count`: `2.46` over 1 of 5 is not a project's score. |
+| `manifests[]` | Every manifest that was successfully analyzed, with its own path, ecosystem, `dependency_count`, `scored_dependency_count`, and `overall_risk_score`. Empty when none were. |
 | `unreadable_manifests[]` | Every file the scan recognized as a dependency manifest and could not read, with `manifest_path`, `ecosystem`, and `guidance`. Empty when everything recognized was read. |
 | `warnings[]` | Why anything was skipped or refused, in plain language. Empty on a clean run. |
 | `ecosystem` | `null` for a mixed-ecosystem directory scan or an empty run. Each dependency still carries its own `ecosystem`. |
@@ -330,6 +331,12 @@ means "clean" or "we measured almost nothing".
 | `unreadable` | Dependency manifests were found and none could be read. Nothing was measured. |
 | `no_manifests` | The tree listed and holds no manifest this tool recognizes. |
 | `discovery_failed` | The tree never came back. Nothing at all is known about this repository. |
+
+Each entry also carries `average_risk_score` and the
+`scored_dependency_count` it was taken over. The average excludes dependencies
+the scan could not score, and is `null` when none of a repository's
+dependencies could be scored — never `0.0`, which would rank a repository the
+scan learned nothing about as a quiet one (#276).
 
 `unreadable_manifests[]` names the files behind the `unreadable` and
 `partially_read` states, with `repo`, `manifest_path`, `ecosystem` and

@@ -21,7 +21,12 @@ from ..manifest_guidance import (
     recognise_unreadable_manifest,
     unsupported_manifest_guidance,
 )
-from ..models import DependencyMetadata, ProjectRiskProfile, RiskLevel
+from ..models import (
+    DependencyMetadata,
+    ProjectRiskProfile,
+    RiskLevel,
+    merged_overall_risk_score,
+)
 from ..org_scan import (
     ExistingDependencyProfiler,
     GitHubOrgClient,
@@ -366,6 +371,26 @@ _REFUSAL_REASONS = frozenset(
 def _refused_manifests(failed_files: List[Dict[str, object]]) -> bool:
     """Whether any manifest was actively refused rather than merely empty."""
     return any(failed.get("reason") in _REFUSAL_REASONS for failed in failed_files)
+
+
+def _manifest_rank(profile: ProjectRiskProfile) -> Tuple[bool, float]:
+    """Sort manifests worst-scored first, unscored ones after all of them.
+
+    A manifest whose every dependency was unresolvable has no risk score, and
+    the ranked list used to give it one implicitly by sorting ``0.0`` — putting
+    "we could not measure this project" in the same position as "this project
+    is clean" (#276). It sorts to the end and is labelled there instead.
+
+    Args:
+        profile: The manifest profile being ranked.
+
+    Returns:
+        A key ordering scored manifests by descending score, unscored last.
+    """
+    score = profile.overall_risk_score
+    if score is None:
+        return True, 0.0
+    return False, -score
 
 
 def _is_vendored(path: str, scan_root: str) -> bool:
@@ -1261,13 +1286,32 @@ def analyze(
                                 "\n[bold]Historical Trend Analysis:[/bold]"
                             )
 
-                            # Overall risk summary
+                            # Overall risk summary. The average is None when
+                            # every scan in the window scored nothing (#276);
+                            # say so rather than formatting a zero, and say
+                            # how many of the compared scans it covers.
                             avg_risk = trends["average_risk_over_time"]
-                            trend_console.print(
-                                "  Average Risk Score: "
-                                f"{avg_risk['average']:.2f}/5.0 "
-                                f"({avg_risk['trend']})"
-                            )
+                            scans_scored = avg_risk["scans_scored"]
+                            scans_compared = avg_risk["scans_compared"]
+                            if avg_risk["average"] is None:
+                                trend_console.print(
+                                    "  Average Risk Score: not scored "
+                                    f"(0 of {scans_compared} scans scored "
+                                    "any dependency)"
+                                )
+                            elif scans_scored < scans_compared:
+                                trend_console.print(
+                                    "  Average Risk Score: "
+                                    f"{avg_risk['average']:.2f}/5.0 "
+                                    f"({avg_risk['trend']}) across "
+                                    f"{scans_scored} of {scans_compared} scans"
+                                )
+                            else:
+                                trend_console.print(
+                                    "  Average Risk Score: "
+                                    f"{avg_risk['average']:.2f}/5.0 "
+                                    f"({avg_risk['trend']})"
+                                )
 
                             # Improving and deteriorating dependencies
                             trend_console.print(
@@ -1387,15 +1431,11 @@ def analyze(
             )
             low_risk = sum(profile.low_risk_dependencies for profile in overall_results)
 
-            # Calculate average risk score
-            if total_deps > 0:
-                total_score = sum(
-                    profile.overall_risk_score * len(profile.dependencies)
-                    for profile in overall_results
-                )
-                avg_score = total_score / total_deps
-            else:
-                avg_score = 0.0
+            # The run-wide mean, over the dependencies that could be scored
+            # and weighted by how many of them each manifest contributed
+            # (#276). ``scored_deps`` is printed beside it: a mean over a
+            # quarter of the run is not the run's score.
+            avg_score, scored_deps = merged_overall_risk_score(overall_results)
 
             # Display the summary
             console.print(
@@ -1414,9 +1454,20 @@ def analyze(
 
             if total_deps > 0:
                 console.print(f"Total dependencies analyzed: [bold]{total_deps}[/bold]")
-                console.print(
-                    f"Overall average risk score: [bold]{avg_score:.2f}/5.0[/bold]"
-                )
+                if avg_score is None:
+                    console.print(
+                        "Overall average risk score: [bold]not scored[/bold] "
+                        f"(0 of {total_deps} scored)"
+                    )
+                elif scored_deps < total_deps:
+                    console.print(
+                        f"Overall average risk score: [bold]{avg_score:.2f}/5.0"
+                        f"[/bold] across {scored_deps} of {total_deps} scored"
+                    )
+                else:
+                    console.print(
+                        f"Overall average risk score: [bold]{avg_score:.2f}/5.0[/bold]"
+                    )
                 console.print(
                     f"High risk dependencies: [bold red]{high_risk}[/bold red]"
                 )
@@ -1430,25 +1481,44 @@ def analyze(
 
             # Show list of manifest files with highest risk scores
             if overall_results:
-                # Sort by risk score (highest first)
-                sorted_results = sorted(
-                    overall_results, key=lambda x: x.overall_risk_score, reverse=True
-                )
+                # Scored manifests worst first; the ones that could not be
+                # scored at all go after them, and are labelled rather than
+                # ranked. Ranking a manifest nobody could measure at position
+                # last is the same claim as scoring it 0.0, which is #276.
+                sorted_results = sorted(overall_results, key=_manifest_rank)
 
                 console.print(
                     "\n[bold]Manifest files by risk score (highest first):[/bold]"
                 )
                 for i, profile in enumerate(sorted_results[:5], 1):  # Show top 5
+                    manifest_score = profile.overall_risk_score
+                    manifest_deps = len(profile.dependencies)
+                    if manifest_score is None:
+                        console.print(
+                            f"{i}. [bold]{profile.manifest_path}[/bold]: "
+                            f"[dim]not scored[/dim] "
+                            f"(0 of {manifest_deps} scored)"
+                        )
+                        continue
                     risk_color = (
                         "red"
-                        if profile.overall_risk_score > 3.5
-                        else "yellow" if profile.overall_risk_score > 2.0 else "green"
+                        if manifest_score > 3.5
+                        else "yellow" if manifest_score > 2.0 else "green"
+                    )
+                    manifest_scored = profile.scored_dependency_count
+                    coverage = (
+                        f"({manifest_deps} dependencies)"
+                        if manifest_scored == manifest_deps
+                        else (
+                            f"({manifest_scored} of {manifest_deps} "
+                            "dependencies scored)"
+                        )
                     )
                     console.print(
                         f"{i}. [bold]{profile.manifest_path}[/bold]: "
-                        f"[{risk_color}]{profile.overall_risk_score:.2f}/5.0"
+                        f"[{risk_color}]{manifest_score:.2f}/5.0"
                         f"[/{risk_color}] "
-                        f"({len(profile.dependencies)} dependencies)"
+                        f"{coverage}"
                     )
 
                 if len(sorted_results) > 5:

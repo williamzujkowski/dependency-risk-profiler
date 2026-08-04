@@ -21,6 +21,13 @@ Its known defects are the reason v2 exists and are **not** fixed here:
   apply" (#61) read alike;
 * every shared field is renamed relative to ``analyze --output json``;
 * ``remediation`` is a free-text sentence an agent has to regex.
+
+One value it emits *did* change: a repository's ``average_risk_score`` is now
+the mean over the dependencies that could be scored, and ``null`` when none
+could be (#276). The freeze is on the shape, and this key keeps its name and
+its position; it does not get v2's new ``scored_dependency_count`` sibling.
+Publishing a repository average that falls every time the scan fails to
+resolve a package is not a shape a v1 parser depends on, it is a wrong number.
 """
 
 from __future__ import annotations

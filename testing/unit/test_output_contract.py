@@ -188,7 +188,6 @@ def _profile() -> ProjectRiskProfile:
         dependencies=[_score()],
         medium_risk_dependencies=1,
         unknown_signal_count=1,
-        overall_risk_score=3.2,
         scan_time=datetime(2026, 8, 4, 9, 0, 0),
     )
 

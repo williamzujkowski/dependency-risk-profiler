@@ -652,14 +652,14 @@ class RiskScorer:
             if dep.insufficient_data:
                 insufficient_data += 1
 
-        # Calculate overall project risk score
-        if scored_dependencies:
-            overall_score = sum(dep.total_score for dep in scored_dependencies) / len(
-                scored_dependencies
-            )
-        else:
-            overall_score = 0.0
-
+        # The overall project risk score is not computed here. It is
+        # ``ProjectRiskProfile.overall_risk_score``, a mean over the
+        # dependencies that could be scored, taken from the same list it
+        # reports (#276). It used to be computed here over *every* dependency,
+        # including the ones scoring produced no measurement for, which is
+        # #74's defect one layer up: an unmeasured dependency contributed 0.0
+        # to the numerator and 1 to the denominator, so the headline number
+        # fell every time the scan failed to resolve a package.
         return ProjectRiskProfile(
             manifest_path=manifest_path,
             ecosystem=ecosystem,
@@ -672,7 +672,6 @@ class RiskScorer:
             unknown_signal_count=sum(
                 len(dep.unknown_signals) for dep in scored_dependencies
             ),
-            overall_risk_score=overall_score,
         )
 
     @staticmethod

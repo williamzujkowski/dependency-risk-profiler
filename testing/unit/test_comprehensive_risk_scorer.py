@@ -378,11 +378,9 @@ def test_project_profile_creation() -> None:
         1 for dep in scored_dependencies if dep.risk_level == RiskLevel.LOW
     )
 
-    overall_score = sum(dep.total_score for dep in scored_dependencies) / len(
-        scored_dependencies
-    )
-
-    # Create the profile
+    # Create the profile. ``overall_risk_score`` is not passed in: it is
+    # derived from ``dependencies`` (#276), so this assertion measures the
+    # production mean rather than the one this test just computed for itself.
     profile = ProjectRiskProfile(
         manifest_path="requirements.txt",
         ecosystem="python",
@@ -390,7 +388,6 @@ def test_project_profile_creation() -> None:
         high_risk_dependencies=high_risk_count,
         medium_risk_dependencies=medium_risk_count,
         low_risk_dependencies=low_risk_count,
-        overall_risk_score=overall_score,
     )
 
     # Assert that we calculated everything correctly
@@ -403,12 +400,16 @@ def test_project_profile_creation() -> None:
     ), "Should identify 1 medium risk dependency"
     assert profile.low_risk_dependencies == 1, "Should identify 1 low risk dependency"
 
-    # Overall score should be the average of all dependency scores
+    # Overall score should be the average of all dependency scores. All four
+    # were scorable here, so the denominator is all four.
     expected_overall = (1.0 + 2.5 + 3.5 + 4.5) / 4  # Average of our mock scores
-    assert abs(profile.overall_risk_score - expected_overall) < 0.01, (
-        f"Overall score {profile.overall_risk_score} should be the average of "
+    overall = profile.overall_risk_score
+    assert overall is not None
+    assert abs(overall - expected_overall) < 0.01, (
+        f"Overall score {overall} should be the average of "
         f"dependency scores {expected_overall}"
     )
+    assert profile.scored_dependency_count == 4
 
 
 def test_license_score_calculation() -> None:
