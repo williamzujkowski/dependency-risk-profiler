@@ -24,6 +24,7 @@ every key npm sends. Refresh those with
 No test here touches the network.
 """
 
+import copy
 import logging
 from typing import Dict, Optional
 from unittest import mock
@@ -61,7 +62,23 @@ EXPRESS_PACKUMENT: Dict[str, object] = {
     "license": "MIT",
     "versions": {
         "4.17.1": {"name": "express", "version": "4.17.1"},
-        "5.2.1": {"name": "express", "version": "5.2.1"},
+        # Both dependency objects, abridged to the same shape npm publishes.
+        # The runtime one is what installing express pulls in; the dev one is
+        # not, and a read that took both would report six here (#204).
+        "5.2.1": {
+            "name": "express",
+            "version": "5.2.1",
+            "dependencies": {
+                "accepts": "^2.0.0",
+                "body-parser": "^2.2.1",
+                "debug": "^4.4.0",
+            },
+            "devDependencies": {
+                "mocha": "^11.7.4",
+                "supertest": "^6.3.0",
+                "eslint": "^8.47.0",
+            },
+        },
     },
     "time": {
         "modified": "2026-06-11T15:12:03.000Z",
@@ -431,16 +448,62 @@ def test_nodejs_measures_the_signals_the_registry_provides() -> None:
     assert_measures_registry_signals(_express_score(), "nodejs")
 
 
-def test_npm_lands_one_signal_short_of_a_verdict_without_a_clone() -> None:
-    """The registry publishes no cheap maintainer count, so npm scores UNKNOWN.
+def test_npm_clears_the_verdict_bar_by_exactly_nothing() -> None:
+    """The npm floor reaches a verdict from registry metadata, and only just (#204).
 
-    ``SCORES_FROM_REGISTRY_ALONE`` records this as False for nodejs. Asserting
-    it here keeps that table honest: if npm ever grows a maintainer read, this
-    fails and the table gets updated rather than quietly describing a state
-    that no longer exists.
+    This test used to assert the opposite, and its own docstring said what to do
+    when that stopped being true. npm still publishes no cheap maintainer count;
+    what changed is that the packument's version manifest carries a dependency
+    list the adapter never read, and reading it took npm from seven measured
+    signals to eight.
+
+    Eight against eight is the bar exactly — ``insufficient_data`` is
+    ``unmeasured > measured`` — so npm clears it with no margin at all. That is
+    worth pinning rather than rounding to "npm scores fine now": lose any one
+    signal and every npm package is UNKNOWN again.
     """
     score = _express_score()
 
-    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is False
-    assert "maintainer" in score.unknown_signals
-    assert score.insufficient_data is True
+    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is True
+    assert "maintainer" in score.unknown_signals, "npm still publishes no owner list"
+    assert "transitive" not in score.unknown_signals
+    assert score.insufficient_data is False
+    assert score.measured_signal_count == score.unknown_signal_count, (
+        "npm is supposed to clear the insufficient-data bar by zero margin; if "
+        "this changed, SCORES_FROM_REGISTRY_ALONE's comment needs updating too"
+    )
+
+
+def test_dev_dependencies_are_not_runtime_dependencies() -> None:
+    """#204: the version manifest's devDependencies are not what a consumer gets."""
+    score = _express_score()
+
+    assert score.dependency.transitive_dependencies == {
+        "accepts",
+        "body-parser",
+        "debug",
+    }
+    assert score.transitive_score == 0.1
+
+
+def test_a_packument_without_the_latest_manifest_leaves_transitive_unmeasured() -> None:
+    """#204: an absent *manifest* is not the same as an absent dependencies key.
+
+    A zero-dependency package omits ``dependencies`` from a manifest that is
+    otherwise there, and that is a measured zero. A packument that does not
+    carry the latest version's manifest at all — a mirror, a ``latest`` resolved
+    from the ``/latest`` document — is nobody having read a list, and must stay
+    unmeasured rather than inheriting the zero-dependency answer.
+    """
+    packument = copy.deepcopy(EXPRESS_PACKUMENT)
+    versions = packument["versions"]
+    assert isinstance(versions, dict)
+    del versions["5.2.1"]
+
+    score = _score_offline(
+        "express", "4.17.1", {"https://registry.npmjs.org/express": packument}
+    )
+
+    assert score.dependency.transitive_source is None
+    assert score.transitive_score is None
+    assert "transitive" in score.unknown_signals

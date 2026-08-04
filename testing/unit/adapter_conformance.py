@@ -208,6 +208,19 @@ class FixtureCase:
     # through a version catalog is invisible in the score and is the whole of
     # what #101 added.
     expected_version_source: Optional[str] = None
+    # The exact runtime dependency set the adapter must have recorded. A score
+    # is a five-bucket function of a count, so it cannot tell a correct read
+    # from one that lost four packages and gained four others, and it cannot
+    # see a dev dependency counted as a runtime one unless the miscount happens
+    # to cross a bucket edge — acid-store scores 0.5 whether or not its ten
+    # dev-dependencies are filtered out. Pinning the set is what makes the
+    # exclusion rule testable rather than merely documented (#204).
+    expected_transitive_dependencies: Optional[FrozenSet[str]] = None
+    # Names that must NOT appear in that set, for the cases where spelling out
+    # all of it would be a wall of package names with no reader. Every entry
+    # here is something the ecosystem's payload really does carry under a
+    # non-runtime key, so an empty exclusion rule fails on it.
+    expected_transitive_excludes: Sequence[str] = ()
     meets_signal_floor: bool = False
     ground_truth: Sequence[str] = field(default_factory=tuple)
 
@@ -258,9 +271,12 @@ def _finish(
     This used to call ``mark_transitive_unmeasured`` to reproduce what the
     pipeline does for registry-only ecosystems — which meant the harness
     asserted the marker rather than the default, and would have stayed green if
-    the default flipped back to fail-open. Now the five adapters that never
-    read a dependency list say nothing and are scored as unmeasured *because*
-    they said nothing, which is the property under test.
+    the default flipped back to fail-open. Every transitive answer in this
+    module is now the adapter's own: eight ecosystems record a measured set
+    from their registry's dependency list, golang records UNMEASURED because
+    ``go.mod`` states no scope, and python's sklearn case records nothing
+    because PyPI published nothing to record (#204). The harness vouches for
+    none of it.
     """
     dep = analyze_license(dep, dict(metadata))
     with mock.patch.object(
@@ -1159,10 +1175,14 @@ NODEJS_CASES: Tuple[FixtureCase, ...] = (
         expected_license_id="MIT",
         expected_deprecated=False,
         meets_signal_floor=True,
+        expected_transitive_excludes=("mocha", "eslint", "supertest", "hbs"),
         ground_truth=(
             "dist-tags.latest carries the release; the packument has no "
             "top-level 'version' key (#140).",
             "repository.url arrives git+-prefixed and .git-suffixed.",
+            "versions['5.2.1'].dependencies names 28 runtime packages and "
+            "versions['5.2.1'].devDependencies a further 16; the packument has "
+            "no top-level 'dependencies' key at all (#204).",
         ),
         signals=(
             SignalValue(
@@ -1210,12 +1230,13 @@ NODEJS_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "transitive",
-                unmeasured=True,
+                equals=0.5,
                 because=(
-                    "the adapter reads no dependency list from the packument, "
-                    "so nothing measured this and nothing marks it on the "
-                    "adapter's behalf. Before #199 that silence scored a "
-                    "confident 0.0 (#141's shape, in the one field it survived)"
+                    "28 runtime dependencies read off "
+                    "versions['5.2.1'].dependencies, which is 20-49 and scores "
+                    "0.5 (#204). Counting devDependencies too would give 44 and "
+                    "still 0.5 — the bucket does not catch that, which is why "
+                    "expected_transitive_excludes pins the set as well"
                 ),
             ),
         ),
@@ -1259,7 +1280,18 @@ NODEJS_CASES: Tuple[FixtureCase, ...] = (
                 equals=0.0,
                 because="request still declares its repository",
             ),
+            SignalValue(
+                "transitive",
+                equals=0.5,
+                because=(
+                    "20 runtime dependencies, exactly on the 20-49 boundary. "
+                    "request also ships 20 devDependencies, so a read that "
+                    "took both would report 40 — the same bucket, which is the "
+                    "point of pinning the set below"
+                ),
+            ),
         ),
+        expected_transitive_excludes=("karma", "browserify", "codecov", "coveralls"),
     ),
     FixtureCase(
         ecosystem="nodejs",
@@ -1272,16 +1304,30 @@ NODEJS_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="0.0.1",
         expected_repository_url=None,
         expected_deprecated=False,
+        expected_transitive_dependencies=frozenset(),
         ground_truth=(
             "Neither 'repository' nor 'homepage' appears in the live packument.",
             "No 'license' key either, which is why the license signal is "
             "unmeasured rather than guessed at (#74).",
+            "versions['0.0.1'].dependencies is present and empty — a measured "
+            "zero, and the spelling npm uses beside the commoner one where a "
+            "zero-dependency package omits the key entirely (#204).",
         ),
         signals=(
             SignalValue(
                 "source_repository",
                 equals=1.0,
                 because="the registry answered and declares no source — default branch",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because=(
+                    "somebody looked at a manifest that was there and found no "
+                    "dependencies. That is a measured zero, and it is a "
+                    "different fact from the unmeasured one this case produced "
+                    "before #204"
+                ),
             ),
             SignalValue(
                 "license",
@@ -1319,10 +1365,15 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
         expected_license_id="MIT",
         expected_deprecated=False,
         meets_signal_floor=True,
+        expected_transitive_dependencies=frozenset({"concurrent-ruby"}),
         ground_truth=(
             "'licenses' is a list; there is no 'license' key at all.",
             "source_code_uri is pinned to the released tag (/tree/v2.0.6) and "
             "has to be trimmed to the repository root.",
+            "'dependencies' is an OBJECT keyed by scope — "
+            "{'development': [], 'runtime': [{'name': 'concurrent-ruby', ...}]} "
+            "— so counting the value itself reports two for every gem in the "
+            "registry (#204).",
         ),
         signals=(
             SignalValue(
@@ -1361,10 +1412,12 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "transitive",
-                unmeasured=True,
+                equals=0.1,
                 because=(
-                    "rubygems' versions endpoint carries a dependencies object "
-                    "the adapter does not read, so nothing measured this (#199)"
+                    "one runtime dependency, concurrent-ruby, read off "
+                    "dependencies.runtime (#204). Counting the scope object "
+                    "itself would give two and score the same, which is why the "
+                    "set is pinned above rather than the count"
                 ),
             ),
         ),
@@ -1383,10 +1436,13 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
         expected_repository_url=None,
         expected_license_id=None,
         expected_deprecated=False,
+        expected_transitive_dependencies=frozenset(),
         ground_truth=(
             "'source_code_uri' is null and homepage_uri points at a dead "
             "non-git host.",
             "'licenses' is null, so the license signal is honestly unmeasured.",
+            "dependencies.runtime is an empty list — a measured zero, unlike "
+            "the licence beside it.",
         ),
         signals=(
             SignalValue(
@@ -1408,6 +1464,16 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
                 "staleness",
                 equals=1.0,
                 because="0.8.6 shipped in January 2012",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.0,
+                because=(
+                    "an empty runtime list beside a null licence, in one "
+                    "payload: the first is a measured zero and the second is "
+                    "not measured at all, and the difference is the registry's "
+                    "not the reader's"
+                ),
             ),
         ),
     ),
@@ -1431,6 +1497,9 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
         expected_license_id="APACHE-2.0",
         expected_deprecated=False,
         meets_signal_floor=True,
+        expected_transitive_dependencies=frozenset(
+            {"certifi", "charset_normalizer", "idna", "urllib3"}
+        ),
         ground_truth=(
             "ownership.roles lists three Owner accounts; there is no "
             "'maintainers' key anywhere in the payload, which is why the count "
@@ -1439,6 +1508,8 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
             "and info.license_expression is null — the opposite of flask.",
             "project_urls.Source carries the repository; home_page is null, as "
             "it is on every modern package.",
+            "requires_dist has six entries, two of them extras-gated "
+            "(PySocks, chardet). Four runtime requirements, not six (#204).",
         ),
         signals=(
             SignalValue(
@@ -1489,10 +1560,15 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "transitive",
-                unmeasured=True,
+                equals=0.1,
                 because=(
-                    "PyPI publishes requires_dist and the adapter does not read "
-                    "it; an unread field is not a measured empty tree (#199)"
+                    "THE #204 extras assertion, and it discriminates by value. "
+                    "Four runtime requirements scores 0.1; the six PyPI lists, "
+                    "extras included, crosses into the 5-19 bucket and scores "
+                    "0.25. So a read that forgot to drop 'extra ==' entries "
+                    "fails right here — and a read that dropped them with a "
+                    "substring test over the requirement string would delete "
+                    "the real PyPI project 'extras' instead (#190's shape)"
                 ),
             ),
         ),
@@ -1515,6 +1591,17 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
         expected_repository_url="https://github.com/pallets/flask",
         expected_license_id="BSD-3-CLAUSE",
         expected_deprecated=False,
+        expected_transitive_dependencies=frozenset(
+            {
+                "blinker",
+                "click",
+                "importlib-metadata",
+                "itsdangerous",
+                "jinja2",
+                "markupsafe",
+                "werkzeug",
+            }
+        ),
         ground_truth=(
             "info.license is null and info.license_expression is "
             "'BSD-3-Clause'; the classifiers carry no 'License ::' entry at "
@@ -1522,6 +1609,11 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
             "ownership is {'organization': 'pallets', 'roles': []} — the "
             "permissions live on the organization, whose membership this "
             "payload does not publish.",
+            "requires_dist mixes both marker kinds: 'importlib-metadata; "
+            'python_version < "3.10"\' is a runtime requirement on the '
+            "interpreters it names and stays, while 'asgiref; extra == "
+            '"async"\' and \'python-dotenv; extra == "dotenv"\' are extras and '
+            "go (#204).",
         ),
         signals=(
             SignalValue(
@@ -1558,6 +1650,16 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
                 equals=0.0,
                 because="flask is current; the default branch",
             ),
+            SignalValue(
+                "transitive",
+                equals=0.25,
+                because=(
+                    "seven runtime requirements of the nine requires_dist "
+                    "lists. The two dropped are extras; the environment-marked "
+                    "importlib-metadata is kept, because a consumer on Python "
+                    "3.9 really does install it"
+                ),
+            ),
         ),
     ),
     FixtureCase(
@@ -1581,6 +1683,11 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
             "info.project_urls is null and info.home_page is the empty string.",
             "info.license is '' and info.license_expression is null, so the "
             "licence is honestly unmeasured rather than guessed.",
+            "info.requires_dist is null. PyPI sends null whenever the newest "
+            "release carries no Requires-Dist metadata, which an sdist-only "
+            "upload predating metadata 2.1 never does whatever it depends on: "
+            "carbon and graphite-web both report null and both declare real "
+            "install_requires. So null is not a measured zero (#204).",
         ),
         signals=(
             SignalValue(
@@ -1617,6 +1724,18 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
                 equals=0.25,
                 because="ownership.roles lists three owners",
             ),
+            SignalValue(
+                "transitive",
+                unmeasured=True,
+                because=(
+                    "THE fail-closed assertion for python's read. requires_dist "
+                    "is null, and null is 'PyPI published no requirement "
+                    "metadata', not 'this package has none'. Reading it as an "
+                    "empty list would score a confident 0.0 for every "
+                    "sdist-only package in the index, which is #141 arriving "
+                    "through the door #204 opened"
+                ),
+            ),
         ),
     ),
 )
@@ -1625,7 +1744,7 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
     FixtureCase(
         ecosystem="cargo",
         fixture="serde",
-        extra_fixtures=("serde.owners",),
+        extra_fixtures=("serde.owners", "serde.dependencies"),
         installed_version="1.0.100",
         purpose=(
             "#139's ground truth and the coverage floor case. The crate object "
@@ -1639,12 +1758,18 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
         expected_license_id="MIT",
         expected_deprecated=False,
         meets_signal_floor=True,
+        expected_transitive_dependencies=frozenset({"serde_core", "serde_derive"}),
         ground_truth=(
             "crate.created_at is 2014-12-05 and the newest versions entry is "
             "dated 2026 — the two dates the #139 bug confused.",
             "the licence lives on the version entry, not on the crate object.",
             "the owners endpoint lists two entries, one of them a team "
             "(github:serde-rs:publish), which still counts as a publisher.",
+            "the crate document carries no dependency list, only a "
+            "versions[].links.dependencies pointer, so the read costs a "
+            "request — the one ecosystem of #204's five where it does.",
+            "serde_derive is optional: true and is still counted. Optional is "
+            "a feature gate inside [dependencies], not a scope (#204).",
         ),
         signals=(
             SignalValue(
@@ -1689,10 +1814,10 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "transitive",
-                unmeasured=True,
+                equals=0.1,
                 because=(
-                    "crates.io serves dependencies from a separate endpoint the "
-                    "adapter never calls, so nothing measured this (#199)"
+                    "two normal dependencies off "
+                    "/crates/serde/1.0.229/dependencies (#204)"
                 ),
             ),
         ),
@@ -1700,7 +1825,7 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
     FixtureCase(
         ecosystem="cargo",
         fixture="acid-store",
-        extra_fixtures=("acid-store.owners",),
+        extra_fixtures=("acid-store.owners", "acid-store.dependencies"),
         installed_version="0.10.0",
         purpose=(
             "The branch rubygems could not prove (#170), captured one "
@@ -1715,11 +1840,29 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
         expected_repository_url="https://github.com/lostatc/acid-store",
         expected_license_id="APACHE-2.0",
         expected_deprecated=True,
+        expected_transitive_excludes=(
+            "criterion",
+            "spectral",
+            "serial_test",
+            "rstest",
+            "maplit",
+            "bytesize",
+            "dotenv",
+            "rstest_reuse",
+        ),
         ground_truth=(
             "crate.max_version is '0.0.0' and no release is numbered 0.0.0; "
             "the newest release that exists is 0.14.2, from March 2024.",
             "crate.yanked is true and every versions entry reports "
             "yanked: true with an audit_actions 'yank' record.",
+            "the dependencies document lists 42 entries: 32 normal and 10 dev. "
+            "rand and tempfile appear TWICE, once under each kind, so counting "
+            "the array is wrong twice over — and 42, 40 and 32 all land in the "
+            "same 20-49 score bucket, which is why the exclusions are named "
+            "rather than left to the score (#204).",
+            "18 of the 32 normal entries are optional feature-gated backends "
+            "(redis, rusqlite, rust-s3, ssh2, sodiumoxide, ...) and are counted "
+            "as the declared runtime dependencies they are.",
         ),
         signals=(
             SignalValue(
@@ -1759,6 +1902,17 @@ CARGO_CASES: Tuple[FixtureCase, ...] = (
                 "source_repository",
                 equals=0.0,
                 because="the crate still declares its repository",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.5,
+                because=(
+                    "32 normal dependencies. Also the proof that the "
+                    "version-pinned endpoint is addressed with the release that "
+                    "exists rather than with the '0.0.0' sentinel — "
+                    "/crates/acid-store/0.0.0/dependencies is a 404 and would "
+                    "leave this unmeasured"
+                ),
             ),
         ),
     ),
@@ -2052,6 +2206,10 @@ GOLANG_CASES: Tuple[FixtureCase, ...] = (
             "Time; Origin.URL is the proxy's own answer to the question the "
             "module-path resolver answers by rule.",
             "the go.mod carries no '// Deprecated:' comment.",
+            "the go.mod's direct require block is "
+            "github.com/stretchr/testify and golang.org/x/sys — one test-only "
+            "module and one runtime one, in the same block, with nothing to "
+            "tell them apart. That is why golang abstains on transitive (#204).",
         ),
         signals=(
             SignalValue(
@@ -2102,8 +2260,13 @@ GOLANG_CASES: Tuple[FixtureCase, ...] = (
                 "transitive",
                 unmeasured=True,
                 because=(
-                    "the proxy serves the module's go.mod and the adapter reads "
-                    "it for the version, not for the require block (#199)"
+                    "the one ecosystem of the nine that abstains, and it does so "
+                    "positively (#204). The go.mod is fetched and the require "
+                    "block is right there — but go.mod states no scope, so "
+                    "logrus's test-only testify sits in the same direct block "
+                    "as its runtime golang.org/x/sys. Counting it would report "
+                    "two where a consumer is exposed to one, systematically, "
+                    "for every module that tests with testify"
                 ),
             ),
         ),
@@ -3302,30 +3465,61 @@ def unproven_branches() -> List[str]:
 
 
 #: The ecosystems whose adapter positively records a measured transitive set,
-#: from an audit of all eight registry adapters (#199). nuget reads the ``.nuspec``
-#: ``<dependencies>`` (#129), maven the POM's scope-filtered ``<dependencies>``,
-#: composer the p2 entry's ``require`` block minus platform constraints (#180).
+#: from an audit of all nine registry adapters (#199, extended by #204). Each
+#: reads its registry's own statement of what installing the package pulls in,
+#: and each draws the runtime line the way its registry draws it:
 #:
-#: The other five never assign ``transitive_dependencies`` at all — verified by
-#: grep, not by trusting the list — so under the fail-closed default they
-#: report the signal as unmeasured. That is not a gap that needs a waiver: it
-#: is the honest answer, and it is asserted in both directions below so that
-#: adding a read without recording it, or losing a read while keeping the
-#: marker, both fail here.
+#: * nuget — the ``.nuspec`` runtime ``<dependencies>`` (#129).
+#: * maven — the POM's ``<dependencies>``, scope-filtered to compile/runtime.
+#: * gradle — maven's read reached through the Gradle parser. Listed explicitly
+#:   rather than aliased: if the route ever stopped reaching the Maven analyzer
+#:   the signal would go silent, and this is where that fails instead of
+#:   passing as a plausible None.
+#: * composer — the p2 ``require`` block minus platform constraints (#180).
+#: * nodejs — ``versions[<latest>].dependencies``, minus devDependencies,
+#:   peerDependencies and optionalDependencies (#204).
+#: * python — ``info.requires_dist``, minus the ``extra ==`` entries (#204).
+#: * cargo — the per-version dependencies endpoint, ``kind == "normal"`` only
+#:   (#204). The one entry here that costs an extra request.
+#: * rubygems — ``dependencies.runtime``, not ``dependencies.development``
+#:   (#204).
 #:
-#: (npm packuments, PyPI ``requires_dist``, crates.io's dependencies endpoint,
-#: rubygems' ``dependencies`` object and a module's ``go.mod`` all *carry* a
-#: dependency list none of those five adapters reads. Reading them is an
-#: enhancement with its own floor changes, not part of closing the default.)
-#: gradle is here because it *is* maven on this axis: the same analyzer reads
-#: the same POM's scope-filtered ``<dependencies>``. Listing it explicitly
-#: rather than aliasing it to maven is the point — if the Gradle route ever
-#: stopped reaching the Maven analyzer, the transitive signal would go silent
-#: and this set is where that shows up as a failure instead of as a plausible
-#: None.
+#: golang is the sole abstainer, and it abstains *positively*: the adapter
+#: calls the recorder with ``source=None``. ``go.mod`` states no dependency
+#: scope, so a module's test-only requirements share the direct ``require``
+#: block with its runtime ones — logrus requires testify and golang.org/x/sys
+#: side by side — and counting the block would over-report Go modules
+#: systematically. Its reason lives at
+#: ``analyzers.golang.TRANSITIVE_UNMEASURED_REASON``.
+#:
+#: Asserted in both directions below, so that adding a read without recording
+#: it, and losing a read while keeping the marker, both fail here.
 TRANSITIVE_RECORDING_ECOSYSTEMS: FrozenSet[str] = frozenset(
-    {"composer", "gradle", "maven", "nuget"}
+    {
+        "cargo",
+        "composer",
+        "gradle",
+        "maven",
+        "nodejs",
+        "nuget",
+        "python",
+        "rubygems",
+    }
 )
+
+#: The fixtures whose ecosystem reads a dependency list but whose *payload*
+#: does not carry one, so the signal is correctly unmeasured for that package
+#: alone. Keyed by ``ecosystem/fixture``, with the reason, because a blanket
+#: per-ecosystem rule cannot express "measured for requests, unmeasured for
+#: sklearn" and pretending otherwise is how a real regression hides.
+TRANSITIVE_UNMEASURED_FIXTURES: Dict[str, str] = {
+    "python/sklearn": (
+        "info.requires_dist is null. PyPI sends null when the newest release "
+        "publishes no Requires-Dist metadata at all, which is also true of "
+        "sdist-only uploads that do have dependencies (carbon, graphite-web), "
+        "so it is not a measured zero (#204)."
+    ),
+}
 
 
 def assert_transitive_is_recorded_not_assumed(
@@ -3347,8 +3541,15 @@ def assert_transitive_is_recorded_not_assumed(
         AssertionError: If a non-reading ecosystem produced a value, or a
             reading one produced None.
     """
-    records = case.ecosystem in TRANSITIVE_RECORDING_ECOSYSTEMS
+    waiver = TRANSITIVE_UNMEASURED_FIXTURES.get(case.slug)
+    records = case.ecosystem in TRANSITIVE_RECORDING_ECOSYSTEMS and waiver is None
     actual = score.transitive_score
+    if waiver is not None:
+        assert actual is None, (
+            f"{case.slug}: transitive scored {actual}, but this payload "
+            f"publishes no dependency list to read. {waiver}"
+        )
+        return
     if records:
         assert actual is not None, (
             f"{case.slug}: transitive came back unmeasured, but {case.ecosystem} "
@@ -3398,6 +3599,24 @@ def assert_case_conforms(case: FixtureCase) -> DependencyRiskScore:
     assert actual_license == case.expected_license_id, (
         f"{case.slug}: license_id is {actual_license!r}, expected "
         f"{case.expected_license_id!r}"
+    )
+
+    if case.expected_transitive_dependencies is not None:
+        actual = frozenset(dep.transitive_dependencies)
+        assert actual == case.expected_transitive_dependencies, (
+            f"{case.slug}: the recorded runtime dependency set is wrong.\n"
+            f"  missing: {sorted(case.expected_transitive_dependencies - actual)}\n"
+            f"  unexpected: {sorted(actual - case.expected_transitive_dependencies)}"
+        )
+    leaked = sorted(
+        name
+        for name in case.expected_transitive_excludes
+        if name in dep.transitive_dependencies
+    )
+    assert not leaked, (
+        f"{case.slug}: {leaked} are in the recorded runtime dependency set, and "
+        f"they are not runtime dependencies. The ecosystem's non-runtime "
+        f"exclusion has stopped firing."
     )
 
     for expectation in case.signals:

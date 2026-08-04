@@ -64,6 +64,20 @@ ANYHOW_OWNERS_RESPONSE: Dict[str, object] = {
     ]
 }
 
+# Recorded from /crates/anyhow/1.0.104/dependencies. anyhow is the shape worth
+# having here: every one of its five declared dependencies is ``kind: "dev"``,
+# so a read that does not filter by kind reports five runtime dependencies for
+# a crate that has none, and a read that does reports a measured zero (#204).
+ANYHOW_DEPENDENCIES_RESPONSE: Dict[str, object] = {
+    "dependencies": [
+        {"crate_id": "futures", "req": "^0.3", "optional": False, "kind": "dev"},
+        {"crate_id": "rustversion", "req": "^1.0.6", "optional": False, "kind": "dev"},
+        {"crate_id": "syn", "req": "^3", "optional": False, "kind": "dev"},
+        {"crate_id": "thiserror", "req": "^2", "optional": False, "kind": "dev"},
+        {"crate_id": "trybuild", "req": "^1.0.108", "optional": False, "kind": "dev"},
+    ]
+}
+
 # Enough of a GitHub repository page for the community analyzer's star scrape.
 GITHUB_REPO_HTML = (
     '<a href="/dtolnay/anyhow/stargazers" '
@@ -102,6 +116,17 @@ def _score_crate_offline(
             ANYHOW_OWNERS_RESPONSE if owners_response is None else owners_response
         ),
     }
+    # The dependencies endpoint is version-pinned, so it is registered for every
+    # release the crate payload names rather than for a hand-picked one: a test
+    # that changes which version resolves must not silently lose the signal.
+    versions = crate_response.get("versions")
+    if isinstance(versions, list):
+        for entry in versions:
+            if isinstance(entry, dict) and isinstance(entry.get("num"), str):
+                responses[
+                    f"https://crates.io/api/v1/crates/{name}/{entry['num']}/"
+                    f"dependencies"
+                ] = copy.deepcopy(ANYHOW_DEPENDENCIES_RESPONSE)
 
     def fake_get_json(url: str) -> Optional[object]:
         return responses.get(url)
@@ -194,6 +219,48 @@ def test_owners_without_users_leave_the_maintainer_count_alone() -> None:
 
     assert score.dependency.maintainer_count is None
     assert "maintainer" in score.unknown_signals
+
+
+def test_dev_dependencies_are_not_runtime_dependencies() -> None:
+    """#204: every anyhow dependency is a dev one, so the runtime answer is zero.
+
+    A measured zero rather than an unmeasured one — somebody read the list —
+    and specifically not five, which is what dropping the ``kind`` filter gives.
+    """
+    score = _score_crate_offline(ANYHOW_CRATE_RESPONSE)
+
+    assert score.dependency.transitive_dependencies == set()
+    assert score.transitive_score == 0.0
+    assert "transitive" not in score.unknown_signals
+
+
+def test_an_unanswered_dependencies_endpoint_leaves_transitive_unmeasured() -> None:
+    """#204: a request nobody answered must not become a confident zero.
+
+    The cargo read is the one of the four that costs a request, so it is the one
+    that can fail on its own — a rate limit, a network blip, a crate whose only
+    releases are yanked and whose version-pinned document therefore 404s. All of
+    those have to land on unmeasured, not on "resolved, and it is empty" (#141).
+    """
+    name = "anyhow"
+    analyzer = CratesIOAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=name, installed_version="1.0.0")
+    responses: Dict[str, object] = {
+        f"https://crates.io/api/v1/crates/{name}": copy.deepcopy(ANYHOW_CRATE_RESPONSE),
+        f"https://crates.io/api/v1/crates/{name}/owners": copy.deepcopy(
+            ANYHOW_OWNERS_RESPONSE
+        ),
+    }
+
+    with mock.patch.object(analyzer, "_get_json", side_effect=responses.get):
+        analyzed = analyzer.analyze({name: dep})[name]
+
+    score = RiskScorer().score_dependency(analyzed)
+
+    assert analyzed.transitive_source is None
+    assert score.transitive_score is None
+    assert "transitive" in score.unknown_signals
 
 
 def test_cargo_meets_minimum_measured_signal_coverage() -> None:

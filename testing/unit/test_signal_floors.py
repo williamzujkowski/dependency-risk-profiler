@@ -17,7 +17,7 @@ supposed to demonstrate.
 """
 
 import copy
-from typing import Dict, List
+from typing import Dict
 
 from signal_floors import (
     MIN_MEASURED_SIGNALS,
@@ -55,50 +55,79 @@ def _owners_response_without_owners() -> Dict[str, object]:
     return payload
 
 
-def _collapsed_scores() -> List[DependencyRiskScore]:
-    """Score anyhow twice, each time one registry field short of the real payload."""
-    return [
-        _score_crate_offline(_crate_response_without_license()),
-        _score_crate_offline(ANYHOW_CRATE_RESPONSE, _owners_response_without_owners()),
-    ]
+def _collapsed_score() -> DependencyRiskScore:
+    """Score anyhow two registry fields short of the real payload.
+
+    Two, not one, since #204: reading the dependencies endpoint took cargo from
+    eight measured signals to nine, so the ecosystem now has exactly one signal
+    of headroom above the edge. Losing the licence *and* the owner list is what
+    puts it back on the collapsed side, and that is the whole content of the
+    re-baseline — a floor of nine fails on the first loss, one step before the
+    verdict disappears.
+    """
+    return _score_crate_offline(
+        _crate_response_without_license(), _owners_response_without_owners()
+    )
 
 
 def test_a_healthy_crate_clears_the_bar_by_exactly_one_signal() -> None:
-    """Cargo measures eight and is unmeasured on eight: still not insufficient.
+    """Cargo measures nine and is unmeasured on seven, one clear of the edge.
 
-    The eighth unmeasured signal is the community pair, which counts once —
-    an absent community record is one gap, not two (#166).
+    The seventh unmeasured signal is the community pair, which counts once —
+    an absent community record is one gap, not two (#166). Before #204 this
+    read eight and eight, clearing by nothing; the dependency list is the
+    signal that bought the margin.
     """
     score = _score_crate_offline(ANYHOW_CRATE_RESPONSE)
 
-    assert score.measured_signal_count == 8
-    assert score.unknown_signal_count == 8
+    assert score.measured_signal_count == 9
+    assert score.unknown_signal_count == 7
     assert score.insufficient_data is False
 
 
-def test_losing_one_registry_field_collapses_the_whole_ecosystem() -> None:
-    """The #127 / #132 failure reproduced: one missing field, everything UNKNOWN."""
-    for score in _collapsed_scores():
-        assert score.measured_signal_count == 7
-        assert score.insufficient_data is True
-        assert score.risk_level is RiskLevel.UNKNOWN
+def test_losing_two_registry_fields_collapses_the_whole_ecosystem() -> None:
+    """The #127 / #132 failure reproduced, at the depth it now takes to reach."""
+    score = _collapsed_score()
+
+    assert score.measured_signal_count == 7
+    assert score.insufficient_data is True
+    assert score.risk_level is RiskLevel.UNKNOWN
+
+
+def test_one_lost_field_still_reaches_a_verdict_and_still_fails_the_floor() -> None:
+    """The margin the floor is supposed to catch, shown from both sides.
+
+    A floor that only fired once the ecosystem had already collapsed would be
+    reporting the fire after the building was gone. cargo losing one field is
+    exactly the state the floor exists to fail on: eight measured, still a
+    verdict, and already below nine.
+    """
+    score = _score_crate_offline(_crate_response_without_license())
+
+    assert score.measured_signal_count == 8
+    assert score.insufficient_data is False
+    assert score.risk_level is not RiskLevel.UNKNOWN
+    assert score.measured_signal_count < MIN_MEASURED_SIGNALS["cargo"]
 
 
 def test_the_superseded_floor_of_seven_admitted_a_collapsed_ecosystem() -> None:
     """Why the floors were re-baselined: seven passed the state it existed to catch."""
-    for score in _collapsed_scores():
-        assert score.risk_level is RiskLevel.UNKNOWN
-        assert score.measured_signal_count >= SUPERSEDED_FLOOR
-        assert score.measured_signal_count < MIN_MEASURED_SIGNALS["cargo"]
+    score = _collapsed_score()
+
+    assert score.risk_level is RiskLevel.UNKNOWN
+    assert score.measured_signal_count >= SUPERSEDED_FLOOR
+    assert score.measured_signal_count < MIN_MEASURED_SIGNALS["cargo"]
 
 
 def test_an_ecosystem_that_reaches_a_verdict_is_floored_above_the_edge() -> None:
     """A floor at the edge cannot fail before the ecosystem has already collapsed.
 
-    npm and PyPI are the honest exceptions: neither publishes a maintainer
-    count, so both sit *at* the seven-signal edge offline and are recorded as
-    not reaching a verdict unaided. Every ecosystem that does reach one must be
-    floored above the edge, or its floor is decoration.
+    golang is the only exception left, and it is a registry difference rather
+    than an unfinished adapter: proxy.golang.org publishes no licence, no owner
+    list, and a scopeless ``go.mod``, so Go modules sit below the edge offline
+    and are recorded as not reaching a verdict unaided. npm was beside it until
+    #204. Every ecosystem that does reach a verdict must be floored above the
+    edge, or its floor is decoration.
     """
     for ecosystem, floor in MIN_MEASURED_SIGNALS.items():
         if SCORES_FROM_REGISTRY_ALONE[ecosystem]:
