@@ -6,7 +6,7 @@ If the prewarm wrote under the raw manifest ecosystem (``pyproject``), every
 such dependency would miss on read and re-query OSV despite the prewarm.
 """
 
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
 import pytest
 
@@ -49,11 +49,13 @@ def _osv_only_options() -> VulnerabilityOptions:
     )
 
 
-def _capture_prewarm(monkeypatch) -> "dict[str, List[Tuple[str, str]]]":
+def _capture_prewarm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> "dict[str, List[Tuple[str, str]]]":
     """Patch the querybatch prewarm to record the (name, ecosystem) pairs."""
     captured: dict[str, List[Tuple[str, str]]] = {}
 
-    async def fake_prewarm(package_ecosystems) -> None:
+    async def fake_prewarm(package_ecosystems: Iterable[Tuple[str, str]]) -> None:
         captured["pairs"] = list(package_ecosystems)
 
     monkeypatch.setattr(
@@ -64,7 +66,9 @@ def _capture_prewarm(monkeypatch) -> "dict[str, List[Tuple[str, str]]]":
     return captured
 
 
-def test_prewarm_key_matches_python_analyzer_read_key(monkeypatch) -> None:
+def test_prewarm_key_matches_python_analyzer_read_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A pyproject dep is prewarmed under the same key the read later uses."""
     captured = _capture_prewarm(monkeypatch)
 
@@ -92,7 +96,9 @@ def test_prewarm_key_matches_python_analyzer_read_key(monkeypatch) -> None:
     )
 
 
-def test_prewarm_normalizes_pyproject_but_preserves_others(monkeypatch) -> None:
+def test_prewarm_normalizes_pyproject_but_preserves_others(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Only pyproject is remapped; other ecosystems key on their own name."""
     captured = _capture_prewarm(monkeypatch)
 
@@ -143,7 +149,7 @@ def test_fetcher_table_covers_every_registered_parser_ecosystem() -> None:
 
 @pytest.mark.parametrize("manifest_ecosystem,fetcher", MANIFEST_ECOSYSTEM_FETCHERS)
 def test_prewarm_key_matches_read_key_for_every_ecosystem(
-    manifest_ecosystem: str, fetcher: str, monkeypatch
+    manifest_ecosystem: str, fetcher: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """#116: prewarm writes and the profiling read agree on the cache key.
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Literal, Set, Tuple
+from typing import Dict, List, Literal, Protocol, Set, Tuple
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
 
@@ -224,8 +224,14 @@ def _plural(count: int, singular: str) -> str:
     return f"{singular}s"
 
 
-class DependencyProfiler:
-    """Protocol-like base class for dependency profiling adapters."""
+class DependencyProfiler(Protocol):
+    """Structural protocol for dependency profiling adapters.
+
+    This was a plain nominal base class whose docstring claimed to be a
+    protocol, the same defect #153 fixed in ``GitHubDiscoveryClient``. Both
+    real implementations already inherit explicitly, so making the claim true
+    costs nothing at runtime and lets fixtures satisfy it by shape.
+    """
 
     def profile(
         self, dependencies: Dict[DependencyKey, DependencyMetadata]

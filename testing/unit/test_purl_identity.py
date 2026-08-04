@@ -11,7 +11,8 @@ collapse, and losslessness.
 """
 
 from dataclasses import FrozenInstanceError
-from typing import Optional
+from types import MappingProxyType
+from typing import MutableMapping, Optional
 
 import pytest
 
@@ -493,6 +494,22 @@ def test_for_dependency_accepts_extra_qualifiers() -> None:
 # --------------------------------------------------------------------------
 
 
+def _assign(target: object, attribute: str, value: object) -> None:
+    """Assign an attribute reflectively.
+
+    A direct ``one.name = ...`` is a static type error against a frozen
+    dataclass, and ``setattr(one, "name", ...)`` is rewritten back into one by
+    ruff's B010. Going through a non-literal attribute name keeps the runtime
+    behaviour under test without needing a suppression to say so.
+
+    Args:
+        target: Object to mutate.
+        attribute: Attribute name.
+        value: Value to assign.
+    """
+    setattr(target, attribute, value)
+
+
 def test_package_url_is_frozen_and_hashable() -> None:
     """Keys end up in sets and dict keys; the value type must support that."""
     one = parse("pkg:pypi/django@5.0.0")
@@ -500,14 +517,19 @@ def test_package_url_is_frozen_and_hashable() -> None:
     assert one == two
     assert len({identity_key(one), identity_key(two)}) == 1
     with pytest.raises(FrozenInstanceError):
-        one.name = "flask"
+        _assign(one, "name", "flask")
 
 
 def test_qualifiers_are_immutable() -> None:
-    """A shared canonical purl must not be mutable through its qualifiers."""
+    """A shared canonical purl must not be mutable through its qualifiers.
+
+    Asserted on the container type: ``qualifiers`` is declared ``Mapping``, so
+    a subscript assignment was never valid code — it only looked like a test
+    because mypy did not read this directory.
+    """
     parsed = parse("pkg:gem/jruby-launcher@1.1.2?platform=java")
-    with pytest.raises(TypeError):
-        parsed.qualifiers["platform"] = "ruby"
+    assert isinstance(parsed.qualifiers, MappingProxyType)
+    assert not isinstance(parsed.qualifiers, MutableMapping)
 
 
 def test_str_returns_the_canonical_form() -> None:

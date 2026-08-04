@@ -2,7 +2,9 @@
 
 import os
 import tempfile
+from typing import Optional
 
+from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.base import BaseParser
 from dependency_risk_profiler.parsers.golang import GoParser
 from dependency_risk_profiler.parsers.nodejs import NodeJSParser
@@ -10,8 +12,10 @@ from dependency_risk_profiler.parsers.python import PythonParser
 
 
 def test_base_parser_factory(
-    sample_nodejs_manifest, sample_python_manifest, sample_golang_manifest
-):
+    sample_nodejs_manifest: str,
+    sample_python_manifest: str,
+    sample_golang_manifest: str,
+) -> None:
     """Test the base parser factory method."""
     # Debug info
     print(f"NodeJS manifest path: {sample_nodejs_manifest}")
@@ -53,7 +57,7 @@ def test_base_parser_factory(
     assert parser is None
 
 
-def test_nodejs_parser(sample_nodejs_manifest):
+def test_nodejs_parser(sample_nodejs_manifest: str) -> None:
     """Test the Node.js package-lock.json parser."""
     parser = NodeJSParser(sample_nodejs_manifest)
     dependencies = parser.parse()
@@ -72,7 +76,7 @@ def test_nodejs_parser(sample_nodejs_manifest):
     assert lodash.installed_version == "4.17.20"
 
 
-def test_python_parser(sample_python_manifest):
+def test_python_parser(sample_python_manifest: str) -> None:
     """Test the Python requirements.txt parser."""
     parser = PythonParser(sample_python_manifest)
     dependencies = parser.parse()
@@ -96,7 +100,7 @@ def test_python_parser(sample_python_manifest):
     assert numpy.installed_version == "1.20.0"
 
 
-def test_pipfile_lock_handles_string_and_dict_entries():
+def test_pipfile_lock_handles_string_and_dict_entries() -> None:
     """REGRESSION: Pipfile.lock entries may be bare strings, not just dicts."""
     import json
 
@@ -120,7 +124,7 @@ def test_pipfile_lock_handles_string_and_dict_entries():
     assert dependencies["pytest"].installed_version == "7.0.0"
 
 
-def test_golang_parser(sample_golang_manifest):
+def test_golang_parser(sample_golang_manifest: str) -> None:
     """Test the Go go.mod parser."""
     parser = GoParser(sample_golang_manifest)
     dependencies = parser.parse()
@@ -142,7 +146,7 @@ def test_golang_parser(sample_golang_manifest):
     )
 
     # Find dependencies by partial name
-    def find_dep(partial_name):
+    def find_dep(partial_name: str) -> Optional[DependencyMetadata]:
         for name, dep in dependencies.items():
             if partial_name in name:
                 return dep

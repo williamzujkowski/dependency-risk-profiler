@@ -5,23 +5,71 @@ must not let a scanned repo write outside its per-repo temp directory.
 """
 
 from pathlib import Path
+from typing import Dict, Iterable, List, Optional
 
 import pytest
 
-from dependency_risk_profiler.org_scan.models import ManifestRef
+from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.org_scan.models import (
+    DependencyKey,
+    DependencyRiskScore,
+    ManifestRef,
+    RepositoryRef,
+)
 from dependency_risk_profiler.org_scan.scanner import OrgScanRunner
 
 
 class _DummyClient:
-    """Placeholder discovery client; unused by ``_write_temp_manifest``."""
+    """Discovery client that satisfies the protocol and answers nothing.
+
+    ``_write_temp_manifest`` never calls it, but a body-less placeholder
+    satisfies no structural protocol at all — which is what the deleted
+    ``# type: ignore[arg-type]`` here was really hiding (#156).
+    """
+
+    def list_org_repositories(
+        self,
+        org: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """Return no repositories."""
+        return []
+
+    def list_user_repositories(
+        self,
+        user: str,
+        include_archived: bool = False,
+        max_repos: Optional[int] = None,
+    ) -> List[RepositoryRef]:
+        """Return no repositories."""
+        return []
+
+    def list_manifest_paths(
+        self,
+        repo: RepositoryRef,
+        supported_names: Iterable[str],
+    ) -> List[str]:
+        """Return no manifest paths."""
+        return []
+
+    def fetch_manifest_content(self, repo: RepositoryRef, path: str) -> str:
+        """Return an empty manifest."""
+        return ""
 
 
 class _DummyProfiler:
-    """Placeholder profiler; unused by ``_write_temp_manifest``."""
+    """Profiler that satisfies the protocol and scores nothing."""
+
+    def profile(
+        self, dependencies: Dict[DependencyKey, DependencyMetadata]
+    ) -> Dict[DependencyKey, DependencyRiskScore]:
+        """Return no scores."""
+        return {}
 
 
 def _runner() -> OrgScanRunner:
-    return OrgScanRunner(_DummyClient(), _DummyProfiler())  # type: ignore[arg-type]
+    return OrgScanRunner(_DummyClient(), _DummyProfiler())
 
 
 def test_write_temp_manifest_writes_within_root(tmp_path: Path) -> None:

@@ -105,8 +105,14 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+# The repo bans `# type: ignore`; this makes a suppression that has stopped
+# being load-bearing fail the gate instead of quietly becoming cargo cult.
+warn_unused_ignores = true
+# `testing/` is checked (see testing/unit/test_mypy_config.py, which ratchets
+# its error count). Only `testing/projects/` is excluded: that is a vendored
+# upstream checkout used as parser input, not code this repo owns.
 exclude = [
-    "testing/",
+    "testing/projects/",
     "venv/",
     "build/",
     "dist/",
@@ -147,10 +153,6 @@ ignore_missing_imports = true
 module = "typer.*"
 ignore_missing_imports = true
 
-[[tool.mypy.overrides]]
-module = ["pytest", "pytest.*", "_pytest.*"]
-follow_imports = "skip"
-
 # Modules still awaiting type cleanup. Every entry here is a debt, not a policy:
 # testing/unit/test_mypy_config.py ratchets the per-module error counts down and
 # fails if any of them grows. Delete entries as modules are cleaned; do not add new ones.
@@ -183,6 +185,13 @@ cov_fail_under = 90
 packages = {find = {where = ["src"]}}
 package-dir = {"" = "src"}
 include-package-data = true
+
+# PEP 561. Without this marker the package ships as untyped: every consumer —
+# including this repo's own test suite — sees `Any` for every symbol, which is
+# how 250 of the first mypy errors in `testing/` turned out to be one missing
+# empty file (#156).
+[tool.setuptools.package-data]
+dependency_risk_profiler = ["py.typed"]
 
 [tool.setuptools.dynamic]
 version = {attr = "dependency_risk_profiler.__version__"}

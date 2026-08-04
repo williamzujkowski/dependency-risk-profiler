@@ -160,7 +160,7 @@ def create_test_profile(manifest_path: str, date_offset: int = 0) -> ProjectRisk
     return profile
 
 
-def generate_test_history(project_id: str, num_profiles: int = 5):
+def generate_test_history(project_id: str, num_profiles: int = 5) -> None:
     """Generate test historical data.
 
     Args:
@@ -192,12 +192,10 @@ def generate_test_history(project_id: str, num_profiles: int = 5):
                 profile.dependencies[2].signed_commits_score = 0.3
                 profile.dependencies[2].branch_protection_score = 0.3
                 profile.dependencies[2].factors = ["improved security"]
-                profile.dependencies[
-                    2
-                ].dependency.security_metrics.has_security_policy = True
-                profile.dependencies[
-                    2
-                ].dependency.security_metrics.has_dependency_update_tools = True
+                metrics = profile.dependencies[2].dependency.security_metrics
+                assert metrics is not None
+                metrics.has_security_policy = True
+                metrics.has_dependency_update_tools = True
 
         # Recalculate overall profile metrics
         profile.high_risk_dependencies = sum(
@@ -221,7 +219,7 @@ def generate_test_history(project_id: str, num_profiles: int = 5):
         print(f"Generated and saved profile with date offset {i * 30} days")
 
 
-def main():
+def main() -> int:
     """Run the historical trends test harness."""
     parser = argparse.ArgumentParser(description="Test historical trends analysis")
 

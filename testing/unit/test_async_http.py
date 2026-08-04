@@ -1,18 +1,12 @@
 """Tests for the async_http module."""
 
 import asyncio
+from typing import Any, AsyncIterator, Dict, Iterator
 from unittest.mock import MagicMock, patch
 
-try:
-    import aiohttp
-except ImportError:
-    aiohttp = None
+import aiohttp
 import pytest
-
-try:
-    from aioresponses import aioresponses
-except ImportError:
-    aioresponses = None
+from aioresponses import aioresponses
 
 from dependency_risk_profiler.async_http import (
     AsyncHTTPBatchClient,
@@ -23,14 +17,14 @@ from dependency_risk_profiler.async_http import (
 
 
 @pytest.fixture
-def mock_aioresponse():
+def mock_aioresponse() -> Iterator[aioresponses]:
     """Fixture for mocking aiohttp responses."""
     with aioresponses() as mock:
         yield mock
 
 
 @pytest.fixture
-async def http_client():
+async def http_client() -> AsyncIterator[AsyncHTTPClient]:
     """Fixture for AsyncHTTPClient."""
     client = AsyncHTTPClient()
     yield client
@@ -38,7 +32,7 @@ async def http_client():
 
 
 @pytest.fixture
-async def batch_client():
+async def batch_client() -> AsyncIterator[AsyncHTTPBatchClient]:
     """Fixture for AsyncHTTPBatchClient."""
     client = AsyncHTTPBatchClient()
     yield client
@@ -53,7 +47,9 @@ class TestAsyncHTTPClient:
     """Tests for the AsyncHTTPClient class."""
 
     @async_test
-    async def test_get_success(self, http_client, mock_aioresponse):
+    async def test_get_success(
+        self, http_client: AsyncHTTPClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: GET requests should return parsed JSON on success."""
         # Arrange
         url = "https://api.example.com/test"
@@ -67,7 +63,9 @@ class TestAsyncHTTPClient:
         assert result == expected_data
 
     @async_test
-    async def test_get_client_error(self, http_client, mock_aioresponse):
+    async def test_get_client_error(
+        self, http_client: AsyncHTTPClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: Client errors (4xx) should return None without retries."""
         # Arrange
         url = "https://api.example.com/test"
@@ -80,7 +78,9 @@ class TestAsyncHTTPClient:
         assert result is None
 
     @async_test
-    async def test_get_server_error_with_retry(self, http_client, mock_aioresponse):
+    async def test_get_server_error_with_retry(
+        self, http_client: AsyncHTTPClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: Server errors (5xx) should trigger retries."""
         # Arrange
         url = "https://api.example.com/test"
@@ -97,7 +97,9 @@ class TestAsyncHTTPClient:
         assert result == expected_data
 
     @async_test
-    async def test_get_max_retries_exceeded(self, http_client, mock_aioresponse):
+    async def test_get_max_retries_exceeded(
+        self, http_client: AsyncHTTPClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: Request should return None after max retries."""
         # Arrange
         url = "https://api.example.com/test"
@@ -115,7 +117,9 @@ class TestAsyncHTTPClient:
         assert result is None
 
     @async_test
-    async def test_post_success(self, http_client, mock_aioresponse):
+    async def test_post_success(
+        self, http_client: AsyncHTTPClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: POST requests should return parsed JSON on success."""
         # Arrange
         url = "https://api.example.com/test"
@@ -130,7 +134,7 @@ class TestAsyncHTTPClient:
         assert result == expected_data
 
     @async_test
-    async def test_session_reuse(self, http_client):
+    async def test_session_reuse(self, http_client: AsyncHTTPClient) -> None:
         """HYPOTHESIS: Client should reuse an existing session."""
         # Act
         session1 = await http_client._get_session()
@@ -141,7 +145,7 @@ class TestAsyncHTTPClient:
         assert not session1.closed
 
     @async_test
-    async def test_concurrency_limit(self, mock_aioresponse):
+    async def test_concurrency_limit(self, mock_aioresponse: aioresponses) -> None:
         """BENCHMARK: Client should respect concurrency limits."""
         # Arrange
         url = "https://api.example.com/test"
@@ -175,7 +179,9 @@ class TestAsyncHTTPBatchClient:
     """Tests for the AsyncHTTPBatchClient class."""
 
     @async_test
-    async def test_batch_get(self, batch_client, mock_aioresponse):
+    async def test_batch_get(
+        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: Batch GET requests should execute in parallel."""
         # Arrange
         urls = [
@@ -199,7 +205,9 @@ class TestAsyncHTTPBatchClient:
         assert results == expected_data
 
     @async_test
-    async def test_batch_get_with_errors(self, batch_client, mock_aioresponse):
+    async def test_batch_get_with_errors(
+        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: Batch GET should handle mixed success and errors."""
         # Arrange
         urls = [
@@ -224,7 +232,9 @@ class TestAsyncHTTPBatchClient:
         assert results == expected_data
 
     @async_test
-    async def test_batch_post(self, batch_client, mock_aioresponse):
+    async def test_batch_post(
+        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: Batch POST requests should execute in parallel."""
         # Arrange
         urls = [
@@ -250,7 +260,9 @@ class TestAsyncHTTPBatchClient:
         assert results == expected_data
 
     @async_test
-    async def test_batch_get_exception_handling(self, batch_client, mock_aioresponse):
+    async def test_batch_get_exception_handling(
+        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
+    ) -> None:
         """REGRESSION: Batch GET should handle and mask exceptions."""
         # Arrange
         urls = [
@@ -275,7 +287,9 @@ class TestUtilityFunctions:
 
     @async_test
     @patch("httpx.AsyncClient.get")
-    async def test_fetch_url_async(self, mock_get, mock_aioresponse):
+    async def test_fetch_url_async(
+        self, mock_get: MagicMock, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: fetch_url_async should return text content."""
         # Arrange
         url = "https://example.com/page"
@@ -294,7 +308,9 @@ class TestUtilityFunctions:
         assert result == expected_content
 
     @async_test
-    async def test_fetch_url_async_failure(self, mock_aioresponse):
+    async def test_fetch_url_async_failure(
+        self, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: fetch_url_async should return None on failure."""
         # Arrange
         url = "https://example.com/error"
@@ -308,7 +324,9 @@ class TestUtilityFunctions:
 
     @async_test
     @patch("httpx.AsyncClient.get")
-    async def test_fetch_json_async(self, mock_get, mock_aioresponse):
+    async def test_fetch_json_async(
+        self, mock_get: MagicMock, mock_aioresponse: aioresponses
+    ) -> None:
         """HYPOTHESIS: fetch_json_async should return parsed JSON."""
         # Arrange
         url = "https://api.example.com/data"
@@ -327,7 +345,9 @@ class TestUtilityFunctions:
         assert result == expected_data
 
     @async_test
-    async def test_fetch_json_async_invalid_json(self, mock_aioresponse):
+    async def test_fetch_json_async_invalid_json(
+        self, mock_aioresponse: aioresponses
+    ) -> None:
         """REGRESSION: fetch_json_async should handle invalid JSON."""
         # Arrange
         url = "https://api.example.com/invalid"
@@ -345,7 +365,9 @@ class TestAsyncPerformance:
     """Benchmark tests for async HTTP performance."""
 
     @async_test
-    async def test_batch_vs_sequential_performance(self, mock_aioresponse):
+    async def test_batch_vs_sequential_performance(
+        self, mock_aioresponse: aioresponses
+    ) -> None:
         """BENCHMARK: Batch requests should be faster than sequential requests.
 
         SLA Requirements:
@@ -357,7 +379,7 @@ class TestAsyncPerformance:
         expected_data = {"message": "success"}
 
         # Setup mock responses with delay
-        async def delay_callback(*args, **kwargs):
+        async def delay_callback(*args: object, **kwargs: object) -> Dict[str, Any]:
             await asyncio.sleep(0.1)
             return dict(status=200, payload=expected_data)
 
@@ -391,7 +413,7 @@ class TestAsyncPerformance:
         await batch_client.close()
 
 
-def test_parse_retry_after_numeric_and_capped():
+def test_parse_retry_after_numeric_and_capped() -> None:
     """Numeric Retry-After is honored and capped; date/missing fall back."""
     from dependency_risk_profiler.async_http import (
         MAX_RETRY_AFTER_SECONDS,

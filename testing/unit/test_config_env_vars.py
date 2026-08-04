@@ -9,7 +9,7 @@ from unittest import mock
 from dependency_risk_profiler.config import Config, get_config
 
 
-def test_config_environment_variables():
+def test_config_environment_variables() -> None:
     """Test that environment variables are properly loaded in the configuration."""
     # Test with all environment variables set
     env_vars = {
@@ -37,7 +37,7 @@ def test_config_environment_variables():
         assert config.get("vulnerability", "enable_nvd") is True
 
 
-def test_config_environment_variable_precedence():
+def test_config_environment_variable_precedence() -> None:
     """Test that environment variables take precedence over config file values."""
     # Create a mock config object with predefined values
     config = Config()
@@ -86,7 +86,7 @@ def test_config_environment_variable_precedence():
         assert config.get("vulnerability", "enable_nvd") is True
 
 
-def test_get_config_singleton():
+def test_get_config_singleton() -> None:
     """Test that get_config returns a singleton instance."""
     # Clear any existing instance
     import dependency_risk_profiler.config

@@ -2,14 +2,20 @@
 
 import os
 import tempfile
+from typing import List
 
 import pytest
 
 from dependency_risk_profiler.parsers.toml import TomlParser
 
+# Temp files the fixtures below create, cleaned up in teardown_module.
+# Previously stashed as attributes on the module object, which no type
+# checker can follow and which ruff's B010 will not let you write honestly.
+_TEMP_FILES: List[str] = []
+
 
 @pytest.fixture
-def flit_pyproject_toml():
+def flit_pyproject_toml() -> str:
     """Create a temporary Flit-style pyproject.toml file for testing."""
     content = """
 [build-system]
@@ -50,16 +56,14 @@ dev = [
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.flit_pyproject_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def pdm_pyproject_toml():
+def pdm_pyproject_toml() -> str:
     """Create a temporary PDM-style pyproject.toml file for testing."""
     content = """
 [build-system]
@@ -98,16 +102,14 @@ includes = ["src"]
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.pdm_pyproject_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def hatch_pyproject_toml():
+def hatch_pyproject_toml() -> str:
     """Create a temporary Hatch-style pyproject.toml file for testing."""
     content = """
 [build-system]
@@ -149,16 +151,14 @@ dependencies = [
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.hatch_pyproject_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def workspace_cargo_toml():
+def workspace_cargo_toml() -> str:
     """Create a temporary Cargo.toml file with workspace dependencies for testing."""
     content = """
 [workspace]
@@ -193,30 +193,26 @@ cc = "1.0"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.workspace_cargo_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def empty_toml_file():
+def empty_toml_file() -> str:
     """Create an empty TOML file for testing."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.empty_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
-def test_flit_pyproject_parsing(flit_pyproject_toml):
+def test_flit_pyproject_parsing(flit_pyproject_toml: str) -> None:
     """Test parsing a Flit-style pyproject.toml file."""
     parser = TomlParser(flit_pyproject_toml)
     dependencies = parser.parse()
@@ -247,7 +243,7 @@ def test_flit_pyproject_parsing(flit_pyproject_toml):
         assert "groups" in dependencies["pytest"].additional_info
 
 
-def test_pdm_pyproject_parsing(pdm_pyproject_toml):
+def test_pdm_pyproject_parsing(pdm_pyproject_toml: str) -> None:
     """Test parsing a PDM-style pyproject.toml file."""
     parser = TomlParser(pdm_pyproject_toml)
     dependencies = parser.parse()
@@ -271,7 +267,7 @@ def test_pdm_pyproject_parsing(pdm_pyproject_toml):
         assert "dev" in dependencies["black"].additional_info.get("section", "")
 
 
-def test_hatch_pyproject_parsing(hatch_pyproject_toml):
+def test_hatch_pyproject_parsing(hatch_pyproject_toml: str) -> None:
     """Test parsing a Hatch-style pyproject.toml file."""
     parser = TomlParser(hatch_pyproject_toml)
     dependencies = parser.parse()
@@ -295,7 +291,7 @@ def test_hatch_pyproject_parsing(hatch_pyproject_toml):
         assert dependencies["pytest"].installed_version in [">=7.0.0", "latest"]
 
 
-def test_workspace_cargo_toml_parsing(workspace_cargo_toml):
+def test_workspace_cargo_toml_parsing(workspace_cargo_toml: str) -> None:
     """Test parsing a Cargo.toml file with workspace dependencies."""
     parser = TomlParser(workspace_cargo_toml)
     dependencies = parser.parse()
@@ -342,7 +338,7 @@ def test_workspace_cargo_toml_parsing(workspace_cargo_toml):
     assert len(dev_deps) > 0, "No dev dependencies found"
 
 
-def test_empty_toml_file(empty_toml_file):
+def test_empty_toml_file(empty_toml_file: str) -> None:
     """Test parsing an empty TOML file."""
     parser = TomlParser(empty_toml_file)
     dependencies = parser.parse()
@@ -352,7 +348,7 @@ def test_empty_toml_file(empty_toml_file):
     assert len(dependencies) == 0
 
 
-def test_extract_version_methods():
+def test_extract_version_methods() -> None:
     """Test the version extraction methods directly."""
     # Create a temporary file for testing
     with tempfile.NamedTemporaryFile(delete=False, suffix=".toml") as f:
@@ -404,7 +400,7 @@ def test_extract_version_methods():
             os.unlink(temp_file)
 
 
-def test_generic_toml_parsing():
+def test_generic_toml_parsing() -> None:
     """Test the generic TOML parsing functionality."""
     # Create a custom TOML file with various dependency formats
     content = """
@@ -430,10 +426,8 @@ requires = ["sixth>=6.0.0", "seventh==7.0.0"]
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.generic_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     parser = TomlParser(temp_file)
     dependencies = parser.parse()
@@ -453,17 +447,9 @@ requires = ["sixth>=6.0.0", "seventh==7.0.0"]
         assert "git:" in dependencies["fourth"].installed_version
 
 
-def teardown_module(module):
-    """Clean up temporary files."""
-    # Clean up any temporary files that might have been created
-    for path_attr in [
-        "flit_pyproject_path",
-        "pdm_pyproject_path",
-        "hatch_pyproject_path",
-        "workspace_cargo_path",
-        "empty_toml_path",
-        "generic_toml_path",
-    ]:
-        path = getattr(module, path_attr, None)
-        if path and os.path.exists(path):
+def teardown_module() -> None:
+    """Remove every temp file the fixtures in this module created."""
+    while _TEMP_FILES:
+        path = _TEMP_FILES.pop()
+        if os.path.exists(path):
             os.unlink(path)

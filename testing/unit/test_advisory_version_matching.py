@@ -91,7 +91,9 @@ def test_advisories_fixed_before_4_2_are_filtered(advisory_id: str) -> None:
     record = next(item for item in annotated if item["id"] == advisory_id)
     assert record["version_match"] == Applicability.NOT_AFFECTED.value
     assert record["counted_in_score"] is False
-    assert NOT_AFFECTED_FILTER_REASON in record["filter_reasons"]
+    reasons = record["filter_reasons"]
+    assert isinstance(reasons, list)
+    assert NOT_AFFECTED_FILTER_REASON in reasons
 
 
 @pytest.mark.parametrize("advisory_id", sorted(AFFECTS_4_2))
@@ -533,7 +535,7 @@ def test_range_matching_uses_each_ecosystems_ordering(
     expected: Applicability,
 ) -> None:
     """The same range shape resolves differently per ecosystem, correctly."""
-    advisory = {
+    advisory: Dict[str, object] = {
         "id": "TEST-1",
         "source": "OSV",
         "severity": "HIGH",

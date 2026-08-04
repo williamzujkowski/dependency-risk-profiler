@@ -12,6 +12,8 @@ diffs live inside each extraction PR, where record-before-move is meaningful).
 No network: pure table lookups.
 """
 
+from typing import Dict, Optional
+
 import pytest
 
 from dependency_risk_profiler.org_scan.report import _deps_dev_system
@@ -37,7 +39,7 @@ CANONICAL_ECOSYSTEMS = (
 # silently move where a dependency's advisories/links are looked up. OSV and
 # GitHub Advisory cover every supported ecosystem; deps.dev is partial (None
 # where the source does not cover the ecosystem, e.g. Packagist).
-EXPECTED_ROUTING = {
+EXPECTED_ROUTING: Dict[str, Dict[str, Optional[str]]] = {
     "nodejs": {"osv": "npm", "gha": "NPM", "deps_dev": "npm"},
     "python": {"osv": "PyPI", "gha": "PIP", "deps_dev": "pypi"},
     "golang": {"osv": "Go", "gha": "GO", "deps_dev": "go"},

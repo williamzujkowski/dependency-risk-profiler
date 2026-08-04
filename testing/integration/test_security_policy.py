@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def create_test_repository(with_security_policy=True):
+def create_test_repository(with_security_policy: bool = True) -> str:
     """Create a temporary repository with or without a security policy file."""
     repo_dir = tempfile.mkdtemp(prefix="security-policy-test-")
     logger.info(f"Created test repository at {repo_dir}")
@@ -77,7 +77,7 @@ def create_test_repository(with_security_policy=True):
     return repo_dir
 
 
-def test_security_policy_detection():
+def test_security_policy_detection() -> None:
     """Test the security policy detection functionality for both cases."""
     # Test with security policy
     test_with_security_policy()
@@ -86,7 +86,7 @@ def test_security_policy_detection():
     test_without_security_policy()
 
 
-def test_with_security_policy():
+def test_with_security_policy() -> None:
     """Test the case with a security policy."""
     logger.info("\n=== TESTING WITH SECURITY POLICY ===")
 
@@ -135,7 +135,7 @@ def test_with_security_policy():
     # Uncomment to clean up: shutil.rmtree(repo_dir)
 
 
-def test_without_security_policy():
+def test_without_security_policy() -> None:
     """Test the case without a security policy."""
     logger.info("\n=== TESTING WITHOUT SECURITY POLICY ===")
 

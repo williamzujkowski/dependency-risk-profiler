@@ -1,6 +1,6 @@
 """Tests that vulnerability lookups use the dependency's real ecosystem."""
 
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from unittest import mock
 
 import pytest
@@ -57,7 +57,9 @@ def test_normalize_ecosystem_covers_all_supported_ecosystems() -> None:
         ({}, "https://example.com/some/pkg", ""),
     ],
 )
-def test_infer_ecosystem_dedup_helper(additional_info, repo_url, expected) -> None:
+def test_infer_ecosystem_dedup_helper(
+    additional_info: Dict[str, str], repo_url: str, expected: str
+) -> None:
     """Prefer the declared ecosystem, else a URL guess that fails closed (#109).
 
     One shared implementation now backs both the sync and async aggregators.
@@ -93,7 +95,7 @@ def test_vuln_lookup_uses_declared_ecosystem_not_url_heuristic() -> None:
     """A dep's additional_info ecosystem drives OSV, not the repo-URL guess."""
     recorded: List[Tuple[str, str]] = []
 
-    async def _fake(self, package_name: str, ecosystem: str) -> list:
+    async def _fake(self: object, package_name: str, ecosystem: str) -> list:
         recorded.append((package_name, ecosystem))
         return []
 
@@ -113,7 +115,7 @@ def test_vuln_lookup_uses_declared_ecosystem_not_url_heuristic() -> None:
     ):
         aggregator_async.aggregate_vulnerability_data_async(
             {"lodash": dep},
-            api_keys={"github": None, "nvd": None},
+            api_keys={},
             enable_osv=True,
             enable_nvd=False,
             enable_github=False,
@@ -127,7 +129,7 @@ def test_vuln_lookup_falls_back_to_url_heuristic_when_ecosystem_absent() -> None
     """Without a declared ecosystem, the URL heuristic still applies."""
     recorded: List[Tuple[str, str]] = []
 
-    async def _fake(self, package_name: str, ecosystem: str) -> list:
+    async def _fake(self: object, package_name: str, ecosystem: str) -> list:
         recorded.append((package_name, ecosystem))
         return []
 
@@ -145,7 +147,7 @@ def test_vuln_lookup_falls_back_to_url_heuristic_when_ecosystem_absent() -> None
     ):
         aggregator_async.aggregate_vulnerability_data_async(
             {"somepkg": dep},
-            api_keys={"github": None, "nvd": None},
+            api_keys={},
             enable_osv=True,
             enable_nvd=False,
             enable_github=False,

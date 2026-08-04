@@ -63,11 +63,53 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Callable, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+)
 from warnings import warn
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "registry"
 MANIFEST_PATH = FIXTURE_ROOT / "manifest.json"
+
+
+class FixtureEntry(TypedDict):
+    """One recorded registry response declared in the manifest."""
+
+    url: str
+    reducer: str
+
+
+class EcosystemEntry(TypedDict):
+    """Every fixture declared for a single ecosystem."""
+
+    fixtures: Dict[str, FixtureEntry]
+
+
+class FixtureManifest(TypedDict):
+    """The shape of ``manifest.json``.
+
+    Spelled out rather than left as ``Dict[str, object]`` so that a key
+    renamed in the manifest fails type checking here instead of silently
+    reading ``None`` at runtime, which is #145 in miniature.
+    """
+
+    fixture_schema: int
+    max_fixture_bytes: int
+    max_string_chars: int
+    warn_after_days: int
+    fail_after_days: int
+    allowed_hosts: List[str]
+    ecosystems: Dict[str, EcosystemEntry]
+
 
 # Mirrors scripts/capture_registry_fixtures.SAFE_ID. Ids become path segments,
 # so they are validated here too rather than trusted because the capture script
@@ -135,7 +177,7 @@ class RegistryFixture:
         return ((today or date.today()) - self.captured_at).days
 
 
-def load_manifest() -> Dict[str, object]:
+def load_manifest() -> FixtureManifest:
     """Return the shared fixture manifest.
 
     Both this loader and the capture script read it, so what CI replays and
@@ -145,7 +187,7 @@ def load_manifest() -> Dict[str, object]:
         The parsed ``manifest.json``.
     """
     with MANIFEST_PATH.open(encoding="utf-8") as handle:
-        manifest: Dict[str, object] = json.load(handle)
+        manifest: FixtureManifest = json.load(handle)
     return manifest
 
 
@@ -221,7 +263,8 @@ def load_fixture(ecosystem: str, name: str) -> RegistryFixture:
         FixtureError: If the fixture is undeclared, missing, oversized,
             malformed, or carries a credential-shaped value.
     """
-    entry = MANIFEST["ecosystems"].get(ecosystem, {}).get("fixtures", {}).get(name)
+    ecosystem_entry = MANIFEST["ecosystems"].get(ecosystem)
+    entry = ecosystem_entry["fixtures"].get(name) if ecosystem_entry else None
     if entry is None:
         raise FixtureError(f"{ecosystem}/{name} is not declared in the manifest")
 
@@ -423,7 +466,7 @@ class RecordedResponse:
         """Return self, so ``with requests.get(...) as response`` works."""
         return self
 
-    def __exit__(self, *exc_info: object) -> bool:
+    def __exit__(self, *exc_info: object) -> Literal[False]:
         """Do nothing; there is no socket to release."""
         return False
 

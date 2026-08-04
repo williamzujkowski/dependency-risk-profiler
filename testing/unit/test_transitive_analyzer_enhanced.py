@@ -3,7 +3,7 @@
 import json
 import os
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -26,7 +26,7 @@ from dependency_risk_profiler.transitive.analyzer_enhanced import (
 class TestVirtualEnvFunctions:
     """Tests for the virtual environment functions."""
 
-    def test_create_virtual_env(self):
+    def test_create_virtual_env(self) -> None:
         """HYPOTHESIS: create_virtual_env should create a virtual environment."""
         # Skip if venv creation would be too slow for unit tests
         pytest.skip("Skipping venv creation test - slow operation")
@@ -46,7 +46,7 @@ class TestVirtualEnvFunctions:
                 assert os.path.exists(os.path.join(temp_dir, "bin"))
                 assert os.path.exists(os.path.join(temp_dir, "bin", "python"))
 
-    def test_get_pip_path(self):
+    def test_get_pip_path(self) -> None:
         """HYPOTHESIS: get_pip_path should return the platform pip path."""
         # Arrange
         venv_path = "/path/to/venv"
@@ -62,7 +62,7 @@ class TestVirtualEnvFunctions:
         assert unix_path == "/path/to/venv/bin/pip"
         assert windows_path == "/path/to/venv/Scripts/pip.exe"
 
-    def test_get_python_path(self):
+    def test_get_python_path(self) -> None:
         """HYPOTHESIS: get_python_path should return the platform python path."""
         # Arrange
         venv_path = "/path/to/venv"
@@ -83,7 +83,7 @@ class TestDependencyInstallation:
     """Tests for package installation functions."""
 
     @patch("subprocess.run")
-    def test_install_packages_success(self, mock_run):
+    def test_install_packages_success(self, mock_run: MagicMock) -> None:
         """HYPOTHESIS: install_packages should return True on success."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
@@ -103,7 +103,7 @@ class TestDependencyInstallation:
         )
 
     @patch("subprocess.run")
-    def test_install_packages_failure(self, mock_run):
+    def test_install_packages_failure(self, mock_run: MagicMock) -> None:
         """HYPOTHESIS: install_packages should return False on installation failure."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
@@ -119,7 +119,7 @@ class TestDependencyInstallation:
         assert result is False
 
     @patch("subprocess.run")
-    def test_install_pipdeptree_success(self, mock_run):
+    def test_install_pipdeptree_success(self, mock_run: MagicMock) -> None:
         """HYPOTHESIS: install_pipdeptree should return True on success."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
@@ -138,7 +138,7 @@ class TestDependencyInstallation:
         )
 
     @patch("subprocess.run")
-    def test_install_pipdeptree_failure(self, mock_run):
+    def test_install_pipdeptree_failure(self, mock_run: MagicMock) -> None:
         """HYPOTHESIS: install_pipdeptree should return False on failure."""
         # Arrange
         pip_path = "/path/to/venv/bin/pip"
@@ -157,7 +157,7 @@ class TestPipdeptreeExecution:
     """Tests for pipdeptree execution."""
 
     @patch("subprocess.run")
-    def test_run_pipdeptree_success(self, mock_run):
+    def test_run_pipdeptree_success(self, mock_run: MagicMock) -> None:
         """HYPOTHESIS: run_pipdeptree should return parsed JSON on success."""
         # Arrange
         python_path = "/path/to/venv/bin/python"
@@ -206,7 +206,7 @@ class TestPipdeptreeExecution:
         )
 
     @patch("subprocess.run")
-    def test_run_pipdeptree_failure(self, mock_run):
+    def test_run_pipdeptree_failure(self, mock_run: MagicMock) -> None:
         """HYPOTHESIS: run_pipdeptree should return None on failure."""
         # Arrange
         python_path = "/path/to/venv/bin/python"
@@ -221,7 +221,7 @@ class TestPipdeptreeExecution:
         assert result is None
 
     @patch("subprocess.run")
-    def test_run_pipdeptree_invalid_json(self, mock_run):
+    def test_run_pipdeptree_invalid_json(self, mock_run: MagicMock) -> None:
         """REGRESSION: run_pipdeptree should handle invalid JSON output."""
         # Arrange
         python_path = "/path/to/venv/bin/python"
@@ -237,7 +237,7 @@ class TestPipdeptreeExecution:
 class TestDependencyGraphBuilding:
     """Tests for dependency graph building."""
 
-    def test_build_dependency_graph(self):
+    def test_build_dependency_graph(self) -> None:
         """HYPOTHESIS: build_dependency_graph should build transitive deps."""
         # Arrange
         direct_dependencies = ["packageA", "packageB"]
@@ -270,7 +270,7 @@ class TestDependencyGraphBuilding:
         assert "dependency3" in transitive_deps["packageB"]
         assert len(transitive_deps["packageB"]) == 1  # only dependency3
 
-    def test_build_dependency_graph_with_cycles(self):
+    def test_build_dependency_graph_with_cycles(self) -> None:
         """REGRESSION: build_dependency_graph should handle dependency cycles."""
         # Arrange
         direct_dependencies = ["packageA"]
@@ -296,8 +296,8 @@ class TestDependencyAnalysis:
     @patch("dependency_risk_profiler.transitive.analyzer_enhanced.install_packages")
     @patch("dependency_risk_profiler.transitive.analyzer_enhanced.create_virtual_env")
     def test_transitive_does_not_install_by_default(
-        self, mock_create_venv, mock_install_packages
-    ):
+        self, mock_create_venv: MagicMock, mock_install_packages: MagicMock
+    ) -> None:
         """Install-based resolution is off by default.
 
         No venv is created and no pip install runs on the untrusted manifest;
@@ -315,11 +315,11 @@ class TestDependencyAnalysis:
     @patch("dependency_risk_profiler.transitive.analyzer_enhanced.run_pipdeptree")
     def test_analyze_python_transitive_dependencies(
         self,
-        mock_run_pipdeptree,
-        mock_install_pipdeptree,
-        mock_install_packages,
-        mock_create_venv,
-    ):
+        mock_run_pipdeptree: MagicMock,
+        mock_install_pipdeptree: MagicMock,
+        mock_install_packages: MagicMock,
+        mock_create_venv: MagicMock,
+    ) -> None:
         """HYPOTHESIS: Python transitive analysis should use pipdeptree."""
         # Arrange
         requirements_file = "/path/to/requirements.txt"
@@ -397,7 +397,9 @@ class TestDependencyAnalysis:
     @patch(
         "dependency_risk_profiler.transitive.analyzer_enhanced.analyze_python_transitive_dependencies"
     )
-    def test_analyze_pyproject_toml_dependencies(self, mock_analyze_python):
+    def test_analyze_pyproject_toml_dependencies(
+        self, mock_analyze_python: MagicMock
+    ) -> None:
         """HYPOTHESIS: pyproject transitive analysis should extract deps."""
         # Skip for complex implementation
         pytest.skip("Requires tomli and file operations, mocking is complex")
@@ -405,7 +407,9 @@ class TestDependencyAnalysis:
     @patch(
         "dependency_risk_profiler.transitive.analyzer_enhanced.analyze_python_transitive_dependencies"
     )
-    def test_analyze_pipfile_lock_dependencies(self, mock_analyze_python):
+    def test_analyze_pipfile_lock_dependencies(
+        self, mock_analyze_python: MagicMock
+    ) -> None:
         """HYPOTHESIS: Pipfile.lock transitive analysis should extract deps."""
         # Arrange
         pipfile_lock = "/tmp/test_Pipfile.lock"
@@ -446,8 +450,11 @@ class TestDependencyAnalysis:
         "dependency_risk_profiler.transitive.analyzer_enhanced.analyze_pipfile_lock_dependencies"
     )
     def test_extract_python_dependencies_enhanced(
-        self, mock_pipfile, mock_pyproject, mock_requirements
-    ):
+        self,
+        mock_pipfile: MagicMock,
+        mock_pyproject: MagicMock,
+        mock_requirements: MagicMock,
+    ) -> None:
         """HYPOTHESIS: enhanced extraction should call the correct analyzer."""
         # Arrange
         mock_requirements.return_value = {"pkg1": {"dep1"}}
@@ -475,7 +482,9 @@ class TestDependencyAnalysis:
 @patch(
     "dependency_risk_profiler.transitive.analyzer_enhanced.extract_python_dependencies_enhanced"
 )
-def test_analyze_transitive_dependencies_enhanced(mock_extract_python):
+def test_analyze_transitive_dependencies_enhanced(
+    mock_extract_python: MagicMock,
+) -> None:
     """HYPOTHESIS: enhanced transitive analysis should update metadata."""
     # Arrange
     dependencies = {
@@ -502,7 +511,7 @@ def test_analyze_transitive_dependencies_enhanced(mock_extract_python):
 
 
 @pytest.mark.benchmark
-def test_transitive_analysis_performance():
+def test_transitive_analysis_performance() -> None:
     """BENCHMARK: Enhanced analysis should handle large dependency trees.
 
     SLA Requirements:

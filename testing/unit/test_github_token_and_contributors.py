@@ -11,6 +11,7 @@ import subprocess
 from typing import Optional
 from unittest import mock
 
+import pytest
 import requests
 
 from dependency_risk_profiler import utils
@@ -41,7 +42,7 @@ def test_resolve_token_prefers_explicit() -> None:
         assert utils.resolve_github_token("explicit") == "explicit"
 
 
-def test_resolve_token_reads_environment(monkeypatch) -> None:
+def test_resolve_token_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Env vars are checked in order when no explicit token is given."""
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.delenv("GH_TOKEN", raising=False)
@@ -49,7 +50,7 @@ def test_resolve_token_reads_environment(monkeypatch) -> None:
     assert utils.resolve_github_token() == "drp-token"
 
 
-def test_resolve_token_falls_back_to_gh_cli(monkeypatch) -> None:
+def test_resolve_token_falls_back_to_gh_cli(monkeypatch: pytest.MonkeyPatch) -> None:
     """With no explicit/env token, an authenticated gh CLI supplies one."""
     for var in ("GITHUB_TOKEN", "GH_TOKEN", "DRP_GITHUB_TOKEN"):
         monkeypatch.delenv(var, raising=False)
@@ -61,7 +62,7 @@ def test_resolve_token_falls_back_to_gh_cli(monkeypatch) -> None:
             assert utils.resolve_github_token() == "gho_fromcli"
 
 
-def test_resolve_token_none_when_gh_missing(monkeypatch) -> None:
+def test_resolve_token_none_when_gh_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """No token anywhere resolves to None (not a guess)."""
     for var in ("GITHUB_TOKEN", "GH_TOKEN", "DRP_GITHUB_TOKEN"):
         monkeypatch.delenv(var, raising=False)
@@ -69,7 +70,7 @@ def test_resolve_token_none_when_gh_missing(monkeypatch) -> None:
         assert utils.resolve_github_token() is None
 
 
-def test_gh_cli_token_none_on_nonzero_exit(monkeypatch) -> None:
+def test_gh_cli_token_none_on_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -> None:
     """An unauthenticated gh CLI (non-zero exit) yields no token."""
     for var in ("GITHUB_TOKEN", "GH_TOKEN", "DRP_GITHUB_TOKEN"):
         monkeypatch.delenv(var, raising=False)
@@ -81,7 +82,7 @@ def test_gh_cli_token_none_on_nonzero_exit(monkeypatch) -> None:
             assert utils.resolve_github_token() is None
 
 
-def test_gh_cli_token_none_on_timeout(monkeypatch) -> None:
+def test_gh_cli_token_none_on_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     """A hung gh CLI degrades quietly to None rather than raising."""
     for var in ("GITHUB_TOKEN", "GH_TOKEN", "DRP_GITHUB_TOKEN"):
         monkeypatch.delenv(var, raising=False)

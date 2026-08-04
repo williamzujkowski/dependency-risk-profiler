@@ -2,14 +2,20 @@
 
 import os
 import tempfile
+from typing import List
 
 import pytest
 
 from dependency_risk_profiler.parsers.toml import TomlParser
 
+# Temp files the fixtures below create, cleaned up in teardown_module.
+# Previously stashed as attributes on the module object, which no type
+# checker can follow and which ruff's B010 will not let you write honestly.
+_TEMP_FILES: List[str] = []
+
 
 @pytest.fixture
-def malformed_version_toml():
+def malformed_version_toml() -> str:
     """Create a TOML file with malformed version specifications."""
     content = """
 [package]
@@ -35,16 +41,14 @@ number_version = 42
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.malformed_version_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def nested_dependencies_toml():
+def nested_dependencies_toml() -> str:
     """Create a TOML file with deeply nested dependency specifications."""
     content = """
 [package]
@@ -72,16 +76,14 @@ fourth = "4.0.0"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.nested_deps_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def large_toml_file():
+def large_toml_file() -> str:
     """Create a large TOML file with many dependencies."""
     content = """
 [package]
@@ -99,16 +101,14 @@ version = "0.1.0"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.large_toml_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def complex_dependencies_toml():
+def complex_dependencies_toml() -> str:
     """Create a TOML file with complex dependency specifications."""
     content = """
 [package]
@@ -130,16 +130,14 @@ standard = "1.0.0"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.complex_deps_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
 @pytest.fixture
-def mixed_formats_toml():
+def mixed_formats_toml() -> str:
     """Create a TOML file with mixed format dependency specifications."""
     content = """
 [project]
@@ -167,15 +165,13 @@ pdm_dep = "6.0.0"
         temp_file = f.name
 
     # Store path for cleanup
-    import sys
 
-    current_module = sys.modules[__name__]
-    current_module.mixed_formats_path = temp_file
+    _TEMP_FILES.append(temp_file)
 
     return temp_file
 
 
-def test_malformed_versions(malformed_version_toml):
+def test_malformed_versions(malformed_version_toml: str) -> None:
     """Test handling of malformed version specifications."""
     parser = TomlParser(malformed_version_toml)
     dependencies = parser.parse()
@@ -214,7 +210,7 @@ def test_malformed_versions(malformed_version_toml):
         assert dependencies["number_version"].installed_version in ["unknown", "42"]
 
 
-def test_nested_dependencies(nested_dependencies_toml):
+def test_nested_dependencies(nested_dependencies_toml: str) -> None:
     """Test parsing of deeply nested dependency specifications."""
     parser = TomlParser(nested_dependencies_toml)
     dependencies = parser.parse()
@@ -228,7 +224,7 @@ def test_nested_dependencies(nested_dependencies_toml):
     assert isinstance(dependencies, dict)
 
 
-def test_large_toml_file(large_toml_file):
+def test_large_toml_file(large_toml_file: str) -> None:
     """Test parsing of a large TOML file with many dependencies."""
     parser = TomlParser(large_toml_file)
     dependencies = parser.parse()
@@ -247,7 +243,7 @@ def test_large_toml_file(large_toml_file):
     assert dependencies["dep100"].installed_version == "100.0.0"
 
 
-def test_complex_dependencies(complex_dependencies_toml):
+def test_complex_dependencies(complex_dependencies_toml: str) -> None:
     """Test parsing of complex dependency specifications."""
     parser = TomlParser(complex_dependencies_toml)
     dependencies = parser.parse()
@@ -268,7 +264,7 @@ def test_complex_dependencies(complex_dependencies_toml):
     assert "complex_features" in dependencies
 
 
-def test_mixed_formats(mixed_formats_toml):
+def test_mixed_formats(mixed_formats_toml: str) -> None:
     """Test parsing of mixed format dependency specifications."""
     parser = TomlParser(mixed_formats_toml)
     dependencies = parser.parse()
@@ -320,16 +316,9 @@ def test_mixed_formats(mixed_formats_toml):
     assert len(formats_found) >= 2, f"Only found {formats_found} formats"
 
 
-def teardown_module(module):
-    """Clean up temporary files."""
-    # Clean up any temporary files that might have been created
-    for path_attr in [
-        "malformed_version_path",
-        "nested_deps_path",
-        "large_toml_path",
-        "complex_deps_path",
-        "mixed_formats_path",
-    ]:
-        path = getattr(module, path_attr, None)
-        if path and os.path.exists(path):
+def teardown_module() -> None:
+    """Remove every temp file the fixtures in this module created."""
+    while _TEMP_FILES:
+        path = _TEMP_FILES.pop()
+        if os.path.exists(path):
             os.unlink(path)

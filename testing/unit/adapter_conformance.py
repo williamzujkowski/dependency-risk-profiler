@@ -431,7 +431,9 @@ def _packagist_name(fixture: RegistryFixture) -> str:
     assert isinstance(payload, Mapping), f"{fixture.slug} is not a JSON object"
     packages = payload.get("packages")
     assert isinstance(packages, Mapping) and packages, f"{fixture.slug} has no packages"
-    return sorted(packages)[0]
+    name = sorted(packages)[0]
+    assert isinstance(name, str)
+    return name
 
 
 def _score_golang(
