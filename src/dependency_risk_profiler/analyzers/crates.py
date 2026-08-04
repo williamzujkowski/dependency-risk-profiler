@@ -78,6 +78,18 @@ class CratesIOAnalyzer(BaseAnalyzer):
                     # actively released crate look abandoned.
                     if "created_at" in release:
                         metadata["released_at"] = release["created_at"]
+                    # Same shape, second field: `crate.max_version` is the
+                    # highest *installable* version, and crates.io answers it
+                    # with the sentinel "0.0.0" when every published version is
+                    # yanked. Reading that as the latest release makes a
+                    # withdrawn crate look current — acid-store's newest
+                    # release is 0.14.2, and against a "0.0.0" latest an
+                    # installed 0.10.0 scores as a trivial patch behind. The
+                    # release entry's own `num` is the version that actually
+                    # exists, and equals max_version whenever max_version
+                    # resolves to a real release.
+                    if "num" in release:
+                        metadata["released_num"] = release["num"]
 
                 self.metadata_cache[name] = metadata
                 dep.additional_info["analysis_status"] = "analyzed"
@@ -112,7 +124,9 @@ class CratesIOAnalyzer(BaseAnalyzer):
             dep: Dependency metadata to update in place.
             metadata: Merged crate summary and latest-release entry.
         """
-        latest_version = self._string_value(metadata, "max_version")
+        latest_version = self._string_value(
+            metadata, "released_num"
+        ) or self._string_value(metadata, "max_version")
         if latest_version:
             dep.latest_version = latest_version
 

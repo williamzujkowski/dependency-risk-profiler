@@ -32,7 +32,7 @@ one inside ``versions["2.88.2"]``.
 
 Converted ecosystems and the ones still pending
 -----------------------------------------------
-See :data:`CONVERSION_STATUS`. Two of eight are converted; the other six are
+See :data:`CONVERSION_STATUS`. Four of eight are converted; the other four are
 listed with what each needs, so the gap is visible rather than assumed closed.
 
 Fixtures come from :mod:`registry_fixtures` — captured from the live registry,
@@ -51,7 +51,9 @@ from signal_floors import (
     mark_transitive_unmeasured,
 )
 
+from dependency_risk_profiler.analyzers.crates import CratesIOAnalyzer
 from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer
+from dependency_risk_profiler.analyzers.python import PythonAnalyzer
 from dependency_risk_profiler.analyzers.ruby import RubyGemsAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
 from dependency_risk_profiler.license.analyzer import analyze_license
@@ -273,7 +275,94 @@ def _score_rubygems(
     return _finish(dep, analyzer.metadata_cache[name])
 
 
-DRIVERS = {"nodejs": _score_nodejs, "rubygems": _score_rubygems}
+def _nested_name(fixture: RegistryFixture, container: str) -> str:
+    """Return the package name a fixture declares inside a nested object.
+
+    PyPI puts it in ``info.name`` and crates.io in ``crate.name``, and both
+    spellings matter: the adapter builds its request URL from the name, so a
+    name that does not round-trip to the captured URL fails at the replay
+    fetcher rather than silently reaching the network.
+
+    Args:
+        fixture: The captured registry document.
+        container: The object holding the name (``info`` or ``crate``).
+
+    Returns:
+        The package name.
+    """
+    payload = fixture.payload
+    assert isinstance(payload, Mapping), f"{fixture.slug} is not a JSON object"
+    nested = payload.get(container)
+    assert isinstance(nested, Mapping), f"{fixture.slug} has no {container} object"
+    name = nested.get("name")
+    assert isinstance(name, str) and name, f"{fixture.slug} declares no name"
+    return name
+
+
+def _score_python(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one captured PyPI project document offline.
+
+    Args:
+        case: The conformance case.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    fixture = fixtures[case.fixture]
+    name = _nested_name(fixture, "info")
+    analyzer = PythonAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=name, installed_version=case.installed_version)
+
+    fetch = replay_fetcher({case.fixture: fixture})
+    with mock.patch(
+        "dependency_risk_profiler.analyzers.python.fetch_json", side_effect=fetch
+    ):
+        dep = analyzer.analyze({name: dep})[name]
+    return _finish(dep, analyzer.metadata_cache[name])
+
+
+def _score_cargo(
+    case: FixtureCase, fixtures: Mapping[str, RegistryFixture]
+) -> DependencyRiskScore:
+    """Score one captured crates.io crate document offline.
+
+    Args:
+        case: The conformance case, whose ``extra_fixtures`` names the crate's
+            owners document.
+        fixtures: Every fixture captured for the ecosystem.
+
+    Returns:
+        The scored dependency.
+    """
+    served = {case.fixture: fixtures[case.fixture]}
+    for extra in case.extra_fixtures:
+        served[extra] = fixtures[extra]
+
+    name = _nested_name(served[case.fixture], "crate")
+    analyzer = CratesIOAnalyzer()
+    analyzer.clone_repos = False
+    dep = DependencyMetadata(name=name, installed_version=case.installed_version)
+
+    fetch = replay_fetcher(served)
+
+    def fetch_one(url: str) -> object:
+        return fetch(url)
+
+    with mock.patch.object(analyzer, "_get_json", side_effect=fetch_one):
+        dep = analyzer.analyze({name: dep})[name]
+    return _finish(dep, analyzer.metadata_cache[name])
+
+
+DRIVERS = {
+    "cargo": _score_cargo,
+    "nodejs": _score_nodejs,
+    "python": _score_python,
+    "rubygems": _score_rubygems,
+}
 
 
 def score_case(case: FixtureCase) -> DependencyRiskScore:
@@ -334,6 +423,69 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
             ),
         ),
     },
+    "python": {
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why=(
+                "Two reads feed one flag: info.yanked, and a summary line the "
+                "maintainer writes on purpose. Both default to False when the "
+                "key is absent, which is #142's shape. sklearn proves the "
+                "non-default value through the summary read."
+            ),
+        ),
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "Same as npm's: a project_urls sweep that finds nothing "
+                "records UNDECLARED and scores 1.0, which a dead read also "
+                "produces."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Worth noting that "
+                "the captured payloads do carry a top-level 'vulnerabilities' "
+                "list the adapter does not read (#171). It is left unread "
+                "deliberately: the aggregator already queries OSV, which is "
+                "the same data with a wider ecosystem reach and a real "
+                "severity model. The key is kept in the fixtures so that the "
+                "decision stays visible."
+            ),
+        ),
+    },
+    "cargo": {
+        "deprecation": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why=(
+                "The adapter flags a crate deprecated when the release entry "
+                "reports yanked: true. Absent key means False forever, the "
+                "same shape as npm's."
+            ),
+        ),
+        "source_repository": Polarity(
+            default=1.0,
+            non_default=0.0,
+            why=(
+                "Same as npm's: a repository read that finds nothing records "
+                "UNDECLARED and scores 1.0, which a dead read also produces."
+            ),
+        ),
+        "exploit": Polarity(
+            default=0.0,
+            non_default=1.0,
+            why="has_known_exploits defaults to False.",
+            proven_elsewhere=(
+                "Not registry-driven; see the nodejs entry. Same aggregator, "
+                "same coverage, same gap."
+            ),
+        ),
+    },
     "rubygems": {
         "deprecation": Polarity(
             default=0.0,
@@ -352,7 +504,13 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "read. So this may be a dead read of exactly #142's class in a "
                 "second adapter. Audit needed against a gem with a yanked "
                 "latest version; until then this branch is recorded as "
-                "unproven rather than assumed to work."
+                "unproven rather than assumed to work. Sharpened by the cargo "
+                "conversion (#170): crates.io answers 200 for a fully yanked "
+                "crate and reports yanked: true on the release entry, so the "
+                "same idea IS capturable one ecosystem over — cargo.acid-store "
+                "is that fixture. The difference is the endpoint, not the "
+                "idea, which makes rubygems' choice of endpoint the thing to "
+                "fix rather than the read."
             ),
         ),
         "source_repository": Polarity(
@@ -628,7 +786,344 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
     ),
 )
 
-CASES: Tuple[FixtureCase, ...] = NODEJS_CASES + RUBYGEMS_CASES
+PYTHON_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="python",
+        fixture="requests",
+        installed_version="2.31.0",
+        purpose=(
+            "The coverage floor case, and the one that retires "
+            "SCORES_FROM_REGISTRY_ALONE['python'] = False. PyPI publishes the "
+            "project's role assignments in a top-level 'ownership' object the "
+            "adapter never read (#171); reading it answers the maintainer "
+            "count PyPI was recorded as unable to provide, and python clears "
+            "the insufficient-data bar from registry metadata alone."
+        ),
+        expected_latest_version="2.34.2",
+        expected_repository_url="https://github.com/psf/requests",
+        expected_license_id="APACHE-2.0",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "ownership.roles lists three Owner accounts; there is no "
+            "'maintainers' key anywhere in the payload, which is why the count "
+            "was believed unavailable.",
+            "info.license is the legacy free-text spelling here ('Apache-2.0') "
+            "and info.license_expression is null — the opposite of flask.",
+            "project_urls.Source carries the repository; home_page is null, as "
+            "it is on every modern package.",
+        ),
+        signals=(
+            SignalValue(
+                "maintainer",
+                equals=0.25,
+                because=(
+                    "THE #171 assertion: three owners read straight off "
+                    "ownership.roles. Before this the signal was unmeasured "
+                    "for every PyPI package and python was floored one signal "
+                    "short of a verdict"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache-2.0 is permissive; the legacy spelling still reads",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="project_urls declares Source — non-default branch",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="requests is neither yanked nor summary-deprecated",
+            ),
+            SignalValue(
+                "version",
+                minimum=0.5,
+                because="2.31.0 against a 2.34.x latest is a real minor gap",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off the newest upload_time_iso_8601 in the payload; "
+                    "the step moves with the calendar, so only measurement is "
+                    "pinned"
+                ),
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="python",
+        fixture="flask",
+        installed_version="2.0.0",
+        purpose=(
+            "Two findings in one captured payload. First: flask publishes its "
+            "licence only as info.license_expression (PEP 639 / metadata 2.4), "
+            "with info.license null and no 'License ::' classifier — 17 of 30 "
+            "sampled popular packages do, and the licence signal read as "
+            "unmeasured for all of them. Second: a project owned by a PyPI "
+            "organization reports 'roles': [], and counting that as zero "
+            "maintainers would score the worst possible bus factor from a "
+            "measurement nobody made."
+        ),
+        expected_latest_version="3.1.3",
+        expected_repository_url="https://github.com/pallets/flask",
+        expected_license_id="BSD-3-CLAUSE",
+        expected_deprecated=False,
+        ground_truth=(
+            "info.license is null and info.license_expression is "
+            "'BSD-3-Clause'; the classifiers carry no 'License ::' entry at "
+            "all, so the old fallback had nothing to reach either.",
+            "ownership is {'organization': 'pallets', 'roles': []} — the "
+            "permissions live on the organization, whose membership this "
+            "payload does not publish.",
+        ),
+        signals=(
+            SignalValue(
+                "license",
+                equals=0.0,
+                because=(
+                    "BSD-3-Clause read from license_expression. A 'license'-only "
+                    "read gives None here, and None is unmeasured, so this one "
+                    "the floors could have caught — on a package whose floor "
+                    "case happened to be an org-owned project"
+                ),
+            ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because=(
+                    "an empty roles list is not zero maintainers. Zero scores "
+                    "1.0, the single-maintainer verdict, from a fact nobody "
+                    "measured (#74, #141)"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="project_urls.Source declares the repository",
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="2.0.0 against a 3.x latest is a major-version gap",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="flask is current; the default branch",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="python",
+        fixture="sklearn",
+        installed_version="0.0",
+        purpose=(
+            "The deprecation non-default branch, and the UNDECLARED branch, on "
+            "one real package. sklearn exists only to tell you to install "
+            "scikit-learn: its summary says so in as many words, it declares no "
+            "project_urls at all, and its license string is empty."
+        ),
+        expected_latest_version="0.0.post12",
+        expected_repository_url=None,
+        expected_license_id=None,
+        expected_deprecated=True,
+        ground_truth=(
+            "info.summary is 'deprecated sklearn package, use scikit-learn "
+            "instead' while info.yanked is False — the summary read is the one "
+            "that fires.",
+            "info.project_urls is null and info.home_page is the empty string.",
+            "info.license is '' and info.license_expression is null, so the "
+            "licence is honestly unmeasured rather than guessed.",
+        ),
+        signals=(
+            SignalValue(
+                "deprecation",
+                equals=1.0,
+                because=(
+                    "THE assertion for python. A read of a key PyPI does not "
+                    "send leaves this False forever, and False is measured, so "
+                    "only the value catches it (#142)"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=1.0,
+                because="the registry answered and declares no source — default branch",
+            ),
+            SignalValue(
+                "license",
+                unmeasured=True,
+                because="an empty licence string is unmeasured, never a confident zero",
+            ),
+            SignalValue(
+                "community",
+                unmeasured=True,
+                because="no repository to scrape stars from",
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="last uploaded in December 2023; over a year is maximum",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=0.25,
+                because="ownership.roles lists three owners",
+            ),
+        ),
+    ),
+)
+
+CARGO_CASES: Tuple[FixtureCase, ...] = (
+    FixtureCase(
+        ecosystem="cargo",
+        fixture="serde",
+        extra_fixtures=("serde.owners",),
+        installed_version="1.0.100",
+        purpose=(
+            "#139's ground truth and the coverage floor case. The crate object "
+            "was first published in December 2014 and the newest release "
+            "shipped last month; reading crate.created_at as the release date "
+            "made the most actively maintained crate in the registry look "
+            "abandoned by a decade."
+        ),
+        expected_latest_version="1.0.229",
+        expected_repository_url="https://github.com/serde-rs/serde",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        meets_signal_floor=True,
+        ground_truth=(
+            "crate.created_at is 2014-12-05 and the newest versions entry is "
+            "dated 2026 — the two dates the #139 bug confused.",
+            "the licence lives on the version entry, not on the crate object.",
+            "the owners endpoint lists two entries, one of them a team "
+            "(github:serde-rs:publish), which still counts as a publisher.",
+        ),
+        signals=(
+            SignalValue(
+                "staleness",
+                maximum=0.5,
+                because=(
+                    "THE #139 assertion: measured off the release entry, not "
+                    "off crate.created_at. The 2014 date scores 1.0 and this "
+                    "one cannot, however the calendar moves"
+                ),
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="the crate declares repository — non-default branch",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="serde is not yanked; the default branch",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="MIT OR Apache-2.0 is permissive, read off the version entry",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=0.5,
+                because="the owners endpoint lists two publishers",
+            ),
+            SignalValue(
+                "version",
+                minimum=0.25,
+                because="1.0.100 against a 1.0.229 latest is real patch drift",
+            ),
+            SignalValue(
+                "community",
+                minimum=0.0,
+                maximum=1.0,
+                because="a resolvable repository lets the star scrape land",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="cargo",
+        fixture="acid-store",
+        extra_fixtures=("acid-store.owners",),
+        installed_version="0.10.0",
+        purpose=(
+            "The branch rubygems could not prove (#170), captured one "
+            "ecosystem over. Every one of acid-store's 25 releases is yanked, "
+            "and crates.io still answers 200 with yanked: true on the release "
+            "entry — where a fully yanked gem answers 404 and the RubyGems "
+            "adapter never reaches its read. It also carries a second "
+            "wrong-value read of #139's shape: crates.io reports max_version "
+            "as the sentinel '0.0.0' when nothing installable remains."
+        ),
+        expected_latest_version="0.14.2",
+        expected_repository_url="https://github.com/lostatc/acid-store",
+        expected_license_id="APACHE-2.0",
+        expected_deprecated=True,
+        ground_truth=(
+            "crate.max_version is '0.0.0' and no release is numbered 0.0.0; "
+            "the newest release that exists is 0.14.2, from March 2024.",
+            "crate.yanked is true and every versions entry reports "
+            "yanked: true with an audit_actions 'yank' record.",
+        ),
+        signals=(
+            SignalValue(
+                "deprecation",
+                equals=1.0,
+                because=(
+                    "THE assertion for cargo, and the one #170 says rubygems "
+                    "has no equivalent for. A dead read of the yanked key "
+                    "gives False here forever"
+                ),
+            ),
+            SignalValue(
+                "version",
+                equals=0.5,
+                because=(
+                    "0.10.0 against the 0.14.2 that actually exists is a minor "
+                    "gap. Against the '0.0.0' sentinel it scores 0.1 — a "
+                    "withdrawn crate reported as a trivial patch behind"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="the last release, yanked or not, shipped in March 2024",
+            ),
+            SignalValue(
+                "maintainer",
+                equals=1.0,
+                because="one owner, and one is a bus factor",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache-2.0 on the release entry; yanking does not unlicense",
+            ),
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because="the crate still declares its repository",
+            ),
+        ),
+    ),
+)
+
+CASES: Tuple[FixtureCase, ...] = (
+    NODEJS_CASES + RUBYGEMS_CASES + PYTHON_CASES + CARGO_CASES
+)
 
 
 # --- The conversion ledger -------------------------------------------------
@@ -667,28 +1162,40 @@ CONVERSION_STATUS: Dict[str, ConversionStatus] = {
         ),
     ),
     "python": ConversionStatus(
-        converted=False,
+        converted=True,
         note=(
-            "PENDING, and the highest-value next one: #145 names PyPI as the "
+            "Three captured project documents. #145 named PyPI as the "
             "ecosystem never audited against a live payload, 'the ecosystem "
-            "everything else was implicitly compared against'. A capture taken "
-            "while building this harness shows /pypi/<name>/json now carries "
-            "top-level 'ownership' and 'vulnerabilities' keys the adapter does "
-            "not read — 'ownership' would answer the maintainer count that "
-            "SCORES_FROM_REGISTRY_ALONE['python'] records as unavailable. "
-            "Needs: fixtures for a healthy package, a yanked or "
-            "summary-deprecated one (sklearn), and one with no project_urls."
+            "everything else was implicitly compared against', and the capture "
+            "found two dead reads in it. 'ownership' answers the maintainer "
+            "count SCORES_FROM_REGISTRY_ALONE recorded as unavailable (#171), "
+            "which retires that flag and raises the floor to 8. "
+            "'license_expression' is the PEP 639 spelling PyPI now uses for "
+            "packages built to metadata 2.4: 17 of 30 sampled popular packages "
+            "publish it with a null 'license' and no 'License ::' classifier, "
+            "and the licence signal was unmeasured for every one of them. Known "
+            "limit: an org-owned project reports 'roles': [], so its maintainer "
+            "count stays unmeasured and it does not clear the "
+            "insufficient-data bar — flask is captured as that case rather "
+            "than rounded off."
         ),
     ),
     "cargo": ConversionStatus(
-        converted=False,
+        converted=True,
         note=(
-            "PENDING. Carried #139 (crate-level created_at is *first* "
-            "publication, not latest release) — a wrong-value dead read, the "
-            "third distinct shape. crates.io keeps yanked releases in the "
-            "versions list, so it is the one ecosystem where the deprecation "
-            "non-default branch looks capturable. Needs a User-Agent header on "
-            "capture (crates.io rejects anonymous crawlers)."
+            "Two captured crate documents plus their owners documents. Picked "
+            "for #139's wrong-value shape (crate-level created_at is *first* "
+            "publication, not latest release) — a value that was present and "
+            "wrong, the third distinct dead-read shape — and because "
+            "crates.io answers 200 for a fully yanked crate, which makes it "
+            "the one ecosystem where the deprecation non-default branch is "
+            "capturable at all (#170). Capturing it found a second read of the "
+            "same shape: crate.max_version is the sentinel '0.0.0' when every "
+            "release is yanked, so a withdrawn crate reported as barely behind "
+            "the latest version. The release entry's own 'num' is read "
+            "instead. Note the fixture floor: 162 fully yanked crates were "
+            "found across 6,000 sampled and none in the top 1,000 by "
+            "downloads, so acid-store is a real but small-audience crate."
         ),
     ),
     "composer": ConversionStatus(

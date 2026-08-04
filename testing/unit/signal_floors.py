@@ -34,11 +34,13 @@ is how a conformance gate differs from a smoke test. The collapse arithmetic
 itself is still worth documenting, so it lives in ``test_signal_floors.py`` as
 its own assertion instead of masquerading as the floor.
 
-Where the numbers come from: crates.io, Packagist, RubyGems and NuGet each
-answer eight signals unaided; PyPI and npm answer seven, landing one short of
-the insufficient-data bar because neither publishes a cheap maintainer count.
+Where the numbers come from: crates.io, Packagist, PyPI, RubyGems and NuGet
+each answer eight signals unaided; npm answers seven, landing one short of the
+insufficient-data bar because it publishes no cheap maintainer count.
 :data:`SCORES_FROM_REGISTRY_ALONE` records that difference rather than papering
-over it.
+over it. PyPI was in npm's column until #171: it publishes a top-level
+``ownership`` object the adapter had never read, and reading it moved python
+from seven to eight.
 
 :data:`REGISTRY_MEASURED_SIGNALS` names the signals behind each count, because
 a count cannot see a swap: an ecosystem that loses one signal and gains another
@@ -57,9 +59,9 @@ below rather than restating them, adds per-signal *value* assertions against
 provenance-dated payloads captured from the live registries, and enforces the
 rule the npm case generalizes to: every signal whose read collapses to a fixed
 default when its key is absent needs at least one fixture where the correct
-answer is the non-default value. Two of the eight ecosystems are converted;
+answer is the non-default value. Four of the eight ecosystems are converted;
 ``adapter_conformance.CONVERSION_STATUS`` lists all eight with what each of the
-remaining six still needs.
+remaining four still needs.
 
 :func:`assert_abandoned_package_is_scored` pins the same property from the
 other direction, for #146: a package abandoned a decade ago must still produce
@@ -92,16 +94,19 @@ from dependency_risk_profiler.transitive.analyzer_enhanced import (
 # at what each one measures today. Raising these is a normal part of improving
 # an adapter; lowering one is a regression that needs a reason in the commit.
 #
-# npm and PyPI sit one below the rest for the same reason: no maintainer count
-# without a clone. Everything above that line clears the insufficient-data bar
-# by exactly one signal, which is why the identity table below matters as much
-# as these counts do.
+# npm sits one below the rest because it publishes no maintainer count without
+# a clone. PyPI used to sit beside it and no longer does: it publishes the
+# project's role assignments in a top-level ``ownership`` object the adapter
+# had never read (#171), found by capturing a live payload for the conformance
+# harness. Everything above that line clears the insufficient-data bar by
+# exactly one signal, which is why the identity table below matters as much as
+# these counts do.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "cargo": 8,
     "composer": 8,
     "nuget": 8,
     "nodejs": 7,
-    "python": 7,
+    "python": 8,
     "rubygems": 8,
 }
 
@@ -109,10 +114,11 @@ MIN_MEASURED_SIGNALS: Dict[str, int] = {
 # and gaining another fails instead of passing under an unchanged total (#145).
 #
 # The membership differences are real registry differences, not oversights:
-# cargo, composer and rubygems answer a maintainer count and report whether a
-# source repository is declared; nuget serves per-package dependencies in its
-# ``.nuspec`` and so measures ``transitive``, but reports nothing either way
-# about a source repository; npm and PyPI publish no cheap maintainer count.
+# cargo, composer, python and rubygems answer a maintainer count and report
+# whether a source repository is declared; nuget serves per-package
+# dependencies in its ``.nuspec`` and so measures ``transitive``, but reports
+# nothing either way about a source repository; npm publishes no cheap
+# maintainer count.
 _REGISTRY_CORE: FrozenSet[str] = frozenset(
     {
         "staleness",
@@ -128,22 +134,30 @@ REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "composer": _REGISTRY_CORE | {"maintainer", "source_repository"},
     "nuget": _REGISTRY_CORE | {"maintainer", "transitive"},
     "nodejs": _REGISTRY_CORE | {"source_repository"},
-    "python": _REGISTRY_CORE | {"source_repository"},
+    "python": _REGISTRY_CORE | {"maintainer", "source_repository"},
     "rubygems": _REGISTRY_CORE | {"maintainer", "source_repository"},
 }
 
 # Whether that floor is on its own enough to clear the insufficient-data bar.
-# crates.io, Packagist and RubyGems each answer a maintainer count (an owners
-# endpoint, or the package's declared authors); PyPI and npm publish no cheap
-# equivalent, so those two land one signal short without a clone. That is a
-# real difference between registries and it is recorded here rather than
-# papered over with a guessed maintainer count.
+# crates.io, Packagist, PyPI and RubyGems each answer a maintainer count (an
+# owners endpoint, a role list, or the package's declared authors); npm
+# publishes no cheap equivalent, so it lands one signal short without a clone.
+# That is a real difference between registries and it is recorded here rather
+# than papered over with a guessed maintainer count.
+#
+# python moved to True when #171 was settled against a live payload: PyPI's
+# top-level ``ownership`` object lists every account holding a role on the
+# project. The honest caveat is captured rather than hidden — a project
+# transferred to a PyPI organization reports ``roles: []`` and its maintainer
+# count stays unmeasured, so it lands back at seven and does not reach a
+# verdict. ``adapter_conformance``'s ``python/flask`` case is that package, and
+# the floor here is what a project PyPI does answer for must measure.
 SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "cargo": True,
     "composer": True,
     "nodejs": False,
     "nuget": True,
-    "python": False,
+    "python": True,
     "rubygems": True,
 }
 

@@ -175,10 +175,22 @@ def first_license_string(value: object) -> Optional[str]:
 def extract_license_text(metadata: Dict) -> Optional[str]:
     """Return the raw license string published in package metadata.
 
-    Both the top level and PyPI's nested ``info`` object are searched under the
-    singular and plural spellings, because the key differs per registry
-    (``license`` on npm/PyPI, ``licenses`` on RubyGems/Packagist). PyPI's
-    ``License ::`` classifiers are the last resort.
+    Both the top level and PyPI's nested ``info`` object are searched under
+    every spelling, because the key differs per registry and, on PyPI, per
+    metadata version: ``licenses`` (a list) on RubyGems and Packagist,
+    ``license`` (free text) on npm and legacy PyPI, and ``license_expression``
+    (an SPDX expression) on PyPI packages built to metadata 2.4 / PEP 639.
+    ``license_expression`` is tried first because where PyPI publishes it, it
+    is the authoritative field and ``license`` is null.
+
+    That last spelling was #145's class of dead read, found by capturing live
+    PyPI payloads for the conformance harness: 17 of 30 sampled popular
+    packages — flask, pytest, urllib3, cryptography, django, numpy — publish
+    ``license_expression`` with ``license: null`` and no ``License ::``
+    classifier, so the license signal read as unmeasured for all of them while
+    the payload stated the licence in plain sight.
+
+    PyPI's ``License ::`` classifiers are the last resort.
 
     Args:
         metadata: Package metadata.
@@ -190,7 +202,7 @@ def extract_license_text(metadata: Dict) -> Optional[str]:
     for source in (metadata, info if isinstance(info, dict) else None):
         if source is None:
             continue
-        for key in ("license", "licenses"):
+        for key in ("license_expression", "license", "licenses"):
             license_text = first_license_string(source.get(key))
             if license_text:
                 return license_text
