@@ -157,7 +157,7 @@ def analyze_github_community_metrics(
         dependency.record_field_source(
             ProvenancedField.CONTRIBUTOR_COUNT, FieldSource.GITHUB_API_CONTRIBUTORS
         )
-    elif dependency.maintainer_count:
+    elif dependency.maintainer_count is not None:
         community_metrics.contributor_count = dependency.maintainer_count
         # A copy, so it inherits the copied field's provenance rather than
         # claiming one of its own. If nothing recorded a source for

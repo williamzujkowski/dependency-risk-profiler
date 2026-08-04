@@ -14,7 +14,10 @@ from unittest import mock
 import pytest
 import requests
 
-from dependency_risk_profiler import utils
+from dependency_risk_profiler import analysis_helpers, utils
+from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.signals import FieldSource, ProvenancedField
 
 
 class _FakeResponse:
@@ -157,3 +160,90 @@ def test_contributor_count_none_on_request_exception() -> None:
 def test_contributor_count_none_for_non_github_url() -> None:
     """A non-GitHub repository URL is not resolvable to a count."""
     assert utils.github_contributor_count("https://gitlab.com/o/r", "tok") is None
+
+
+class TestAMeasuredZeroIsAnAnswer:
+    """``count_contributors`` separates "none" from "could not count".
+
+    It returns None for a count it could not take and an int for one it did,
+    and the analyze path threw the zero away with ``if contributor_count:`` —
+    the falsy-vs-absent read, in the field where absent and zero have opposite
+    meanings for the maintainer-concentration score (#217).
+    """
+
+    def test_a_zero_count_reaches_the_dependency(self) -> None:
+        """A repository with no contributors measured zero of them."""
+        dependency = DependencyMetadata(name="pkg", installed_version="1.0.0")
+
+        with (
+            mock.patch.object(
+                analysis_helpers, "get_last_commit_date", return_value=None
+            ),
+            mock.patch.object(analysis_helpers, "count_contributors", return_value=0),
+            mock.patch.object(
+                analysis_helpers, "calculate_commit_frequency", return_value=None
+            ),
+            mock.patch.object(
+                analysis_helpers,
+                "check_health_indicators",
+                return_value=(False, False, False),
+            ),
+        ):
+            analysis_helpers.analyze_repository(dependency, "/nonexistent")
+
+        assert dependency.maintainer_count == 0
+        assert (
+            dependency.field_sources.get(ProvenancedField.MAINTAINER_COUNT)
+            is FieldSource.REPOSITORY_CLONE_HISTORY
+        )
+
+    def test_an_uncountable_repository_stays_unmeasured(self) -> None:
+        """A shallow clone or a git failure is still nobody having looked."""
+        dependency = DependencyMetadata(name="pkg", installed_version="1.0.0")
+
+        with (
+            mock.patch.object(
+                analysis_helpers, "get_last_commit_date", return_value=None
+            ),
+            mock.patch.object(
+                analysis_helpers, "count_contributors", return_value=None
+            ),
+            mock.patch.object(
+                analysis_helpers, "calculate_commit_frequency", return_value=None
+            ),
+            mock.patch.object(
+                analysis_helpers,
+                "check_health_indicators",
+                return_value=(False, False, False),
+            ),
+        ):
+            analysis_helpers.analyze_repository(dependency, "/nonexistent")
+
+        assert dependency.maintainer_count is None
+        assert ProvenancedField.MAINTAINER_COUNT not in dependency.field_sources
+
+    def test_a_zero_maintainer_count_is_copied_to_contributor_count(self) -> None:
+        """The same read, in the community pass that copies the count across."""
+        dependency = DependencyMetadata(
+            name="pkg",
+            installed_version="1.0.0",
+            repository_url="https://github.com/o/r",
+        )
+        dependency.maintainer_count = 0
+        dependency.record_field_source(
+            ProvenancedField.MAINTAINER_COUNT, FieldSource.REPOSITORY_CLONE_HISTORY
+        )
+
+        with (
+            mock.patch.object(
+                community_analyzer, "github_contributor_count", return_value=None
+            ),
+            mock.patch.object(
+                community_analyzer, "github_commit_frequency", return_value=None
+            ),
+            mock.patch.object(community_analyzer, "fetch_url", return_value=None),
+        ):
+            community_analyzer.analyze_github_community_metrics(dependency)
+
+        assert dependency.community_metrics is not None
+        assert dependency.community_metrics.contributor_count == 0

@@ -28,6 +28,10 @@ NPM_REGISTRY_BASE = "https://registry.npmjs.org"
 # the packument this adapter already fetches, at no extra request.
 TRANSITIVE_SOURCE_NPM_MANIFEST = "npm-version-manifest"
 
+# The description npm's security team publishes on the placeholder that
+# replaces a package it has removed. See ``_is_security_placeholder``.
+_SECURITY_HOLDING_DESCRIPTION = "security holding package"
+
 
 def npm_registry_path(package_name: str) -> str:
     """Return the registry path segment for a package name.
@@ -114,9 +118,34 @@ class NodeJSAnalyzer(BaseAnalyzer):
             npm_data: ``registry.npmjs.org/<package>`` packument.
         """
         latest = self._latest_version(dep.name, npm_data)
+
+        # A package npm has removed for malware is not deleted; the registry
+        # republishes it as a placeholder owned by npm's security team, and
+        # ``dist-tags.latest`` then points at that placeholder. See
+        # ``_is_security_placeholder`` for why the version it publishes is a
+        # sentinel rather than a release (#217).
+        security_holding = self._is_security_placeholder(npm_data, latest)
+        if security_holding:
+            logger.warning(
+                "npm replaced %s with a security holding package at %s; "
+                "the package was removed from the registry, so version drift "
+                "stays unmeasured and the dependency is marked deprecated",
+                dep.name,
+                latest,
+            )
+            dep.is_deprecated = True
+            dep.additional_info["npm_security_holding_package"] = "true"
+            # Nothing downstream may read the placeholder as a release: not the
+            # latest version, not its (empty) dependency list, not the manifest
+            # it publishes. Dropping it here is what keeps every one of those
+            # reads unmeasured rather than confidently wrong.
+            latest = None
+        elif self._is_deprecated(npm_data, latest):
+            dep.is_deprecated = True
+
         if latest:
             dep.latest_version = latest
-        else:
+        elif not security_holding:
             # #74: an unresolvable latest version leaves the drift signal
             # honestly unmeasured. Say so, rather than failing in silence the
             # way this did for every npm dependency before #140.
@@ -126,9 +155,6 @@ class NodeJSAnalyzer(BaseAnalyzer):
                 "version drift stays unmeasured",
                 dep.name,
             )
-
-        if self._is_deprecated(npm_data, latest):
-            dep.is_deprecated = True
 
         # The latest release's own manifest names its runtime dependencies. The
         # read is deliberately gated on the manifest existing rather than on the
@@ -278,6 +304,47 @@ class NodeJSAnalyzer(BaseAnalyzer):
         if manifest is None:
             return False
         return bool(manifest.get("deprecated"))
+
+    @classmethod
+    def _is_security_placeholder(
+        cls, npm_data: Dict[str, object], latest_version: Optional[str]
+    ) -> bool:
+        """Return whether ``latest`` is npm's security holding package.
+
+        When npm's security team removes a package for malware or typosquatting
+        they do not delete the name — they republish it as a placeholder with
+        the description ``security holding package`` at a version carrying a
+        ``-security`` prerelease tag, and repoint ``dist-tags.latest`` at it.
+
+        That version is cargo's ``"0.0.0"`` in npm's dialect: a parseable
+        semver of exactly the right type that is not a release of the package
+        at all. Read as the latest version it inverts the finding — crossenv,
+        pulled for stealing environment variables, publishes ``0.0.2-security``
+        against which an installed ``6.1.1`` reads as *ahead* of the registry,
+        so a package npm removed for malware scores as current and undrifted.
+        The placeholder carries no ``deprecated`` notice either, so nothing
+        else in the payload flags it (#217).
+
+        Both markers are required. The description alone would catch a package
+        that merely mentions the phrase; the ``-security`` suffix alone would
+        catch a legitimate security-fix prerelease.
+
+        Args:
+            npm_data: ``registry.npmjs.org/<package>`` packument.
+            latest_version: Latest version, when one resolved.
+
+        Returns:
+            True when the latest version is a security holding placeholder.
+        """
+        if not latest_version or not latest_version.endswith("-security"):
+            return False
+        manifest = cls._version_manifest(npm_data, latest_version)
+        if manifest is None:
+            return False
+        description = manifest.get("description")
+        if not isinstance(description, str):
+            return False
+        return description.strip().lower() == _SECURITY_HOLDING_DESCRIPTION
 
     @staticmethod
     def _declared_repository(npm_data: Dict[str, object]) -> Optional[str]:

@@ -53,9 +53,13 @@ def analyze_repository(
                 # Keep as is if we can't parse it
                 pass
 
-        # Count contributors
+        # Count contributors. ``count_contributors`` answers None for a count
+        # it could not take (a shallow clone, a git failure) and an int for one
+        # it did, so the guard is on None: a measured zero is an answer, and
+        # ``if contributor_count:`` threw it away as though nobody had looked.
+        # The commit-cadence read below already guards this way (#217).
         contributor_count = count_contributors(repo_dir)
-        if contributor_count:
+        if contributor_count is not None:
             dependency.maintainer_count = contributor_count
             dependency.record_field_source(
                 ProvenancedField.MAINTAINER_COUNT,

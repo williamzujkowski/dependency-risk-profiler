@@ -254,6 +254,91 @@ def test_deprecation_is_read_from_the_version_manifest() -> None:
     assert dep.is_deprecated is True
 
 
+# The shape npm's security team publishes over a package it has removed. The
+# version is a real semver and the manifest is a real manifest; only the
+# description says what actually happened. Captured from crossenv, pulled for
+# stealing environment variables (#217).
+SECURITY_HOLDING_PACKUMENT: Dict[str, object] = {
+    "name": "crossenv",
+    "description": "security holding package",
+    "dist-tags": {"latest": "0.0.2-security"},
+    "versions": {
+        "0.0.2-security": {
+            "name": "crossenv",
+            "version": "0.0.2-security",
+            "description": "security holding package",
+        }
+    },
+}
+
+
+def test_a_security_holding_package_is_not_a_release() -> None:
+    """The placeholder is a sentinel, not the package's latest version."""
+    dep = _analyze(
+        "crossenv",
+        "6.1.1",
+        {"https://registry.npmjs.org/crossenv": SECURITY_HOLDING_PACKUMENT},
+    )
+
+    assert dep.is_deprecated is True
+    assert dep.latest_version is None
+    assert dep.additional_info["npm_security_holding_package"] == "true"
+
+
+def test_a_security_holding_package_leaves_version_drift_unmeasured() -> None:
+    """Read as a release, 0.0.2-security puts the installed pin *ahead*.
+
+    That is the inversion: a package npm removed for malware scores as current
+    and undrifted. Unmeasured is the honest answer; the deprecation carries the
+    finding.
+    """
+    dep = _analyze(
+        "crossenv",
+        "6.1.1",
+        {"https://registry.npmjs.org/crossenv": SECURITY_HOLDING_PACKUMENT},
+    )
+
+    score = RiskScorer().score_dependency(dep)
+
+    assert score.version_score is None
+    assert score.deprecation_score == 1.0
+
+
+def test_a_security_holding_package_declares_no_dependency_list() -> None:
+    """The placeholder's empty manifest is not a measured zero (#141)."""
+    dep = _analyze(
+        "crossenv",
+        "6.1.1",
+        {"https://registry.npmjs.org/crossenv": SECURITY_HOLDING_PACKUMENT},
+    )
+
+    assert not dep.transitive_dependencies
+
+
+def test_a_genuine_security_prerelease_is_still_a_release() -> None:
+    """Both markers are required: the suffix alone is a legitimate release."""
+    packument: Dict[str, object] = {
+        "name": "example",
+        "dist-tags": {"latest": "1.2.3-security"},
+        "versions": {
+            "1.2.3-security": {
+                "name": "example",
+                "version": "1.2.3-security",
+                "description": "an out-of-band security release",
+            }
+        },
+    }
+
+    dep = _analyze(
+        "example",
+        "1.2.0",
+        {"https://registry.npmjs.org/example": packument},
+    )
+
+    assert dep.latest_version == "1.2.3-security"
+    assert dep.is_deprecated is False
+
+
 def test_repository_url_survives_a_dot_git_inside_the_repo_name() -> None:
     """Trimming ".git" by substring mangled pages repos; canonicalize instead."""
     packument: Dict[str, object] = {
