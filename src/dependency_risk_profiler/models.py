@@ -3,9 +3,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
-from .signals import Measurement, SourceRepositoryState
+from .signals import (
+    SIGNAL_SOURCE_REPOSITORY,
+    SOURCE_REPOSITORY_UNREADABLE,
+    Measurement,
+    SourceRepositoryState,
+    unmeasured_reason_for,
+)
 
 
 class RiskLevel(Enum):
@@ -161,12 +167,47 @@ class DependencyRiskScore:
     total_signal_count: int = 0
     insufficient_data: bool = False
 
-    # Every signal by its stable name, as a MEASURED value or an UNMEASURED
-    # reason (#198). The distinction used to stop at the scorer: both JSON
-    # writers flattened it to a bare ``null``, which a consumer cannot tell
-    # from "measured, and the answer happens to be null". Surfacing it is #164
-    # step 5. Keyed by the names in ``signals.SIGNAL_CATALOG``.
-    measurements: Dict[str, Measurement] = field(default_factory=dict)
+    # Exactly the ``(signal, measurement, weight)`` list the scorer weighed,
+    # stored by reference rather than copied. The scorer already builds it, so
+    # keeping it costs nothing in the hot path — which matters: scoring runs
+    # under a 50ms-per-100-dependencies SLA that coverage instrumentation eats
+    # most of, and an eager per-dependency reshape of this list measurably ate
+    # the rest. Read it through :attr:`measurements`.
+    weighted_signals: Sequence[Tuple[str, Measurement, float]] = ()
+
+    @property
+    def measurements(self) -> Dict[str, Measurement]:
+        """Return every signal by name, as a value or the reason there isn't one.
+
+        The two-state measurement (#198) used to stop at the scorer: both JSON
+        writers flattened it to a bare ``null``, which a consumer cannot tell
+        from "measured, and the answer happens to be null". Surfacing it is
+        #164 step 5, and this is the view the output contract serializes.
+
+        Built on demand, not at scoring time. ``source_repository`` is added
+        here when it never entered the weighted score, so a consumer can tell
+        "unmeasured" from "this build has no such signal" — it stays out of
+        ``unknown_signals`` and the counts, which describe the weighted set,
+        because #74's rule is that an unavailable signal leaves both the
+        numerator and the denominator.
+
+        Returns:
+            Mapping of stable signal name to its measurement.
+        """
+        measurements = {
+            name: measurement for name, measurement, _ in self.weighted_signals
+        }
+        if SIGNAL_SOURCE_REPOSITORY not in measurements:
+            unreadable = (
+                self.dependency.source_repository_state in SOURCE_REPOSITORY_UNREADABLE
+            )
+            measurements[SIGNAL_SOURCE_REPOSITORY] = Measurement.unmeasured(
+                unmeasured_reason_for(
+                    SIGNAL_SOURCE_REPOSITORY,
+                    source_repository_unreadable=unreadable,
+                )
+            )
+        return measurements
 
     @property
     def unknown_signal_count(self) -> int:

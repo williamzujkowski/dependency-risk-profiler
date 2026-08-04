@@ -158,15 +158,17 @@ def _score() -> DependencyRiskScore:
         unknown_signals=[SIGNAL_MAINTAINED],
         measured_signal_count=2,
         total_signal_count=3,
-        measurements={
+        weighted_signals=(
             # A signal somebody measured, and the answer was zero.
-            SIGNAL_STALENESS: Measurement.measured(0.0),
-            SIGNAL_EXPLOIT: Measurement.measured(1.0),
+            (SIGNAL_STALENESS, Measurement.measured(0.0), 0.25),
+            (SIGNAL_EXPLOIT, Measurement.measured(1.0), 0.5),
             # A signal nobody could measure, with the reason preserved.
-            SIGNAL_MAINTAINED: Measurement.unmeasured(
-                UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
+            (
+                SIGNAL_MAINTAINED,
+                Measurement.unmeasured(UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE),
+                0.2,
             ),
-        },
+        ),
     )
 
 
