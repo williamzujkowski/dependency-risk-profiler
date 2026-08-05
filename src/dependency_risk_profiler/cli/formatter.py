@@ -54,6 +54,19 @@ class TerminalFormatter(BaseFormatter):
     ADVISORIES_WIDTH = 26
     TABLE_SEPARATOR = "  "
 
+    # The dependency column is sized to the names actually present, between
+    # these bounds. 12 was the fixed width and is kept as the floor so short
+    # names render exactly as before.
+    #
+    # No terminal-width arithmetic here, deliberately. The other four columns
+    # plus separators already total 117, so this table has never fitted an
+    # 80-column terminal and does not fit 100 either; there is no slack to
+    # redistribute and pretending otherwise just reproduces the truncation
+    # under a more complicated calculation. The table gets as wide as the
+    # names require, up to the cap.
+    MIN_DEPENDENCY_WIDTH = 12
+    MAX_DEPENDENCY_WIDTH = 48
+
     def __init__(self, color: bool = True) -> None:
         """Initialize the terminal formatter.
 
@@ -61,6 +74,32 @@ class TerminalFormatter(BaseFormatter):
             color: Whether to enable color output.
         """
         self.color = color
+
+    def _apply_layout(self, profile: ProjectRiskProfile) -> None:
+        """Size the dependency column to the names this report will render.
+
+        ``DEPENDENCY_WIDTH`` was a constant 12. Every ecosystem with
+        namespaced names -- golang import paths, maven ``group:artifact``,
+        ``Microsoft.*``, ``androidx.*`` -- shares a prefix longer than that, so
+        the column rendered the prefix and cut the part that distinguishes one
+        dependency from another. On gin's ``go.mod``, 26 of 35 rows read
+        ``github.com/…`` (#279).
+
+        Instance attributes shadow the class constants, so a caller that
+        renders rows without going through ``format_profile`` still gets the
+        old fixed layout rather than an exception.
+
+        Args:
+            profile: The profile about to be rendered.
+        """
+        longest = max(
+            (cell_len(dep.dependency.name) for dep in profile.dependencies),
+            default=0,
+        )
+        self.DEPENDENCY_WIDTH = min(
+            self.MAX_DEPENDENCY_WIDTH,
+            max(self.MIN_DEPENDENCY_WIDTH, longest),
+        )
 
     def format_profile(self, profile: ProjectRiskProfile) -> str:
         """Format a project risk profile for terminal output.
@@ -98,6 +137,7 @@ class TerminalFormatter(BaseFormatter):
             )
 
         if profile.dependencies:
+            self._apply_layout(profile)
             result.extend(
                 [
                     "",

@@ -185,3 +185,48 @@ def test_low_cadence_reaches_the_terminal_report() -> None:
     output = TerminalFormatter(color=False).format_profile(profile)
 
     assert "low development activity (0.5/month)" in output
+
+
+def test_namespaced_names_render_in_full_not_as_a_shared_prefix() -> None:
+    """REGRESSION #279: a 12-cell name column named nothing.
+
+    ``DEPENDENCY_WIDTH`` was the constant 12, so every ecosystem with
+    namespaced names rendered only the part they have in common. On gin's
+    ``go.mod``, 26 of 35 rows read ``github.com/…`` -- the report described
+    dependencies it could not name, and two rows differing only after the
+    prefix were indistinguishable.
+
+    Asserted on the two names together: a check that one long name survives
+    would also pass if the column had merely been made wider by a constant,
+    which is the fix that breaks again on the next longer ecosystem.
+    """
+    names = [
+        "github.com/gin-contrib/sse",
+        "github.com/goccy/go-json",
+    ]
+    dependencies = [
+        DependencyRiskScore(
+            dependency=DependencyMetadata(
+                name=name,
+                installed_version="v1.0.0",
+                latest_version="v1.0.0",
+            ),
+            total_score=1.0,
+            risk_level=RiskLevel.LOW,
+            measured_signal_count=9,
+            total_signal_count=14,
+        )
+        for name in names
+    ]
+    profile = ProjectRiskProfile(
+        manifest_path="/tmp/gin/go.mod",
+        ecosystem="golang",
+        dependencies=dependencies,
+        low_risk_dependencies=len(names),
+    )
+
+    output = TerminalFormatter(color=False).format_profile(profile)
+
+    for name in names:
+        assert name in output, f"{name!r} was truncated out of the report"
+    assert "github.com/…" not in output

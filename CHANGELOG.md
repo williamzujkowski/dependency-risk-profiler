@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The report could not name the dependencies it was describing.** The
+  dependency column was the constant 12 cells, so every ecosystem with
+  namespaced names rendered only the part they have in common. On gin's
+  `go.mod`, 26 of 35 rows read `github.com/…`; the same went for maven
+  `group:artifact`, `Microsoft.*` and `androidx.*`. Two dependencies differing
+  only after the prefix were indistinguishable, which made the default human
+  report unusable for exactly the ecosystems whose names carry the most
+  information.
+
+  The column is now sized to the names actually present, floored at the old 12
+  so short names render unchanged and capped at 48.
+
+  No terminal-width arithmetic, deliberately, and the first attempt at this was
+  wrong for an instructive reason: the other four columns and their separators
+  already total 117 cells, so this table has never fitted an 80-column terminal
+  and does not fit 100 either. Computing a budget against the terminal and
+  redistributing the slack reproduced the truncation exactly, because there was
+  no slack — it just arrived via more arithmetic. The table is as wide as the
+  names require.
+
+
 ### Removed
 
 - **Two CI steps reported success while doing nothing.** The `security` job
