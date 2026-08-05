@@ -359,6 +359,52 @@ def test_prepare_runs_before_canonicalization_and_never_over_the_declaration() -
     assert resolution.declared == "scm:git:https://github.com/psf/requests.git"
 
 
+def test_the_maven_sweep_prepares_its_scm_connection_strings() -> None:
+    """The Maven adapter must actually pass the hook, not merely have one.
+
+    ``resolve_repository`` taking a ``prepare`` argument proves nothing about
+    the one caller that needs it. No captured POM in the conformance corpus has
+    an ``scm:git:`` connection string whose *resolution* is load-bearing —
+    every one of them either resolves through ``<url>`` or is a Subversion
+    ``<scm>`` that stays UNUSABLE either way — so deleting the hook from the
+    production call left the whole conformance suite green. This is the
+    assertion that goes red.
+    """
+    from dependency_risk_profiler.analyzers.maven import MavenAnalyzer
+    from dependency_risk_profiler.parsers.pom_model import InheritedMetadata
+
+    inherited = InheritedMetadata(
+        scm_url="scm:git:https://github.com/psf/requests.git",
+        project_url="https://requests.readthedocs.io/",
+    )
+    resolution = MavenAnalyzer()._resolve_repository(inherited)
+
+    assert resolution.url == GOOD_URL
+    assert resolution.declared == "scm:git:https://github.com/psf/requests.git"
+    assert _state(resolution) is SourceRepositoryState.DECLARED
+
+
+def test_a_maven_scm_naming_subversion_stays_unusable_not_undeclared() -> None:
+    """The other half of the hook: the declaration keeps its raw text.
+
+    ``normalize_scm_url`` answers None for a Subversion connection string, so a
+    sweep that prepared the *declaration* as well as the candidate would record
+    "declares no source" for log4j — the exact laundering #290 exists to stop,
+    arriving from the Maven side.
+    """
+    from dependency_risk_profiler.analyzers.maven import MavenAnalyzer
+    from dependency_risk_profiler.parsers.pom_model import InheritedMetadata
+
+    inherited = InheritedMetadata(
+        scm_url="scm:svn:http://svn.apache.org/repos/asf/logging/log4j/tags/v1_2_17"
+    )
+    resolution = MavenAnalyzer()._resolve_repository(inherited)
+
+    assert resolution.url is None
+    assert resolution.declared is not None
+    assert _state(resolution) is SourceRepositoryState.UNUSABLE
+
+
 # --- The same property, per ecosystem, through production code --------------
 #
 # The property above is about the shared sweep. This table is about each
