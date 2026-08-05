@@ -619,7 +619,11 @@ def analyze(
     minimum_vulnerability_severity: VulnerabilitySeverity = typer.Option(
         "LOW",
         "--minimum-vulnerability-severity",
-        help="Minimum vulnerability severity that counts toward scoring",
+        help=(
+            "Minimum stated severity that counts toward scoring. An advisory "
+            "that applies to the installed version and states no severity at "
+            "all is counted at every threshold, including this one."
+        ),
     ),
     # Supply chain visualization options
     generate_graph: bool = typer.Option(

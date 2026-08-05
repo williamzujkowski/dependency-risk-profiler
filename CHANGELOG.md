@@ -548,6 +548,96 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The tool told you a package with known malware in it was clean.** An
+  advisory the range matcher had itself decided applied to the installed
+  version — `version_match: "affected"` — was then discarded from the score for
+  carrying no severity label, under the silent filter reason `unknown severity`.
+  A malicious-package advisory will never carry a CVSS, because CVSS scores a
+  vulnerability *in* software and there is nothing to score when the software
+  **is** the attack, so `MAL-*` records were dropped every time. So were whole
+  databases: `GO-*` (0 of 42 records sampled publish a severity) and `RUSTSEC-*`
+  (0 of 14). Two ecosystems' native advisory sources were therefore silent.
+
+  `golang.org/x/net v0.55.0` reported `known_vulnerable: false`,
+  `counted_in_score: 0` and `0 scored` in the terminal while holding
+  GO-2026-5942 matched as affected. `anyhow 1.0.75` likewise, with
+  RUSTSEC-2026-0190. No flag recovered them:
+  `--minimum-vulnerability-severity INFO` changed nothing, because the filter
+  reason was not the threshold.
+
+  **An advisory with no published severity is now counted, and says so.** It is
+  neither an advisory of severity zero nor an advisory of unknown
+  applicability — applicability was decided, and the answer was *affected*. It
+  gets the two-state treatment `applicability_unknown` already had one field
+  over: `advisories.severity_unknown` and `severity_unknown_reasons`, which
+  distinguish "the source published no severity" from "the value in this record
+  is not a severity". `UNKNOWN` is deliberately **absent** from `SEVERITY_ORDER`,
+  so nothing can order it against a real tier — that is the by-construction half
+  of "unmeasured is not measured-zero", and `max_counted_severity` stays null
+  rather than holding a word that looks like a tier.
+
+  **`--minimum-vulnerability-severity` cannot reach these advisories at any
+  threshold**, and that is now documented rather than incidental. The threshold
+  compares against a severity an advisory *states*; filtering the ones that
+  state none would be this bug behind a flag.
+
+  **Malicious-package advisories get their own tier, `MALICIOUS`, ranked above
+  `CRITICAL`.** Their missing severity is categorical, not a gap, so folding
+  them into the unknown bucket would say the tool could not tell how bad it was
+  — the one thing it can tell. `MALICIOUS` floors the verdict at `CRITICAL`
+  with no one-rung discount: that rung of slack is paid for by reachability,
+  which this tool does not measure and malware does not depend on. It does not
+  invent a CVSS to go with the tier; `max_counted_cvss_score` stays null unless
+  a real one was published.
+
+  **A counted advisory of unknown severity floors nothing, and that is argued
+  rather than left to fall out.** The honest floor would be `LOW`, and `LOW`
+  floors at `LOW` — the bottom of the scale — so it would forbid nothing.
+  Returning no floor keeps `verdict_floor.applied` meaning what it says. The
+  protection is that the advisory is counted: `known_vulnerable` is true, the
+  `N scored` column is non-zero, and the `exploit` signal carries a non-zero
+  floor instead of the `0.0` a package with no advisories at all scores — at
+  the tool's highest-weighted signal, that zero was the last place the silence
+  could hide.
+
+- **One vulnerability was counted once per advisory record describing it, so
+  `lodash 4.17.15` reported six advisories for four vulnerabilities.**
+  Advisories were deduplicated by exact `id`. OSV re-scopes an advisory by
+  publishing a *second* record with narrower wording and listing each in the
+  other's `aliases` — `GHSA-35jh-r3h4-6jhm` and `GHSA-r5fr-rjxr-66jc` are both
+  CVE-2021-23337, `GHSA-f23m-r3pf-42rh` and `GHSA-xxjr-mmjv-4gpg` are both
+  CVE-2025-13465 — and the `aliases` field was never read, so both halves of
+  each pair survived filtering and both were counted. Everything downstream
+  inherited the inflation: `counted_in_score`, the `N scored` column, the
+  `Known security issues (N counted, ...)` risk factor, and the #242 verdict
+  floor. `npm-user-validate 0.1.5` counted CVE-2020-7754 **twice, at two
+  different severities**, HIGH and LOW.
+
+  Records are now grouped by the transitive closure of `id` and `aliases`, so
+  two records that both name one CVE and never name each other still collapse —
+  which is exactly lodash's shape. `related` is deliberately not part of the
+  closure: OSV defines it as connected-but-distinct, and merging on it would
+  drop real findings.
+
+  Every field that can filter an advisory out is merged in the direction that
+  keeps it in, because collapsing two records must never lose what either
+  carried. The severity, CVSS and raw severity string come as a set from the
+  record stating the worst of them, so `npm-user-validate` keeps HIGH rather
+  than whichever of HIGH and LOW sorts first. `withdrawn` is true only if
+  *every* record is withdrawn. Ranges are unioned, and a group in which any
+  record carries no range data at all collapses to no range data, so the
+  advisory stays counted with `applicability_unknown` rather than being filtered
+  by a sibling's ranges. The surviving record is the lexicographically first ID
+  in its group — matching `_worst_counted_advisory_id`'s existing tie-break, so
+  the ID a report names does not depend on which source answered first — and it
+  carries every collapsed ID in its own `aliases`, so nothing disappears
+  unfindably.
+
+  The advisory cache schema goes to **5**. A version-4 entry has no `aliases` to
+  group on and still holds one record per advisory, so without the bump every
+  inflated count already on disk would go on being served, as a measurement,
+  for the rest of its 24-hour TTL.
+
 - **`overall_risk_score` averaged in the dependencies it could not measure as
   `0.0`, so a manifest scored better the less the tool managed to learn about
   it.** One manifest, `PyYAML==5.1`, scored **2.46**. The same manifest with

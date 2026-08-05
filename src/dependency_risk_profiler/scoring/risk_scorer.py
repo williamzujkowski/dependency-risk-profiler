@@ -57,6 +57,7 @@ from ..versioning import (
     uses_calendar_versioning,
 )
 from ..vulnerabilities.aggregator import (
+    MALICIOUS_SEVERITY,
     exploit_score_from_cvss,
     exploit_score_from_severity,
 )
@@ -86,6 +87,15 @@ SEVERITY_AS_RISK_LEVEL: Dict[str, RiskLevel] = {
     "CRITICAL": RiskLevel.CRITICAL,
 }
 
+#: What the exploit signal is worth for a package whose counted advisories all
+#: state no severity. Derived from the ``LOW`` contribution rather than written
+#: as a number, so the two cannot drift: it is a **floor** — "a live advisory
+#: exists, and no publisher has said it is worse than the mildest thing on this
+#: scale" — and deliberately not a claim that the advisory is LOW. The
+#: alternative, 0.0, is the value a package with no advisories at all carries,
+#: and this signal has the largest single weight in the mean (#272).
+ADVISORY_WITHOUT_SEVERITY_EXPLOIT_FLOOR = exploit_score_from_severity("LOW")
+
 
 def severity_floor(max_counted_severity: str) -> Optional[RiskLevel]:
     """Return the verdict a live advisory of this severity forbids sitting below.
@@ -103,6 +113,29 @@ def severity_floor(max_counted_severity: str) -> Optional[RiskLevel]:
     unmeasured context is worth. Two rungs is not slack; it is the verdict
     ignoring the fact, which is #242.
 
+    **``MALICIOUS`` gets no slack: it floors at ``CRITICAL``.** The rung of
+    slack above is paid for by one unmeasured thing, reachability, and a
+    malicious package does not depend on it — the payload runs at install time
+    or on import, from a package the manifest already asked for, and there is
+    no vulnerable code path for the caller to avoid. There is also nothing
+    below to discount to: the advisory does not say "this is exploitable under
+    conditions", it says the artifact is the attack. Handing it the same one
+    rung of doubt as a CVSS base score would be applying an allowance whose
+    justification is absent (#272).
+
+    **An advisory whose severity nobody published floors nothing, and that is a
+    decision rather than an omission.** Absence of a severity is not evidence of
+    a high one, so the honest floor is the weakest rung the scale has, ``LOW``
+    — and ``severity_floor("LOW")`` is itself ``LOW``, the bottom of
+    ``RISK_LEVEL_ORDER``, so such a floor forbids nothing any real verdict was
+    going to do anyway. Returning None rather than a vacuous floor keeps
+    ``verdict_floor.applied`` meaning what it says. What protects the reader is
+    upstream of the floor: the advisory is **counted**, so ``known_vulnerable``
+    is true, the ``N scored`` column is non-zero, the exploit signal carries a
+    non-zero floor, and ``severity_unknown`` says how many counted advisories
+    are in this state. Before #272 it was none of those, because the advisory
+    was discarded.
+
     Args:
         max_counted_severity: Worst severity among the advisories that counted
             toward the score.
@@ -110,6 +143,8 @@ def severity_floor(max_counted_severity: str) -> Optional[RiskLevel]:
     Returns:
         The floor, or None when the severity is not one this scale recognizes.
     """
+    if max_counted_severity == MALICIOUS_SEVERITY:
+        return RiskLevel.CRITICAL
     tier = SEVERITY_AS_RISK_LEVEL.get(max_counted_severity)
     if tier is None:
         return None
@@ -953,15 +988,30 @@ class RiskScorer:
                 if counted_count == 0:
                     return 0.0
 
+                # Severity first, CVSS second — the reverse of the old order,
+                # and only ``MALICIOUS`` can tell the difference. A malicious
+                # package that shares an alias group with a CVSS-scored
+                # advisory would otherwise be scored off that CVSS, which is a
+                # statement about the vulnerability and not about the malware.
+                severity = security_metrics.max_vulnerability_severity
+                if severity == MALICIOUS_SEVERITY:
+                    return exploit_score_from_severity(severity)
+
                 if security_metrics.max_cvss_score is not None:
                     return exploit_score_from_cvss(security_metrics.max_cvss_score)
 
-                if security_metrics.max_vulnerability_severity is not None:
-                    return exploit_score_from_severity(
-                        security_metrics.max_vulnerability_severity
-                    )
+                if severity is not None:
+                    return exploit_score_from_severity(severity)
 
-                return 0.0
+                # Counted advisories, none of which states a severity. Not
+                # zero: zero is the value this signal carries for a package
+                # with **no** live advisories, and returning it here would say
+                # a package with a live advisory looks exactly like a clean one
+                # at the tool's highest-weighted signal (#272). Not a guess at
+                # a tier either — the floor is the weakest non-zero rung the
+                # scale has, which is what "there is something here, and
+                # nobody has said how bad" is worth.
+                return ADVISORY_WITHOUT_SEVERITY_EXPLOIT_FLOOR
 
         return 1.0 if has_known_exploits else 0.0
 
@@ -1466,6 +1516,14 @@ class RiskScorer:
                     factors.append(
                         f"Known security issues ({counted_count} counted, "
                         f"max severity {max_severity})"
+                    )
+                elif counted_count is not None:
+                    # Counted advisories, no severity among them. The count is
+                    # the fact; saying "max severity UNKNOWN" would dress an
+                    # absence up as a measurement (#272).
+                    factors.append(
+                        f"Known security issues ({counted_count} counted, "
+                        "severity not published)"
                     )
                 else:
                     factors.append("Known security issues")

@@ -1,0 +1,83 @@
+{
+  "provenance": {
+    "captured_at": "2026-08-04",
+    "captured_by": "curl -s -X POST https://api.osv.dev/v1/query -H 'Content-Type: application/json' -d '{\"package\":{\"name\":\"anyhow\",\"ecosystem\":\"crates.io\"}}'",
+    "package": "anyhow",
+    "osv_ecosystem": "crates.io",
+    "what_this_is": "Every advisory OSV holds for anyhow. RUSTSEC-2026-0190 applies to 1.0.75 and RustSec publishes no severity for any of its records.",
+    "advisory_count": 1,
+    "trimming": [
+      "details: 1 of 1 advisory descriptions truncated to 400 characters. Prose no adapter reads; no key dropped.",
+      "references: 0 of 1 advisories trimmed to their first 3 links. Volume only; the key and its entry shape are retained. Nothing else is reduced."
+    ]
+  },
+  "payload": {
+    "vulns": [
+      {
+        "id": "RUSTSEC-2026-0190",
+        "summary": "Unsoundness in `Error::downcast_mut()`",
+        "details": "Affected versions of this crate violate borrow rules, resulting in undefined behavior, when the user adds context to an error via `Error::context` and then later calls `Error::downcast_mut` on the returned `Error`.\n\nThe flaw was corrected in commit `6e8c000` by revising how the mutable reference is constructed, avoiding inclusion of a shared reference in the resulting borrow chain.\n\n## Example\n\n``",
+        "modified": "2026-06-29T14:15:03.650725453Z",
+        "published": "2026-06-25T12:00:00Z",
+        "database_specific": {
+          "license": "CC0-1.0"
+        },
+        "references": [
+          {
+            "type": "PACKAGE",
+            "url": "https://crates.io/crates/anyhow"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2026-0190.html"
+          },
+          {
+            "type": "REPORT",
+            "url": "https://github.com/dtolnay/anyhow/issues/451"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "anyhow",
+              "ecosystem": "crates.io",
+              "purl": "pkg:cargo/anyhow"
+            },
+            "ranges": [
+              {
+                "type": "SEMVER",
+                "events": [
+                  {
+                    "introduced": "0.0.0-0"
+                  },
+                  {
+                    "fixed": "1.0.103"
+                  }
+                ]
+              }
+            ],
+            "ecosystem_specific": {
+              "affected_functions": null,
+              "affects": {
+                "os": [],
+                "functions": [
+                  "anyhow::Error::downcast_mut"
+                ],
+                "arch": []
+              }
+            },
+            "database_specific": {
+              "source": "https://github.com/rustsec/advisory-db/blob/osv/crates/RUSTSEC-2026-0190.json",
+              "categories": [
+                "memory-corruption"
+              ],
+              "cvss": null,
+              "informational": "unsound"
+            }
+          }
+        ],
+        "schema_version": "1.7.5"
+      }
+    ]
+  }
+}

@@ -228,7 +228,7 @@ def test_a_clean_verdict_written_before_the_fix_is_not_served_after_it(
     )
 
     assert isolated_cache.get("flask", "python") is None
-    assert CACHE_SCHEMA_VERSION == 4
+    assert CACHE_SCHEMA_VERSION == 5
 
 
 # --- Per-source classification ---------------------------------------------

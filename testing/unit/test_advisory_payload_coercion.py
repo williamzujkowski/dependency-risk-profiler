@@ -13,6 +13,8 @@ import pytest
 
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.vulnerabilities.aggregator import (
+    SEVERITY_NOT_PUBLISHED_REASON,
+    SEVERITY_UNREADABLE_REASON,
     GitHubAdvisorySource,
     NVDSource,
     OSVSource,
@@ -103,7 +105,15 @@ class TestBooleanCvssScore:
         assert normalized["cvss_score"] is None
 
     def test_a_boolean_score_does_not_survive_annotation(self) -> None:
-        """A cached record predating the fix is still refused at scoring."""
+        """A cached record predating the fix carries no score into the maximum.
+
+        Updated for #272: the record is **counted**, not refused. A ``true``
+        where a CVSS should be is a severity nobody readably published, and
+        discarding the advisory for that was the fail-open this repository
+        spent #216, #217 and #272 removing. What must not survive is the
+        *value*: ``cvss_score`` is None and the advisory declares its severity
+        unreadable rather than defaulting to a tier.
+        """
         (annotated,) = annotate_vulnerabilities_for_scoring(
             [{"id": "CVE-2024-0001", "source": "NVD", "cvss_score": True}],
             "LOW",
@@ -112,8 +122,11 @@ class TestBooleanCvssScore:
         )
 
         assert annotated["cvss_score"] is None
-        assert annotated["counted_in_score"] is False
-        assert "unknown severity" in _filter_reasons(annotated)
+        assert annotated["normalized_severity"] == "UNKNOWN"
+        assert annotated["counted_in_score"] is True
+        assert annotated["severity_unknown"] is True
+        assert annotated["severity_unknown_reason"] == SEVERITY_UNREADABLE_REASON
+        assert "unknown severity" not in _filter_reasons(annotated)
 
     def test_a_real_zero_is_kept_and_a_missing_score_is_not_invented(self) -> None:
         """0.0 is a score NVD published; it is not the absence of one.
@@ -146,16 +159,65 @@ class TestUnmeasuredIsNotUnsevere:
         assert normalized["cvss_score"] is None
         assert normalized["normalized_severity"] == "CRITICAL"
 
-    def test_an_advisory_with_no_readable_severity_at_all_is_not_counted(self) -> None:
-        """With nothing to go on it is refused, not scored as INFO."""
+    def test_an_advisory_with_no_readable_severity_is_counted_not_defaulted(
+        self,
+    ) -> None:
+        """With nothing to go on it is counted, and says so — never as INFO.
+
+        Updated for #272. It used to be refused, under the filter reason
+        ``unknown severity``, which is how the ``GO-*`` and ``RUSTSEC-*``
+        databases and every ``MAL-*`` malware advisory left the score in
+        silence. Two things are asserted together because either alone is
+        satisfiable by the wrong fix: the advisory counts, **and** its severity
+        is still ``UNKNOWN`` rather than quietly promoted to a tier.
+
+        The NVD record here also comes out low-confidence, which is a separate
+        and legitimate filter, so the annotation is inspected directly.
+        """
         (normalized,) = NVDSource()._normalize_results(_nvd_payload(baseScore=True))
         (annotated,) = annotate_vulnerabilities_for_scoring(
             [normalized], "LOW", None, "python"
         )
 
         assert annotated["normalized_severity"] == "UNKNOWN"
-        assert annotated["counted_in_score"] is False
-        assert "unknown severity" in _filter_reasons(annotated)
+        assert annotated["severity_unknown"] is True
+        assert "unknown severity" not in _filter_reasons(annotated)
+
+    def test_a_severity_less_osv_advisory_counts(self) -> None:
+        """REGRESSION (#272): the ``GO-*`` / ``RUSTSEC-*`` shape, minimally.
+
+        A high-confidence source, an advisory that applies, and no severity
+        anywhere in the record. Before the fix this was
+        ``counted_in_score: false`` with the reason ``unknown severity``.
+        """
+        (annotated,) = annotate_vulnerabilities_for_scoring(
+            [{"id": "GO-2026-5942", "source": "OSV", "confidence": "HIGH"}],
+            "LOW",
+            None,
+            "golang",
+        )
+
+        assert annotated["counted_in_score"] is True
+        assert annotated["severity_unknown"] is True
+        assert annotated["severity_unknown_reason"] == SEVERITY_NOT_PUBLISHED_REASON
+
+    def test_the_threshold_cannot_reach_an_advisory_with_no_severity(self) -> None:
+        """REGRESSION (#272): filtering it at any threshold rebuilds the bug.
+
+        ``--minimum-vulnerability-severity CRITICAL`` filters advisories that
+        *state* a milder severity. It has nothing to compare against when none
+        was stated, and answering "then it does not count" would be the tool
+        deciding how bad an advisory is from the fact that nobody has said.
+        """
+        for threshold in ("INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"):
+            (annotated,) = annotate_vulnerabilities_for_scoring(
+                [{"id": "RUSTSEC-2026-0190", "source": "OSV", "confidence": "HIGH"}],
+                threshold,
+                None,
+                "cargo",
+            )
+
+            assert annotated["counted_in_score"] is True, threshold
 
 
 class TestWithdrawalNeedsATimestamp:
@@ -357,15 +419,27 @@ class TestMaximumCvssDistinguishesZeroFromUnmeasured:
         assert dependency.security_metrics.max_vulnerability_severity == "HIGH"
 
     def test_an_unreadable_advisory_leaves_the_maximum_unmeasured(self) -> None:
-        """Nothing counted means nothing to take a maximum over."""
+        """A counted advisory that states no severity contributes no maximum.
+
+        Updated for #272: the advisory is now counted, so this pins the thing
+        that must **not** follow from counting it. ``max_cvss_score`` and
+        ``max_vulnerability_severity`` stay None — there is nothing to take a
+        maximum over — and the new counter says why, rather than a reader
+        having to infer it from a null next to a non-zero count.
+        """
         dependency = _update_dependency_with_vulnerabilities(
             DependencyMetadata(name="pkg", installed_version="1.0.0"),
             [{"id": "X-1", "source": "OSV", "cvss_score": True}],
         )
 
         assert dependency.security_metrics is not None
-        assert dependency.security_metrics.counted_vulnerability_count == 0
+        assert dependency.security_metrics.counted_vulnerability_count == 1
         assert dependency.security_metrics.max_cvss_score is None
+        assert dependency.security_metrics.max_vulnerability_severity is None
+        assert dependency.security_metrics.severity_unknown_count == 1
+        assert dependency.security_metrics.severity_unknown_reasons == {
+            SEVERITY_UNREADABLE_REASON: 1
+        }
 
 
 class TestAShapeErrorIsNotNoAdvisories:

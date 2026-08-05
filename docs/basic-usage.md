@@ -98,6 +98,8 @@ dependency-risk-profiler analyze requirements.txt --minimum-vulnerability-severi
 
 The default threshold is `LOW`. `INFO`, withdrawn, and low-confidence findings are kept out of scoring noise.
 
+The threshold compares against a severity the advisory **states**. An advisory that applies to the installed version and states no severity at all is counted at every threshold, including `CRITICAL` — the Go vulnerability database, RustSec, and OSV's malicious-package records publish no severity for anything, and filtering them would say a package with known malware in it was clean.
+
 ## Configuration
 
 Generate a sample config file:
