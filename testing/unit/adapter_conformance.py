@@ -1528,6 +1528,59 @@ RUBYGEMS_CASES: Tuple[FixtureCase, ...] = (
     ),
     FixtureCase(
         ecosystem="rubygems",
+        fixture="coderay",
+        extra_fixtures=("coderay.owners",),
+        installed_version="1.1.3",
+        purpose=(
+            "RubyGems is where the http:// gate costs the most: 15.35% of "
+            "sampled gems declare their repository over plain http, against "
+            "2.63% across all eight ecosystems. coderay is the case where it "
+            "actually bites — its source_code_uri is "
+            "http://github.com/rubychan/coderay and its homepage_uri is "
+            "coderay.rubychan.de, so the fallback rescues nothing and the gem "
+            "recorded UNUSABLE. mail, rainbow and arel publish the same "
+            "http:// source_code_uri and are *not* affected, because their "
+            "homepage_uri happens to be the https spelling of the same "
+            "repository — which is why the declaration and the resolution have "
+            "to be read together to see the defect at all."
+        ),
+        expected_latest_version="1.1.3",
+        expected_repository_url="https://github.com/rubychan/coderay",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        ground_truth=(
+            "source_code_uri is http://github.com/rubychan/coderay: RubyGems' "
+            "designated source field, naming a host the tool already "
+            "supported, refused over the scheme.",
+            "homepage_uri is http://coderay.rubychan.de, a project site and "
+            "not a repository, so nothing else in the payload could stand in.",
+            "the owners endpoint is captured beside it so the maintainer count "
+            "is replayed rather than left to the network.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "THE rubygems http:// assertion. 0.75 is what the scheme "
+                    "check produced for a gem whose designated field names a "
+                    "github.com repository"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="last shipped in 2020",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="the gem declares MIT",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="rubygems",
         fixture="hpricot",
         extra_fixtures=("hpricot.owners",),
         installed_version="0.8.6",
@@ -1762,6 +1815,130 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
                     "lists. The two dropped are extras; the environment-marked "
                     "importlib-metadata is kept, because a consumer on Python "
                     "3.9 really does install it"
+                ),
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="python",
+        fixture="python3-openid",
+        installed_version="3.2.0",
+        purpose=(
+            "THE #281 / #290 case, and it is two defects in one payload. "
+            "python3-openid names its GitHub repository twice — in home_page "
+            "and in project_urls.Homepage — and both are spelled http://. The "
+            "resolver refused the scheme, and the *declaration* sweep read a "
+            "narrower key-set that matched neither label, so the state fell "
+            "through to UNDECLARED: the tool asserted 'declares no source "
+            "repository' about a package that declares one twice. Both halves "
+            "now come out of one sweep over one key-set, and http:// is "
+            "upgraded to https the way git:// always was."
+        ),
+        expected_latest_version="3.2.0",
+        expected_repository_url="https://github.com/necaris/python3-openid",
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        expected_transitive_dependencies=frozenset({"defusedxml"}),
+        ground_truth=(
+            "info.project_urls is exactly {'Download', 'Homepage'} and both "
+            "carry http://github.com/necaris/python3-openid — neither label "
+            "matches _SOURCE_URL_KEYS, which is why the declaration sweep saw "
+            "nothing while the resolver saw two candidates.",
+            "info.home_page carries the same URL a third time, over http.",
+            "requires_dist has three entries, two of them extras-gated "
+            "(mysql-connector-python, psycopg2). One runtime requirement.",
+            "the resolved URL is https, never http: the upgrade is the point, "
+            "and a clone over cleartext is never attempted.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "THE #290 assertion. This scored 1.0 — 'declares none' — "
+                    "against a payload naming the repository three times. Both "
+                    "0.75 and 1.0 are wrong here and they are wrong in "
+                    "different ways: 0.75 would at least be honest about the "
+                    "resolver, 1.0 is a claim about the registry's metadata"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                equals=1.0,
+                because="last shipped in 2019; a six-year gap is maximum",
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="info.license is 'Apache Software License, Version 2.0'",
+            ),
+            SignalValue(
+                "deprecation",
+                equals=0.0,
+                because="the default branch; see the python deprecation waiver",
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.1,
+                because="one runtime requirement once the extras are dropped",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="python",
+        fixture="django-allauth",
+        installed_version="0.52.0",
+        purpose=(
+            "The other #281 package, and the other half of the URL gate. "
+            "django-allauth declares its repository under the exact 'Source' "
+            "key the declaration sweep looks for, so it always recorded "
+            "UNUSABLE — honestly, about its own boundary. The boundary was a "
+            "seven-word host tuple: Codeberg clones with "
+            "`git clone --depth 1 --no-tags` and always has, and the seven "
+            "clone-derived signals do not care which forge served the objects."
+        ),
+        expected_latest_version="65.18.0",
+        expected_repository_url="https://codeberg.org/allauth/django-allauth",
+        expected_license_id="MIT",
+        expected_deprecated=False,
+        expected_transitive_excludes=("pyjwt", "qrcode", "fido2"),
+        ground_truth=(
+            "project_urls.Source is https://codeberg.org/allauth/django-allauth "
+            "— the designated label, on a host the tool refused.",
+            "project_urls.Funding is https://github.com/sponsors/pennersr, "
+            "which _NON_SOURCE_URL_KEYS excludes on purpose: it canonicalizes "
+            "to a 'sponsors/pennersr' repository that does not exist.",
+            "project_urls['Release notes'] points inside the Codeberg "
+            "repository at /src/branch/main/ChangeLog.rst, a Forgejo-native "
+            "deep path, and is excluded by label rather than by trimming.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "THE widened-host assertion. 0.75 is what a three-host "
+                    "allowlist produces for a repository anyone can clone"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="info.license is 'MIT'",
+            ),
+            SignalValue(
+                "version",
+                equals=1.0,
+                because="0.52.0 against 65.18.0 is as far behind as it goes",
+            ),
+            SignalValue(
+                "community",
+                unmeasured=True,
+                because=(
+                    "the star scrape is GitHub-shaped, so a Codeberg "
+                    "repository has no popularity record — the one signal of "
+                    "sixteen that genuinely needs a forge API, and it stays "
+                    "unmeasured rather than defaulting to zero (#289 §1.3)"
                 ),
             ),
         ),

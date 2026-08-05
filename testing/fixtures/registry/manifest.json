@@ -333,6 +333,14 @@
         "sklearn": {
           "url": "https://pypi.org/pypi/sklearn/json",
           "reducer": "pypi-project"
+        },
+        "python3-openid": {
+          "url": "https://pypi.org/pypi/python3-openid/json",
+          "reducer": "pypi-project"
+        },
+        "django-allauth": {
+          "url": "https://pypi.org/pypi/django-allauth/json",
+          "reducer": "pypi-project"
         }
       }
     },
@@ -362,6 +370,14 @@
     },
     "rubygems": {
       "fixtures": {
+        "coderay": {
+          "url": "https://rubygems.org/api/v1/gems/coderay.json",
+          "reducer": "none"
+        },
+        "coderay.owners": {
+          "url": "https://rubygems.org/api/v1/gems/coderay/owners.json",
+          "reducer": "none"
+        },
         "tzinfo": {
           "url": "https://rubygems.org/api/v1/gems/tzinfo.json",
           "reducer": "none"

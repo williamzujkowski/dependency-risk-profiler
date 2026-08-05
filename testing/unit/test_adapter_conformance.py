@@ -897,7 +897,14 @@ def test_unproven_branches_are_named_rather_than_assumed_closed() -> None:
 def test_every_declared_fixture_loads_with_provenance(
     fixture_id: Tuple[str, str],
 ) -> None:
-    """Each fixture records where it came from and when it was taken."""
+    """Each fixture records where it came from and when it was taken.
+
+    ``captured_at`` is written in UTC by ``capture_registry_fixtures.py``, so
+    it is compared against UTC. Against a local ``date.today()`` a fixture
+    captured from a machine behind UTC reads as taken tomorrow, and the check
+    fires on a correct capture — which is a bug in the check, not in the
+    fixture.
+    """
     ecosystem, name = fixture_id
     fixture = load_fixture(ecosystem, name)
 

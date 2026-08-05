@@ -8,13 +8,15 @@ from urllib.parse import quote
 from ..models import DependencyMetadata
 from ..parsers.nodejs import runtime_dependency_names
 from ..release_dates import (
+    RepositoryResolution,
     apply_registry_release_date,
     newest_timestamp,
     parse_registry_timestamp,
     record_source_repository,
+    resolve_repository,
 )
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url, fetch_json
+from ..utils import fetch_json
 from .base import BaseAnalyzer
 from .common import collect_repository_signals
 
@@ -169,12 +171,10 @@ class NodeJSAnalyzer(BaseAnalyzer):
             dep.transitive_dependencies = shipped - {dep.name}
             record_transitive_source(dep, source=TRANSITIVE_SOURCE_NPM_MANIFEST)
 
-        repository_url = self._repository_url(npm_data)
-        if repository_url:
-            dep.repository_url = repository_url
-        record_source_repository(
-            dep, repository_url, declared=self._declared_repository(npm_data)
-        )
+        resolution = self._resolve_repository(npm_data)
+        if resolution.url:
+            dep.repository_url = resolution.url
+        record_source_repository(dep, resolution)
 
         apply_registry_release_date(dep, self._released_at(npm_data, latest))
 
@@ -348,60 +348,35 @@ class NodeJSAnalyzer(BaseAnalyzer):
         return description.strip().lower() == _SECURITY_HOLDING_DESCRIPTION
 
     @staticmethod
-    def _declared_repository(npm_data: Dict[str, object]) -> Optional[str]:
-        """Return the raw ``repository`` field, or None when there is none.
+    def _resolve_repository(npm_data: Dict[str, object]) -> RepositoryResolution:
+        """Return npm's one answer about where this package's source lives.
 
-        This is npm's designated source pointer, and it is read raw so that a
-        package which declares a repository nobody can clone stays
-        distinguishable from one that declares none (#176). ``homepage`` is
-        deliberately not consulted: it is a resolution fallback, not a
-        declaration of source, and a docs site promoted to a broken repository
-        would be a fabricated finding rather than a missed one.
-
-        Args:
-            npm_data: ``registry.npmjs.org/<package>`` packument.
-
-        Returns:
-            The declared repository URL as published, or None.
-        """
-        repository = npm_data.get("repository")
-        if isinstance(repository, dict):
-            repository = repository.get("url")
-        if isinstance(repository, str) and repository.strip():
-            return repository
-        return None
-
-    @staticmethod
-    def _repository_url(npm_data: Dict[str, object]) -> Optional[str]:
-        """Return the package's repository root, or None when it publishes none.
-
-        package.json spells ``repository`` as either a string or a
+        ``repository`` is npm's designated source pointer and is the
+        declaration. package.json spells it as either a string or a
         ``{"type", "url"}`` object, and the URL arrives in every git spelling
         there is (``git+https://``, ``git://``, ``git@host:owner/repo``, with
-        or without a ``.git`` suffix). ``canonical_repository_url`` normalizes
+        or without a ``.git`` suffix); ``canonical_repository_url`` normalizes
         all of them and trims monorepo subpaths back to ``owner/repo``.
+
+        ``homepage`` is the resolution fallback: some packages publish the
+        repository only there, and a docs site under that label is still not a
+        declaration of source (#176).
 
         Args:
             npm_data: ``registry.npmjs.org/<package>`` packument.
 
         Returns:
-            An ``https://host/owner/repo`` URL, or None.
+            The resolution the packument supports.
         """
         repository = npm_data.get("repository")
-        candidates: List[object] = []
         if isinstance(repository, dict):
-            candidates.append(repository.get("url"))
-        elif isinstance(repository, str):
-            candidates.append(repository)
-        candidates.append(npm_data.get("homepage"))
-
-        for candidate in candidates:
-            if not isinstance(candidate, str) or not candidate:
-                continue
-            canonical = canonical_repository_url(candidate)
-            if canonical:
-                return canonical
-        return None
+            declared = _string_or_none(repository.get("url"))
+        else:
+            declared = _string_or_none(repository)
+        return resolve_repository(
+            declarations=[declared],
+            fallbacks=[_string_or_none(npm_data.get("homepage"))],
+        )
 
     def _get_npm_package_info(self, package_name: str) -> Optional[Dict[str, object]]:
         """Get package information from npm registry.
@@ -430,3 +405,17 @@ class NodeJSAnalyzer(BaseAnalyzer):
         url = f"{NPM_REGISTRY_BASE}/{npm_registry_path(package_name)}/latest"
         payload = fetch_json(url, self.timeout)
         return payload if isinstance(payload, dict) else None
+
+
+def _string_or_none(value: object) -> Optional[str]:
+    """Return a non-empty string value, or None for anything else.
+
+    Args:
+        value: Raw value from an npm packument, of any type.
+
+    Returns:
+        The original string when it has content, else None.
+    """
+    if isinstance(value, str) and value.strip():
+        return value
+    return None

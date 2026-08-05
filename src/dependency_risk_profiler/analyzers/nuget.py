@@ -5,10 +5,13 @@ from typing import Dict, List, Optional
 
 from ..models import DependencyMetadata
 from ..parsers.nuget_registry import CatalogEntry, NuGetRegistryClient, NuspecDocument
-from ..release_dates import record_source_repository
+from ..release_dates import (
+    RepositoryResolution,
+    record_source_repository,
+    resolve_repository,
+)
 from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url
 from .base import BaseAnalyzer
 from .common import collect_repository_signals
 
@@ -134,9 +137,9 @@ class NuGetAnalyzer(BaseAnalyzer):
             nuspec: The package's own manifest, or None when unreadable.
             catalog: The registration catalog entry, or None when unreadable.
         """
-        repository_url = self._repository_url(nuspec, catalog)
-        if repository_url:
-            dep.repository_url = repository_url
+        resolution = self._resolve_repository(nuspec, catalog)
+        if resolution.url:
+            dep.repository_url = resolution.url
 
         # nuget resolved a repository and then reported nothing about whether
         # one was declared, so the signal was dropped from the score entirely
@@ -146,11 +149,7 @@ class NuGetAnalyzer(BaseAnalyzer):
         # not count as one. Recorded only when nuget.org answered with a
         # document at all: neither is unmeasured, not a negative finding (#182).
         if nuspec is not None or catalog is not None:
-            record_source_repository(
-                dep,
-                repository_url,
-                declared=nuspec.repository_url if nuspec is not None else None,
-            )
+            record_source_repository(dep, resolution)
 
         # The catalog is the only place a publication date exists. A cloned repo
         # refines this to the last commit; without a clone it is the release
@@ -199,30 +198,36 @@ class NuGetAnalyzer(BaseAnalyzer):
             record_transitive_source(dep, source=TRANSITIVE_SOURCE_NUSPEC)
 
     @staticmethod
-    def _repository_url(
+    def _resolve_repository(
         nuspec: Optional[NuspecDocument], catalog: Optional[CatalogEntry]
-    ) -> Optional[str]:
-        """Return the package's repository root, or None when it publishes none.
+    ) -> RepositoryResolution:
+        """Return nuget.org's one answer about where this package's source lives.
 
-        ``<repository>`` is the authoritative pointer and is tried first:
-        ``projectUrl`` is routinely a documentation site (MediatR publishes
-        ``https://mediatr.io/``), which is not cloneable and would silently cost
-        the package every repository-derived signal. Each candidate is trimmed
-        back to its ``owner/repo`` root, because packages built out of a
-        monorepo point at a subdirectory and both ``git clone`` and the GitHub
-        API reject that deeper path (#134). A non-repository homepage is
-        rejected by the canonicalizer rather than guessed at.
+        ``<repository>`` is the authoritative pointer and is the declaration.
+        ``projectUrl``, from either the nuspec or the catalog entry, is a
+        resolution fallback: it is routinely a documentation site (MediatR
+        publishes ``https://mediatr.io/``), which is not cloneable and is not a
+        statement about source. Each candidate is trimmed back to its
+        ``owner/repo`` root, because packages built out of a monorepo point at
+        a subdirectory and both ``git clone`` and the GitHub API reject that
+        deeper path (#134).
+
+        Args:
+            nuspec: The package's own manifest, or None when unreadable.
+            catalog: The registration catalog entry, or None when unreadable.
+
+        Returns:
+            The resolution these documents support.
         """
-        candidates: List[Optional[str]] = []
+        fallbacks: List[Optional[str]] = []
         if nuspec is not None:
-            candidates.extend([nuspec.repository_url, nuspec.project_url])
+            fallbacks.append(nuspec.project_url)
         if catalog is not None:
-            candidates.append(catalog.project_url)
-        for candidate in candidates:
-            canonical = canonical_repository_url(candidate)
-            if canonical:
-                return canonical
-        return None
+            fallbacks.append(catalog.project_url)
+        return resolve_repository(
+            declarations=[nuspec.repository_url if nuspec is not None else None],
+            fallbacks=fallbacks,
+        )
 
     def _get_latest_version(self, package_id: str) -> Optional[str]:
         """Return the latest stable NuGet version for a package id, or None."""

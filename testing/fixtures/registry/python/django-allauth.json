@@ -1,0 +1,241 @@
+{
+  "payload": {
+    "info": {
+      "author": null,
+      "author_email": "Raymond Penners <raymond.penners@intenct.nl>",
+      "bugtrack_url": null,
+      "classifiers": [
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Web Environment",
+        "Framework :: Django",
+        "Framework :: Django :: 4.2",
+        "Framework :: Django :: 5.0",
+        "Framework :: Django :: 5.1",
+        "Framework :: Django :: 5.2",
+        "Framework :: Django :: 6.0",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+        "Topic :: Internet",
+        "Topic :: Software Development :: Libraries :: Python Modules"
+      ],
+      "description": "\n==========================\nWelcome to django-allauth!\n==========================\n\n.. image:: https://codeberg.org/allauth/allauth.org/raw/commit/da3b56390e1b18eaec09b05cd89dfa7812212dfc/content/news/2024/04/website-redesign/logo-light.png\n   :target: https://allauth.org\n   :align: right\n   :alt: django-allauth logo\n   :width: 250px\n\n\n.. |ci| image:: https://img.shields.io/github/actions/workflow/status/pennersr/django-allauth/ci.yml.svg\n   :target: https://github.com/pennersr/django-allauth/actions\n.. |pypi| image:: https://img.shields.io/pypi/v/django-allauth\n   :target: https://pypi.python.org/pypi/django-allauth\n.. |cov| image:: https://img.shields.io/coverallsCoverage/github/pennersr/django-allauth\n   :alt: Coverage Status\n   :target: https://coveralls.io/r/pennersr/django-allauth\n.. |btc| image:: https://img.shields.io/badge/bitcoin-donate-yellow\n   :target: https://blockchain.info/address/1AJXuBMPHkaDCNX2rwAy34bGgs7hmrePEr\n.. |liberapay| image:: https://img.shields.io/liberapay/receives/pennersr\n   :target: https://en.liberapay.com/pennersr\n.. |pystyle| image:: https://img.shields.io/badge/code_style-pep8-green\n   :target: https://www.python.org/dev/peps/pep-0008/\n.. |jsstyle| image:: https://img.shields.io/badge/code_style-standard-brightgreen\n   :target: http://standardjs.com\n.. |editor| image:: https://img.shields.io/badge/editor-emacs-purple\n   :target: https://www.gnu.org/software/emacs/\n.. |i18n| image:: https://img.shields.io/weblate/progress/allauth\n   :target: https://hosted.weblate.org/projects/allauth/django-allauth/\n.. |pypidl| image:: https://img.shields.io/pypi/dm/django-allauth\n   :target: https://pypistats.org/packages/django-allauth\n   :alt: PyPI - Downloads\n.. |djangodemo| image:: https://img.shields.io/badge/%E2%96%B6_demo-Django_project-red\n   :target: https://django.demo.allauth.org/\n   :alt: View Django Demo\n.. |reactdemo| image:: https://img.shields.io/badge/%E2%96%B6_demo-React_SPA-red\n   :target: https://react.demo.allauth.org/\n   :al\u2026[truncated-by-capture]",
+      "description_content_type": "text/x-rst",
+      "docs_url": null,
+      "download_url": null,
+      "downloads": {
+        "last_day": -1,
+        "last_month": -1,
+        "last_week": -1
+      },
+      "dynamic": [
+        "License-File"
+      ],
+      "home_page": null,
+      "keywords": null,
+      "license": "MIT",
+      "license_expression": null,
+      "license_files": [
+        "LICENSE",
+        "AUTHORS"
+      ],
+      "maintainer": null,
+      "maintainer_email": null,
+      "name": "django-allauth",
+      "package_url": "https://pypi.org/project/django-allauth/",
+      "platform": null,
+      "project_url": "https://pypi.org/project/django-allauth/",
+      "project_urls": {
+        "Documentation": "https://docs.allauth.org/en/latest/",
+        "Funding": "https://github.com/sponsors/pennersr",
+        "Homepage": "https://allauth.org",
+        "Release notes": "https://codeberg.org/allauth/django-allauth/src/branch/main/ChangeLog.rst",
+        "Source": "https://codeberg.org/allauth/django-allauth",
+        "Tracker": "https://codeberg.org/allauth/django-allauth/issues"
+      },
+      "provides_extra": [
+        "headless",
+        "headless-spec",
+        "idp-oidc",
+        "mfa",
+        "openid",
+        "saml",
+        "steam",
+        "socialaccount"
+      ],
+      "release_url": "https://pypi.org/project/django-allauth/65.18.0/",
+      "requires_dist": [
+        "Django>=4.2.16",
+        "asgiref>=3.8.1",
+        "pyjwt[crypto]<3,>=2.0; extra == \"headless\"",
+        "PyYAML<7,>=6; extra == \"headless-spec\"",
+        "oauthlib<4,>=3.3.0; extra == \"idp-oidc\"",
+        "pyjwt[crypto]<3,>=2.0; extra == \"idp-oidc\"",
+        "qrcode<9,>=7.0.0; extra == \"mfa\"",
+        "fido2<3,>=1.1.2; extra == \"mfa\"",
+        "python3-openid<4,>=3.0.8; extra == \"openid\"",
+        "python3-saml<2.0.0,>=1.15.0; extra == \"saml\"",
+        "python3-openid<4,>=3.0.8; extra == \"steam\"",
+        "oauthlib<4,>=3.3.0; extra == \"socialaccount\"",
+        "requests<3,>=2.0.0; extra == \"socialaccount\"",
+        "pyjwt[crypto]<3,>=2.0; extra == \"socialaccount\""
+      ],
+      "requires_python": ">=3.10",
+      "summary": "Integrated set of Django applications addressing authentication, registration, account management as well as 3rd party (social) account authentication.",
+      "version": "65.18.0",
+      "yanked": false,
+      "yanked_reason": null
+    },
+    "last_serial": 37525541,
+    "ownership": {
+      "organization": null,
+      "roles": [
+        {
+          "role": "Owner",
+          "user": "pennersr"
+        }
+      ]
+    },
+    "releases": {
+      "0.1.0": [
+        {
+          "comment_text": "",
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "c7e8f3ac068a47e01c6f51cc6c9e774bcbc46ffe9432dfbeae02ef46082c7bed",
+            "md5": "74d53109ac226178ad3b4341a6d328ba",
+            "sha256": "f10f857a7a8ff72e4f977b353c6a8ab72ee6b23711cf51683d19021d3c4dee19"
+          },
+          "downloads": -1,
+          "filename": "django-allauth-0.1.0.tar.gz",
+          "has_sig": false,
+          "md5_digest": "74d53109ac226178ad3b4341a6d328ba",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": null,
+          "size": 29926,
+          "upload_time": "2011-02-12T15:44:25",
+          "upload_time_iso_8601": "2011-02-12T15:44:25.541052Z",
+          "url": "https://files.pythonhosted.org/packages/c7/e8/f3ac068a47e01c6f51cc6c9e774bcbc46ffe9432dfbeae02ef46082c7bed/django-allauth-0.1.0.tar.gz",
+          "yanked": false,
+          "yanked_reason": null
+        }
+      ],
+      "65.18.0": [
+        {
+          "comment_text": null,
+          "core-metadata": {
+            "sha256": "7f4bc7fd97bd171ffe924d00dd05caef35be8554ff0c312a0915b7a01216a517"
+          },
+          "digests": {
+            "blake2b_256": "1d755a4c2bf050e38ab16549395a7cd751ddcf3a18305bff4852cfd6c0d94998",
+            "md5": "01131828eeb001a43cd35b9cb6701d7a",
+            "sha256": "e508640c83b94eaf1a9b4e9ac5332dc310dcdc83fca40d58a3f670e15bad1e84"
+          },
+          "downloads": -1,
+          "filename": "django_allauth-65.18.0-py3-none-any.whl",
+          "has_sig": false,
+          "md5_digest": "01131828eeb001a43cd35b9cb6701d7a",
+          "packagetype": "bdist_wheel",
+          "python_version": "py3",
+          "requires_python": ">=3.10",
+          "size": 2061080,
+          "upload_time": "2026-05-29T13:01:16",
+          "upload_time_iso_8601": "2026-05-29T13:01:16.532084Z",
+          "url": "https://files.pythonhosted.org/packages/1d/75/5a4c2bf050e38ab16549395a7cd751ddcf3a18305bff4852cfd6c0d94998/django_allauth-65.18.0-py3-none-any.whl",
+          "yanked": false,
+          "yanked_reason": null
+        },
+        {
+          "comment_text": null,
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "d7102d33c5bc3c0f9d7db1276a1babcaadd147e73eb416ccb1bd9523c6ac925f",
+            "md5": "945c99f4895cabe96a32cb4cc8868770",
+            "sha256": "afb82e2c545b9a5539370ad120468faaed84715e095a7b6e76972dacdc6376fe"
+          },
+          "downloads": -1,
+          "filename": "django_allauth-65.18.0.tar.gz",
+          "has_sig": false,
+          "md5_digest": "945c99f4895cabe96a32cb4cc8868770",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": ">=3.10",
+          "size": 2246988,
+          "upload_time": "2026-05-29T13:01:26",
+          "upload_time_iso_8601": "2026-05-29T13:01:26.071648Z",
+          "url": "https://files.pythonhosted.org/packages/d7/10/2d33c5bc3c0f9d7db1276a1babcaadd147e73eb416ccb1bd9523c6ac925f/django_allauth-65.18.0.tar.gz",
+          "yanked": false,
+          "yanked_reason": null
+        }
+      ]
+    },
+    "urls": [
+      {
+        "comment_text": null,
+        "core-metadata": {
+          "sha256": "7f4bc7fd97bd171ffe924d00dd05caef35be8554ff0c312a0915b7a01216a517"
+        },
+        "digests": {
+          "blake2b_256": "1d755a4c2bf050e38ab16549395a7cd751ddcf3a18305bff4852cfd6c0d94998",
+          "md5": "01131828eeb001a43cd35b9cb6701d7a",
+          "sha256": "e508640c83b94eaf1a9b4e9ac5332dc310dcdc83fca40d58a3f670e15bad1e84"
+        },
+        "downloads": -1,
+        "filename": "django_allauth-65.18.0-py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "01131828eeb001a43cd35b9cb6701d7a",
+        "packagetype": "bdist_wheel",
+        "python_version": "py3",
+        "requires_python": ">=3.10",
+        "size": 2061080,
+        "upload_time": "2026-05-29T13:01:16",
+        "upload_time_iso_8601": "2026-05-29T13:01:16.532084Z",
+        "url": "https://files.pythonhosted.org/packages/1d/75/5a4c2bf050e38ab16549395a7cd751ddcf3a18305bff4852cfd6c0d94998/django_allauth-65.18.0-py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": null,
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "d7102d33c5bc3c0f9d7db1276a1babcaadd147e73eb416ccb1bd9523c6ac925f",
+          "md5": "945c99f4895cabe96a32cb4cc8868770",
+          "sha256": "afb82e2c545b9a5539370ad120468faaed84715e095a7b6e76972dacdc6376fe"
+        },
+        "downloads": -1,
+        "filename": "django_allauth-65.18.0.tar.gz",
+        "has_sig": false,
+        "md5_digest": "945c99f4895cabe96a32cb4cc8868770",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": ">=3.10",
+        "size": 2246988,
+        "upload_time": "2026-05-29T13:01:26",
+        "upload_time_iso_8601": "2026-05-29T13:01:26.071648Z",
+        "url": "https://files.pythonhosted.org/packages/d7/10/2d33c5bc3c0f9d7db1276a1babcaadd147e73eb416ccb1bd9523c6ac925f/django_allauth-65.18.0.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "vulnerabilities": []
+  },
+  "provenance": {
+    "captured_at": "2026-08-05",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "pypi-project",
+    "source_url": "https://pypi.org/pypi/django-allauth/json",
+    "trimming": [
+      "releases: kept ['0.1.0', '65.18.0'], dropped 130 other per-version file lists (volume only; retained releases keep every key, including the newest upload the cadence reads)",
+      "truncated 1 string values to 2000 characters"
+    ]
+  }
+}

@@ -10,13 +10,14 @@ import requests
 from ..models import DependencyMetadata
 from ..parsers.crates import runtime_dependency_names
 from ..release_dates import (
+    RepositoryResolution,
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
+    resolve_repository,
 )
 from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url
 from .base import BaseAnalyzer
 from .common import collect_repository_signals
 
@@ -162,16 +163,14 @@ class CratesIOAnalyzer(BaseAnalyzer):
         if latest_version:
             dep.latest_version = latest_version
 
-        repository_url = self._repository_url(metadata)
-        if repository_url:
-            dep.repository_url = repository_url
         # ``repository`` is Cargo's designated source pointer and is read raw
         # here: a crate declaring a repository nobody can clone is a different
         # fact from one declaring none (#176). ``homepage`` stays a resolution
         # fallback and is not a declaration of source.
-        record_source_repository(
-            dep, repository_url, declared=self._string_value(metadata, "repository")
-        )
+        resolution = self._resolve_repository(metadata)
+        if resolution.url:
+            dep.repository_url = resolution.url
+        record_source_repository(dep, resolution)
 
         # The newest release date is the publication cadence a consumer of the
         # crate actually sees, and it now wins over a clone's last commit
@@ -230,8 +229,10 @@ class CratesIOAnalyzer(BaseAnalyzer):
         dep.transitive_dependencies = shipped - {dep.name}
         record_transitive_source(dep, source=TRANSITIVE_SOURCE_CRATES_IO)
 
-    def _repository_url(self, metadata: Mapping[str, object]) -> Optional[str]:
-        """Return the crate's repository root, or None when it publishes none.
+    def _resolve_repository(
+        self, metadata: Mapping[str, object]
+    ) -> RepositoryResolution:
+        """Return crates.io's one answer about where this crate's source lives.
 
         Crates in a workspace commonly point ``repository`` at their own
         subdirectory (``.../tree/master/regex-syntax``), which neither
@@ -239,12 +240,17 @@ class CratesIOAnalyzer(BaseAnalyzer):
         back to its ``owner/repo`` root. ``homepage`` is the fallback because
         some crates publish the repository only there; non-repository homepages
         are rejected by the canonicalizer rather than guessed at.
+
+        Args:
+            metadata: Merged crate summary and latest-release entry.
+
+        Returns:
+            The resolution the crate's metadata supports.
         """
-        for key in ("repository", "homepage"):
-            canonical = canonical_repository_url(self._string_value(metadata, key))
-            if canonical:
-                return canonical
-        return None
+        return resolve_repository(
+            declarations=[self._string_value(metadata, "repository")],
+            fallbacks=[self._string_value(metadata, "homepage")],
+        )
 
     def _latest_release(
         self, crate_info: Mapping[str, object], crate_summary: Mapping[str, object]

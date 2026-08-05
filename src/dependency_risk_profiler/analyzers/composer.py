@@ -8,13 +8,14 @@ import requests
 from ..models import DependencyMetadata
 from ..parsers.composer import required_packages
 from ..release_dates import (
+    RepositoryResolution,
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
+    resolve_repository,
 )
 from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url
 from .base import BaseAnalyzer
 from .common import collect_repository_signals
 
@@ -70,10 +71,13 @@ class ComposerAnalyzer(BaseAnalyzer):
                     self.metadata_cache[name] = release
                     self._apply_registry_metadata(dep, release)
 
-                # Both spellings are trimmed to the repo root before use.
-                repository_url = canonical_repository_url(dep.repository_url)
-                if repository_url:
-                    dep.repository_url = repository_url
+                # One sweep over one key-set, in one order: Packagist's
+                # ``source.url`` and the lockfile's own entry are declarations,
+                # ``homepage`` is the resolution fallback. Both spellings are
+                # trimmed to the repo root before use.
+                resolution = self._resolve_repository(release, lock_declared)
+                if resolution.url:
+                    dep.repository_url = resolution.url
 
                 # Only when somebody actually answered. ``_get_latest_release``
                 # swallows a connection error, a non-200 and an unparseable body
@@ -82,9 +86,8 @@ class ComposerAnalyzer(BaseAnalyzer):
                 # asked — #141's fabricated zero in a different field (#182).
                 # A source.url in composer.lock is a real declaration whatever
                 # Packagist did, so it counts on its own.
-                declared = self._declared_source(release) or lock_declared
                 if release is not None or lock_declared is not None:
-                    record_source_repository(dep, repository_url, declared=declared)
+                    record_source_repository(dep, resolution)
 
                 # Repository-derived signals (last commit, tests/CI, the
                 # OpenSSF-style security checks) come from the source repo, the
@@ -126,10 +129,6 @@ class ComposerAnalyzer(BaseAnalyzer):
         if isinstance(version, str) and version:
             dep.latest_version = version.lstrip("v")
 
-        repository_url = self._repository_url(release)
-        if repository_url:
-            dep.repository_url = repository_url
-
         # Packagist dates the release, not the repository; it is the release
         # cadence a consumer of the package actually sees, and it now wins over
         # a clone's last commit rather than being overwritten by it (#146).
@@ -154,40 +153,36 @@ class ComposerAnalyzer(BaseAnalyzer):
                 dep.additional_info["abandoned_in_favor_of"] = abandoned
 
     @staticmethod
-    def _repository_url(release: Dict[str, object]) -> Optional[str]:
-        """Return the package's repository root, or None when it publishes none.
+    def _resolve_repository(
+        release: Optional[Dict[str, object]], lock_declared: Optional[str]
+    ) -> RepositoryResolution:
+        """Return the one answer Packagist and the lockfile together support.
 
-        Packagist records the VCS location under ``source.url`` and commonly
-        spells it with a ``.git`` suffix; ``homepage`` is the fallback because
-        some packages publish the repository only there.
-        """
-        source = release.get("source")
-        if isinstance(source, dict):
-            canonical = canonical_repository_url(_string_or_none(source.get("url")))
-            if canonical:
-                return canonical
-        return canonical_repository_url(_string_or_none(release.get("homepage")))
-
-    @staticmethod
-    def _declared_source(release: Optional[Dict[str, object]]) -> Optional[str]:
-        """Return the raw ``source.url`` Packagist published, or None.
-
-        ``source`` is Packagist's designated VCS pointer; ``homepage`` is the
-        resolution fallback and is not a declaration of source (#176).
+        ``source`` is Packagist's designated VCS pointer and commonly spells
+        the URL with a ``.git`` suffix; a ``source.url`` already recorded in
+        the project's own ``composer.lock`` is just as much a declaration, and
+        it survives a Packagist lookup that never answered. ``homepage`` is the
+        resolution fallback: some packages publish the repository only there,
+        and a docs site under that label is not a declaration of source (#176).
 
         Args:
             release: The newest Packagist release entry, or None when the
                 lookup did not answer.
+            lock_declared: ``source.url`` as the project's composer.lock
+                recorded it, or None.
 
         Returns:
-            The declared source URL as published, or None.
+            The resolution these two sources support.
         """
-        if release is None:
-            return None
-        source = release.get("source")
-        if not isinstance(source, dict):
-            return None
-        return _string_or_none(source.get("url"))
+        entry: Dict[str, object] = release if release is not None else {}
+        source = entry.get("source")
+        declared = (
+            _string_or_none(source.get("url")) if isinstance(source, dict) else None
+        )
+        return resolve_repository(
+            declarations=[declared, lock_declared],
+            fallbacks=[_string_or_none(entry.get("homepage"))],
+        )
 
     @staticmethod
     def _author_count(release: Optional[Dict[str, object]]) -> Optional[int]:

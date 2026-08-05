@@ -46,7 +46,10 @@ from dependency_risk_profiler.models import (
     RiskLevel,
     SecurityMetrics,
 )
-from dependency_risk_profiler.release_dates import record_source_repository
+from dependency_risk_profiler.release_dates import (
+    RepositoryResolution,
+    record_source_repository,
+)
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer, severity_floor
 from dependency_risk_profiler.signals import AdvisoryLookupState, SourceRepositoryState
 from dependency_risk_profiler.vulnerabilities.aggregator import (
@@ -141,8 +144,10 @@ def _healthy_dependency(name: str) -> DependencyMetadata:
     )
     record_source_repository(
         dependency,
-        "https://github.com/example/example",
-        declared="https://github.com/example/example",
+        RepositoryResolution(
+            url="https://github.com/example/example",
+            declared="https://github.com/example/example",
+        ),
     )
     return dependency
 
