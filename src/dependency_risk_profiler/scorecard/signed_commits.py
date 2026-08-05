@@ -6,6 +6,12 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
+from ..forge_paths import (
+    GITHUB_APP_SETTINGS_PATHS,
+    WORKFLOW_GLOB,
+    existing_workflow_dirs,
+    first_existing,
+)
 from ..models import DependencyMetadata, SecurityMetrics
 from .unmeasured import no_repository_issue, read_failed_issue
 
@@ -284,10 +290,14 @@ def check_commit_signing_requirement(repo_dir: str) -> CommitSigningRequirement:
         # GitHub repositories might have a CODEOWNERS file that enforces signing
         repo_path = Path(repo_dir)
 
-        # Check for GitHub Actions workflow that enforces signed commits
-        workflow_dir = repo_path / ".github" / "workflows"
-        if workflow_dir.exists() and workflow_dir.is_dir():
-            for workflow_file in workflow_dir.glob("*.y*ml"):
+        # Check for an Actions-compatible workflow that enforces signed
+        # commits. Gitea Actions and Forgejo Actions read the same workflow
+        # format from their own directories, so all of them are searched
+        # (#291).
+        for workflow_dir in existing_workflow_dirs(repo_path):
+            if result["requires_commit_signing"]:
+                break
+            for workflow_file in sorted(workflow_dir.glob(WORKFLOW_GLOB)):
                 try:
                     with open(workflow_file, "r", encoding="utf-8") as f:
                         content = f.read().lower()
@@ -297,16 +307,20 @@ def check_commit_signing_requirement(repo_dir: str) -> CommitSigningRequirement:
                         ):
                             result["requires_commit_signing"] = True
                             result["commit_signing_mechanism"] = (
-                                f"GitHub Actions workflow: {workflow_file.name}"
+                                "Actions workflow: "
+                                f"{workflow_dir.parent.name}/{workflow_dir.name}/"
+                                f"{workflow_file.name}"
                             )
                             break
                 except Exception as e:
                     logger.debug(f"Error reading workflow file {workflow_file}: {e}")
                     raise
 
-        # Check for GitHub branch protection settings in .github/settings.yml
-        settings_file = repo_path / ".github" / "settings.yml"
-        if settings_file.exists():
+        # Check the Probot Settings app's settings.yml. Not widened past
+        # GitHub: no other forge has an in-tree branch-protection convention
+        # (see ``forge_paths.GITHUB_APP_SETTINGS_PATHS``).
+        settings_file = first_existing(repo_path, GITHUB_APP_SETTINGS_PATHS)
+        if settings_file is not None:
             try:
                 with open(settings_file, "r", encoding="utf-8") as f:
                     content = f.read().lower()

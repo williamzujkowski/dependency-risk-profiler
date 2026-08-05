@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 
 import requests
 
+from .forge_paths import CI_CONFIG_PATHS, CONTRIBUTING_PATHS, any_exists
+
 # Bounded retry for transient HTTP failures (notably 429 rate limiting from
 # registry/community APIs on large org scans).
 _FETCH_MAX_RETRIES = 3
@@ -590,35 +592,15 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
                 has_tests = True
                 break
 
-    # Check for CI configuration
-    ci_patterns = [
-        ".github/workflows/",
-        ".travis.yml",
-        ".circleci/",
-        ".gitlab-ci.yml",
-        "azure-pipelines.yml",
-        "Jenkinsfile",
-    ]
-    has_ci = False
-    for pattern in ci_patterns:
-        if repo_path.joinpath(pattern).exists():
-            has_ci = True
-            break
+    # Check for CI configuration. The forge-native workflow directories and
+    # Woodpecker join the list here (#291): the Codeberg clone of
+    # ``django-allauth`` runs Woodpecker and, with ``.github/`` removed,
+    # reported ``has_ci=False`` while ``.woodpecker.yaml`` sat in its root.
+    has_ci = any_exists(repo_path, CI_CONFIG_PATHS)
 
-    # Check for contribution guidelines
-    contribution_patterns = [
-        "CONTRIBUTING.md",
-        ".github/CONTRIBUTING.md",
-        "docs/CONTRIBUTING.md",
-        "CONTRIBUTE.md",
-        ".github/CONTRIBUTE.md",
-        "docs/CONTRIBUTE.md",
-    ]
-    has_contribution_guidelines = False
-    for pattern in contribution_patterns:
-        if repo_path.joinpath(pattern).exists():
-            has_contribution_guidelines = True
-            break
+    # Check for contribution guidelines, in each forge's own folder as well as
+    # the root and ``docs/``.
+    has_contribution_guidelines = any_exists(repo_path, CONTRIBUTING_PATHS)
 
     return has_tests, has_ci, has_contribution_guidelines
 
