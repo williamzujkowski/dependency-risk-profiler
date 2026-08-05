@@ -9,6 +9,7 @@ from dependency_risk_profiler.parsers.base import BaseParser
 from dependency_risk_profiler.parsers.golang import GoParser
 from dependency_risk_profiler.parsers.nodejs import NodeJSParser
 from dependency_risk_profiler.parsers.python import PythonParser
+from dependency_risk_profiler.parsers.version_sources import DECLARED_CONSTRAINT_KEY
 
 
 def test_base_parser_factory(
@@ -93,7 +94,10 @@ def test_python_parser(sample_python_manifest: str) -> None:
 
     requests = dependencies["requests"]
     assert requests.name == "requests"
-    assert requests.installed_version.replace(">=", "") == "2.25.0"
+    # `requests>=2.25.0` states a bound. It is not an installed version and no
+    # longer masquerades as one (#275).
+    assert requests.installed_version == ""
+    assert requests.additional_info[DECLARED_CONSTRAINT_KEY] == ">=2.25.0"
 
     numpy = dependencies["numpy"]
     assert numpy.name == "numpy"
@@ -120,7 +124,10 @@ def test_pipfile_lock_handles_string_and_dict_entries() -> None:
 
     assert dependencies["requests"].installed_version == "2.28.0"
     assert dependencies["six"].installed_version == "1.16.0"
-    assert dependencies["wildcard"].installed_version == "*"
+    # `"*"` is the `latest` sentinel wearing a different hat: the lock file
+    # pinned this entry by something other than a version, and there is no
+    # version here to score drift against (#275).
+    assert dependencies["wildcard"].installed_version == ""
     assert dependencies["pytest"].installed_version == "7.0.0"
 
 

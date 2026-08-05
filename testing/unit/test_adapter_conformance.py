@@ -49,6 +49,7 @@ from registry_fixtures import (
     declared_fixtures,
     load_fixture,
     replay_fetcher,
+    utc_today,
 )
 from signal_floors import (
     MIN_MEASURED_SIGNALS,
@@ -901,7 +902,7 @@ def test_every_declared_fixture_loads_with_provenance(
     fixture = load_fixture(ecosystem, name)
 
     assert fixture.source_url.startswith("https://")
-    assert fixture.captured_at <= date.today()
+    assert fixture.captured_at <= utc_today()
     assert fixture.payload not in (None, {}, [])
 
 

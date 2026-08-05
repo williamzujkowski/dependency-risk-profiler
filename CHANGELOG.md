@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Python constraint was scored as though it were the installed version.**
+  `requests>=2.20.0` produced a record byte-identical to `requests==2.20.0`:
+  the same `known_vulnerable: true`, decided from four advisories fixed in
+  2.20.1, about a project that may well be running 2.32.5 and have none of
+  them. `billiard>=4.2.1,<5.0` landed as `installed_version: "4.2.1,<5.0"`
+  with a version-drift signal reporting `measured` off a string that is not a
+  version by any reading. An unpinned line became the word `latest`, which then
+  rendered as `latest → 5.4.4 · behind latest` beside a count of `0 signals
+  could not be measured`.
+
+  A bound is not a version, and the two no longer share a slot.
+  `installed_version` now holds one concrete version or nothing at all, the
+  declaration is kept beside it as `declared_constraint`, and an unpinned
+  requirement is marked `unmanaged` — the same contract NuGet's unreachable
+  `Directory.Packages.props`, Maven's inherited versions and Gradle's dynamic
+  versions have had since #141. So version drift comes back `unmeasured`
+  rather than as a number computed against an invention, and an advisory
+  reports `applicability_unknown` with `installed version unknown` instead of
+  a verdict it had no version to reach.
+
+  What a user gets back is different in both directions. On celery's
+  `requirements/default.txt` all nine drift signals become unmeasured, which is
+  the honest answer for a file that pins nothing — and measured coverage still
+  *rises*, 128/143 to 133/144, because `backports.zoneinfo[tzdata]` had been
+  queried as a PyPI project of that literal name, found nothing, and scored
+  2 of 15. Extras are not part of a name; it now resolves as
+  `backports-zoneinfo` and scores.
+
+  The sharper case is the one that was supposed to be safe. Read a line at a
+  time, `pip-compile --generate-hashes` output — the most thoroughly pinned
+  manifest Python has — gave every package a version with a trailing backslash
+  (`26.1.2 \`) and one extra dependency named `--hash`. Nothing could be
+  compared against a version in that shape, so on warehouse's lockfile
+  **seven packages reported `known_vulnerable: true` on 27 advisories nobody
+  could place**, `pip` among them with twelve. All 27 now resolve against the
+  real pin and none of them applies.
+
+  Both Python readers go through one PEP 508 parse now. `parsers/python.py`
+  used to strip the operator and `parsers/toml.py` used to keep it, so the same
+  line read two different wrong ways depending on which file it was written in;
+  the chain they replace also turned `requests!=2.0` into a package called
+  `requests!` and `tzdata; sys_platform == "win32"` into one called
+  `tzdata; sys_platform`. Environment markers are parsed off the name and the
+  dependency is kept: whether it applies to the machine running the scan is a
+  different question, and the tool reads a manifest, not an interpreter.
+
 - **The report could not name the dependencies it was describing.** The
   dependency column was the constant 12 cells, so every ecosystem with
   namespaced names rendered only the part they have in common. On gin's

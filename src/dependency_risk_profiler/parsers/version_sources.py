@@ -50,3 +50,12 @@ VERSION_SOURCE_CATALOG = "version-catalog"
 # Declared somewhere unreachable, or in a form that does not name one concrete
 # version (a floating "1.2.*", an open-ended range). Honestly unmeasured.
 VERSION_SOURCE_UNMANAGED = "unmanaged"
+
+# What the manifest wrote where a version would go, when it is not a version:
+# ">=2.20.0", "<5.0,>=4.2.1", "git:https://…". Always accompanies
+# VERSION_SOURCE_UNMANAGED and never appears without it, because a pin has
+# nothing to record here — that is the #275 separation, and it is what stops a
+# bound from being read back as an installed version by anything downstream.
+# Read by the CLI formatter, which prints ">=2.20.0 unpinned → 2.34.2" rather
+# than throwing away the only thing the manifest actually said.
+DECLARED_CONSTRAINT_KEY = "declared_constraint"

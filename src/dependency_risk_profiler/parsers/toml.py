@@ -1,10 +1,19 @@
 """Parser for TOML dependency files."""
 
+import logging
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from ..models import DependencyMetadata
 from .base import BaseParser
+from .python_requirements import (
+    DeclaredRequirement,
+    python_dependency,
+    read_poetry_requirement,
+    read_requirement,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class TomlParser(BaseParser):
@@ -70,13 +79,13 @@ class TomlParser(BaseParser):
             if "project" in data and "dependencies" in data["project"]:
                 deps_list = data["project"]["dependencies"]
                 for dep in deps_list:
-                    # Parse the dependency string (e.g., "requests>=2.25.0")
-                    name, version = self._parse_dependency_string(dep)
-                    dependencies[name] = DependencyMetadata(
-                        name=name,
-                        installed_version=version,
-                        repository_url=f"https://pypi.org/project/{name}/",
-                        additional_info={"section": "project.dependencies"},
+                    # "requests>=2.25.0" is a bound, not an installed version,
+                    # and #275 is that the two do not share a slot.
+                    requirement = self._read_pep508(dep)
+                    if requirement is None:
+                        continue
+                    dependencies[requirement.name] = python_dependency(
+                        requirement, {"section": "project.dependencies"}
                     )
 
             # Poetry format (tool.poetry.dependencies)
@@ -92,13 +101,12 @@ class TomlParser(BaseParser):
                         continue
 
                     # Handle different version formats in Poetry
-                    version = self._extract_poetry_version(version_info)
+                    requirement = read_poetry_requirement(name, version_info)
+                    if requirement is None:
+                        continue
 
-                    dependencies[name] = DependencyMetadata(
-                        name=name,
-                        installed_version=version,
-                        repository_url=f"https://pypi.org/project/{name}/",
-                        additional_info={"section": "tool.poetry.dependencies"},
+                    dependencies[requirement.name] = python_dependency(
+                        requirement, {"section": "tool.poetry.dependencies"}
                     )
 
             # Handle Poetry dev dependencies
@@ -109,18 +117,20 @@ class TomlParser(BaseParser):
             ):
                 dev_deps = data["tool"]["poetry"]["dev-dependencies"]
                 for name, version_info in dev_deps.items():
-                    version = self._extract_poetry_version(version_info)
+                    requirement = read_poetry_requirement(name, version_info)
+                    if requirement is None:
+                        continue
 
                     # Skip if already in main dependencies
-                    if name in dependencies:
+                    if requirement.name in dependencies:
                         # Update existing dependency to mark it as a dev dependency
-                        dependencies[name].additional_info["dev_dependency"] = "true"
+                        dependencies[requirement.name].additional_info[
+                            "dev_dependency"
+                        ] = "true"
                     else:
-                        dependencies[name] = DependencyMetadata(
-                            name=name,
-                            installed_version=version,
-                            repository_url=f"https://pypi.org/project/{name}/",
-                            additional_info={
+                        dependencies[requirement.name] = python_dependency(
+                            requirement,
+                            {
                                 "dev_dependency": "true",
                                 "section": "tool.poetry.dev-dependencies",
                             },
@@ -130,15 +140,15 @@ class TomlParser(BaseParser):
             if "build-system" in data and "requires" in data["build-system"]:
                 build_deps = data["build-system"]["requires"]
                 for dep in build_deps:
-                    name, version = self._parse_dependency_string(dep)
+                    requirement = self._read_pep508(dep)
+                    if requirement is None:
+                        continue
 
                     # Skip if already present as a regular dependency
-                    if name not in dependencies:
-                        dependencies[name] = DependencyMetadata(
-                            name=name,
-                            installed_version=version,
-                            repository_url=f"https://pypi.org/project/{name}/",
-                            additional_info={
+                    if requirement.name not in dependencies:
+                        dependencies[requirement.name] = python_dependency(
+                            requirement,
+                            {
                                 "build_dependency": "true",
                                 "section": "build-system.requires",
                             },
@@ -148,7 +158,10 @@ class TomlParser(BaseParser):
             if "project" in data and "optional-dependencies" in data["project"]:
                 for group, deps in data["project"]["optional-dependencies"].items():
                     for dep in deps:
-                        name, version = self._parse_dependency_string(dep)
+                        requirement = self._read_pep508(dep)
+                        if requirement is None:
+                            continue
+                        name = requirement.name
                         # Only add if not already added or update with additional info
                         if name in dependencies:
                             if "groups" in dependencies[name].additional_info:
@@ -183,16 +196,46 @@ class TomlParser(BaseParser):
                             ]:
                                 additional_info["dev_dependency"] = "true"
 
-                            dependencies[name] = DependencyMetadata(
-                                name=name,
-                                installed_version=version,
-                                repository_url=f"https://pypi.org/project/{name}/",
-                                additional_info=additional_info,
+                            dependencies[name] = python_dependency(
+                                requirement, additional_info
                             )
 
             return dependencies
         except Exception as e:
             raise ValueError(f"Error parsing pyproject.toml: {e}") from e
+
+    def _read_pep508(self, dep: object) -> Optional[DeclaredRequirement]:
+        """Read one PEP 508 string out of a pyproject table, or report it.
+
+        ``project.dependencies``, ``project.optional-dependencies`` and
+        ``build-system.requires`` all hold PEP 508 strings, and all three used
+        to go through a separator scan that kept the operator in the version
+        (``">=3.12.1"``) while ``parsers/python.py`` stripped it (``"3.12.1"``)
+        — two readings of one ecosystem, both wrong in different directions
+        (#275). They now share the one reader with requirements.txt.
+
+        Args:
+            dep: The entry, which the schema says is a string and a hand-edited
+                file may not be.
+
+        Returns:
+            The declaration, or None when the entry is not a requirement.
+        """
+        if not isinstance(dep, str):
+            logger.warning(
+                "%s: %r is not a requirement string; skipping",
+                self.manifest_path,
+                dep,
+            )
+            return None
+        requirement = read_requirement(dep)
+        if requirement is None:
+            logger.warning(
+                "%s: cannot read %r as a requirement; skipping",
+                self.manifest_path,
+                dep,
+            )
+        return requirement
 
     def _parse_cargo_toml(self) -> Dict[str, DependencyMetadata]:
         """Parse a Cargo.toml file for Rust dependencies.
@@ -420,32 +463,6 @@ class TomlParser(BaseParser):
         # If no version specifier, assume latest
         name = dep_string.split(";")[0].strip()  # Remove environment markers
         return name, "latest"
-
-    def _extract_poetry_version(self, version_info: Any) -> str:
-        """Extract version info from Poetry's format, which can be a string or dict.
-
-        Args:
-            version_info: Version info from Poetry (string or dict).
-
-        Returns:
-            Version string.
-        """
-        if isinstance(version_info, str):
-            return version_info
-        elif isinstance(version_info, dict):
-            if "version" in version_info:
-                # TOML types the value, so `version = 1.0` arrives as a float.
-                # Coerce, as _extract_generic_version already does, rather than
-                # handing a non-string back from a `-> str` function.
-                return str(version_info["version"])
-            elif "git" in version_info:
-                return f"git:{version_info['git']}"
-            elif "path" in version_info:
-                return f"path:{version_info['path']}"
-            elif "url" in version_info:
-                return f"url:{version_info['url']}"
-
-        return "unknown"
 
     def _extract_cargo_version(self, version_info: Any) -> str:
         """Extract version info from Cargo.toml, which can be a string or dict.

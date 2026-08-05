@@ -1,0 +1,11 @@
+{
+  "payload": "billiard>=4.2.1,<5.0\nkombu>=5.5.2,<5.6\nvine>=5.1.0,<6.0\nclick>=8.1.2,<9.0\nclick-didyoumean>=0.3.0\nclick-repl>=0.2.0\nclick-plugins>=1.1.1\nbackports.zoneinfo[tzdata]>=0.2.1; python_version < '3.9'\npython-dateutil>=2.8.2\n",
+  "provenance": {
+    "captured_at": "2026-08-05",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://raw.githubusercontent.com/celery/celery/v5.5.3/requirements/default.txt",
+    "trimming": []
+  }
+}

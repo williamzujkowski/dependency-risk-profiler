@@ -50,7 +50,11 @@ parseable. Migrate.
 {
   "name": "jinja2",
   "ecosystem": "python",
-  "installed_version": "3.1.2",     // the resolved version actually installed
+  "installed_version": "3.1.2",     // the resolved version, or "" when the
+                                    // manifest states a constraint rather than
+                                    // a pin (#275). Never a bound, never
+                                    // "latest": drift then reads unmeasured
+                                    // and advisories applicability_unknown.
   "latest_version": "3.1.6",        // null when the registry lookup didn't resolve
   "last_updated": "2024-03-01T12:00:00",
   "repository_url": "https://github.com/pallets/jinja",

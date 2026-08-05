@@ -8,6 +8,7 @@ from enum import Enum
 from typing import Dict, List, Literal, Optional, Protocol, Set, Tuple
 
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel
+from ..parsers.version_sources import VERSION_SOURCE_UNMANAGED
 
 AccountType = Literal["organization", "user"]
 
@@ -243,12 +244,22 @@ class AggregatedDependency:
         raw specifiers the manifests actually declared, and no amount of
         formatting reconstructs it from one resolved version.
 
+        A variant whose version could not be resolved contributes the empty
+        string, which joined into ``", 3.1.6"`` and read as a formatting bug.
+        It is rendered with the word the rest of the tool already uses for it —
+        NuGet's unreachable ``Directory.Packages.props``, Maven's inherited
+        versions and, since #275, a Python requirement that states a bound
+        rather than a pin all arrive here the same way.
+
         Returns:
             The observed specs, range-like ones first.
         """
         if not self.version_specs:
-            return [self.key.version]
-        return sorted(self.version_specs, key=_version_spec_sort_key)
+            return [self.key.version or VERSION_SOURCE_UNMANAGED]
+        return sorted(
+            (spec or VERSION_SOURCE_UNMANAGED for spec in self.version_specs),
+            key=_version_spec_sort_key,
+        )
 
 
 def _version_spec_sort_key(version_spec: str) -> Tuple[int, str]:

@@ -6,6 +6,10 @@ from typing import List
 
 import pytest
 
+from dependency_risk_profiler.parsers.python_requirements import (
+    DeclaredRequirement,
+    read_poetry_requirement,
+)
 from dependency_risk_profiler.parsers.toml import TomlParser
 
 # Temp files the fixtures below create, cleaned up in teardown_module.
@@ -370,14 +374,22 @@ def test_extract_version_methods() -> None:
             ">=1.9.0",
         )
 
-        # Test _extract_poetry_version
-        assert parser._extract_poetry_version("^2.0.0") == "^2.0.0"
-        assert parser._extract_poetry_version({"version": "^1.0.0"}) == "^1.0.0"
-        assert (
-            parser._extract_poetry_version(
-                {"git": "https://github.com/example/repo.git"}
-            )
-            == "git:https://github.com/example/repo.git"
+        # Poetry entries are read by `read_poetry_requirement`, which returns a
+        # pin or a constraint and never a string in the version slot (#275).
+        # `_extract_poetry_version` returned `"^2.0.0"` as an installed version
+        # and was deleted with its last caller.
+        assert read_poetry_requirement("pkg", "^2.0.0") == DeclaredRequirement(
+            name="pkg", pinned_version=None, constraint="^2.0.0"
+        )
+        assert read_poetry_requirement(
+            "pkg", {"version": "^1.0.0"}
+        ) == DeclaredRequirement(name="pkg", pinned_version=None, constraint="^1.0.0")
+        assert read_poetry_requirement(
+            "pkg", {"git": "https://github.com/example/repo.git"}
+        ) == DeclaredRequirement(
+            name="pkg",
+            pinned_version=None,
+            constraint="git:https://github.com/example/repo.git",
         )
 
         # Test _extract_cargo_version

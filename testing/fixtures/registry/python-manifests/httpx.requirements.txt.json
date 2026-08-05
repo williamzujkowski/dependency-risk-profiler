@@ -1,0 +1,11 @@
+{
+  "payload": "# We're pinning our tooling, because it's an environment we can strictly control.\n# On the other hand, we're not pinning package dependencies, because our tests\n# needs to pass with the latest version of the packages.\n# Reference: https://github.com/encode/httpx/pull/1721#discussion_r661241588\n-e .[brotli,cli,http2,socks,zstd]\n\n# Optional charset auto-detection\n# Used in our test cases\nchardet==5.2.0\n\n# Documentation\nmkdocs==1.6.1\nmkautodoc==0.2.0\nmkdocs-material==9.5.47\n\n# Packaging\nbuild==1.2.2.post1\ntwine==6.0.1\n\n# Tests & Linting\ncoverage[toml]==7.6.1\ncryptography==44.0.0\nmypy==1.13.0\npytest==8.3.4\nruff==0.8.1\ntrio==0.27.0\ntrio-typing==0.10.0\ntrustme==1.1.0; python_version < '3.9'\ntrustme==1.2.0; python_version >= '3.9'\nuvicorn==0.32.1\n",
+  "provenance": {
+    "captured_at": "2026-08-05",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "text",
+    "reducer": "none",
+    "source_url": "https://raw.githubusercontent.com/encode/httpx/0.28.1/requirements.txt",
+    "trimming": []
+  }
+}
