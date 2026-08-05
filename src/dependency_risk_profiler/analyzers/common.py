@@ -11,7 +11,7 @@ from typing import Optional
 
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
-from ..utils import cloned_repo, is_cloneable_repo_url
+from ..utils import cloned_repo, is_cloneable_repo_url, redact_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def collect_repository_signals(
         logger.debug(
             "Skipping repository signals for %s: %s is not a cloneable repo URL",
             dependency.name,
-            repository_url,
+            redact_credentials(repository_url),
         )
         return dependency
 

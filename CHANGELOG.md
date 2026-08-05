@@ -103,6 +103,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository-derived signals come off a shallow clone with no API — so it
   applies today to GitLab and Bitbucket, which this tool already clones, and to
   repositories on GitHub that simply keep their templates somewhere else.
+- **Every repository-derived signal was thrown away over a URL scheme, and the
+  loss was then reported as a fact about the package's metadata.** Two defects
+  in one path, and the second is the worse one.
+
+  `normalize_clone_url` upgraded `git://` to https — a protocol GitHub switched
+  off in 2022 — and refused plain `http://`. A survey of 8,870 packages across
+  eight ecosystems found 2.63% declaring their repository over `http://`, more
+  than every non-GitHub forge combined and 15.35% of RubyGems, and **114 of
+  those 233 rows are on `github.com`**: repositories the tool already supported,
+  discarded because a gemspec written before the host had TLS was never
+  rewritten. The host allowlist was three strings, so Codeberg, Gitea,
+  SourceHut and Gitee were "not a reachable git forge" despite cloning fine.
+  `https://WWW.github.com/x/y` was a second identity for one repository, which
+  the Go analyzer duly cloned twice. And a URL carrying a credential was
+  *accepted*: `netloc.split("@")[-1]` threw the secret away and cloned the
+  repository, recording neither.
+
+  Plain `http://` is now upgraded to https and cloned over https — never over
+  cleartext, because fetching an artifact through a channel an attacker can
+  rewrite in order to score that artifact's supply-chain risk measures the
+  attacker. The allowlist covers the six forges verified cloneable with
+  `git clone --depth 1 --no-tags`. `www.` comes off the host. A URL carrying a
+  credential is refused outright rather than sanitised, and every log line that
+  echoes a rejected URL redacts the userinfo first, so the refusal is not what
+  writes the token to disk.
+
+  Measured end to end against live registries, with the production analyzers
+  and scorer: `python3-openid` and `django-allauth` each go from 7 of 16
+  measured signals to 13, `python3-openid` from MEDIUM to HIGH; the same for
+  `quick-error` and `gethostname` on crates.io and `coderay`, `compass` and
+  `colorize` on RubyGems. Across PyGoat's 34 dependencies, measured coverage
+  goes from 92.28% to 94.85% and nothing loses a signal.
+
+- **A package that stated its GitHub repository twice was reported as declaring
+  no source repository.** `_declared_source` and `_repository_url` swept
+  different key-sets. The resolver read every `project_urls` entry; the
+  declaration read a short list of source-ish labels. `python3-openid` labels
+  its repository `Download` and `Homepage`, so the resolver saw two candidates,
+  failed on the scheme, and the declaration sweep — which had never looked at
+  either key — left the state UNDECLARED. The tool then printed "Declares no
+  source repository", which is a claim about PyPI's metadata rather than about
+  our own resolver, and it was false. Six of the eight ecosystems had the same
+  split.
+
+  Each ecosystem now runs one sweep over one key-set in one order, and returns
+  both answers as a single frozen `RepositoryResolution` that
+  `record_source_repository` takes whole. UNDECLARED is reachable only when
+  nothing in the payload named a source: a fallback field naming a host we
+  clone from, which still yields no `owner/repo` pair, is UNUSABLE — a
+  resolution failure, said as one. A fallback naming a host we cannot clone
+  stays UNDECLARED, so hpricot's dead `code.whytheluckystiff.net` homepage is
+  still not promoted to a broken repository (#176).
 
 - **The report could not name the dependencies it was describing.** The
   dependency column was the constant 12 cells, so every ecosystem with

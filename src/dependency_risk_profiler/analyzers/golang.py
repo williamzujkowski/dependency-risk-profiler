@@ -9,6 +9,7 @@ from ..analysis_helpers import analyze_repository
 from ..go_modules import GoModuleResolver
 from ..models import DependencyMetadata
 from ..release_dates import (
+    RepositoryResolution,
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
@@ -200,11 +201,21 @@ class GoAnalyzer(BaseAnalyzer):
                     continue
                 repository = resolution.repository
                 if repository is None:
+                    # Go has no separate repository field: the module path is
+                    # the declaration, and one that resolves to no repository
+                    # is the declared-but-unusable state (#176, #137). There is
+                    # one candidate here, so there is no second key-set for the
+                    # declaration to disagree with (#290).
                     logger.debug("No source repository resolved for %s", name)
-                    record_source_repository(dep, None, declared=name)
+                    record_source_repository(
+                        dep, RepositoryResolution(url=None, declared=name)
+                    )
                     continue
                 dep.repository_url = repository.url
-                record_source_repository(dep, repository.url, declared=repository.url)
+                record_source_repository(
+                    dep,
+                    RepositoryResolution(url=repository.url, declared=repository.url),
+                )
                 if repository.subdirectory:
                     # Many modules can share one repository; record where this
                     # one lives so a shared repository URL is not confusing.

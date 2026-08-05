@@ -8,13 +8,14 @@ import requests
 from ..models import DependencyMetadata
 from ..parsers.ruby import runtime_dependency_names
 from ..release_dates import (
+    RepositoryResolution,
     apply_registry_release_date,
     parse_registry_timestamp,
     record_source_repository,
+    resolve_repository,
 )
 from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url
 from .base import BaseAnalyzer
 from .common import collect_repository_signals
 
@@ -120,17 +121,15 @@ class RubyGemsAnalyzer(BaseAnalyzer):
             dep.transitive_dependencies = shipped - {dep.name}
             record_transitive_source(dep, source=TRANSITIVE_SOURCE_RUBYGEMS)
 
-        repo = self._repository_url(info)
-        if repo:
-            dep.repository_url = repo
         # ``source_code_uri`` is RubyGems' designated source pointer, read raw
         # so a gem naming a repository nobody can clone stays distinguishable
         # from one naming none (#176). ``homepage_uri`` remains a resolution
         # fallback: hpricot's is code.whytheluckystiff.net, a dead host that was
         # never a declaration of source in the first place.
-        record_source_repository(
-            dep, repo, declared=self._declared_source_code_uri(info)
-        )
+        resolution = self._resolve_repository(info)
+        if resolution.url:
+            dep.repository_url = resolution.url
+        record_source_repository(dep, resolution)
 
         # RubyGems dates the latest release, not the repository; it is the
         # release cadence a consumer of the gem actually sees, and it now wins
@@ -202,47 +201,39 @@ class RubyGemsAnalyzer(BaseAnalyzer):
         return any(term in lowered for term in _DESCRIPTION_DEPRECATION_TERMS)
 
     @staticmethod
-    def _declared_source_code_uri(info: Dict[str, object]) -> Optional[str]:
-        """Return the gem's raw ``source_code_uri``, or None when it has none.
+    def _resolve_repository(info: Dict[str, object]) -> RepositoryResolution:
+        """Return RubyGems' one answer about where this gem's source lives.
 
-        RubyGems publishes it both at the top level and inside ``metadata``;
-        either spelling is a declaration.
+        ``source_code_uri`` is the declaration and RubyGems publishes it both
+        at the top level and inside ``metadata``; either spelling counts.
+        ``homepage_uri``, in both spellings, is the resolution fallback — gems
+        commonly point at a tagged subpath (``.../tree/v2.0.6``), which the
+        canonicalizer trims back to ``owner/repo``.
+
+        RubyGems is the ecosystem this matters most in: 15.35% of sampled gems
+        declare their repository over plain ``http://``, and ``mail``,
+        ``rainbow``, ``arel`` and ``coderay`` all publish a ``source_code_uri``
+        of ``http://github.com/...`` — the designated field, naming a supported
+        host, discarded over the scheme until #290.
 
         Args:
             info: The ``/gems/<name>.json`` payload.
 
         Returns:
-            The declared source URL as published, or None.
+            The resolution the gem's metadata supports.
         """
         metadata = info.get("metadata")
         nested: Dict[str, object] = metadata if isinstance(metadata, dict) else {}
-        for candidate in (info.get("source_code_uri"), nested.get("source_code_uri")):
-            if isinstance(candidate, str) and candidate.strip():
-                return candidate
-        return None
-
-    def _repository_url(self, info: Dict[str, object]) -> Optional[str]:
-        """Return the gem's repository root, or None when it publishes none.
-
-        Gems spell the repository several ways and commonly point at a tagged
-        subpath (``.../tree/v2.0.6``), so each candidate is trimmed back to its
-        ``owner/repo`` root before use.
-        """
-        metadata = info.get("metadata")
-        nested: Dict[str, object] = metadata if isinstance(metadata, dict) else {}
-        candidates = (
-            info.get("source_code_uri"),
-            nested.get("source_code_uri"),
-            info.get("homepage_uri"),
-            nested.get("homepage_uri"),
+        return resolve_repository(
+            declarations=[
+                _string_or_none(info.get("source_code_uri")),
+                _string_or_none(nested.get("source_code_uri")),
+            ],
+            fallbacks=[
+                _string_or_none(info.get("homepage_uri")),
+                _string_or_none(nested.get("homepage_uri")),
+            ],
         )
-        for candidate in candidates:
-            if not isinstance(candidate, str) or not candidate:
-                continue
-            canonical = canonical_repository_url(candidate)
-            if canonical:
-                return canonical
-        return None
 
     def _get_gem_info(self, gem_name: str) -> Optional[Dict[str, object]]:
         """Return rubygems.org metadata for a gem, or None on failure."""
@@ -272,3 +263,17 @@ class RubyGemsAnalyzer(BaseAnalyzer):
         except ValueError:
             return None
         return payload
+
+
+def _string_or_none(value: object) -> Optional[str]:
+    """Return a non-empty string value, or None for anything else.
+
+    Args:
+        value: Raw value from a rubygems.org payload, of any type.
+
+    Returns:
+        The stripped-of-nothing original string when it has content, else None.
+    """
+    if isinstance(value, str) and value.strip():
+        return value
+    return None

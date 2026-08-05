@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.release_dates import (
     RELEASE_DATE_SOURCE_KEY,
+    RepositoryResolution,
     RELEASE_DATE_SOURCE_REGISTRY,
     RELEASE_DATE_SOURCE_REPOSITORY,
     apply_registry_release_date,
@@ -147,14 +148,18 @@ def test_a_declared_repository_is_recorded_only_when_it_is_one() -> None:
     declared = _dependency()
     record_source_repository(
         declared,
-        "https://github.com/psf/requests",
-        declared="https://github.com/psf/requests",
+        RepositoryResolution(
+            url="https://github.com/psf/requests",
+            declared="https://github.com/psf/requests",
+        ),
     )
     assert declared.source_repository_state == SourceRepositoryState.DECLARED
 
     for not_a_repo in (None, "", "http://readthedocs.org/docs/nose/"):
         dep = _dependency()
-        record_source_repository(dep, not_a_repo, declared=None)
+        record_source_repository(
+            dep, RepositoryResolution(url=not_a_repo, declared=None)
+        )
         assert dep.source_repository_state == SourceRepositoryState.UNDECLARED
 
 
@@ -164,8 +169,10 @@ def test_a_tagged_subpath_still_counts_as_a_declared_repository() -> None:
 
     record_source_repository(
         dep,
-        "https://github.com/tzinfo/tzinfo/tree/v2.0.6",
-        declared="https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+        RepositoryResolution(
+            url="https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+            declared="https://github.com/tzinfo/tzinfo/tree/v2.0.6",
+        ),
     )
 
     assert dep.source_repository_state == SourceRepositoryState.DECLARED
@@ -187,7 +194,9 @@ def test_declaring_an_unusable_repository_is_its_own_state() -> None:
         "not a url at all",
     ):
         dep = _dependency()
-        record_source_repository(dep, None, declared=unusable)
+        record_source_repository(
+            dep, RepositoryResolution(url=None, declared=unusable)
+        )
         assert dep.source_repository_state == SourceRepositoryState.UNUSABLE
 
 
@@ -195,7 +204,7 @@ def test_a_blank_declaration_is_no_declaration() -> None:
     """An empty <scm> or an all-whitespace source URL states nothing."""
     for blank in (None, "", "   ", "\n\t"):
         dep = _dependency()
-        record_source_repository(dep, None, declared=blank)
+        record_source_repository(dep, RepositoryResolution(url=None, declared=blank))
         assert dep.source_repository_state == SourceRepositoryState.UNDECLARED
 
 
@@ -205,8 +214,10 @@ def test_a_resolvable_declaration_wins_over_its_own_raw_spelling() -> None:
 
     record_source_repository(
         dep,
-        "https://github.com/tzinfo/tzinfo",
-        declared="scm:git:git@github.com:tzinfo/tzinfo.git",
+        RepositoryResolution(
+            url="https://github.com/tzinfo/tzinfo",
+            declared="scm:git:git@github.com:tzinfo/tzinfo.git",
+        ),
     )
 
     assert dep.source_repository_state == SourceRepositoryState.DECLARED

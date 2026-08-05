@@ -1,0 +1,224 @@
+{
+  "payload": {
+    "info": {
+      "author": "Rami Chowdhury",
+      "author_email": "rami.chowdhury@gmail.com",
+      "bugtrack_url": null,
+      "classifiers": [
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Web Environment",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: POSIX",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: Dynamic Content :: CGI Tools/Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: System :: Systems Administration :: Authentication/Directory"
+      ],
+      "description": "This is a set of Python packages to support use of\nthe OpenID decentralized identity system in your application, update to Python\n3.  Want to enable single sign-on for your web site?  Use the openid.consumer\npackage.  Want to run your own OpenID server? Check out openid.server.\nIncludes example code and support for a variety of storage back-ends.\n\n",
+      "description_content_type": "",
+      "docs_url": null,
+      "download_url": "http://github.com/necaris/python3-openid/tarball/v3.2.0",
+      "downloads": {
+        "last_day": -1,
+        "last_month": -1,
+        "last_week": -1
+      },
+      "dynamic": null,
+      "home_page": "http://github.com/necaris/python3-openid",
+      "keywords": "",
+      "license": "",
+      "license_expression": null,
+      "license_files": null,
+      "maintainer": "Rami Chowdhury",
+      "maintainer_email": "rami.chowdhury@gmail.com",
+      "name": "python3-openid",
+      "package_url": "https://pypi.org/project/python3-openid/",
+      "platform": "",
+      "project_url": "https://pypi.org/project/python3-openid/",
+      "project_urls": {
+        "Download": "http://github.com/necaris/python3-openid/tarball/v3.2.0",
+        "Homepage": "http://github.com/necaris/python3-openid"
+      },
+      "provides_extra": null,
+      "release_url": "https://pypi.org/project/python3-openid/3.2.0/",
+      "requires_dist": [
+        "defusedxml",
+        "mysql-connector-python ; extra == 'mysql'",
+        "psycopg2 ; extra == 'postgresql'"
+      ],
+      "requires_python": "",
+      "summary": "OpenID support for modern servers and consumers.",
+      "version": "3.2.0",
+      "yanked": false,
+      "yanked_reason": null
+    },
+    "last_serial": 7586418,
+    "ownership": {
+      "organization": null,
+      "roles": [
+        {
+          "role": "Owner",
+          "user": "necaris"
+        }
+      ]
+    },
+    "releases": {
+      "3.0.0": [
+        {
+          "comment_text": "",
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "915c6e404b446fad58eb210e81f38d8ac7b7e921ece954756a97b765cc527787",
+            "md5": "7889e5457dfaa2df61802efa7fb2d266",
+            "sha256": "c6b595756aefa1bc0c1d9033720381d5f02e5b32d684ba088438c5b687f4fe99"
+          },
+          "downloads": -1,
+          "filename": "python3-openid-3.0.0.tar.gz",
+          "has_sig": false,
+          "md5_digest": "7889e5457dfaa2df61802efa7fb2d266",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": null,
+          "size": 299708,
+          "upload_time": "2012-12-25T16:02:57",
+          "upload_time_iso_8601": "2012-12-25T16:02:57.611830Z",
+          "url": "https://files.pythonhosted.org/packages/91/5c/6e404b446fad58eb210e81f38d8ac7b7e921ece954756a97b765cc527787/python3-openid-3.0.0.tar.gz",
+          "yanked": false,
+          "yanked_reason": null
+        },
+        {
+          "comment_text": "",
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "1b525f8769eec2434673c38a2bc04d9fb857f7c9d6040e6c709c0fa62e900ce0",
+            "md5": "b6e5da91e6558dec8942e119ad25f9e8",
+            "sha256": "5b31267a651917dc25c28678827403c35387f94d6d9da8dc4796f38f7a6c8a0e"
+          },
+          "downloads": -1,
+          "filename": "python3-openid-3.0.0.zip",
+          "has_sig": false,
+          "md5_digest": "b6e5da91e6558dec8942e119ad25f9e8",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": null,
+          "size": 366075,
+          "upload_time": "2012-12-25T16:03:01",
+          "upload_time_iso_8601": "2012-12-25T16:03:01.039205Z",
+          "url": "https://files.pythonhosted.org/packages/1b/52/5f8769eec2434673c38a2bc04d9fb857f7c9d6040e6c709c0fa62e900ce0/python3-openid-3.0.0.zip",
+          "yanked": false,
+          "yanked_reason": null
+        }
+      ],
+      "3.2.0": [
+        {
+          "comment_text": "",
+          "core-metadata": {
+            "sha256": "446ef9dea80ee7f627557db96f34be457bc33b7c3261bac0a0b80ab2104b42bb"
+          },
+          "digests": {
+            "blake2b_256": "e0a5c6ba13860bdf5525f1ab01e01cc667578d6f1efc8a1dba355700fb04c29b",
+            "md5": "e5c3644b8569a20fdfe0348f451da704",
+            "sha256": "6626f771e0417486701e0b4daff762e7212e820ca5b29fcc0d05f6f8736dfa6b"
+          },
+          "downloads": -1,
+          "filename": "python3_openid-3.2.0-py3-none-any.whl",
+          "has_sig": false,
+          "md5_digest": "e5c3644b8569a20fdfe0348f451da704",
+          "packagetype": "bdist_wheel",
+          "python_version": "py3",
+          "requires_python": null,
+          "size": 133681,
+          "upload_time": "2020-06-29T12:15:47",
+          "upload_time_iso_8601": "2020-06-29T12:15:47.502272Z",
+          "url": "https://files.pythonhosted.org/packages/e0/a5/c6ba13860bdf5525f1ab01e01cc667578d6f1efc8a1dba355700fb04c29b/python3_openid-3.2.0-py3-none-any.whl",
+          "yanked": false,
+          "yanked_reason": null
+        },
+        {
+          "comment_text": "",
+          "core-metadata": false,
+          "digests": {
+            "blake2b_256": "5f4a29feb8da6c44f77007dcd29518fea73a3d5653ee02a587ae1f17f1f5ddb5",
+            "md5": "105d6fb86cf4ed503ee76e38b3aa7db0",
+            "sha256": "33fbf6928f401e0b790151ed2b5290b02545e8775f982485205a066f874aaeaf"
+          },
+          "downloads": -1,
+          "filename": "python3-openid-3.2.0.tar.gz",
+          "has_sig": false,
+          "md5_digest": "105d6fb86cf4ed503ee76e38b3aa7db0",
+          "packagetype": "sdist",
+          "python_version": "source",
+          "requires_python": null,
+          "size": 305600,
+          "upload_time": "2020-06-29T12:15:49",
+          "upload_time_iso_8601": "2020-06-29T12:15:49.026621Z",
+          "url": "https://files.pythonhosted.org/packages/5f/4a/29feb8da6c44f77007dcd29518fea73a3d5653ee02a587ae1f17f1f5ddb5/python3-openid-3.2.0.tar.gz",
+          "yanked": false,
+          "yanked_reason": null
+        }
+      ]
+    },
+    "urls": [
+      {
+        "comment_text": "",
+        "core-metadata": {
+          "sha256": "446ef9dea80ee7f627557db96f34be457bc33b7c3261bac0a0b80ab2104b42bb"
+        },
+        "digests": {
+          "blake2b_256": "e0a5c6ba13860bdf5525f1ab01e01cc667578d6f1efc8a1dba355700fb04c29b",
+          "md5": "e5c3644b8569a20fdfe0348f451da704",
+          "sha256": "6626f771e0417486701e0b4daff762e7212e820ca5b29fcc0d05f6f8736dfa6b"
+        },
+        "downloads": -1,
+        "filename": "python3_openid-3.2.0-py3-none-any.whl",
+        "has_sig": false,
+        "md5_digest": "e5c3644b8569a20fdfe0348f451da704",
+        "packagetype": "bdist_wheel",
+        "python_version": "py3",
+        "requires_python": null,
+        "size": 133681,
+        "upload_time": "2020-06-29T12:15:47",
+        "upload_time_iso_8601": "2020-06-29T12:15:47.502272Z",
+        "url": "https://files.pythonhosted.org/packages/e0/a5/c6ba13860bdf5525f1ab01e01cc667578d6f1efc8a1dba355700fb04c29b/python3_openid-3.2.0-py3-none-any.whl",
+        "yanked": false,
+        "yanked_reason": null
+      },
+      {
+        "comment_text": "",
+        "core-metadata": false,
+        "digests": {
+          "blake2b_256": "5f4a29feb8da6c44f77007dcd29518fea73a3d5653ee02a587ae1f17f1f5ddb5",
+          "md5": "105d6fb86cf4ed503ee76e38b3aa7db0",
+          "sha256": "33fbf6928f401e0b790151ed2b5290b02545e8775f982485205a066f874aaeaf"
+        },
+        "downloads": -1,
+        "filename": "python3-openid-3.2.0.tar.gz",
+        "has_sig": false,
+        "md5_digest": "105d6fb86cf4ed503ee76e38b3aa7db0",
+        "packagetype": "sdist",
+        "python_version": "source",
+        "requires_python": null,
+        "size": 305600,
+        "upload_time": "2020-06-29T12:15:49",
+        "upload_time_iso_8601": "2020-06-29T12:15:49.026621Z",
+        "url": "https://files.pythonhosted.org/packages/5f/4a/29feb8da6c44f77007dcd29518fea73a3d5653ee02a587ae1f17f1f5ddb5/python3-openid-3.2.0.tar.gz",
+        "yanked": false,
+        "yanked_reason": null
+      }
+    ],
+    "vulnerabilities": []
+  },
+  "provenance": {
+    "captured_at": "2026-08-05",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "pypi-project",
+    "source_url": "https://pypi.org/pypi/python3-openid/json",
+    "trimming": [
+      "releases: kept ['3.0.0', '3.2.0'], dropped 11 other per-version file lists (volume only; retained releases keep every key, including the newest upload the cadence reads)"
+    ]
+  }
+}

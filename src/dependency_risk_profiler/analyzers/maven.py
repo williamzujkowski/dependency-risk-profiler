@@ -20,9 +20,14 @@ from ..parsers.pom_model import (
     inherit_metadata,
 )
 from ..parsers.xml_utils import local_name
-from ..release_dates import apply_registry_release_date, record_source_repository
+from ..release_dates import (
+    RepositoryResolution,
+    apply_registry_release_date,
+    record_source_repository,
+    resolve_repository,
+)
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url, cloned_repo, is_cloneable_repo_url
+from ..utils import cloned_repo, is_cloneable_repo_url
 from .base import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
@@ -138,7 +143,7 @@ class MavenAnalyzer(BaseAnalyzer):
                 # from a third direction (#178).
                 if inherited is not None:
                     record_source_repository(
-                        dep, dep.repository_url, declared=inherited.scm_url
+                        dep, self._resolve_repository(inherited)
                     )
             except Exception as exc:
                 logger.error("Error analyzing Maven package %s: %s", name, exc)
@@ -213,11 +218,9 @@ class MavenAnalyzer(BaseAnalyzer):
         # that only publish a project homepage. Both get trimmed to the
         # repository root, because monorepo artifacts point at a subdirectory
         # and both git clone and the GitHub API reject that deeper path.
-        for candidate in (inherited.scm_url, inherited.project_url):
-            repository_url = canonical_repository_url(normalize_scm_url(candidate))
-            if repository_url:
-                dep.repository_url = repository_url
-                break
+        resolution = self._resolve_repository(inherited)
+        if resolution.url:
+            dep.repository_url = resolution.url
 
         # analyze_license() reads a registry-metadata mapping; give it one built
         # from <licenses>, using the plural key so the multi-license case stays
@@ -239,6 +242,36 @@ class MavenAnalyzer(BaseAnalyzer):
         dep.transitive_dependencies = shipped
         record_transitive_source(dep, source=TRANSITIVE_SOURCE_MAVEN_POM)
         return inherited
+
+    @staticmethod
+    def _resolve_repository(inherited: InheritedMetadata) -> RepositoryResolution:
+        """Return the POM lineage's one answer about where the source lives.
+
+        ``<scm>`` is Maven's designated source pointer and is the declaration;
+        ``<url>`` is the fallback for POMs that publish only a project
+        homepage. Both are read across the parent chain, because Maven's
+        convention is to declare them once in a parent and inherit them, and
+        an artifact that inherits a Subversion ``<scm>`` has declared one
+        (#178, #182).
+
+        A Maven ``<scm>`` is not a URL — ``scm:git:https://...``,
+        ``scm:svn:http://...`` — so ``normalize_scm_url`` prepares each
+        candidate before it is canonicalized, while the declaration keeps the
+        raw text. That is why the ``prepare`` hook exists: a ``<scm>`` naming
+        Subversion must stay UNUSABLE rather than becoming UNDECLARED because
+        its connection string does not parse as a clone URL.
+
+        Args:
+            inherited: The nearest-declaration-wins view of the parent chain.
+
+        Returns:
+            The resolution the POM lineage supports.
+        """
+        return resolve_repository(
+            declarations=[inherited.scm_url],
+            fallbacks=[inherited.project_url],
+            prepare=normalize_scm_url,
+        )
 
     def _analyze_repositories(
         self, dependencies: Dict[str, DependencyMetadata]

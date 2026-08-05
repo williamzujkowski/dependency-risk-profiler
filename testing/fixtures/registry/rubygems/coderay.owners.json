@@ -1,0 +1,17 @@
+{
+  "payload": [
+    {
+      "handle": "murphy",
+      "id": 41941,
+      "role": "owner"
+    }
+  ],
+  "provenance": {
+    "captured_at": "2026-08-05",
+    "captured_by": "scripts/capture_registry_fixtures.py",
+    "format": "json",
+    "reducer": "none",
+    "source_url": "https://rubygems.org/api/v1/gems/coderay/owners.json",
+    "trimming": []
+  }
+}

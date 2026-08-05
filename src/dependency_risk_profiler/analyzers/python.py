@@ -2,18 +2,20 @@
 
 import logging
 import re
-from typing import Dict, Iterator, Mapping, Optional, Sequence
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence
 
 from ..models import DependencyMetadata
 from ..parsers.python import runtime_requirement_names
 from ..release_dates import (
+    RepositoryResolution,
     apply_registry_release_date,
     newest_timestamp,
     record_source_repository,
+    resolve_repository,
 )
 from ..signals import FieldSource, ProvenancedField
 from ..transitive.analyzer_enhanced import record_transitive_source
-from ..utils import canonical_repository_url, fetch_json
+from ..utils import fetch_json
 from .base import BaseAnalyzer
 from .common import collect_repository_signals
 
@@ -151,15 +153,13 @@ class PythonAnalyzer(BaseAnalyzer):
                 dep.name,
             )
 
-        repository_url = self._repository_url(info_map)
-        if repository_url:
-            dep.repository_url = repository_url
         # Recorded off the registry answer, not off dep.repository_url: the
         # requirements parser pre-fills that with the package's pypi.org
         # project page, which is a landing page, not a source repository.
-        record_source_repository(
-            dep, repository_url, declared=self._declared_source(info_map)
-        )
+        resolution = self._resolve_repository(info_map)
+        if resolution.url:
+            dep.repository_url = resolution.url
+        record_source_repository(dep, resolution)
 
         # PyPI dates every uploaded file. The newest upload across all releases
         # is when the project last shipped anything — for `distribute` that is
@@ -211,80 +211,57 @@ class PythonAnalyzer(BaseAnalyzer):
         return any(term in lowered for term in _SUMMARY_DEPRECATION_TERMS)
 
     @staticmethod
-    def _declared_source(info_map: Mapping[str, object]) -> Optional[str]:
-        """Return the raw project URL labelled as source, or None when none is.
-
-        A declaration is a value under a label that names source — ``Source``,
-        ``Repository``, ``Code``. ``Homepage`` and ``home_page`` are resolution
-        fallbacks rather than declarations, so a package whose only link is a
-        dead docs site still reads as declaring no source, which is what it did
-        (#176).
-
-        Args:
-            info_map: The payload's ``info`` object.
-
-        Returns:
-            The declared source URL as published, or None.
-        """
-        project_urls = info_map.get("project_urls")
-        urls: Mapping[str, object] = (
-            project_urls if isinstance(project_urls, Mapping) else {}
-        )
-        for wanted in _SOURCE_URL_KEYS:
-            for key, value in urls.items():
-                if not isinstance(key, str) or wanted not in key.lower():
-                    continue
-                declared = _string_or_none(value)
-                if declared:
-                    return declared
-        return None
-
-    @staticmethod
-    def _repository_url(info_map: Mapping[str, object]) -> Optional[str]:
-        """Return the package's repository root, or None when it declares none.
+    def _resolve_repository(info_map: Mapping[str, object]) -> RepositoryResolution:
+        """Return PyPI's one answer about where this package's source lives.
 
         ``project_urls`` is where PyPI records the source repository, and the
         keys are free text, so candidates are tried most-explicit-first:
-        ``Source`` before ``Code``, and any hosted URL trimmed to its
-        ``owner/repo`` root. ``home_page`` is a genuine last resort — it is
-        ``None`` on every modern package, PyPI having superseded it with
-        ``project_urls`` — and it is consulted only after every project URL has
-        failed, so a documentation homepage can never stand in for a missing
-        ``Source`` entry.
+        ``Source`` before ``Code``. Those are the *declarations*.
+
+        Every other project URL, plus the legacy ``home_page``, is a fallback:
+        plenty of packages publish the repository under a plain ``Homepage``
+        label, and a hosted repository URL is still one. The labels that
+        routinely point at a hosted *non*-repository are excluded
+        (``https://github.com/sponsors/<user>`` would otherwise canonicalize to
+        a "sponsors/<user>" repo that does not exist).
+
+        This one sweep replaces the two that used to disagree. The declaration
+        sweep read only ``_SOURCE_URL_KEYS`` while the resolver read every key,
+        so ``python3-openid`` — whose only labels are ``Download`` and
+        ``Homepage``, both naming its GitHub repository — resolved to nothing
+        and was recorded as declaring no source at all (#281).
 
         Args:
             info_map: The payload's ``info`` object.
 
         Returns:
-            An ``https://host/owner/repo`` URL, or None.
+            The resolution PyPI's metadata supports.
         """
         project_urls = info_map.get("project_urls")
         urls: Mapping[str, object] = (
             project_urls if isinstance(project_urls, Mapping) else {}
         )
 
+        declarations: List[Optional[str]] = []
+        claimed: List[str] = []
         for wanted in _SOURCE_URL_KEYS:
             for key, value in urls.items():
                 if not isinstance(key, str) or wanted not in key.lower():
                     continue
-                canonical = canonical_repository_url(_string_or_none(value))
-                if canonical:
-                    return canonical
+                if key in claimed:
+                    continue
+                claimed.append(key)
+                declarations.append(_string_or_none(value))
 
-        # Plenty of packages publish the repository under a label that names
-        # none of the above — most often plain "Homepage" pointing at GitHub. A
-        # hosted repo URL is still one, so any remaining project URL counts,
-        # except the labels that routinely point at a hosted *non*-repository
-        # (``https://github.com/sponsors/<user>`` would otherwise canonicalize
-        # to the "sponsors/<user>" repo, which does not exist).
-        for key, value in urls.items():
-            if isinstance(key, str) and _is_non_source_label(key):
-                continue
-            canonical = canonical_repository_url(_string_or_none(value))
-            if canonical:
-                return canonical
+        fallbacks: List[Optional[str]] = [
+            _string_or_none(value)
+            for key, value in urls.items()
+            if not (isinstance(key, str) and (_is_non_source_label(key)))
+            and key not in claimed
+        ]
+        fallbacks.append(_string_or_none(info_map.get("home_page")))
 
-        return canonical_repository_url(_string_or_none(info_map.get("home_page")))
+        return resolve_repository(declarations, fallbacks)
 
     def _get_pypi_package_info(self, package_name: str) -> Optional[dict]:
         """Get package information from PyPI.

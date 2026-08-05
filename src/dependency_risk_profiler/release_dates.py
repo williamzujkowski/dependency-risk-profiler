@@ -22,12 +22,13 @@ defaulted to a date nobody published.
 """
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterable, List, Optional
+from typing import Callable, Iterable, List, Optional, Sequence
 
 from .models import DependencyMetadata
 from .signals import FieldSource, ProvenancedField, SourceRepositoryState
-from .utils import canonical_repository_url
+from .utils import canonical_repository_url, is_cloneable_repo_url
 
 logger = logging.getLogger(__name__)
 
@@ -161,11 +162,104 @@ def apply_repository_activity_date(
     dependency.record_field_source(ProvenancedField.LAST_UPDATED, source)
 
 
+@dataclass(frozen=True)
+class RepositoryResolution:
+    """One sweep's answer about where a package's source lives.
+
+    Both halves come out of one traversal of one candidate list, and that is
+    the entire point of the type. They used to be produced by two sweeps over
+    two key-sets: the resolver read every project URL, the declaration read a
+    short list of source-ish labels, and a URL only the wider sweep could see
+    therefore resolved to nothing *and* recorded "declares no source
+    repository". ``python3-openid`` publishes its GitHub repository twice, and
+    the tool asserted it published none (#281). A resolution failure laundered
+    into a metadata assertion is a second defect on top of the failure, and it
+    is unreachable once there is only one sweep to disagree with itself.
+
+    Attributes:
+        url: The canonical ``https://host/owner/repo`` root, when a candidate
+            resolved to one. None means no candidate did.
+        declared: Raw text of the candidate that stands as the package's
+            statement about its source, exactly as the registry published it.
+            None means the registry answered and named no source at all —
+            which, given ``url`` is also None, is the only way UNDECLARED can
+            now be reached.
+    """
+
+    url: Optional[str]
+    declared: Optional[str]
+
+
+def _as_published(candidate: Optional[str]) -> Optional[str]:
+    """Return a candidate unchanged; the default ``prepare`` for a sweep."""
+    return candidate
+
+
+def resolve_repository(
+    declarations: Sequence[Optional[str]],
+    fallbacks: Sequence[Optional[str]] = (),
+    *,
+    prepare: Callable[[Optional[str]], Optional[str]] = _as_published,
+) -> RepositoryResolution:
+    """Resolve a package's source repository from one ordered candidate list.
+
+    Every ecosystem hands this the same two things in its own registry's
+    vocabulary:
+
+    * ``declarations`` — the fields the registry *designates* for the source
+      repository, most authoritative first: PyPI's source-labelled
+      ``project_urls``, npm's ``repository``, RubyGems' ``source_code_uri``,
+      Cargo's ``repository``, Packagist's ``source.url``, a nuspec's
+      ``<repository>``, a POM's ``<scm>``. Whatever one of these carries is a
+      statement about source, even when it is unusable.
+    * ``fallbacks`` — fields that frequently *contain* a repository without
+      being a declaration of one: ``home_page``, ``homepage``, ``projectUrl``,
+      a POM's ``<url>``. Plenty of packages publish their repository only
+      here, so they are resolved from; a docs site under one of these labels
+      is still not a declaration of source, which is what #176 settled and
+      what hpricot's dead ``code.whytheluckystiff.net`` homepage depends on.
+
+    Traversal order is declarations first, then fallbacks, and it is the same
+    order for both answers this returns — there is no second key-set to drift.
+
+    A fallback earns the middle state only when it names a host this tool
+    clones from and still yields no ``owner/repo`` pair
+    (``https://github.com/rails``). That is a URL we recognised as a repository
+    reference and could not use, which is a resolution failure and must not
+    read as an absent declaration. A fallback on a host we cannot clone stays
+    UNDECLARED, because "this might be a forge we have never heard of" is a
+    guess, and guessing is what this repository does not do.
+
+    Args:
+        declarations: Designated source fields, most authoritative first. May
+            contain None and empty entries; both mean "absent".
+        fallbacks: Fields consulted only after every declaration has failed.
+        prepare: Applied to each candidate before it is canonicalized, for
+            registries whose designated field is not a URL. Maven's ``<scm>``
+            is the one caller: ``scm:git:https://...`` has to lose its prefix
+            before it parses, while ``declared`` must still carry the raw text
+            so a ``<scm>`` naming Subversion stays UNUSABLE rather than
+            becoming UNDECLARED.
+
+    Returns:
+        The single resolution for this package.
+    """
+    for candidate in (*declarations, *fallbacks):
+        url = canonical_repository_url(prepare(candidate))
+        if url:
+            return RepositoryResolution(url=url, declared=candidate)
+    for candidate in declarations:
+        if candidate and candidate.strip():
+            return RepositoryResolution(url=None, declared=candidate)
+    for candidate in fallbacks:
+        if candidate and is_cloneable_repo_url(prepare(candidate)):
+            return RepositoryResolution(url=None, declared=candidate)
+    return RepositoryResolution(url=None, declared=None)
+
+
 def record_source_repository(
     dependency: DependencyMetadata,
-    repository_url: Optional[str],
-    *,
-    declared: Optional[str],
+    resolution: RepositoryResolution,
 ) -> None:
     """Record what the registry said about the package's source repository.
 
@@ -174,35 +268,31 @@ def record_source_repository(
     and #164 moved measurement states out of the untyped bag so a typo cannot
     read as a different answer and mypy can see the field at all.
 
-    Three states, and the caller has to supply the evidence for the middle one,
-    which is why ``declared`` is keyword-only and has no default: the difference
-    between "declared nothing" and "declared something unusable" is only visible
-    in the registry's own source field, before canonicalization throws it away.
+    Three states, and the evidence for all three arrives as one frozen
+    :class:`RepositoryResolution` rather than as two independently-computed
+    arguments. That is #290's half of the fix: the caller can no longer hand
+    over a resolved URL and a declaration that came from a *narrower* sweep,
+    because there is only one sweep and it produced both.
 
-    * ``repository_url`` canonicalizes to an ``owner/repo`` root on a supported
-      host -> DECLARED. The repository-derived signals can be measured.
-    * it does not, but the registry's source field carried *something* ->
-      UNUSABLE. A Subversion connection string, a decommissioned vanity host, a
-      URL that does not parse. The package told us where its source lived and
-      the answer is no longer reachable.
+    * a candidate canonicalized to an ``owner/repo`` root on a supported host
+      -> DECLARED. The repository-derived signals can be measured.
+    * none did, but a candidate stood as a statement about source -> UNUSABLE.
+      A Subversion connection string, a decommissioned vanity host, a URL that
+      does not parse, a forge URL with no repository in it. The package told us
+      where its source lived and the answer is not usable.
     * neither -> UNDECLARED. The registry answered and names no source at all.
-
-    ``declared`` must come from the field the registry designates for the source
-    repository — Maven's ``<scm>``, npm's ``repository``, a nuspec's
-    ``<repository>``. A project homepage or a docs site is not a declaration of
-    source, so a homepage that fails to canonicalize leaves the state
-    UNDECLARED rather than promoting a landing page to a broken repository.
 
     Call this only when the registry actually answered. A failed lookup leaves
     the state None, which is the unmeasured state (#182).
 
     Args:
         dependency: Dependency metadata to update in place.
-        repository_url: Repository URL resolved from the registry answer, if any.
-        declared: Raw text of the registry's own source-repository field, or
-            None when that field is absent or empty.
+        resolution: What this ecosystem's one sweep found, from
+            :func:`resolve_repository` or built directly by an ecosystem with a
+            single candidate field.
     """
-    if canonical_repository_url(repository_url) is not None:
+    declared = resolution.declared
+    if canonical_repository_url(resolution.url) is not None:
         state = SourceRepositoryState.DECLARED
     elif declared is not None and declared.strip():
         state = SourceRepositoryState.UNUSABLE
