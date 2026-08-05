@@ -6,6 +6,12 @@ import re
 from pathlib import Path
 from typing import List, Optional, Set, Tuple, TypedDict
 
+from ..forge_paths import (
+    DEPENDABOT_CONFIG_PATHS,
+    RENOVATE_CONFIG_PATHS,
+    WORKFLOW_GLOB,
+    existing_workflow_dirs,
+)
 from ..models import DependencyMetadata, SecurityMetrics
 from ..signals import UnmeasuredReason
 from .unmeasured import no_repository_issue, read_failed_issue
@@ -82,16 +88,12 @@ def check_dependabot_configuration(repo_dir: str) -> DependabotConfiguration:
     try:
         repo_path = Path(repo_dir)
 
-        # Common Dependabot configuration file locations
-        dependabot_file_paths = [
-            ".github/dependabot.yml",
-            ".github/dependabot.yaml",
-            ".dependabot/config.yml",
-            ".dependabot/config.yaml",
-        ]
-
-        # Check if any Dependabot file exists
-        for path in dependabot_file_paths:
+        # Dependabot's configuration locations. Deliberately GitHub-shaped:
+        # Dependabot is a GitHub service, not a directory convention, so on
+        # Forgejo, Gitea or GitLab there is nowhere else it could be and its
+        # absence is a real absence of that tooling, not an unmeasured signal
+        # (#291). Renovate, below, is the one that generalises.
+        for path in DEPENDABOT_CONFIG_PATHS:
             file_path = repo_path.joinpath(path)
             if file_path.exists():
                 result["has_dependabot"] = True
@@ -190,18 +192,12 @@ def check_renovate_configuration(repo_dir: str) -> RenovateConfiguration:
     try:
         repo_path = Path(repo_dir)
 
-        # Common Renovate configuration file locations
-        renovate_file_paths = [
-            "renovate.json",
-            ".github/renovate.json",
-            "renovate.json5",
-            ".github/renovate.json5",
-            ".renovaterc.json",
-            ".renovaterc",
-        ]
-
-        # Check if any Renovate file exists
-        for path in renovate_file_paths:
+        # Renovate's configuration locations, in Renovate's own documented
+        # search order. Renovate runs against GitHub, GitLab, Gitea and
+        # Forgejo, so this one genuinely generalises — and the previous list
+        # missed ``.gitlab/renovate.json`` and every ``.jsonc`` spelling, which
+        # read as a repository with no update tooling at all (#291).
+        for path in RENOVATE_CONFIG_PATHS:
             file_path = repo_path.joinpath(path)
             if file_path.exists():
                 result["has_renovate"] = True
@@ -310,9 +306,11 @@ def check_github_actions_dependency_updates(
 
     try:
         repo_path = Path(repo_dir)
-        workflow_dir = repo_path / ".github" / "workflows"
+        # Gitea Actions and Forgejo Actions read the same workflow format from
+        # their own directories, so all of them are searched (#291).
+        workflow_dirs = existing_workflow_dirs(repo_path)
 
-        if not workflow_dir.exists() or not workflow_dir.is_dir():
+        if not workflow_dirs:
             return result
 
         # Known GitHub Actions that update dependencies
@@ -328,19 +326,23 @@ def check_github_actions_dependency_updates(
         update_workflows = []
 
         # Search workflow files for dependency update actions
-        for workflow_file in workflow_dir.glob("*.y*ml"):
-            try:
-                with open(workflow_file, "r", encoding="utf-8") as f:
-                    content = f.read().lower()
+        for workflow_dir in workflow_dirs:
+            for workflow_file in sorted(workflow_dir.glob(WORKFLOW_GLOB)):
+                try:
+                    with open(workflow_file, "r", encoding="utf-8") as f:
+                        content = f.read().lower()
 
-                    if any(
-                        re.search(pattern, content)
-                        for pattern in update_action_patterns
-                    ):
-                        update_workflows.append(workflow_file.name)
-            except Exception as e:
-                logger.error(f"Error reading workflow file {workflow_file}: {e}")
-                raise
+                        if any(
+                            re.search(pattern, content)
+                            for pattern in update_action_patterns
+                        ):
+                            update_workflows.append(
+                                f"{workflow_dir.parent.name}/{workflow_dir.name}/"
+                                f"{workflow_file.name}"
+                            )
+                except Exception as e:
+                    logger.error(f"Error reading workflow file {workflow_file}: {e}")
+                    raise
 
         if update_workflows:
             result["has_update_actions"] = True

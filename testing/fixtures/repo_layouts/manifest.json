@@ -1,0 +1,18 @@
+{
+  "layout_schema": 1,
+  "allowed_hosts": [
+    "codeberg.org",
+    "gitlab.com",
+    "github.com"
+  ],
+  "layouts": {
+    "codeberg-django-allauth": {
+      "url": "https://codeberg.org/allauth/django-allauth.git",
+      "why": "Forgejo-native. Ships .gitea/pull_request_template.md and .gitea/ISSUE_TEMPLATE/ beside a .github/ kept for the GitHub mirror, and runs Woodpecker rather than Actions. Deleting .github/ from this tree is the reduction #291 was demonstrated on."
+    },
+    "gitlab-runner": {
+      "url": "https://gitlab.com/gitlab-org/gitlab-runner.git",
+      "why": "GitLab-native, with no .github/ at all. Carries .gitlab/CODEOWNERS, .gitlab/issue_templates/ and .gitlab/merge_request_templates/ — GitLab's spellings differ from every other forge's, so this is the layout that proves the path table is a table and not a prefix substitution. It ships no security policy, which makes it the captured proof that a real absence still reads as a measured absence."
+    }
+  }
+}

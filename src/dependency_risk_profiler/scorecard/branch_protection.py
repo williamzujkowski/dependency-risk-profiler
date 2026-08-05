@@ -6,6 +6,17 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
+from ..forge_paths import (
+    CODEOWNERS_PATHS,
+    CODEQL_WORKFLOW_PATHS,
+    GITHUB_APP_SETTINGS_PATHS,
+    PULL_REQUEST_TEMPLATE_PATHS,
+    WORKFLOW_GLOB,
+    any_exists,
+    existing_workflow_dirs,
+    first_existing,
+    locations_phrase,
+)
 from ..models import DependencyMetadata, SecurityMetrics
 from .unmeasured import no_repository_issue, read_failed_issue
 
@@ -60,9 +71,12 @@ def check_github_branch_protection_config(repo_dir: str) -> GitHubBranchProtecti
     try:
         repo_path = Path(repo_dir)
 
-        # Check for GitHub settings.yml that configures branch protection
-        settings_file = repo_path / ".github" / "settings.yml"
-        if settings_file.exists():
+        # Check for the Probot Settings app's settings.yml, which configures
+        # branch protection in-tree. Deliberately not widened past GitHub: no
+        # other forge has an in-tree branch-protection convention to widen to
+        # (see ``forge_paths.GITHUB_APP_SETTINGS_PATHS``).
+        settings_file = first_existing(repo_path, GITHUB_APP_SETTINGS_PATHS)
+        if settings_file is not None:
             with open(settings_file, "r", encoding="utf-8") as f:
                 content = f.read().lower()
 
@@ -99,14 +113,16 @@ def check_github_branch_protection_config(repo_dir: str) -> GitHubBranchProtecti
 
                     result["protection_details"] = protection_details
 
-        # Check for GitHub Actions workflow that enforces branch protection
-        workflow_dir = repo_path / ".github" / "workflows"
-        if (
-            workflow_dir.exists()
-            and workflow_dir.is_dir()
-            and not result["has_branch_protection"]
-        ):
-            for workflow_file in workflow_dir.glob("*.y*ml"):
+        # Check for an Actions-compatible workflow that enforces branch
+        # protection. Gitea Actions and Forgejo Actions read the same workflow
+        # format from their own directories, so all three are consulted (#291).
+        workflow_dirs = (
+            [] if result["has_branch_protection"] else existing_workflow_dirs(repo_path)
+        )
+        for workflow_dir in workflow_dirs:
+            if result["has_branch_protection"]:
+                break
+            for workflow_file in workflow_dir.glob(WORKFLOW_GLOB):
                 try:
                     with open(workflow_file, "r", encoding="utf-8") as f:
                         content = f.read().lower()
@@ -117,7 +133,9 @@ def check_github_branch_protection_config(repo_dir: str) -> GitHubBranchProtecti
                         ) and not re.search(r"check.*branch", content):
                             result["has_branch_protection"] = True
                             result["protection_type"] = (
-                                f"GitHub Actions: {workflow_file.name}"
+                                "Actions workflow: "
+                                f"{workflow_dir.parent.name}/{workflow_dir.name}/"
+                                f"{workflow_file.name}"
                             )
                             break
                 except Exception as e:
@@ -158,28 +176,12 @@ def check_common_branch_protection_indicators(
     try:
         repo_path = Path(repo_dir)
 
-        # Check for CODEOWNERS file
-        codeowners_paths = [
-            "CODEOWNERS",
-            ".github/CODEOWNERS",
-            "docs/CODEOWNERS",
-        ]
+        # Check for CODEOWNERS. GitHub, GitLab and Gitea each read the root and
+        # ``docs/`` plus their own folder, so all of them are consulted (#291).
+        result["has_code_owners"] = any_exists(repo_path, CODEOWNERS_PATHS)
 
-        for path in codeowners_paths:
-            if repo_path.joinpath(path).exists():
-                result["has_code_owners"] = True
-                break
-
-        # Check for CodeQL
-        codeql_paths = [
-            ".github/workflows/codeql-analysis.yml",
-            ".github/workflows/codeql.yml",
-        ]
-
-        for path in codeql_paths:
-            if repo_path.joinpath(path).exists():
-                result["has_codeql"] = True
-                break
+        # Check for CodeQL, under every Actions-compatible workflow directory.
+        result["has_codeql"] = any_exists(repo_path, CODEQL_WORKFLOW_PATHS)
 
         # Try to detect protected branches from git config
         try:
@@ -237,19 +239,15 @@ def check_pull_request_patterns(repo_dir: str) -> PullRequestPatterns:
     try:
         repo_path = Path(repo_dir)
 
-        # Check for pull request template files
-        pr_template_paths = [
-            ".github/PULL_REQUEST_TEMPLATE.md",
-            ".github/pull_request_template.md",
-            "docs/pull_request_template.md",
-            ".github/PULL_REQUEST_TEMPLATE/",
-        ]
-
-        for path in pr_template_paths:
-            if repo_path.joinpath(path).exists():
-                result["has_pull_request_template"] = True
-                result["uses_pull_requests"] = True
-                break
+        # Check for a pull request template, in every convention that has one:
+        # GitHub's, Gitea's and Forgejo's identically-named file, and GitLab's
+        # differently-named merge-request template directory (#291). Before
+        # this, a Forgejo-native repository shipping
+        # ``.gitea/pull_request_template.md`` reported ``False`` for both of
+        # these, which the scorer counted as evidence it uses neither.
+        if any_exists(repo_path, PULL_REQUEST_TEMPLATE_PATHS):
+            result["has_pull_request_template"] = True
+            result["uses_pull_requests"] = True
 
     except Exception as e:
         logger.error(f"Error checking pull request patterns: {e}")
@@ -339,16 +337,23 @@ def identify_branch_protection_issues(
         if "Disallows force pushes" not in protection_details:
             issues.append("Branch protection does not prevent force pushes")
 
-    # Check for other protection indicators
+    # Check for other protection indicators. A negative finding names the
+    # places that were consulted, so it is attributable rather than an implied
+    # claim about ``.github/`` alone (#291).
     if not protection_indicators["has_code_owners"]:
-        issues.append("No CODEOWNERS file found")
+        issues.append(
+            f"No CODEOWNERS file found in {locations_phrase(CODEOWNERS_PATHS)}"
+        )
 
     if not protection_indicators["has_protected_branches"]:
         issues.append("No protected branches detected")
 
     # Check for pull request patterns
     if not pr_patterns["has_pull_request_template"]:
-        issues.append("No pull request template found")
+        issues.append(
+            "No pull request template found in "
+            f"{locations_phrase(PULL_REQUEST_TEMPLATE_PATHS)}"
+        )
 
     return issues
 

@@ -5,6 +5,14 @@ import re
 from pathlib import Path
 from typing import List, Optional, Tuple, TypedDict
 
+from ..forge_paths import (
+    SECURITY_POLICY_PATHS,
+    SECURITY_TOOL_CONFIG_PATHS,
+    WORKFLOW_GLOB,
+    existing_workflow_dirs,
+    first_existing,
+    locations_phrase,
+)
 from ..models import DependencyMetadata, SecurityMetrics
 from .unmeasured import no_repository_issue, read_failed_issue
 
@@ -71,36 +79,13 @@ def check_security_file_existence(repo_dir: str) -> SecurityFileExistence:
     try:
         repo_path = Path(repo_dir)
 
-        # Common security policy file locations
-        security_file_paths = [
-            "SECURITY.md",
-            ".github/SECURITY.md",
-            "docs/SECURITY.md",
-            "security.md",
-            ".github/security.md",
-            "docs/security.md",
-            "SECURITY.txt",
-            ".github/SECURITY.txt",
-            "docs/SECURITY.txt",
-            "security.txt",
-            ".github/security.txt",
-            "docs/security.txt",
-            "security/README.md",
-        ]
-
-        # Check if any security file exists
-        has_security_file = any(
-            repo_path.joinpath(path).exists() for path in security_file_paths
-        )
-        result["has_security_file"] = has_security_file
-
-        # Find the actual file if it exists
-        if has_security_file:
-            for path in security_file_paths:
-                file_path = repo_path.joinpath(path)
-                if file_path.exists():
-                    result["security_file_path"] = str(file_path)
-                    break
+        # Where a security policy lives, across every forge convention rather
+        # than GitHub's alone (#291). One lookup answers both questions: the
+        # first hit is the file, and no hit is a measured absence.
+        security_file = first_existing(repo_path, SECURITY_POLICY_PATHS)
+        result["has_security_file"] = security_file is not None
+        if security_file is not None:
+            result["security_file_path"] = str(security_file)
 
     except Exception as e:
         logger.error(f"Error checking security file existence: {e}")
@@ -242,11 +227,14 @@ def check_other_security_indicators(repo_dir: str) -> OtherSecurityIndicators:
     try:
         repo_path = Path(repo_dir)
 
-        # Check for security workflows (GitHub Actions, etc.)
-        github_workflow_dir = repo_path / ".github" / "workflows"
-        if github_workflow_dir.exists() and github_workflow_dir.is_dir():
-            security_workflows = []
-            for workflow_file in github_workflow_dir.glob("*.yml"):
+        # Check for security workflows. Gitea Actions and Forgejo Actions read
+        # the same workflow format from their own directories, so every
+        # existing one is searched rather than ``.github/`` alone (#291). The
+        # glob also widens from ``*.yml`` to ``*.y*ml``: a repository whose
+        # workflows are named ``.yaml`` was reporting no security workflows.
+        security_workflows = []
+        for workflow_dir in existing_workflow_dirs(repo_path):
+            for workflow_file in sorted(workflow_dir.glob(WORKFLOW_GLOB)):
                 with open(workflow_file, "r", encoding="utf-8") as f:
                     content = f.read().lower()
                     if any(
@@ -260,29 +248,21 @@ def check_other_security_indicators(repo_dir: str) -> OtherSecurityIndicators:
                             "dependabot",
                         ]
                     ):
-                        security_workflows.append(workflow_file.name)
+                        security_workflows.append(
+                            f"{workflow_dir.parent.name}/{workflow_dir.name}/"
+                            f"{workflow_file.name}"
+                        )
 
-            result["has_security_workflows"] = len(security_workflows) > 0
-            if security_workflows:
-                result["security_workflow_count"] = len(security_workflows)
-                result["security_workflows"] = security_workflows
-        else:
-            result["has_security_workflows"] = False
+        result["has_security_workflows"] = len(security_workflows) > 0
+        if security_workflows:
+            result["security_workflow_count"] = len(security_workflows)
+            result["security_workflows"] = security_workflows
 
-        # Check for security tools configuration files
-        security_tool_configs = [
-            ".snyk",
-            ".dependabot/config.yml",
-            ".github/dependabot.yml",
-            ".github/dependabot.yaml",
-            "codecov.yml",
-            ".codeclimate.yml",
-            ".coveralls.yml",
-            ".sonarcloud.properties",
-        ]
-
+        # Check for security tools configuration files. Dependabot stays
+        # GitHub-shaped on purpose: it is a service, not a directory layout,
+        # and its absence on another forge is a real absence of that tooling.
         security_tools = []
-        for config in security_tool_configs:
+        for config in SECURITY_TOOL_CONFIG_PATHS:
             if repo_path.joinpath(config).exists():
                 security_tools.append(config)
 
@@ -374,7 +354,10 @@ def identify_security_policy_issues(
     issues = []
 
     if not file_existence.get("has_security_file", False):
-        issues.append("No security policy file found")
+        issues.append(
+            "No security policy file found in "
+            f"{locations_phrase(SECURITY_POLICY_PATHS)}"
+        )
         return issues
 
     if file_content:
@@ -450,7 +433,10 @@ def check_security_policy(
                 # initial value.
                 has_security_policy = False
                 security_policy_score = 0.0
-                issues.append("No security policy file found")
+                issues.append(
+                    "No security policy file found in "
+                    f"{locations_phrase(SECURITY_POLICY_PATHS)}"
+                )
 
             # Log results
             policy_status = "Found" if has_security_policy else "Not found"

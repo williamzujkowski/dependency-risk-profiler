@@ -6,6 +6,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, TypedDict
 
+from ..forge_paths import (
+    CODEOWNERS_PATHS,
+    ISSUE_TEMPLATE_PATHS,
+    MAINTAINERS_PATHS,
+    any_exists,
+)
 from ..models import DependencyMetadata
 from .unmeasured import no_repository_issue, read_failed_issue
 
@@ -355,42 +361,18 @@ def analyze_issue_activity(repo_path: str) -> IssueActivity:
     try:
         repo_path_obj = Path(repo_path)
 
-        # Check for GitHub issue templates (a sign of maintained projects)
-        issue_template_paths = [
-            ".github/ISSUE_TEMPLATE",
-            ".gitlab/issue_templates",
-            "docs/issue-templates",
-        ]
-
-        has_issue_templates = any(
-            repo_path_obj.joinpath(path).exists() for path in issue_template_paths
-        )
-        result["has_issue_templates"] = has_issue_templates
+        # Issue templates, across every forge that has the concept (#291).
+        # This check already knew half the answer — it read ``.gitlab`` beside
+        # ``.github`` — and the missing half was Gitea's and Forgejo's, which
+        # is what made the Codeberg ``django-allauth`` clone report ``False``
+        # while ``.gitea/ISSUE_TEMPLATE/`` sat in the tree.
+        result["has_issue_templates"] = any_exists(repo_path_obj, ISSUE_TEMPLATE_PATHS)
 
         # Look for CODEOWNERS file (indicates active maintainership)
-        codeowners_paths = [
-            "CODEOWNERS",
-            ".github/CODEOWNERS",
-            "docs/CODEOWNERS",
-        ]
-
-        has_codeowners = any(
-            repo_path_obj.joinpath(path).exists() for path in codeowners_paths
-        )
-        result["has_codeowners"] = has_codeowners
+        result["has_codeowners"] = any_exists(repo_path_obj, CODEOWNERS_PATHS)
 
         # Look for active maintainership indicators
-        maintainership_files = [
-            "MAINTAINERS",
-            "OWNERS",
-            ".github/MAINTAINERS.md",
-            "docs/MAINTAINERS.md",
-        ]
-
-        has_maintainership = any(
-            repo_path_obj.joinpath(path).exists() for path in maintainership_files
-        )
-        result["has_maintainership_info"] = has_maintainership
+        result["has_maintainership_info"] = any_exists(repo_path_obj, MAINTAINERS_PATHS)
 
     except Exception as e:
         logger.error(f"Error analyzing issue activity: {e}")

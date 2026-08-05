@@ -55,6 +55,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependency is kept: whether it applies to the machine running the scan is a
   different question, and the tool reads a manifest, not an interpreter.
 
+- **A repository that keeps its metadata where its own forge looks for it read
+  as a repository that has none.** The `scorecard/` checks and
+  `utils.check_health_indicators` searched GitHub-shaped paths — `.github/`,
+  and only `.github/`, for pull request templates, issue templates, CODEOWNERS,
+  security policies, workflows and CI. On a Forgejo-, Gitea- or GitLab-native
+  layout the file is there and the check said `False`, which the scorer counts
+  as evidence against the project. This is the #218 defect one layer out: #218
+  made a read that *raised* unmeasured, and a read that succeeds against the
+  wrong path stayed a confident negative finding.
+
+  Measured, not reasoned about. Taking the real Codeberg clone of
+  `allauth/django-allauth`, which ships `.gitea/pull_request_template.md` and
+  `.gitea/ISSUE_TEMPLATE/` beside a `.github/` kept for its GitHub mirror, and
+  deleting `.github/`:
+
+  | signal | before | after | truth |
+  |---|---|---|---|
+  | `has_pull_request_template` | False | **True** | `.gitea/pull_request_template.md` |
+  | `uses_pull_requests` | False | **True** | it does |
+  | `has_issue_templates` | False | **True** | `.gitea/ISSUE_TEMPLATE/` |
+  | `has_ci` | False | **True** | `.woodpecker.yaml`, in the root, all along |
+  | `has_security_file` | False | False | genuinely absent outside `.github/` |
+  | `has_dependabot` | False | False | Forgejo does not run Dependabot |
+
+  And on the real `gitlab-org/gitlab-runner`, which has no `.github/` at all:
+  `has_pull_request_template` False → True (`.gitlab/merge_request_templates/`),
+  `has_codeowners` False → True (`.gitlab/CODEOWNERS`), `has_renovate` False →
+  True (`.gitlab/renovate.json`), and `branch_protection` False → True end to
+  end. Its `has_security_file` stays False, because it ships no security policy.
+
+  Every path now lives in one table, `forge_paths.py`, taken from each forge's
+  own documentation, and every check consults the whole table. The negative
+  findings say where they looked, so a `False` is attributable to somewhere
+  rather than implying `.github/` and not saying so.
+
+  **Nothing became an unknown.** Widening a path set only ever turns `False`
+  into `True`, and only when a file exists on disk. Two path sets were
+  deliberately left GitHub-shaped, because generalising them would have been
+  inventing a convention: Dependabot is a service rather than a directory
+  layout, so its absence on Forgejo is a real absence of update tooling, and
+  `.github/settings.yml` belongs to a GitHub App with no in-tree equivalent
+  anywhere else. Both are asserted to stay `False`, against tests that would
+  pass if they went quiet.
+
+  This lands independently of any forge adapter — seven of the eight
+  repository-derived signals come off a shallow clone with no API — so it
+  applies today to GitLab and Bitbucket, which this tool already clones, and to
+  repositories on GitHub that simply keep their templates somewhere else.
+
 - **The report could not name the dependencies it was describing.** The
   dependency column was the constant 12 cells, so every ecosystem with
   namespaced names rendered only the part they have in common. On gin's

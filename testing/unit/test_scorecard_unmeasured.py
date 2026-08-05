@@ -113,7 +113,12 @@ def test_unreadable_security_policy_is_unmeasured(git_repo: Path) -> None:
     assert verdict is None
     assert score is None
     assert any(FAILED in issue for issue in issues), issues
-    assert not any("No security policy file found" == issue for issue in issues), issues
+    # ``startswith`` rather than equality: #291 appended the locations that
+    # were consulted to this line, and an equality check would then pass
+    # because the string changed rather than because the read is unmeasured.
+    assert not any(
+        issue.startswith("No security policy file found") for issue in issues
+    ), issues
 
 
 def test_unreadable_dependabot_config_is_unmeasured(git_repo: Path) -> None:
