@@ -687,7 +687,9 @@ def report_staleness(manifest: Dict[str, object]) -> int:
     Returns:
         Process exit code: 1 when any fixture is past the failure threshold.
     """
-    today = dt.date.today()
+    # Provenance is recorded in UTC a few lines above; age it on the same
+    # clock rather than on the operator's.
+    today = dt.datetime.now(dt.timezone.utc).date()
     worst = 0
     for ecosystem, entry in sorted(manifest["ecosystems"].items()):
         for name in sorted(entry["fixtures"]):

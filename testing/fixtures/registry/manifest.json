@@ -336,6 +336,30 @@
         }
       }
     },
+    "python-manifests": {
+      "fixtures": {
+        "celery.default.txt": {
+          "url": "https://raw.githubusercontent.com/celery/celery/v5.5.3/requirements/default.txt",
+          "reducer": "none",
+          "format": "text"
+        },
+        "httpx.requirements.txt": {
+          "url": "https://raw.githubusercontent.com/encode/httpx/0.28.1/requirements.txt",
+          "reducer": "none",
+          "format": "text"
+        },
+        "django.pyproject.toml": {
+          "url": "https://raw.githubusercontent.com/django/django/5.2/pyproject.toml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "warehouse.dev.txt": {
+          "url": "https://raw.githubusercontent.com/pypi/warehouse/17b82bac0e265b699e36f3af97a40186433ceb67/requirements/dev.txt",
+          "reducer": "none",
+          "format": "text"
+        }
+      }
+    },
     "rubygems": {
       "fixtures": {
         "tzinfo": {

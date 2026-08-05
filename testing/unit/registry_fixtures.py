@@ -61,7 +61,7 @@ signal this whole harness exists to surface; do not squash it.
 import json
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import (
     Callable,
@@ -78,6 +78,20 @@ from typing import (
 from warnings import warn
 
 FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "registry"
+
+
+def utc_today() -> date:
+    """Return today's date in UTC, the clock the provenance block is written on.
+
+    Args:
+        None.
+
+    Returns:
+        The current UTC date.
+    """
+    return datetime.now(timezone.utc).date()
+
+
 MANIFEST_PATH = FIXTURE_ROOT / "manifest.json"
 
 
@@ -168,13 +182,18 @@ class RegistryFixture:
     def age_days(self, today: Optional[date] = None) -> int:
         """Return how many days old the capture is.
 
+        ``captured_at`` is written in UTC by the capture script, so the default
+        reference is UTC too. Comparing a UTC date against a local one is two
+        clocks in one subtraction, and west of Greenwich it makes a fixture
+        captured this evening look like it was captured tomorrow.
+
         Args:
-            today: Reference date; defaults to the current date.
+            today: Reference date; defaults to the current UTC date.
 
         Returns:
             Age of the capture in days.
         """
-        return ((today or date.today()) - self.captured_at).days
+        return ((today or utc_today()) - self.captured_at).days
 
 
 def load_manifest() -> FixtureManifest:

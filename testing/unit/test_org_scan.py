@@ -417,10 +417,13 @@ def test_org_scan_groups_report_by_canonical_package_identity() -> None:
     )
 
     assert len(profiler.profiled_keys) == 2
+    # The pyproject entry declares `jinja2>=3.1.2`, which is a bound and not an
+    # installed version, so it carries no version at all (#275). The
+    # requirements.txt entry pins, and still does.
     assert sorted(
         (key.ecosystem, key.name, key.version) for key in profiler.profiled_keys
     ) == [
-        ("pyproject", "jinja2", ">=3.1.2"),
+        ("pyproject", "jinja2", ""),
         ("python", "jinja2", "3.1.6"),
     ]
     assert report.unique_dependency_count == 1
@@ -429,8 +432,10 @@ def test_org_scan_groups_report_by_canonical_package_identity() -> None:
     assert dependency.key.ecosystem == "python"
     assert dependency.key.name == "jinja2"
     assert dependency.key.version == "3.1.6"
-    assert dependency.version_specs == {">=3.1.2", "3.1.6"}
-    assert dependency.version_specs_list == [">=3.1.2", "3.1.6"]
+    assert dependency.version_specs == {"", "3.1.6"}
+    # The unresolved variant renders with the word the rest of the tool uses
+    # for it rather than joining into a leading comma.
+    assert dependency.version_specs_list == ["3.1.6", "unmanaged"]
     assert dependency.risk_level == RiskLevel.HIGH
     assert dependency.risk_score.total_score == 7.3
     assert dependency.advisory_summary == "2 scored / 0 filtered"
@@ -462,14 +467,14 @@ def test_org_scan_groups_report_by_canonical_package_identity() -> None:
         Dict[str, object], cast(Dict[str, object], inventory[0])["extensions"]
     )["org_scan"]
     assert cast(Dict[str, object], org_scan)["version_specs"] == [
-        ">=3.1.2",
         "3.1.6",
+        "unmanaged",
     ]
 
     html = render_html_report(report)
     assert '<span class="eco">· python</span>' in html
     assert '<span class="eco">· pyproject</span>' not in html
-    assert "&gt;=3.1.2, 3.1.6" in html
+    assert "3.1.6, unmanaged" in html
 
 
 def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:

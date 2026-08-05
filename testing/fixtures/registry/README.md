@@ -31,7 +31,7 @@ Half the ecosystems answer with something else, so a manifest entry may declare
 | nuget | flat-container index and registration index (JSON) plus the `.nuspec` (XML) |
 | golang | `@latest` (JSON) plus the module's `go.mod` (plain text) |
 
-Two ecosystems also capture something no registry serves at all: a **project
+Three ecosystems also capture something no registry serves at all: a **project
 file** out of somebody's repository, from `raw.githubusercontent.com`. Gradle
 needs one because it has no registry of its own and the parse is the thing that
 can break (#101); nuget needs one because a `.csproj` states neither its
@@ -40,6 +40,15 @@ versions nor its full dependency set, and the `Directory.Packages.props` and
 drivers partition their fixtures on that host prefix and materialise each file
 at the path its source URL describes, so the walk-up runs against the
 repository's real layout rather than one a test author arranged.
+
+`python-manifests` is the third, and the only one that is *nothing but* project
+files. Python's readers were writing constraints, environment markers and the
+word `latest` into `installed_version` (#275), and the shapes that did it are
+not shapes a fixture author invents — they are what celery, httpx, django and
+warehouse actually publish. `httpx.requirements.txt` and `warehouse.dev.txt`
+are the control: 42 pins that a parser rewrite must leave exactly as they were.
+These four are read by the parser directly and never fetched by an adapter, so
+they are declared here rather than in `python/`, which holds pypi.org payloads.
 
 Text payloads are never string-truncated and never reduced. Shortening a POM
 changes how it *parses*, which is a key difference wearing a volume costume;

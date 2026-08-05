@@ -7,6 +7,14 @@ from typing import Dict, List, Optional, Sequence, Set
 
 from ..models import DependencyMetadata
 from .base import BaseParser
+from .python_requirements import (
+    DeclaredRequirement,
+    normalized_name,
+    python_dependency,
+    read_requirement,
+    read_version_specifier,
+    requirement_lines,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -140,101 +148,53 @@ class PythonParser(BaseParser):
     def _parse_requirements_txt(self) -> Dict[str, DependencyMetadata]:
         """Parse a requirements.txt file.
 
+        Every line goes through :func:`~.python_requirements.read_requirement`,
+        which is pip's own PEP 508 parser, so a bound stays a bound and only a
+        ``==`` to one concrete version becomes an ``installed_version`` (#275).
+        The chain of ``if "==" in line / elif ">=" in line`` this replaced had
+        seven branches and got four shapes wrong; the specifier grammar has one
+        implementation and gets them right for free.
+
         Returns:
             Dictionary mapping dependency names to their metadata.
         """
-        dependencies = {}
+        dependencies: Dict[str, DependencyMetadata] = {}
 
         try:
             with open(self.manifest_path, "r", encoding="utf-8") as f:
-                requirements = f.readlines()
+                text = f.read()
 
-            for line in requirements:
-                line = line.strip()
-
-                # Skip empty lines, comments, and non-dependency lines
-                if (
-                    not line
-                    or line.startswith("#")
-                    or line.startswith("-e ")
-                    or line.startswith("-r ")
-                ):
+            for line in requirement_lines(text):
+                requirement = read_requirement(line)
+                if requirement is None:
+                    # Not a requirement pip would accept either. Naming a
+                    # package after it is how `requests-toolbelt!` reached a
+                    # registry lookup, so it is reported and dropped.
+                    logger.warning(
+                        "%s: cannot read %r as a requirement; skipping",
+                        self.manifest_path,
+                        line,
+                    )
                     continue
+                dependencies[requirement.name] = python_dependency(requirement)
 
-                # Handle different formats of dependency specifications
-                # Format: package==version
-                if "==" in line:
-                    parts = line.split("==", 1)
-                    name = parts[0].strip()
-                    version = (
-                        parts[1].strip().split(";")[0].strip()
-                    )  # Remove environment markers
-
-                # Format: package>=version
-                elif ">=" in line:
-                    parts = line.split(">=", 1)
-                    name = parts[0].strip()
-                    version = (
-                        parts[1].strip().split(";")[0].strip()
-                    )  # Remove environment markers
-
-                # Format: package<=version
-                elif "<=" in line:
-                    parts = line.split("<=", 1)
-                    name = parts[0].strip()
-                    version = (
-                        parts[1].strip().split(";")[0].strip()
-                    )  # Remove environment markers
-
-                # Format: package~=version
-                elif "~=" in line:
-                    parts = line.split("~=", 1)
-                    name = parts[0].strip()
-                    version = (
-                        parts[1].strip().split(";")[0].strip()
-                    )  # Remove environment markers
-
-                # Format: package>version
-                elif ">" in line and "=" not in line:
-                    parts = line.split(">", 1)
-                    name = parts[0].strip()
-                    version = (
-                        ">" + parts[1].strip().split(";")[0].strip()
-                    )  # Remove environment markers
-
-                # Format: package<version
-                elif "<" in line and "=" not in line:
-                    parts = line.split("<", 1)
-                    name = parts[0].strip()
-                    version = (
-                        "<" + parts[1].strip().split(";")[0].strip()
-                    )  # Remove environment markers
-
-                # Format: package[extras]. Matching the bracket pair rather than
-                # testing for both characters keeps a line such as `foo]bar[baz`
-                # out of this branch; it used to enter and then crash on the
-                # unmatched `re.search(...).group(1)`.
-                elif (extras_match := re.search(r"\[(.*?)\]", line)) is not None:
-                    name = line.split("[")[0].strip()
-                    version = "with extras [" + extras_match.group(1) + "]"
-
-                # Format: package
-                else:
-                    name = line.split(";")[0].strip()  # Remove environment markers
-                    version = "latest"
-
-                # Clean up package name
-                name = re.sub(r"[<>=~].*$", "", name).strip()
-
-                # Add to dependencies
-                dependencies[name] = DependencyMetadata(
-                    name=name,
-                    installed_version=version,
-                    repository_url=f"https://pypi.org/project/{name}/",
+            unpinned = sum(
+                1
+                for metadata in dependencies.values()
+                if not metadata.installed_version
+            )
+            if unpinned:
+                logger.info(
+                    "%d of %d requirements in %s state a constraint rather than "
+                    "one version; their version-drift signal is reported as "
+                    "unmeasured and advisories against them as "
+                    "applicability-unknown, not resolved against a bound",
+                    unpinned,
+                    len(dependencies),
+                    self.manifest_path,
                 )
-
             return dependencies
-        except Exception as e:
+        except OSError as e:
             raise ValueError(f"Error parsing requirements.txt: {e}") from e
 
     def _parse_pipfile_lock(self) -> Dict[str, DependencyMetadata]:
@@ -255,44 +215,53 @@ class PythonParser(BaseParser):
 
             # Process default packages
             for name, info in default_packages.items():
-                dependencies[name] = DependencyMetadata(
-                    name=name,
-                    installed_version=self._pipfile_version(info),
-                    repository_url=f"https://pypi.org/project/{name}/",
-                )
+                requirement = self._pipfile_requirement(name, info)
+                dependencies[requirement.name] = python_dependency(requirement)
 
             # Process dev packages
             for name, info in dev_packages.items():
+                requirement = self._pipfile_requirement(name, info)
                 # Skip if already in default packages
-                if name in dependencies:
+                if requirement.name in dependencies:
                     continue
 
-                dependencies[name] = DependencyMetadata(
-                    name=name,
-                    installed_version=self._pipfile_version(info),
-                    repository_url=f"https://pypi.org/project/{name}/",
-                    additional_info={"dev_dependency": "true"},
+                dependencies[requirement.name] = python_dependency(
+                    requirement, {"dev_dependency": "true"}
                 )
 
             return dependencies
-        except Exception as e:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
             raise ValueError(f"Error parsing Pipfile.lock: {e}") from e
 
     @staticmethod
-    def _pipfile_version(info: object) -> str:
-        """Extract a package version from a Pipfile.lock entry.
+    def _pipfile_requirement(name: str, info: object) -> DeclaredRequirement:
+        """Read one Pipfile.lock entry.
 
-        Entries are usually ``{"version": "==1.2.3", ...}`` but can also be a
-        bare version string (e.g. ``"==1.2.3"`` or ``"*"``); handle both without
-        assuming a dict.
+        Entries are usually ``{"version": "==1.2.3", …}`` but can also be a bare
+        version string, so both shapes are handled without assuming a dict.
+
+        A lock file is where a pin is expected, and the ``==`` form is one — but
+        not every entry carries one. ``"*"`` appears for an entry pinned by
+        ``git``/``ref`` rather than by version, and an editable or VCS entry may
+        carry no ``version`` key at all. Those name no version, and #275 is that
+        such an entry must not be scored as though they did: ``"*"`` is exactly
+        the ``latest`` sentinel wearing a different hat.
+
+        Args:
+            name: The package name as the lock file wrote it.
+            info: The entry value.
+
+        Returns:
+            The declaration, pinned when the entry states one version.
         """
         if isinstance(info, dict):
-            raw = info.get("version", "")
+            raw = info.get("version")
         elif isinstance(info, str):
             raw = info
         else:
-            raw = ""
-        version = raw if isinstance(raw, str) else str(raw)
-        if version.startswith("=="):
-            version = version[2:]
-        return version
+            raw = None
+        if not isinstance(raw, str) or not raw.strip():
+            return DeclaredRequirement(
+                name=normalized_name(name), pinned_version=None, constraint=None
+            )
+        return read_version_specifier(name, raw.strip())

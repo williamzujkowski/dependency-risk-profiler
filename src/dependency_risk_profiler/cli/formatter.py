@@ -20,6 +20,7 @@ from ..models import (
     RiskLevel,
     merged_overall_risk_score,
 )
+from ..parsers.version_sources import DECLARED_CONSTRAINT_KEY
 from ..popularity import should_soften_low_release_cadence
 from ..versioning import (
     calendar_drift_days,
@@ -312,7 +313,14 @@ class TerminalFormatter(BaseFormatter):
         # like a bug. Say what actually happened: the version is declared
         # somewhere we could not reach (a parent POM, an imported BOM), so drift
         # is unmeasured rather than zero.
-        installed = metadata.installed_version or "unmanaged"
+        # A manifest that states `requests>=2.20.0` did say something, just not
+        # a version. Printing the bound and labelling it unpinned keeps that
+        # fact visible without putting it where a version goes (#275).
+        constraint = metadata.additional_info.get(DECLARED_CONSTRAINT_KEY)
+        if not metadata.installed_version and constraint:
+            installed = f"{constraint} unpinned"
+        else:
+            installed = metadata.installed_version or "unmanaged"
         if metadata.latest_version:
             return f"{installed} → {metadata.latest_version}"
         return f"{installed} → latest unknown"
