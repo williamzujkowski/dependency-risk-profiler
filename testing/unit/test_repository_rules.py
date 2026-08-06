@@ -8,7 +8,7 @@ reintroducing a specimen of the defect it catches:
 
 * rule 1 -- restoring ``scan_for_malware``'s "always clean in this example"
 * rule 3 -- adding a module-level function with no caller
-* rule 7 -- adding a ``# type: ignore`` to a source file
+* rule 8 -- adding a ``# type: ignore`` to a source file
 
 Rules 2 (rescope, don't stub), 4 (silence is not an answer) and 5 (fixtures
 are captured) are review-time judgment and are deliberately absent. Not every
@@ -184,12 +184,12 @@ def test_every_public_definition_has_a_reference() -> None:
 
 
 # --------------------------------------------------------------------------
-# Rule 7 -- the bar
+# Rule 8 -- the bar
 # --------------------------------------------------------------------------
 
 
 def test_no_type_or_lint_suppressions_in_source() -> None:
-    """AGENTS.md rule 7: no ``# type: ignore`` and no ``# noqa`` in ``src/``.
+    """AGENTS.md rule 8: no ``# type: ignore`` and no ``# noqa`` in ``src/``.
 
     The repository reached zero of both and the point of this check is that it
     stays there.
@@ -210,7 +210,7 @@ def test_no_type_or_lint_suppressions_in_source() -> None:
                     )
 
     assert not offenders, (
-        "AGENTS.md rule 7: the bar.\n"
+        "AGENTS.md rule 8: the bar.\n"
         "Fix the type rather than silencing the checker. Fixing 63 errors in "
         "one pass and 11 in another, both with zero suppressions, is the "
         "precedent -- the bar is demonstrably achievable.\n\n"
@@ -235,7 +235,7 @@ MAX_EXPLICIT_ANY: Dict[str, int] = {
 
 
 def test_explicit_any_never_increases() -> None:
-    """AGENTS.md rule 7: the ``Any`` count ratchets down, never up.
+    """AGENTS.md rule 8: the ``Any`` count ratchets down, never up.
 
     Stating a bar the tooling does not enforce is how this repository ended up
     with eleven mypy-exempt modules. Rather than weaken the rule or claim a
@@ -260,14 +260,14 @@ def test_explicit_any_never_increases() -> None:
             regressions.append(f"{name}: {count} uses of Any, ceiling is {ceiling}")
 
     assert not regressions, (
-        "AGENTS.md rule 7: explicit Any ratchets down, never up.\n"
+        "AGENTS.md rule 8: explicit Any ratchets down, never up.\n"
         "A new Any needs a real type instead. If a module drops to zero, "
         "remove its entry -- ceilings only move down.\n\n" + "\n".join(regressions)
     )
 
 
 def test_uv_lock_is_tracked_and_not_ignored() -> None:
-    """AGENTS.md rule 7: ``uv.lock`` is committed.
+    """AGENTS.md rule 8: ``uv.lock`` is committed.
 
     The rule used to say the opposite, and the commit that introduced it
     committed ``uv.lock`` in the same change -- a bar and its violation
@@ -289,7 +289,7 @@ def test_uv_lock_is_tracked_and_not_ignored() -> None:
         check=False,
     )
     assert tracked.returncode == 0, (
-        "AGENTS.md rule 7: `uv.lock` is committed.\n"
+        "AGENTS.md rule 8: `uv.lock` is committed.\n"
         "It pins the development environment, which is the only environment it "
         "can reach -- the lockfile is not packaged into the wheel or the sdist.\n"
         "If this rule should change, change AGENTS.md and this test in the same "
@@ -306,7 +306,7 @@ def test_uv_lock_is_tracked_and_not_ignored() -> None:
             and line.strip().lstrip("/") == "uv.lock"
         ]
         assert not ignored, (
-            "AGENTS.md rule 7: `uv.lock` is committed, so .gitignore must not "
+            "AGENTS.md rule 8: `uv.lock` is committed, so .gitignore must not "
             "list it. A tracked file that is also ignored is a trap: the next "
             "person to delete it locally will not see it come back.\n\n"
             + "\n".join(ignored)
@@ -439,7 +439,7 @@ def test_every_required_codeql_language_has_something_to_analyse() -> None:
 
 
 def test_mypy_first_party_exemption_list_stays_empty() -> None:
-    """AGENTS.md rule 7: the first-party mypy exemption list stays empty.
+    """AGENTS.md rule 8: the first-party mypy exemption list stays empty.
 
     It once held eleven modules -- including every module where this
     session's defects lived -- defended by a test asserting the exemptions
@@ -451,7 +451,7 @@ def test_mypy_first_party_exemption_list_stays_empty() -> None:
         text,
     )
     assert not exempt, (
-        "AGENTS.md rule 7: the first-party mypy exemption list stays empty.\n"
+        "AGENTS.md rule 8: the first-party mypy exemption list stays empty.\n"
         "Unmask the module and fix the errors, or leave the work undone and "
         "say so -- do not re-exempt.\n\n" + "\n".join(sorted(exempt))
     )

@@ -25,7 +25,7 @@ filed separately with its own acceptance criteria. A v4.0 vector is reported
 **unscored**, never approximated from the v3 vector alongside it.
 
 **No new dependency.** The ``cvss`` package on PyPI does this, and AGENTS.md
-rule 7 allows an argued exception — but the argument does not get off the ground
+rule 8 allows an argued exception — but the argument does not get off the ground
 here: the v3.x base formula is thirty lines of arithmetic with no security-
 sensitive primitive in it, and the crypto carve-out that motivates the exception
 path explicitly does not extend to parsing.

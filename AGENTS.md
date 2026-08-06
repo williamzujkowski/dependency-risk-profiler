@@ -82,7 +82,31 @@ Two worked examples of the same shape in tests, both caught only because someone
 - A new test invoked the code without `--recursive`, so `os.walk` never descended and the branch it claimed to cover was never entered.
 - New scanner tests used a fixture client that classified its own trees; deleting the classifier from the *production* client left all seventeen green. The double had reimplemented the subject, so the test proved the double works.
 
-### 7. The bar
+### 7. Comments are evergreen
+
+**A comment states what is true now and why the code is the way it is. It never narrates the change that produced it.**
+
+The reader of a comment is someone meeting this code for the first time, years from now, with no memory of what it replaced. A comment written as a changelog entry makes that reader reconstruct a history they cannot see in order to understand a line they can.
+
+The test: **delete the history from your comment. Does what remains still explain the code?** If not, the comment was describing a diff, not a design.
+
+| Not evergreen | Evergreen |
+|---|---|
+| `# 12 was the fixed width and is kept as the floor` | `# 12 is the floor: shorter names need no more.` |
+| `# This used to read `.github/` only, so Forgejo layouts reported False` | `# Each forge keeps templates under its own directory; all conventions are checked.` |
+| `# Previously handed straight to dict.update, which silently accepted` | `# Rejects a non-mapping rather than letting dict.update accept it silently.` |
+| `# The 77 errors this module was masked for were one inference, repeated` | *(delete — it explains a past state of the type checker, not the code)* |
+
+**What is legitimate, and stays:**
+
+- **Rationale for a non-obvious decision**, stated in the present. *"No terminal-width arithmetic here: the fixed columns already exceed any terminal, so there is no budget to redistribute."* That is a fact about the current design and it earns its place.
+- **A trailing issue reference as a pointer**, e.g. `# … (#242)`, when the issue holds evidence too long for a comment. The comment must stand on its own with the reference removed — the number is a footnote, never the explanation.
+- **Non-obvious external facts.** *"OSV publishes `severity[].score` as a vector string, not a number."* Evergreen, and the reason the code looks odd.
+- **Test docstrings may name the defect they guard.** A regression test's subject *is* the historical defect; that is what makes it a regression test. This rule governs `src/`.
+
+**Why this matters here specifically.** This repository's comments carry unusually heavy rationale, deliberately — several defects survived for months because nobody recorded *why* a line was the way it was. That is worth keeping. But rationale and history are not the same thing, and the habit of writing "this used to…" turns a durable explanation into one with a shelf life. Write the reason, not the repair.
+
+### 8. The bar
 
 - No `# type: ignore`, no `# noqa`, no new `# nosec`. `src/` is at zero of the first two; keep it there.
 - No **new** `Any`. The repository carries 82 across eight modules — stated as banned, never enforced, because mypy's `disallow_any_explicit` was never set. They are frozen by a ratchet and the honest number is written down rather than wished away.
@@ -107,7 +131,9 @@ Rule 6 says a gate never observed to fail is unverified. A file of prose is exac
 | 1 — no simulated implementations | Fails on stub markers in `src/` (`in a real implementation`, `for simulation purposes`, `simulate ...ing`, `always clean in this example`) |
 | 3 — landed code must be reachable | Fails on a module-level function or class in `src/` with no reference outside its own definition |
 | 6 — a required check must analyse its own subject | Fails when an enrolled CodeQL language has **zero** tracked files surviving `paths-ignore` |
-| 7 — the bar | Fails on `# type: ignore` or `# noqa`; fails on a first-party `ignore_errors` entry; **ratchets `Any` down** |
+| 8 — the bar | Fails on `# type: ignore` or `# noqa`; fails on a first-party `ignore_errors` entry; **ratchets `Any` down** |
+
+Rule 7 (evergreen comments) is **not** mechanised, and the reason is worth stating rather than leaving as an omission. A grep for `used to`, `previously` or `no longer` fires on legitimate prose — `git tag -v` output *previously* meaning something, an advisory that is *no longer* withdrawn — and this file's own standard is that a check firing on legitimate work is a bug in the check. It is review-time judgment, like rules 2, 4 and 5.
 
 Each check was verified to fail before it was committed, by reintroducing a specimen of the defect it catches. Rules 2, 4 and 5 are review-time judgment and are honestly marked as such — not every rule can be mechanised, but a rule that *can* be and isn't is just a wish.
 
@@ -119,7 +145,24 @@ Each check was verified to fail before it was committed, by reintroducing a spec
 
 ## On ponytail
 
-We use [ponytail](https://github.com/DietrichGebert/ponytail) minimization: prefer the reuse rung, fix root causes, delete rather than accumulate, and add no abstraction that was not requested.
+We use [ponytail](https://github.com/DietrichGebert/ponytail) minimization. Before writing code, walk the ladder in order and stop at the first rung that answers:
+
+1. **Does this need to exist?** — YAGNI. The cheapest code is the code not written.
+2. **Is it already in this codebase?** — reuse rather than rewrite.
+3. **Does the standard library do it?**
+4. **Is it a native platform feature?**
+5. **Does an installed dependency already do it?**
+6. **Is it one line?**
+7. Only then: the minimal implementation that fully solves the problem.
+
+Validity, security and accessibility are never traded for brevity.
+
+Worked examples from this repository, so the rungs are not abstract:
+
+- **Rung 2** — `scan-org` maintained a second hand-written list of manifest names beside the ecosystem registry's. The two disagreed and `.csproj` fell through the gap. The fix was to extend the registry's own matcher and delete the list, not to add a test asserting the two lists match.
+- **Rung 3** — CVSS base scoring is closed-form arithmetic from the spec, so it is ~40 lines of stdlib rather than a new dependency. The v4.0 table is 270 entries against 164 published reference pairs, so it is *not* written until it can be exercised.
+- **Rung 1, applied to a fix in progress** — a terminal-width budget was computed to size a report column, and it reproduced the bug it was meant to fix. The columns already exceed any terminal, so there was no budget to spend. Deleted; the column is sized to its content. Less mechanism, and it works.
+- **Rung 1, applied to a whole directory** — `testing/projects/` was 4.4 MB of vendored code, exempted by name in nine tool configs, that no test had ever opened. Deleted rather than made loadable.
 
 **Read "minimum" as minimum *mechanism*, never minimum *finish*.**
 

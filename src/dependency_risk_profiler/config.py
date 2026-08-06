@@ -36,8 +36,7 @@ CONFIG_PATHS = [
 #
 # The annotation is load-bearing. Without it mypy joins the section literals
 # (one is all floats, the rest are mixed) down to a bare `object`, and every
-# `self._config["general"]["debug"] = ...` below became uncheckable — 48 of the
-# 77 errors this module was masked for were that one inference, repeated.
+# `self._config["general"]["debug"] = ...` below is uncheckable.
 DEFAULT_CONFIG: Dict[str, Dict[str, object]] = {
     "general": {
         "output_format": "terminal",
@@ -220,9 +219,9 @@ class Config:
         Args:
             config_data: Configuration data to merge
         """
-        # A config file is user-edited text: `general = "yes"` parses fine and
-        # would previously have been handed straight to `dict.update`, which
-        # raises. Skip sections that are not tables and say so.
+        # A config file is user-edited text: `general = "yes"` parses fine
+        # and reaches here as a string. `dict.update` raises on it, so skip
+        # sections that are not tables and say which were skipped.
         for section in (
             "general",
             "scoring_weights",
