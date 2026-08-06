@@ -435,6 +435,51 @@ def field_sources_to_dict(metadata: DependencyMetadata) -> Dict[str, str]:
     }
 
 
+def forge_to_dict(metadata: DependencyMetadata) -> Dict[str, object]:
+    """Serialize which forge was asked, and what it answered per capability.
+
+    The reason a package hosted somewhere without an adapter scores on fewer
+    signals than a GitHub one, readable from the payload alone (#292). Fifteen
+    of sixteen signals are read from a ``git clone`` and are unaffected by any
+    of this; the ones reported here are the facts a clone cannot carry, so a
+    consumer can attribute a missing ``community_popularity`` to the host
+    rather than to the package.
+
+    ``software`` is ``None`` when no registered adapter claims the host. That
+    is not a failure and must not read as one — the repository is cloneable and
+    every clone-derived signal is measured exactly as it is on GitHub.
+
+    Args:
+        metadata: The dependency's metadata.
+
+    Returns:
+        The forge block. ``capabilities`` is empty when nothing asked a forge
+        about this dependency at all, which is the case for a package that
+        declares no usable source repository.
+    """
+    return {
+        "software": metadata.forge.value if metadata.forge is not None else None,
+        "capabilities": {
+            capability.value: (
+                {
+                    "state": answer.state.value,
+                    "field_source": (
+                        _SOURCE_NAMES[answer.field_source]
+                        if answer.field_source is not None
+                        else None
+                    ),
+                }
+                if answer.is_measured
+                else {
+                    "state": answer.state.value,
+                    "reason": answer.reason.value if answer.reason else None,
+                }
+            )
+            for capability, answer in metadata.forge_answers.items()
+        },
+    }
+
+
 def signals_to_dict(
     measurements: Mapping[str, Measurement],
 ) -> Dict[str, object]:
@@ -660,6 +705,11 @@ def scored_dependency(
         # question: ``signals`` says whether a value exists and why not, this
         # says how much the value that does exist is worth.
         "field_sources": field_sources_to_dict(metadata),
+        # Which forge served the facts a clone cannot carry, and what it said
+        # to each. Sits beside ``field_sources`` because it answers the
+        # neighbouring question: that says how much a value is worth, this says
+        # whether anything could have produced one at all (#292).
+        "forge": forge_to_dict(metadata),
         "unknown_signals": list(score.unknown_signals),
         # ``unknown_signal_count`` is gone: it is ``len(unknown_signals)``.
         # These two are not, because they count the signals that entered the

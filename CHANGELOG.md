@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A forge adapter contract, so a coverage gap is visible instead of silent.**
+  The community pass was named `analyze_github_community_metrics` and gated on
+  a regex that looked for `github.com` anywhere in the repository URL. A
+  package on any other host fell out of the top of it and returned unchanged,
+  so its star count, contributor count and commit cadence were simply never
+  attempted — and the report said the same thing about that package as it said
+  about a GitHub package whose API call failed. Two different facts, one
+  silence.
+
+  Repositories now route by host through `ForgeRegistry`, which mirrors
+  `EcosystemRegistry` including its name-only tier, so there is one table
+  rather than a second hand-written host list to drift out of agreement with
+  the first (#265 is what that costs). GitHub is the first adapter and
+  reproduces exactly what the previous code did: the same three lookups
+  against the same endpoints, in the same order.
+
+  The layer is deliberately small, because the measurement says it should be.
+  **Seven of the eight repository-derived signals are read from a shallow `git
+  clone`** — `pathlib` checks and `git` subprocesses — and need no forge API at
+  all, so a host nobody wrote an adapter for still scores on them. Exactly one
+  signal, `community_popularity`, has no reading outside a forge, and the two
+  refinements beside it are countable from git history a `--depth 1` clone does
+  not have. That is three capabilities, not eight; `ForgeCapability` names the
+  three that a caller asks for and an adapter serves, and nothing else.
+
+  `ForgeAnswer` is the same two-state gate as `Measurement` and reuses
+  `UnmeasuredReason` rather than inventing a vocabulary beside it: measured
+  carries a value and the acquisition path that produced it, unmeasured carries
+  a reason and can carry neither a value nor a source. An adapter that omits
+  `capabilities` raises at class-definition time, and the router never calls
+  `fetch` for a capability the adapter did not declare — so there is no code
+  path in which an adapter could answer `0` for something its API does not
+  serve, because nothing asks it.
+
+  The difference reaches the output. Schema v2 gains a `forge` block naming the
+  resolved forge and, per capability, either the path that answered or the
+  reason nothing did. A Codeberg-hosted package reports
+  `lookup_not_attempted` against a `null` forge; a GitHub-hosted package with
+  no token reports `no_data_from_source` against `github`. `docs/forge-coverage.md`
+  publishes both tables and is generated from the adapters' own `capabilities`
+  sets, checked by `testing/unit/test_forge_contract.py` so it cannot drift.
+
+  No GitHub-hosted package moves, measured against a noise floor established
+  before the change rather than assumed. Four runs of the unmodified tool over
+  a 30-package corpus (28 of them GitHub-hosted): three runs minutes apart
+  agreed in every field, and one 25 minutes later differed in **3** — two
+  commit cadences and one star count, all live GitHub counts, one of which
+  oscillated back on the next run. Against the closest-in-time baseline, this
+  change moves **no** field on any GitHub-hosted package.
+
+  It moves two on the one Codeberg-hosted package, and the direction is worth
+  stating: the branch that reuses a registry-declared maintainer count when the
+  forge cannot supply one sat *after* the GitHub-only early return, so it never
+  ran for any other host. `django-allauth` now reports the contributor count
+  PyPI publishes, attributed to `registry:metadata` rather than to a forge. Its
+  risk level, score and unmeasured-signal count are unchanged (#292).
+
 ### Changed
 
 - **AGENTS.md states the ponytail ladder rather than gesturing at it, and adds

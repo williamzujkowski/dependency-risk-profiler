@@ -37,6 +37,7 @@ from signal_floors import assert_measures_registry_signals, assert_meets_signal_
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.nuget import NuGetAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.forges import github as github_forge
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.parsers.nuget import NuGetParser
@@ -323,10 +324,10 @@ def _score_offline(
     dep = analyze_license(dep, metadata)
     with (
         mock.patch.object(
-            community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
+            github_forge, "fetch_url", return_value=GITHUB_REPO_HTML
         ),
         mock.patch.object(
-            community_analyzer, "github_contributor_count", return_value=None
+            github_forge, "github_contributor_count", return_value=None
         ),
     ):
         dep = community_analyzer.analyze_community_metrics(dep, metadata)

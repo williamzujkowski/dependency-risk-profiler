@@ -11,6 +11,7 @@ from signal_floors import assert_measures_registry_signals, assert_meets_signal_
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
 from dependency_risk_profiler.analyzers.composer import ComposerAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.forges import github as github_forge
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import (
     DependencyMetadata,
@@ -170,7 +171,7 @@ def _score_package_offline(
     metadata = analyzer.metadata_cache[name]
     dep = analyze_license(dep, metadata)
     with mock.patch.object(
-        community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
+        github_forge, "fetch_url", return_value=GITHUB_REPO_HTML
     ):
         dep = community_analyzer.analyze_community_metrics(dep, metadata)
 

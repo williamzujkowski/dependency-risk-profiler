@@ -69,6 +69,10 @@ SHARED_KEYS = {
     "advisories",
     "signals",
     "field_sources",
+    # Additive in schema 2 (#292): which forge served the facts a clone cannot
+    # carry, and what it answered to each. Present on both paths because a
+    # consumer must be able to attribute a missing signal to the host.
+    "forge",
     "unknown_signals",
     "measured_signal_count",
     "total_signal_count",
