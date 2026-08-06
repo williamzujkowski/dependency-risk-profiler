@@ -25,7 +25,7 @@ import requests
 from ..models import DependencyMetadata
 from ..signals import ADVISORY_LOOKUP_UNMEASURED, AdvisoryLookupState
 from ..versioning import VersionScheme
-from . import affected_ranges, ecosystems
+from . import affected_ranges, cvss, ecosystems
 from .cache import advisory_cache_key
 from .cache import default_cache as disk_cache
 
@@ -131,6 +131,28 @@ CVSS_SEVERITY_TIERS = frozenset(SEVERITY_ORDER) - {MALICIOUS_SEVERITY}
 #: and MAL-*, the second is a parser or a publisher to go and look at.
 SEVERITY_NOT_PUBLISHED_REASON = "source published no severity"
 SEVERITY_UNREADABLE_REASON = "severity is not a value this code can read"
+
+#: Why a counted advisory carries no CVSS base score. Three states rather than
+#: one, for the reason the severity pair above has two: "nobody scored this",
+#: "it was scored under a CVSS version this tool cannot compute yet" and "the
+#: value in this record is not a CVSS" call for different action, and #273 is
+#: what happens when all three are answered with a number instead.
+#:
+#: ``CVSS_UNSUPPORTED_VERSION_REASON`` names the version it could not score, so
+#: the field says *which* gap it is rather than that there is one.
+CVSS_NOT_PUBLISHED_REASON = "source published no CVSS"
+CVSS_UNREADABLE_REASON = "CVSS is not a value this code can read"
+CVSS_UNSUPPORTED_VERSION_REASON = "CVSS version this code cannot score"
+
+#: OSV severity entry types, ranked. An advisory scored under more than one
+#: version publishes an entry per version, and the newest is the publisher's
+#: current assessment — a GHSA record whose ``database_specific.severity`` says
+#: CRITICAL while its v3.1 vector computes to 8.1 is a record whose label
+#: follows its v4.0 score. Reading the older entry there would publish a number
+#: that contradicts the label beside it, so the highest type wins and an
+#: unscoreable highest type leaves the CVSS unmeasured rather than reaching
+#: past it (#273).
+OSV_SEVERITY_TYPE_RANK = {"CVSS_V2": 2, "CVSS_V3": 3, "CVSS_V4": 4}
 
 LOW_CONFIDENCE_VALUES = {"LOW", "VERY_LOW", "UNKNOWN", "UNTRUSTED"}
 
@@ -546,8 +568,12 @@ class OSVSource(VulnerabilitySource):
                 _payload_mapping(vuln.get("database_specific")).get("severity")
             )
 
-            # Extract CVSS score if available
-            cvss_score = _extract_osv_cvss_score(vuln.get("severity"))
+            # Decode the CVSS vector OSV publishes, and record why when it
+            # cannot be decoded. Before #273 this read ``severity[].score`` as
+            # if it were a number and was answered None every single time.
+            cvss_score, cvss_unknown_reason = _extract_osv_cvss_score(
+                vuln.get("severity")
+            )
 
             # Determine fixed versions
             fixed_versions = []
@@ -598,6 +624,7 @@ class OSVSource(VulnerabilitySource):
                         severity, cvss_score
                     ),
                     "cvss_score": cvss_score,
+                    "cvss_unknown_reason": cvss_unknown_reason,
                     "withdrawn": _withdrawn_timestamp(vuln.get("withdrawn")),
                     "confidence": "HIGH",
                     "fixed_versions": fixed_versions,
@@ -1450,6 +1477,13 @@ def _annotate_vulnerability_for_scoring(
     annotated["severity_unknown_reason"] = (
         _severity_unknown_reason(vulnerability) if severity_unknown else None
     )
+    # The same two states, one field over. ``max_counted_cvss_score`` used to
+    # answer for an advisory nobody scored by publishing the tier constant, so
+    # a reader could not tell a measured 10.0 from a CRITICAL label (#273).
+    annotated["cvss_unknown"] = cvss_score is None
+    annotated["cvss_unknown_reason"] = (
+        _cvss_unknown_reason(vulnerability) if cvss_score is None else None
+    )
     annotated["withdrawn"] = withdrawn
     annotated["confidence"] = confidence
     annotated["version_match"] = applicability.status.value
@@ -1507,18 +1541,74 @@ def _severity_unknown_reason(vulnerability: Dict[str, object]) -> str:
     return SEVERITY_NOT_PUBLISHED_REASON
 
 
-def _extract_osv_cvss_score(severity_data: object) -> Optional[float]:
-    if isinstance(severity_data, dict):
-        return normalize_cvss_score(severity_data.get("score"))
+def _extract_osv_cvss_score(
+    severity_data: object,
+) -> Tuple[Optional[float], Optional[str]]:
+    """Return an OSV record's CVSS base score, or why there isn't one.
 
-    if isinstance(severity_data, list):
-        for severity_entry in severity_data:
-            if isinstance(severity_entry, dict):
-                normalized_score = normalize_cvss_score(severity_entry.get("score"))
-                if normalized_score is not None:
-                    return normalized_score
+    ``severity[].score`` is a **vector string**, not a number: that is what the
+    OSV schema defines and what OSV sends, in 837 of 837 severity entries
+    surveyed across ten ecosystems. The previous implementation passed it to
+    :func:`normalize_cvss_score`, which correctly answers ``None`` for a string
+    that is not a decimal — so this read had never once succeeded, and every
+    ``max_counted_cvss_score`` the tool published was the severity *label* run
+    through :func:`severity_to_score` (#273).
 
-    return None
+    The vector is decoded instead, by :mod:`.cvss`. Only the highest-ranked
+    entry is consulted; see :data:`OSV_SEVERITY_TYPE_RANK` for why reaching past
+    an unscoreable one to an older entry is not an improvement on saying
+    nothing.
+
+    Args:
+        severity_data: The advisory's ``severity`` block, as OSV sent it.
+
+    Returns:
+        Tuple of the base score and the reason there is none. Exactly one of
+        the two is set: a score with no reason, or a reason with no score.
+    """
+    ranked: List[Tuple[int, object]] = []
+    for severity_entry in _payload_sequence(severity_data):
+        entry = _payload_mapping(severity_entry)
+        rank = OSV_SEVERITY_TYPE_RANK.get(_payload_str(entry.get("type")).upper())
+        if rank is not None:
+            ranked.append((rank, entry.get("score")))
+
+    if not ranked:
+        return None, CVSS_NOT_PUBLISHED_REASON
+
+    vector = max(ranked, key=lambda entry: entry[0])[1]
+    score = cvss.base_score(vector)
+    if score is not None:
+        return score, None
+
+    version = cvss.declared_version(vector)
+    if version is not None and not cvss.is_scoreable(version):
+        return None, f"{CVSS_UNSUPPORTED_VERSION_REASON}: {version}"
+    return None, CVSS_UNREADABLE_REASON
+
+
+def _cvss_unknown_reason(vulnerability: Dict[str, object]) -> str:
+    """Return why an advisory carries no CVSS base score.
+
+    The OSV normalizer already decided this and recorded it, because only it
+    can see which severity entries the record shipped. Every other source
+    publishes a number, so the two remaining cases are decided here: a value
+    that was present and did not survive :func:`normalize_cvss_score` is
+    unreadable, and an absent one was never published.
+
+    Args:
+        vulnerability: A normalized advisory record whose CVSS came out None.
+
+    Returns:
+        One of the ``CVSS_*_REASON`` constants, possibly with the version
+        appended.
+    """
+    recorded = vulnerability.get("cvss_unknown_reason")
+    if isinstance(recorded, str) and recorded.strip():
+        return recorded
+    if vulnerability.get("cvss_score") is not None:
+        return CVSS_UNREADABLE_REASON
+    return CVSS_NOT_PUBLISHED_REASON
 
 
 def _is_withdrawn(vulnerability: Dict[str, object]) -> bool:
@@ -1775,7 +1865,10 @@ def _merge_advisory_group(
 
     * severity, CVSS and the raw severity string come as a set from the record
       that states the worst of them, so a group never scores below its worst
-      member (a re-scoped advisory published at HIGH and LOW is HIGH);
+      member (a re-scoped advisory published at HIGH and LOW is HIGH) — and
+      *"as a set"* includes the reason there is no CVSS, or the merged record
+      would carry one record's score beside another's explanation for not
+      having one;
     * ``withdrawn`` only if *every* record is withdrawn — one live record for a
       vulnerability means it stands;
     * ``confidence`` from the most trusted record;
@@ -1803,6 +1896,7 @@ def _merge_advisory_group(
     merged["severity"] = worst.get("severity")
     merged["normalized_severity"] = worst.get("normalized_severity")
     merged["cvss_score"] = worst.get("cvss_score")
+    merged["cvss_unknown_reason"] = worst.get("cvss_unknown_reason")
     merged["withdrawn"] = all(_is_withdrawn(record) for record in group)
     merged["confidence"] = _normalize_confidence(
         max(group, key=_confidence_evidence_rank)
@@ -2161,6 +2255,14 @@ def _update_dependency_with_vulnerabilities(
     severity_unknown_vulnerabilities = [
         vuln for vuln in counted_vulnerabilities if vuln.get("severity_unknown") is True
     ]
+    # Counted advisories carrying no CVSS base score, and why. The field
+    # ``max_counted_cvss_score`` is a maximum over the rest of them, so this is
+    # what says how much of the population that maximum speaks for — without
+    # it, an advisory nobody scored and an advisory scored 10.0 look the same
+    # from outside (#273).
+    cvss_unknown_vulnerabilities = [
+        vuln for vuln in counted_vulnerabilities if vuln.get("cvss_unknown") is True
+    ]
 
     # Count vulnerabilities
     dependency.security_metrics.vulnerability_count = len(vulnerabilities)
@@ -2177,14 +2279,18 @@ def _update_dependency_with_vulnerabilities(
     dependency.security_metrics.applicability_unknown_count = len(
         undecided_vulnerabilities
     )
-    dependency.security_metrics.applicability_unknown_reasons = (
-        _count_applicability_reasons(undecided_vulnerabilities)
+    dependency.security_metrics.applicability_unknown_reasons = _count_reasons(
+        undecided_vulnerabilities, "version_match_reason"
     )
     dependency.security_metrics.severity_unknown_count = len(
         severity_unknown_vulnerabilities
     )
-    dependency.security_metrics.severity_unknown_reasons = _count_severity_reasons(
-        severity_unknown_vulnerabilities
+    dependency.security_metrics.severity_unknown_reasons = _count_reasons(
+        severity_unknown_vulnerabilities, "severity_unknown_reason"
+    )
+    dependency.security_metrics.cvss_unknown_count = len(cvss_unknown_vulnerabilities)
+    dependency.security_metrics.cvss_unknown_reasons = _count_reasons(
+        cvss_unknown_vulnerabilities, "cvss_unknown_reason"
     )
 
     # Find maximum CVSS score. ``None`` is the unmeasured state and 0.0 is a
@@ -2193,21 +2299,24 @@ def _update_dependency_with_vulnerabilities(
     # at 0.0 and publish ``max_cvss if max_cvss > 0 else None``, so those
     # answers came out as "no CVSS was measured" — the same falsy-vs-absent
     # read #216 fixed one line above, in the guard on the per-advisory score
-    # (#217). Only an advisory whose severity this code cannot read at all
-    # leaves the maximum unmeasured.
+    # (#217).
+    #
+    # It also used to fall back to ``severity_to_score(tier)`` for an advisory
+    # that published no score, which made the maximum cover every counted
+    # advisory at the price of the field being a severity label wearing a
+    # number's clothes: never anything but 3.0, 5.0, 8.0 or 10.0, and wrong
+    # against GitHub's own base score for all six advisories the #273 sweep
+    # checked. The derivation is gone. What is published is the maximum of the
+    # scores the *sources* published, and ``cvss_unknown_count`` says how many
+    # counted advisories are not in it.
+    #
+    # The consequence is deliberate and is handled where it lands: the maximum
+    # no longer covers every counted advisory, so nothing may read it as the
+    # worst tier on its own. See ``_calculate_exploit_score``.
     max_cvss: Optional[float] = None
     max_severity = None
     for vuln in counted_vulnerabilities:
         candidate = normalize_cvss_score(vuln.get("cvss_score"))
-        if candidate is None:
-            # No CVSS: derive from the tier, but only from a tier that names a
-            # CVSS band. ``severity_to_score`` answers 0.0 both for NONE and for
-            # anything it does not recognize, so UNKNOWN would otherwise
-            # fabricate a measured zero — and MALICIOUS would fabricate a 10.0
-            # nobody scored, which is why it is not in ``CVSS_SEVERITY_TIERS``.
-            tier = _get_string(vuln, "normalized_severity")
-            if tier in CVSS_SEVERITY_TIERS:
-                candidate = severity_to_score(tier)
         if candidate is not None:
             max_cvss = candidate if max_cvss is None else max(max_cvss, candidate)
         severity = _get_string(vuln, "normalized_severity")
@@ -2241,25 +2350,25 @@ def _count_filter_reasons(vulnerabilities: List[Dict[str, object]]) -> Dict[str,
     return reason_counts
 
 
-def _count_severity_reasons(
-    vulnerabilities: List[Dict[str, object]],
+def _count_reasons(
+    vulnerabilities: List[Dict[str, object]], key: str
 ) -> Dict[str, int]:
-    """Tally why severity could not be read for counted advisories."""
+    """Tally one per-advisory reason field across a set of advisories.
+
+    One function rather than the three near-identical ones this replaced: the
+    severity, applicability and CVSS tallies differ only in which key they
+    read, and a fourth copy is how the third one came to be written.
+
+    Args:
+        vulnerabilities: The advisories to tally over.
+        key: The per-advisory field holding the reason.
+
+    Returns:
+        Reason to count, for the advisories that state one.
+    """
     reason_counts: Dict[str, int] = {}
     for vulnerability in vulnerabilities:
-        reason = _get_string(vulnerability, "severity_unknown_reason")
-        if reason:
-            reason_counts[reason] = reason_counts.get(reason, 0) + 1
-    return reason_counts
-
-
-def _count_applicability_reasons(
-    vulnerabilities: List[Dict[str, object]],
-) -> Dict[str, int]:
-    """Tally why applicability could not be decided for counted advisories."""
-    reason_counts: Dict[str, int] = {}
-    for vulnerability in vulnerabilities:
-        reason = _get_string(vulnerability, "version_match_reason")
+        reason = _get_string(vulnerability, key)
         if reason:
             reason_counts[reason] = reason_counts.get(reason, 0) + 1
     return reason_counts

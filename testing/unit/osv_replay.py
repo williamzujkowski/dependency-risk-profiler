@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pytest
 
@@ -70,6 +70,43 @@ def recorded_query(fixture: str) -> Dict[str, object]:
     return payload
 
 
+def normalized_advisories(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    fixture: str,
+    package_name: str,
+    ecosystem: str,
+) -> List[Dict[str, object]]:
+    """Return one recorded OSV answer as ``OSVSource`` normalizes it.
+
+    The same shipped path as :func:`advisories_for` — ``OSVSource.lookup`` and
+    ``_normalize_results`` — stopped one stage earlier, before
+    ``merge_alias_duplicates`` collapses records that alias each other. That
+    stage is correct and is tested elsewhere, but it means a per-record
+    assertion made after it may be reading a *different* record's field: OSV
+    publishes the same vulnerability as a GHSA and a PYSEC entry, and the merge
+    keeps one of them. A test about how one record's ``severity`` block is read
+    has to look at that record.
+
+    Args:
+        monkeypatch: pytest's patcher, used only on the HTTP transport.
+        fixture: File name under ``testing/fixtures/osv``.
+        package_name: The package the recording was taken for.
+        ecosystem: The tool's ecosystem key, e.g. ``nodejs``.
+
+    Returns:
+        The advisory records ``OSVSource`` normalized, unmerged.
+    """
+    return list(
+        _recorded_lookup(
+            monkeypatch,
+            fixture=fixture,
+            package_name=package_name,
+            ecosystem=ecosystem,
+        )[1].vulnerabilities
+    )
+
+
 def advisories_for(
     monkeypatch: pytest.MonkeyPatch,
     *,
@@ -88,6 +125,34 @@ def advisories_for(
     Returns:
         The advisory records ``combine_source_lookups`` produced.
     """
+    source, lookup = _recorded_lookup(
+        monkeypatch,
+        fixture=fixture,
+        package_name=package_name,
+        ecosystem=ecosystem,
+    )
+    outcome = aggregator.combine_source_lookups([(source, lookup)])
+    return outcome.vulnerabilities
+
+
+def _recorded_lookup(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    fixture: str,
+    package_name: str,
+    ecosystem: str,
+) -> Tuple["aggregator.OSVSource", "aggregator.SourceLookup"]:
+    """Run ``OSVSource.lookup`` against a recording.
+
+    Args:
+        monkeypatch: pytest's patcher, used only on the HTTP transport.
+        fixture: File name under ``testing/fixtures/osv``.
+        package_name: The package the recording was taken for.
+        ecosystem: The tool's ecosystem key, e.g. ``nodejs``.
+
+    Returns:
+        The source and the answer it produced.
+    """
     payload = recorded_query(fixture)
 
     def recorded_post(
@@ -102,8 +167,7 @@ def advisories_for(
     source = aggregator.OSVSource()
     lookup = source.lookup(package_name, ecosystem)
     assert lookup.state is aggregator.SourceState.ANSWERED
-    outcome = aggregator.combine_source_lookups([(source, lookup)])
-    return outcome.vulnerabilities
+    return source, lookup
 
 
 def annotated_dependency(

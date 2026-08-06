@@ -134,6 +134,14 @@ class SecurityMetrics:
     # tier or nothing, and "nothing" means no counted advisory stated one.
     severity_unknown_count: Optional[int] = None
     severity_unknown_reasons: Dict[str, int] = field(default_factory=dict)
+    # Counted advisories carrying no CVSS base score, with the reasons why.
+    # ``max_cvss_score`` is a maximum over the advisories that *do* carry one,
+    # so this is what says how much of the population it speaks for. Before
+    # #273 the question could not arise: an advisory with no score had the
+    # severity tier's representative number written in for it, so the maximum
+    # was never anything but 3.0, 5.0, 8.0 or 10.0 and never a measurement.
+    cvss_unknown_count: Optional[int] = None
+    cvss_unknown_reasons: Dict[str, int] = field(default_factory=dict)
     max_vulnerability_severity: Optional[str] = None
     vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
 

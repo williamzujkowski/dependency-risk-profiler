@@ -997,11 +997,28 @@ class RiskScorer:
                 if severity == MALICIOUS_SEVERITY:
                     return exploit_score_from_severity(severity)
 
+                # The worse of what the scores say and what the labels say,
+                # rather than the score alone. Until #273, ``max_cvss_score``
+                # covered every counted advisory — an advisory nobody scored
+                # had its severity tier's representative number written in —
+                # so reading it alone could not miss anything. It no longer
+                # covers them: it is now a maximum over the advisories whose
+                # publisher actually stated a CVSS, and ``cvss_unknown_count``
+                # says how many it leaves out. Reading it alone would let a
+                # package whose worst advisory is unscored be scored off its
+                # second-worst, which is this fix quietly lowering risk.
+                #
+                # Both branches end in ``exploit_score_from_severity``, so this
+                # is a maximum over tiers wearing two different notations.
+                candidates = []
                 if security_metrics.max_cvss_score is not None:
-                    return exploit_score_from_cvss(security_metrics.max_cvss_score)
-
+                    candidates.append(
+                        exploit_score_from_cvss(security_metrics.max_cvss_score)
+                    )
                 if severity is not None:
-                    return exploit_score_from_severity(severity)
+                    candidates.append(exploit_score_from_severity(severity))
+                if candidates:
+                    return max(candidates)
 
                 # Counted advisories, none of which states a severity. Not
                 # zero: zero is the value this signal carries for a package
