@@ -91,6 +91,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same win in the healthier direction and is #301. A failed clone still reports
   `no_data_from_source`, which names the wrong cause — the registry answered and
   was right — and that is #302.
+- **`max_counted_cvss_score` was a severity label wearing a number's clothes.**
+  `_extract_osv_cvss_score` read OSV's `severity[].score` as a number. The OSV
+  schema defines that field as the CVSS **vector string** —
+  `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H` — so `normalize_cvss_score`
+  answered `None` for every OSV record the tool has ever fetched. In a 2247-
+  advisory corpus across nine ecosystems, **0 of 1412** deduplicated advisories
+  carried a numeric CVSS. The read had never once succeeded.
+
+  Nothing crashed, because there was a fallback: `severity_to_score(tier)`, which
+  maps the *label* to a representative number. That number was then published as
+  `max_counted_cvss_score`, a field whose name asserts a measurement. Across 29
+  packages it took exactly three values — 5.0, 8.0 and 10.0 — and it was wrong
+  against GitHub's own published base score for all six advisories checked:
+
+  | advisory | package | before | after | GitHub v3.1 |
+  |---|---|---|---|---|
+  | GHSA-frmv-pr5f-9mcr | Django | 10.0 | **9.1** | 9.1 |
+  | GHSA-xqr8-7jwr-rhp7 | certifi | 8.0 | **7.5** | 7.5 |
+  | GHSA-2g68-c3qc-8985 | Werkzeug | 8.0 | **7.5** | 7.5 |
+  | GHSA-9hjg-9r4m-mvj7 | requests | 5.0 | **5.3** | 5.3 |
+  | GHSA-3pqx-4fqf-j49f | PyYAML | 10.0 | *unmeasured: CVSS:4.0* | 9.8 |
+  | GHSA-3f63-hfp8-52jq | Pillow | 10.0 | *unmeasured: CVSS:4.0* | 8.1 |
+
+  The vector is now decoded. `vulnerabilities/cvss.py` computes CVSS v3.0 and
+  v3.1 base scores from the eight base metrics — the specification's closed-form
+  arithmetic, no new dependency — and is checked against every distinct
+  `(vectorString, baseScore)` pair NVD publishes, 498 of them, captured into
+  `testing/fixtures/cvss/`. 674 of the corpus's 1412 advisories now carry a
+  score, spread across **52 distinct values** instead of three.
+
+  **CVSS v4.0 is not scored, and says so.** Its base score is a 270-entry
+  MacroVector lookup with an interpolation over neighbouring equivalence
+  classes, and NVD publishes only 164 distinct v4 pairs to check one against —
+  too few to cover the table. An advisory whose highest severity entry is v4.0
+  reports no score and names the version it could not compute, in a new
+  `cvss_unknown` / `cvss_unknown_reasons` pair beside the maximum. It does not
+  reach past the v4 entry to the v3 one beside it: a publisher that rescores an
+  advisory under v4.0 sets its label from the v4 score, and 41 of the 161
+  dual-scored advisories surveyed have a v3.1 band that contradicts their own
+  label for exactly that reason.
+
+  Two things follow, neither of them cosmetic. `normalize_vulnerability_severity`
+  has always had a CVSS fallback for advisories that publish a vector and no
+  label, and it had been unreachable for as long as the score arrived `None`;
+  **204 of 2246 advisories** move out of `UNKNOWN` and state a severity, and the
+  unlabelled-but-scored records turn out to be PYSEC, not RUSTSEC. And the
+  maximum no longer covers every counted advisory, so the exploit signal stops
+  reading it alone — it takes the worse of the maximum and the severity label.
+  Without that, this fix would have quietly *lowered* the exploit signal for five
+  of 29 packages, pillow and `github.com/docker/docker` from 1.0 to 0.75.
+
+  The verdict floor is unmoved: it keys on `max_counted_severity`, the label, and
+  every risk level, floor and exploit score in the corpus is byte-identical
+  before and after. The only field that changed is the one that was lying.
 
 - **A Python constraint was scored as though it were the installed version.**
   `requests>=2.20.0` produced a record byte-identical to `requests==2.20.0`:

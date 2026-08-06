@@ -19,12 +19,21 @@ from __future__ import annotations
 from typing import Dict
 
 import pytest
-from osv_replay import annotated_dependency, normalized_advisories
+from osv_replay import (
+    advisories_for,
+    annotated_dependency,
+    normalized_advisories,
+)
 
+from dependency_risk_profiler.models import SecurityMetrics
+from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import AdvisoryLookupState
 from dependency_risk_profiler.vulnerabilities.aggregator import (
     CVSS_NOT_PUBLISHED_REASON,
     CVSS_UNSUPPORTED_VERSION_REASON,
     MALICIOUS_SEVERITY,
+    exploit_score_from_cvss,
+    exploit_score_from_severity,
     severity_to_score,
 )
 
@@ -305,6 +314,46 @@ class TestOtherEcosystemsDecodeTheSameWay:
         assert measured - TIER_CONSTANTS
 
 
+class TestAMergedGroupKeepsScoreAndReasonTogether:
+    """#274's merge takes the worst record's severity evidence — all of it."""
+
+    def test_the_reason_travels_with_the_score_it_explains(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """certifi's GHSA and PYSEC records for one vulnerability, collapsed.
+
+        ``_merge_advisory_group`` copies ``severity``, ``normalized_severity``
+        and ``cvss_score`` from the worst-scored member and the rest of the
+        record from the lexicographically first one. Leaving
+        ``cvss_unknown_reason`` behind in the second group would produce a
+        record holding one member's score beside another member's explanation
+        for having none — measured and unmeasured at once, which is the state
+        rule 4 exists to make unrepresentable.
+
+        Args:
+            monkeypatch: pytest's patcher, used only on the HTTP transport.
+        """
+        merged = advisories_for(
+            monkeypatch,
+            fixture="pypi_certifi.json",
+            package_name="certifi",
+            ecosystem="python",
+        )
+
+        contradictions = [
+            advisory
+            for advisory in merged
+            if advisory.get("cvss_score") is not None
+            and advisory.get("cvss_unknown_reason") is not None
+        ]
+        assert contradictions == []
+        assert any(
+            advisory.get("cvss_score") is None
+            and advisory.get("cvss_unknown_reason") is not None
+            for advisory in merged
+        )
+
+
 class TestMaliciousAdvisoriesAreUntouched:
     """#285's tier survives: malware has nothing to score and is not scored."""
 
@@ -354,3 +403,77 @@ class TestMaliciousAdvisoriesAreUntouched:
         assert metrics.max_vulnerability_severity == MALICIOUS_SEVERITY
         assert metrics.max_cvss_score == 9.8
         assert metrics.cvss_unknown_count == 1
+
+
+class TestTheExploitSignalStopsReadingAnIncompleteMaximum:
+    """The consequence of the fix, handled where it lands.
+
+    Until #273, ``max_counted_cvss_score`` covered every counted advisory:
+    anything the source did not score had its tier's representative number
+    written in. Nothing could be missing from it, so the exploit signal read it
+    alone and took the CVSS branch whenever it was set.
+
+    It is now a maximum over the advisories a publisher *did* score. On a real
+    29-package corpus, keeping the old CVSS-first-and-stop order would have
+    **lowered** the exploit signal for five of them — pillow and
+    ``github.com/docker/docker`` from 1.0 to 0.75, activesupport, flask and the
+    openssl crate from 0.75 to 0.45 — because each has a worst advisory scored
+    only under CVSS v4.0 and a second-worst scored under v3.1. A fix for a
+    field that lied is not allowed to make the tool report less risk.
+    """
+
+    def test_a_higher_label_beats_a_lower_measured_maximum(self) -> None:
+        """The openssl-crate shape: MEDIUM measured, CRITICAL published.
+
+        The maximum CVSS is real; it is just not the worst advisory's, because
+        the worst advisory's CVSS could not be decoded. The severity label is
+        what covers all of them.
+        """
+        metrics = SecurityMetrics(
+            counted_vulnerability_count=2,
+            max_cvss_score=5.5,
+            cvss_unknown_count=1,
+            max_vulnerability_severity="CRITICAL",
+        )
+
+        score = RiskScorer()._calculate_exploit_score(
+            True, metrics, AdvisoryLookupState.COMPLETE
+        )
+
+        assert score == exploit_score_from_severity("CRITICAL")
+        assert score != exploit_score_from_cvss(5.5)
+
+    def test_a_higher_measured_maximum_still_beats_a_lower_label(self) -> None:
+        """The guard is a maximum, not a swap: neither side wins by position."""
+        metrics = SecurityMetrics(
+            counted_vulnerability_count=1,
+            max_cvss_score=9.5,
+            cvss_unknown_count=0,
+            max_vulnerability_severity="MEDIUM",
+        )
+
+        score = RiskScorer()._calculate_exploit_score(
+            True, metrics, AdvisoryLookupState.COMPLETE
+        )
+
+        assert score == exploit_score_from_cvss(9.5)
+
+    def test_a_malicious_package_is_still_decided_by_its_tier_alone(self) -> None:
+        """#285 is untouched: ``MALICIOUS`` short-circuits above all of this.
+
+        A malware advisory that shares an alias group with a CVSS-scored one
+        must not be scored off that CVSS — a statement about a vulnerability is
+        not a statement about the malware.
+        """
+        metrics = SecurityMetrics(
+            counted_vulnerability_count=2,
+            max_cvss_score=2.0,
+            cvss_unknown_count=1,
+            max_vulnerability_severity=MALICIOUS_SEVERITY,
+        )
+
+        score = RiskScorer()._calculate_exploit_score(
+            True, metrics, AdvisoryLookupState.COMPLETE
+        )
+
+        assert score == exploit_score_from_severity(MALICIOUS_SEVERITY)

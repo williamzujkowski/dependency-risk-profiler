@@ -1865,7 +1865,10 @@ def _merge_advisory_group(
 
     * severity, CVSS and the raw severity string come as a set from the record
       that states the worst of them, so a group never scores below its worst
-      member (a re-scoped advisory published at HIGH and LOW is HIGH);
+      member (a re-scoped advisory published at HIGH and LOW is HIGH) — and
+      *"as a set"* includes the reason there is no CVSS, or the merged record
+      would carry one record's score beside another's explanation for not
+      having one;
     * ``withdrawn`` only if *every* record is withdrawn — one live record for a
       vulnerability means it stands;
     * ``confidence`` from the most trusted record;
@@ -1893,6 +1896,7 @@ def _merge_advisory_group(
     merged["severity"] = worst.get("severity")
     merged["normalized_severity"] = worst.get("normalized_severity")
     merged["cvss_score"] = worst.get("cvss_score")
+    merged["cvss_unknown_reason"] = worst.get("cvss_unknown_reason")
     merged["withdrawn"] = all(_is_withdrawn(record) for record in group)
     merged["confidence"] = _normalize_confidence(
         max(group, key=_confidence_evidence_rank)
