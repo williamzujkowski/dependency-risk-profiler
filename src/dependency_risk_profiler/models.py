@@ -12,6 +12,7 @@ from .signals import (
     FieldSource,
     Measurement,
     ProvenancedField,
+    RegistryLookupState,
     SourceRepositoryState,
     unmeasured_reason_for,
 )
@@ -193,6 +194,17 @@ class DependencyMetadata:
     # source's own ``name``, never a URL or a token-bearing request — because
     # this is rendered into reports.
     advisory_sources_unavailable: Tuple[str, ...] = ()
+    # What the package registries jointly established, so the scorer can tell
+    # "every repository was asked and none publishes this" from "one repository
+    # was asked" and from "the lookup did not finish". Written only by
+    # ``record_registry_lookup`` below, from the Maven analyzer, and read only
+    # through ``signals.unmeasured_reason_for``. None means no registry-lookup
+    # state was recorded, which is every ecosystem but Maven today (#278).
+    registry_lookup_state: Optional[RegistryLookupState] = None
+    # Which repositories were asked and did not answer. Names only — a
+    # repository's own short ``name``, never its URL — because this is rendered
+    # into reports.
+    registry_sources_unavailable: Tuple[str, ...] = ()
 
     # Which acquisition path last wrote each of the seven fields that have more
     # than one (#164 step 7). Written only through ``record_field_source``,
@@ -293,6 +305,54 @@ class DependencyMetadata:
         self.advisory_lookup_state = state
         self.advisory_sources_unavailable = names
 
+    def record_registry_lookup(
+        self,
+        state: RegistryLookupState,
+        *,
+        repositories_unavailable: Sequence[str],
+    ) -> None:
+        """Record what the package registries established, and what they could not.
+
+        The only writer of :attr:`registry_lookup_state`, and it takes the
+        evidence as a required keyword-only argument for the same reason
+        :meth:`record_advisory_lookup` does: a state that can be set by
+        omission is a state nobody has to justify. Here that matters because
+        the state being justified is the one that stops an artifact nobody
+        could reach from reading as an artifact nobody publishes.
+
+        Args:
+            state: What the repositories established.
+            repositories_unavailable: Short names of the repositories that were
+                asked and did not answer. Required to be non-empty exactly when
+                the state says something failed, and empty otherwise.
+
+        Raises:
+            TypeError: If ``state`` is not a :class:`RegistryLookupState`.
+            ValueError: If the names disagree with the state — a failure that
+                cannot say what failed is not a report, and a lookup that
+                nobody failed cannot name a casualty.
+        """
+        if not isinstance(state, RegistryLookupState):
+            raise TypeError(
+                "state must be a RegistryLookupState member, not "
+                f"{type(state).__name__}"
+            )
+        names = tuple(repositories_unavailable)
+        if state is RegistryLookupState.FAILED and not names:
+            raise ValueError(
+                "registry lookup state 'failed' must name the repositories "
+                "that did not answer: an unexplained failure is the 404 "
+                "wearing a different hat (#219, #278)"
+            )
+        if state is not RegistryLookupState.FAILED and names:
+            raise ValueError(
+                f"registry lookup state {state.value!r} means no repository "
+                f"was asked and left unanswered, so it cannot also report "
+                f"{names!r} as unavailable"
+            )
+        self.registry_lookup_state = state
+        self.registry_sources_unavailable = names
+
 
 @dataclass
 class DependencyRiskScore:
@@ -373,6 +433,7 @@ class DependencyRiskScore:
                     SIGNAL_SOURCE_REPOSITORY,
                     source_repository_unreadable=unreadable,
                     advisory_lookup=self.dependency.advisory_lookup_state,
+                    registry_lookup=self.dependency.registry_lookup_state,
                 )
             )
         return measurements

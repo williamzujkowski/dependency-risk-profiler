@@ -444,6 +444,52 @@ def advisory_lookup_is_measured(state: Optional[AdvisoryLookupState]) -> bool:
     return state not in ADVISORY_LOOKUP_UNMEASURED
 
 
+class RegistryLookupState(Enum):
+    """What the package registries jointly established about one package.
+
+    The same shape as :class:`AdvisoryLookupState` and for the same reason. An
+    ecosystem whose registry is a set of repositories rather than one API can
+    fail in a way one endpoint cannot: it can be asked *incompletely*. Until
+    #278 the Maven side asked exactly one repository, Maven Central, and every
+    ``androidx.*`` artifact — none of which is published there — came back
+    indistinguishable from an artifact that does not exist. Sixty-two of
+    Signal-Android's ninety-four dependencies were in that state.
+
+    So "we asked every repository we know and none of them publishes this" is
+    :attr:`ABSENT_EVERYWHERE`, and it is deliberately not the same member as
+    :attr:`NOT_ATTEMPTED`, which covers a lookup that stopped part-way — a
+    spent fetch budget, a coordinate the grammar refuses, remote resolution
+    switched off. The distinction is not a convention: the state is derived
+    from the recorded per-repository outcomes by
+    ``parsers.maven_repositories.RepositoryLookup.state``, so absence is
+    unreachable unless the outcomes actually cover the configured set
+    (AGENTS.md rule 4).
+
+    ``None`` on a dependency means no registry-lookup state was recorded at
+    all, which is what every ecosystem other than Maven does today. It reads as
+    "do not branch", exactly like ``None`` for the advisory state, and never as
+    a failure.
+    """
+
+    #: At least one repository produced the document. Anything still missing is
+    #: missing from a document we actually read.
+    ANSWERED = "answered"
+
+    #: Every configured repository was asked, every one of them answered, and
+    #: none of them publishes this artifact. A measurement.
+    ABSENT_EVERYWHERE = "absent_everywhere"
+
+    #: At least one repository was asked and did not answer — a timeout, a 5xx,
+    #: a refused redirect, an unreadable body — and none of the others had it.
+    #: "Not published anywhere" is exactly the claim that cannot be made here,
+    #: which is #219's rule at repository scope.
+    FAILED = "failed"
+
+    #: The lookup did not finish: no repository was asked, or some answered
+    #: "no" and the rest were never reached.
+    NOT_ATTEMPTED = "not_attempted"
+
+
 # --- Field provenance ------------------------------------------------------
 
 
@@ -868,6 +914,7 @@ def unmeasured_reason_for(
     *,
     source_repository_unreadable: bool,
     advisory_lookup: Optional[AdvisoryLookupState],
+    registry_lookup: Optional[RegistryLookupState],
 ) -> UnmeasuredReason:
     """Decide why a signal came back unmeasured. The only place that decides.
 
@@ -876,9 +923,9 @@ def unmeasured_reason_for(
     table's read side, and it takes facts rather than opinions — both arguments
     are states the pipeline *recorded*, not inferences about the package.
 
-    Both are keyword-only and neither has a default, so a caller cannot reach a
-    fallback by forgetting one. ``advisory_lookup`` may be ``None``; that is
-    itself the recorded fact that no lookup ran.
+    All three are keyword-only and none has a default, so a caller cannot reach
+    a fallback by forgetting one. ``advisory_lookup`` and ``registry_lookup``
+    may be ``None``; that is itself the recorded fact that no such lookup ran.
 
     Args:
         signal: A stable signal name from :data:`SIGNAL_CATALOG`.
@@ -886,6 +933,9 @@ def unmeasured_reason_for(
             readable source repository came out of it.
         advisory_lookup: What the advisory sources established, or None when
             the aggregator never ran for this dependency.
+        registry_lookup: What the package registries established, or None when
+            no registry-lookup state was recorded — which is every ecosystem
+            but Maven today (#278).
 
     Returns:
         The reason to record. Defaults to the signal's own catalog reason,
@@ -908,4 +958,15 @@ def unmeasured_reason_for(
             return UnmeasuredReason.SOURCE_LOOKUP_FAILED
         if advisory_lookup is AdvisoryLookupState.NOT_ATTEMPTED:
             return UnmeasuredReason.LOOKUP_NOT_ATTEMPTED
+    # And the two ways a *registry* lookup produces no measurement, last,
+    # because both of the facts above are more specific. An artifact nobody
+    # could look up has no source repository to be unreadable and no advisory
+    # verdict to explain, so in practice this branch is what remains.
+    # ABSENT_EVERYWHERE falls through on purpose: every repository was asked
+    # and answered, so the input really was absent from the source, which is
+    # what the catalog's own reason already says.
+    if registry_lookup is RegistryLookupState.FAILED:
+        return UnmeasuredReason.SOURCE_LOOKUP_FAILED
+    if registry_lookup is RegistryLookupState.NOT_ATTEMPTED:
+        return UnmeasuredReason.LOOKUP_NOT_ATTEMPTED
     return spec.unmeasured_reason

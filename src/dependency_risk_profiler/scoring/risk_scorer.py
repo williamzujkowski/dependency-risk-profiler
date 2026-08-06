@@ -45,6 +45,7 @@ from ..signals import (
     AdvisoryLookupState,
     Measurement,
     MeasurementState,
+    RegistryLookupState,
     SourceRepositoryState,
     UnmeasuredReason,
     advisory_lookup_is_measured,
@@ -270,6 +271,49 @@ def advisory_risk_factors(dependency: DependencyMetadata) -> List[str]:
     ]
 
 
+def registry_risk_factors(dependency: DependencyMetadata) -> List[str]:
+    """Return the risk factors describing a registry lookup that fell short.
+
+    The same gap ``advisory_risk_factors`` reports, one layer down. An
+    ecosystem served by several repositories can come back empty for three
+    different reasons, and a reader can act on each of them differently: an
+    artifact no repository publishes is probably a typo or an internal
+    coordinate; a repository that did not answer is an outage; a lookup that
+    stopped part-way is a budget this scan set too low. Before #278 all three
+    read as the same silence, because only one repository was ever asked.
+
+    ``ANSWERED`` produces nothing here on purpose: the lookup did its job, and
+    whatever is still missing is missing from a document that was read.
+
+    Out here rather than inline for the reason ``advisory_risk_factors``
+    documents at length: ``score_dependency`` sits on a benchmark cliff.
+
+    Args:
+        dependency: The scored dependency.
+
+    Returns:
+        Zero or one factor, in report order.
+    """
+    registry = dependency.registry_lookup_state
+    if registry is RegistryLookupState.FAILED:
+        unavailable = ", ".join(dependency.registry_sources_unavailable)
+        return [
+            f"Package registry lookup did not answer ({unavailable}); "
+            "the artifact may well be published, unread"
+        ]
+    if registry is RegistryLookupState.ABSENT_EVERYWHERE:
+        return [
+            "No configured package repository publishes this artifact; "
+            "its registry-derived signals are absent, not unread"
+        ]
+    if registry is RegistryLookupState.NOT_ATTEMPTED:
+        return [
+            "Package registry lookup did not finish; the artifact was left "
+            "unread rather than reported as unpublished"
+        ]
+    return []
+
+
 class RiskScorer:
     """Scores dependencies based on various risk factors."""
 
@@ -386,6 +430,7 @@ class RiskScorer:
         source_repository_state = dependency.source_repository_state
         unreadable = source_repository_state in SOURCE_REPOSITORY_UNREADABLE
         advisory = dependency.advisory_lookup_state
+        registry = dependency.registry_lookup_state
 
         staleness_score = self._calculate_staleness_score(dependency.last_updated)
         staleness_score = self._dampen_staleness_for_popularity(
@@ -453,7 +498,7 @@ class RiskScorer:
         # through the one centralized reason table, so no adapter and no branch
         # of this method gets to decide independently what an absence means.
         measure = self._measure
-        context = (unreadable, advisory)
+        context = (unreadable, advisory, registry)
         weighted_scores: List[Tuple[str, Measurement, float]] = [
             (
                 SIGNAL_STALENESS,
@@ -605,6 +650,7 @@ class RiskScorer:
             maintained_score,
         )
         risk_factors.extend(advisory_risk_factors(dependency))
+        risk_factors.extend(registry_risk_factors(dependency))
         if source_repository_state is SourceRepositoryState.UNDECLARED:
             risk_factors.append("Declares no source repository")
         elif source_repository_state is SourceRepositoryState.UNUSABLE:
@@ -713,7 +759,9 @@ class RiskScorer:
     def _measure(
         signal: str,
         score: Optional[float],
-        context: Tuple[bool, Optional[AdvisoryLookupState]],
+        context: Tuple[
+            bool, Optional[AdvisoryLookupState], Optional[RegistryLookupState]
+        ],
     ) -> Measurement:
         """Lift one scorer result into a measurement, with its reason.
 
@@ -742,12 +790,13 @@ class RiskScorer:
         # the shared per-reason instances live, which is cheaper still.
         if score is not None:
             return Measurement(MeasurementState.MEASURED, score, None)
-        unreadable, advisory = context
+        unreadable, advisory, registry = context
         return Measurement.unmeasured(
             unmeasured_reason_for(
                 signal,
                 source_repository_unreadable=unreadable,
                 advisory_lookup=advisory,
+                registry_lookup=registry,
             )
         )
 

@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 
 from ..models import DependencyMetadata
 from .base import BaseParser
-from .maven_central import MavenCentralClient
+from .maven_repositories import MavenRepositoryClient
 from .maven_versions import ManagedVersionResolver, ResolvedPom
 from .pom_model import PomDocument, is_resolved, read_pom, resolve_properties
 from .version_sources import (
@@ -45,18 +45,18 @@ class MavenPomParser(BaseParser):
     def __init__(
         self,
         manifest_path: str,
-        client: Optional[MavenCentralClient] = None,
+        client: Optional[MavenRepositoryClient] = None,
     ) -> None:
         """Initialize the parser.
 
         Args:
             manifest_path: Path to the ``pom.xml`` file.
-            client: Maven Central client used to read parent POMs and imported
-                BOMs. Defaults to a bounded client; tests inject a fake one and
+            client: Maven repository client used to read parent POMs and
+                imported BOMs. Defaults to a bounded client; tests inject a fake one and
                 ``DEPENDENCY_RISK_NO_REMOTE_POMS=1`` disables remote reads.
         """
         super().__init__(manifest_path)
-        self.client = client if client is not None else MavenCentralClient()
+        self.client = client if client is not None else MavenRepositoryClient()
 
     def parse(self) -> Dict[str, DependencyMetadata]:
         """Parse pom.xml and extract direct dependencies.
@@ -73,7 +73,7 @@ class MavenPomParser(BaseParser):
 
         # Pass one is entirely local: no network, no parent POMs. A project that
         # pins its versions inline never needs pass two.
-        offline = MavenCentralClient(enabled=False)
+        offline = MavenRepositoryClient(enabled=False)
         local_scope = ManagedVersionResolver(offline).resolve(document)
         resolved = self._resolve_direct(document, local_scope)
 

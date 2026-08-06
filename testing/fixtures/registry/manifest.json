@@ -7,6 +7,7 @@
   "allowed_hosts": [
     "api.nuget.org",
     "crates.io",
+    "dl.google.com",
     "proxy.golang.org",
     "pypi.org",
     "raw.githubusercontent.com",
@@ -98,6 +99,26 @@
         },
         "reactive-streams.metadata": {
           "url": "https://repo1.maven.org/maven2/org/reactivestreams/reactive-streams/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "signal.build.gradle.kts": {
+          "url": "https://raw.githubusercontent.com/signalapp/Signal-Android/v8.22.1/app/build.gradle.kts",
+          "reducer": "none",
+          "format": "text"
+        },
+        "signal.libs.versions.toml": {
+          "url": "https://raw.githubusercontent.com/signalapp/Signal-Android/v8.22.1/gradle/libs.versions.toml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "appcompat.pom": {
+          "url": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat/1.7.1/appcompat-1.7.1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "appcompat.metadata": {
+          "url": "https://dl.google.com/dl/android/maven2/androidx/appcompat/appcompat/maven-metadata.xml",
           "reducer": "none",
           "format": "text"
         }
@@ -214,6 +235,26 @@
         },
         "commons-collections.pom": {
           "url": "https://repo1.maven.org/maven2/commons-collections/commons-collections/3.1/commons-collections-3.1.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "material.pom": {
+          "url": "https://dl.google.com/dl/android/maven2/com/google/android/material/material/1.12.0/material-1.12.0.pom",
+          "reducer": "none",
+          "format": "text"
+        },
+        "material.metadata": {
+          "url": "https://dl.google.com/dl/android/maven2/com/google/android/material/material/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "agp-central.metadata": {
+          "url": "https://repo1.maven.org/maven2/com/android/tools/build/gradle/maven-metadata.xml",
+          "reducer": "none",
+          "format": "text"
+        },
+        "agp-google.metadata": {
+          "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml",
           "reducer": "none",
           "format": "text"
         }

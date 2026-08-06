@@ -5,6 +5,7 @@ from typing import Optional
 from unittest import mock
 
 import pytest
+from registry_fixtures import RecordedResponse
 from test_maven_version_resolution import MirrorClient
 
 from dependency_risk_profiler.analyzers.base import BaseAnalyzer
@@ -16,7 +17,10 @@ from dependency_risk_profiler.analyzers.maven import (
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.maven import MavenPomParser
-from dependency_risk_profiler.parsers.maven_central import MavenCentralClient
+from dependency_risk_profiler.parsers.maven_repositories import (
+    CENTRAL,
+    MavenRepositoryClient,
+)
 from dependency_risk_profiler.vulnerabilities import ecosystems
 
 POM_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -129,9 +133,31 @@ def test_pom_dispatches_to_maven_analyzer() -> None:
 
 def _offline_analyzer() -> MavenAnalyzer:
     """Return an analyzer that reads no POMs and clones nothing."""
-    analyzer = MavenAnalyzer(client=MavenCentralClient(enabled=False))
+    analyzer = MavenAnalyzer(client=MavenRepositoryClient(enabled=False))
     analyzer.clone_repos = False
     return analyzer
+
+
+def _serve_metadata(body: str) -> "mock._patch[mock.MagicMock]":
+    """Patch the repository transport to answer every URL with one document.
+
+    Patched at ``parsers.maven_repositories`` because that is where the fetch
+    lives: since #278 the analyzer holds no transport of its own, so both the
+    metadata lookup and the POM read go through the one client. A test that
+    patched the analyzer's module would stub nothing and reach the network.
+
+    Args:
+        body: The XML to serve.
+
+    Returns:
+        The unentered patch, so the caller can inspect the call arguments.
+    """
+    return mock.patch(
+        "dependency_risk_profiler.parsers.maven_repositories.requests.get",
+        side_effect=lambda url, **_kwargs: RecordedResponse(
+            url, body.encode("utf-8")
+        ),
+    )
 
 
 def test_maven_analyzer_sets_ecosystem_and_reads_release_version() -> None:
@@ -141,17 +167,20 @@ def test_maven_analyzer_sets_ecosystem_and_reads_release_version() -> None:
         name="com.google.guava:guava", installed_version="31.1-jre"
     )
 
-    with mock.patch("dependency_risk_profiler.analyzers.maven.requests.get") as get:
-        get.return_value = mock.Mock(
-            status_code=200, content=MAVEN_METADATA.encode("utf-8")
-        )
+    analyzer.client.enabled = True
+    analyzer.client.repositories = (CENTRAL,)
+    with _serve_metadata(MAVEN_METADATA) as get:
         result = analyzer.analyze({"com.google.guava:guava": dep})
 
     updated = result["com.google.guava:guava"]
     assert updated.additional_info["ecosystem"] == "maven"
     assert updated.latest_version == "32.1.3-jre"  # <release>, not <latest>
     # groupId dots become path separators.
-    assert "com/google/guava/guava/maven-metadata.xml" in get.call_args[0][0]
+    requested = [call.args[0] for call in get.call_args_list]
+    assert (
+        "https://repo1.maven.org/maven2/com/google/guava/guava/maven-metadata.xml"
+        in requested
+    )
 
 
 def test_maven_analyzer_reads_repo_license_and_deps_from_the_artifact_pom() -> None:
@@ -168,10 +197,7 @@ def test_maven_analyzer_reads_repo_license_and_deps_from_the_artifact_pom() -> N
         name="com.google.guava:guava", installed_version="33.0.0-jre"
     )
 
-    with mock.patch("dependency_risk_profiler.analyzers.maven.requests.get") as get:
-        get.return_value = mock.Mock(
-            status_code=200, content=MAVEN_METADATA.encode("utf-8")
-        )
+    with _serve_metadata(MAVEN_METADATA):
         result = analyzer.analyze({"com.google.guava:guava": dep})
 
     updated = result["com.google.guava:guava"]
@@ -204,10 +230,7 @@ def test_an_unreadable_pom_leaves_the_source_signal_unmeasured() -> None:
         name="com.google.guava:guava", installed_version="31.1-jre"
     )
 
-    with mock.patch("dependency_risk_profiler.analyzers.maven.requests.get") as get:
-        get.return_value = mock.Mock(
-            status_code=200, content=MAVEN_METADATA.encode("utf-8")
-        )
+    with _serve_metadata(MAVEN_METADATA):
         result = analyzer.analyze({"com.google.guava:guava": dep})
 
     assert result["com.google.guava:guava"].source_repository_state is None
@@ -215,7 +238,7 @@ def test_an_unreadable_pom_leaves_the_source_signal_unmeasured() -> None:
 
 def test_maven_analyzer_clones_each_repository_once() -> None:
     """Twelve starters share one repo; the clone is shared, not repeated."""
-    analyzer = MavenAnalyzer(client=MavenCentralClient(enabled=False))
+    analyzer = MavenAnalyzer(client=MavenRepositoryClient(enabled=False))
     shared = "https://github.com/spring-projects/spring-boot"
     dependencies = {
         f"org.springframework.boot:starter-{index}": DependencyMetadata(
@@ -237,8 +260,10 @@ def test_maven_analyzer_clones_each_repository_once() -> None:
             "dependency_risk_profiler.analyzers.maven.analyze_repository"
         ) as analyze,
         mock.patch(
-            "dependency_risk_profiler.analyzers.maven.requests.get",
-            return_value=mock.Mock(status_code=404, content=b""),
+            "dependency_risk_profiler.parsers.maven_repositories.requests.get",
+            side_effect=lambda url, **_kwargs: RecordedResponse(
+                url, b"", status_code=404
+            ),
         ),
     ):
         clone.return_value.__enter__.return_value = ("/tmp/clone", "repo")

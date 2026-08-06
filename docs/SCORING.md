@@ -26,7 +26,7 @@ The tool collects information from various sources to evaluate dependency health
 
 - **.NET (NuGet)**: The NuGet flat-container index (`https://api.nuget.org/v3-flatcontainer/[id]/index.json`) provides the version list; the newest stable is preferred.
 
-- **Java (Maven)**: Maven Central's `maven-metadata.xml` provides the release/latest version.
+- **Java (Maven)**: `maven-metadata.xml` provides the release/latest version, merged across Maven Central and Google's Maven repository on `lastUpdated` so an abandoned mirror cannot decide it (#278).
 
 ### 2. Source Code Repositories
 

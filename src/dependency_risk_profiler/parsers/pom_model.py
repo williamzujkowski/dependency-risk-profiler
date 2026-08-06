@@ -2,7 +2,7 @@
 
 Pure, offline, side-effect free: an ``xml.etree`` element in, a
 :class:`PomDocument` out. Everything that needs the network (following a
-``<parent>`` or an imported BOM) lives in :mod:`.maven_central`; everything that
+``<parent>`` or an imported BOM) lives in :mod:`.maven_repositories`; everything that
 needs a file lives in :mod:`.maven`. Keeping the shape-reading here is what
 makes the inheritance rules testable without a single HTTP call.
 """
