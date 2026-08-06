@@ -51,10 +51,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   publishes both tables and is generated from the adapters' own `capabilities`
   sets, checked by `testing/unit/test_forge_contract.py` so it cannot drift.
 
-  No GitHub-hosted package moves. Verified on a 30-package corpus against a
-  noise floor established first: three consecutive runs of the unmodified tool
-  differed in **0 fields**, and the run on this change differs from the
-  baseline in 0 fields outside the additive `forge` block (#292).
+  No GitHub-hosted package moves, measured against a noise floor established
+  before the change rather than assumed. Four runs of the unmodified tool over
+  a 30-package corpus (28 of them GitHub-hosted): three runs minutes apart
+  agreed in every field, and one 25 minutes later differed in **3** — two
+  commit cadences and one star count, all live GitHub counts, one of which
+  oscillated back on the next run. Against the closest-in-time baseline, this
+  change moves **no** field on any GitHub-hosted package.
+
+  It moves two on the one Codeberg-hosted package, and the direction is worth
+  stating: the branch that reuses a registry-declared maintainer count when the
+  forge cannot supply one sat *after* the GitHub-only early return, so it never
+  ran for any other host. `django-allauth` now reports the contributor count
+  PyPI publishes, attributed to `registry:metadata` rather than to a forge. Its
+  risk level, score and unmeasured-signal count are unchanged (#292).
 
 ### Changed
 
