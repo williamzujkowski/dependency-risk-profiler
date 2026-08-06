@@ -576,7 +576,14 @@ def _scored_axios() -> DependencyRiskScore:
 
 
 def test_axios_1_6_5_is_the_case_the_issue_recorded() -> None:
-    """The recording reproduces #242's numbers: 44 found, 29 counted, HIGH, 8.0."""
+    """The recording reproduces #242's numbers: 44 found, 29 counted, HIGH.
+
+    The fourth number the issue recorded was ``max_cvss_score == 8.0``, and it
+    is gone rather than changed: 8.0 was ``severity_to_score("HIGH")``, not a
+    CVSS anybody computed, and no advisory in this recording publishes a base
+    score (#273). The floor is keyed on the **label**, so it is unmoved — see
+    the test below, which still puts axios at MEDIUM off a HIGH severity.
+    """
     score = _scored_axios()
     metrics = score.dependency.security_metrics
 
@@ -584,7 +591,8 @@ def test_axios_1_6_5_is_the_case_the_issue_recorded() -> None:
     assert metrics.vulnerability_count == 44
     assert metrics.counted_vulnerability_count == 29
     assert metrics.max_vulnerability_severity == "HIGH"
-    assert metrics.max_cvss_score == 8.0
+    assert metrics.max_cvss_score is None
+    assert metrics.cvss_unknown_count == 29
     assert known_vulnerable(score.dependency) is True
 
 
@@ -658,11 +666,11 @@ def test_the_floor_serializes_with_every_key_present() -> None:
 def test_a_floor_the_verdict_already_cleared_is_still_reported() -> None:
     """The evaluated-and-cleared case is a record, not a silence.
 
-lodash 4.17.21 was this shape when #242 was filed: three counted advisories
-    topping out at HIGH, a MEDIUM floor, and a verdict its own leading
-    indicators had already carried past that floor. A payload that said nothing
-    here would leave a reader unable to tell such a verdict from one where the
-    floor was never computed at all.
+    lodash 4.17.21 was this shape when #242 was filed: three counted advisories
+        topping out at HIGH, a MEDIUM floor, and a verdict its own leading
+        indicators had already carried past that floor. A payload that said nothing
+        here would leave a reader unable to tell such a verdict from one where the
+        floor was never computed at all.
     """
     dependency = _healthy_dependency("already-clear")
     dependency.last_updated = datetime.now(timezone.utc) - timedelta(days=900)

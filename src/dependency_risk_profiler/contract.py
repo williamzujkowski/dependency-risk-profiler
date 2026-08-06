@@ -524,6 +524,8 @@ def advisories_to_dict(metrics: Optional[SecurityMetrics]) -> Dict[str, object]:
             "applicability_unknown_reasons": {},
             "severity_unknown": None,
             "severity_unknown_reasons": {},
+            "cvss_unknown": None,
+            "cvss_unknown_reasons": {},
             "max_counted_cvss_score": None,
             "max_counted_severity": None,
             "details": [],
@@ -545,6 +547,16 @@ def advisories_to_dict(metrics: Optional[SecurityMetrics]) -> Dict[str, object]:
         # case for Go and Rust and for every malicious-package advisory.
         "severity_unknown": metrics.severity_unknown_count,
         "severity_unknown_reasons": dict(metrics.severity_unknown_reasons),
+        # Counted advisories that carry no CVSS base score, and why (#273).
+        # Additive, and load-bearing for reading the field below it:
+        # ``max_counted_cvss_score`` is the maximum over the advisories that
+        # *are* scored, and this says how many are not. A null maximum beside a
+        # non-zero count here is a package whose live advisories nobody scored;
+        # a null maximum beside a zero count is a package with no counted
+        # advisories at all. Before #273 neither could be told from a 10.0,
+        # because an unscored advisory had the tier constant written in for it.
+        "cvss_unknown": metrics.cvss_unknown_count,
+        "cvss_unknown_reasons": dict(metrics.cvss_unknown_reasons),
         "max_counted_cvss_score": metrics.max_cvss_score,
         "max_counted_severity": metrics.max_vulnerability_severity,
         "details": list(metrics.vulnerability_details),

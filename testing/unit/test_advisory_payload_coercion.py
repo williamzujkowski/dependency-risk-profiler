@@ -399,8 +399,17 @@ class TestMaximumCvssDistinguishesZeroFromUnmeasured:
     one (#217).
     """
 
-    def test_a_counted_advisory_always_publishes_a_maximum(self) -> None:
-        """The lodash shape: HIGH, no CVSS, still a statement about severity."""
+    def test_a_severity_label_no_longer_stands_in_for_a_measurement(self) -> None:
+        """The lodash shape: HIGH, no CVSS. The label is not a score (#273).
+
+        This test asserted ``max_cvss_score == 8.0`` and passed for exactly the
+        reason #273 is a defect: 8.0 is ``severity_to_score("HIGH")``, a
+        constant derived from the label, published in a field whose name claims
+        a CVSS measurement. GHSA-p6mc-m468-83gg has no CVSS vector at all, so
+        there is no base score to report and the honest answer is that there
+        isn't one — with the reason beside it, and the HIGH label untouched in
+        the field that does carry a label.
+        """
         dependency = _update_dependency_with_vulnerabilities(
             DependencyMetadata(name="lodash", installed_version="4.17.15"),
             [
@@ -415,7 +424,11 @@ class TestMaximumCvssDistinguishesZeroFromUnmeasured:
         )
 
         assert dependency.security_metrics is not None
-        assert dependency.security_metrics.max_cvss_score == 8.0
+        assert dependency.security_metrics.max_cvss_score is None
+        assert dependency.security_metrics.cvss_unknown_count == 1
+        assert dependency.security_metrics.cvss_unknown_reasons == {
+            "source published no CVSS": 1
+        }
         assert dependency.security_metrics.max_vulnerability_severity == "HIGH"
 
     def test_an_unreadable_advisory_leaves_the_maximum_unmeasured(self) -> None:

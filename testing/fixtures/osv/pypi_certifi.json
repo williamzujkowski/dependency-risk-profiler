@@ -1,0 +1,611 @@
+{
+  "provenance": {
+    "captured_at": "2026-08-05",
+    "captured_by": "curl -s -X POST https://api.osv.dev/v1/query -H 'Content-Type: application/json' -d '{\"package\":{\"name\":\"certifi\",\"ecosystem\":\"PyPI\"}}'",
+    "package": "certifi",
+    "osv_ecosystem": "PyPI",
+    "what_this_is": "Every advisory OSV holds for certifi, captured for #273. Four severity shapes in six records, none of which a hand-written fixture would have produced: PYSEC-2024-230 publishes a CVSS v3.1 vector and NO database_specific.severity, which is the state that normalized to UNKNOWN for as long as the vector went undecoded; GHSA-43fp-rhv2-5gv8 publishes a v3.1 vector AND a v4.0 vector, which is what the highest-type rule is for; GHSA-248v-346w-9cwc carries a severity label with no severity block at all; and two PYSEC records carry neither. GHSA-xqr8-7jwr-rhp7 is one of the six advisories the #273 sweep checked against GitHub's API -- the tool reported 8.0 for it, derived from its HIGH label, against a real CVSS v3.1 base score of 7.5.",
+    "advisory_count": 6,
+    "trimming": [
+      "details: 5 of 6 advisory descriptions truncated to 400 characters. Prose no adapter reads; no key dropped.",
+      "references: 5 of 6 advisories trimmed to their first 3 links. Volume only; the key and its entry shape are retained. Nothing else is reduced."
+    ]
+  },
+  "payload": {
+    "vulns": [
+      {
+        "id": "GHSA-248v-346w-9cwc",
+        "summary": "Certifi removes GLOBALTRUST root certificate",
+        "details": "Certifi 2024.07.04 removes root certificates from \"GLOBALTRUST\" from the root store. These are in the process of being removed from Mozilla's trust store.\n\nGLOBALTRUST's root certificates are being removed pursuant to an investigation which identified \"long-running and unresolved compliance issues\". Conclusions of Mozilla's investigation can be found [here]( https://groups.google.com/a/mozilla.org",
+        "aliases": [
+          "CVE-2024-39689",
+          "PYSEC-2024-230"
+        ],
+        "modified": "2026-06-10T17:14:15.601729576Z",
+        "published": "2024-07-05T20:06:40Z",
+        "related": [
+          "CGA-fj4m-68jh-2rrm"
+        ],
+        "database_specific": {
+          "nvd_published_at": "2024-07-05T19:15:10Z",
+          "severity": "LOW",
+          "cwe_ids": [
+            "CWE-345"
+          ],
+          "github_reviewed_at": "2024-07-05T20:06:40Z",
+          "github_reviewed": true
+        },
+        "references": [
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/security/advisories/GHSA-248v-346w-9cwc"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-39689"
+          },
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/commit/bd8153872e9c6fc98f4023df9c2deaffea2fa463"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "certifi",
+              "ecosystem": "PyPI",
+              "purl": "pkg:pypi/certifi"
+            },
+            "ranges": [
+              {
+                "type": "ECOSYSTEM",
+                "events": [
+                  {
+                    "introduced": "2021.5.30"
+                  },
+                  {
+                    "fixed": "2024.7.4"
+                  }
+                ]
+              }
+            ],
+            "versions": [
+              "2021.10.8",
+              "2021.5.30",
+              "2022.12.7",
+              "2022.5.18",
+              "2022.5.18.1",
+              "2022.6.15",
+              "2022.6.15.1",
+              "2022.6.15.2",
+              "2022.9.14",
+              "2022.9.24",
+              "2023.11.17",
+              "2023.5.7",
+              "2023.7.22",
+              "2024.2.2",
+              "2024.6.2"
+            ],
+            "database_specific": {
+              "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2024/07/GHSA-248v-346w-9cwc/GHSA-248v-346w-9cwc.json"
+            }
+          }
+        ],
+        "schema_version": "1.7.3"
+      },
+      {
+        "id": "GHSA-43fp-rhv2-5gv8",
+        "summary": "Certifi removing TrustCor root certificate",
+        "details": "Certifi 2022.12.07 removes root certificates from \"TrustCor\" from the root store. These are in the process of being removed from Mozilla's trust store.\n\nTrustCor's root certificates are being removed pursuant to an investigation prompted by media reporting that TrustCor's ownership also operated a business that produced spyware. Conclusions of Mozilla's investigation can be found [here](https://gr",
+        "aliases": [
+          "CVE-2022-23491",
+          "PYSEC-2022-42986"
+        ],
+        "modified": "2025-02-12T18:53:14.421067Z",
+        "published": "2022-12-07T23:05:18Z",
+        "database_specific": {
+          "github_reviewed": true,
+          "nvd_published_at": "2022-12-07T22:15:00Z",
+          "severity": "MODERATE",
+          "cwe_ids": [
+            "CWE-345"
+          ],
+          "github_reviewed_at": "2022-12-07T23:05:18Z"
+        },
+        "references": [
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/security/advisories/GHSA-43fp-rhv2-5gv8"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23491"
+          },
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/commit/9e9e840925d7b8e76c76fdac1fab7e6e88c1c3b8"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "certifi",
+              "ecosystem": "PyPI",
+              "purl": "pkg:pypi/certifi"
+            },
+            "ranges": [
+              {
+                "type": "ECOSYSTEM",
+                "events": [
+                  {
+                    "introduced": "2017.11.05"
+                  },
+                  {
+                    "fixed": "2022.12.07"
+                  }
+                ]
+              }
+            ],
+            "versions": [
+              "2017.11.5",
+              "2018.1.18",
+              "2018.10.15",
+              "2018.11.29",
+              "2018.4.16",
+              "2018.8.13",
+              "2018.8.24",
+              "2019.11.28",
+              "2019.3.9",
+              "2019.6.16",
+              "2019.9.11",
+              "2020.11.8",
+              "2020.12.5",
+              "2020.4.5",
+              "2020.4.5.1",
+              "2020.4.5.2",
+              "2020.6.20",
+              "2021.10.8",
+              "2021.5.30",
+              "2022.5.18",
+              "2022.5.18.1",
+              "2022.6.15",
+              "2022.6.15.1",
+              "2022.6.15.2",
+              "2022.9.14",
+              "2022.9.24"
+            ],
+            "database_specific": {
+              "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2022/12/GHSA-43fp-rhv2-5gv8/GHSA-43fp-rhv2-5gv8.json"
+            }
+          }
+        ],
+        "schema_version": "1.7.3",
+        "severity": [
+          {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:C/C:N/I:H/A:N"
+          },
+          {
+            "type": "CVSS_V4",
+            "score": "CVSS:4.0/AV:N/AC:L/AT:P/PR:H/UI:N/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N"
+          }
+        ]
+      },
+      {
+        "id": "GHSA-xqr8-7jwr-rhp7",
+        "summary": "Removal of e-Tugra root certificate",
+        "details": "Certifi 2023.07.22 removes root certificates from \"e-Tugra\" from the root store. These are in the process of being removed from Mozilla's trust store.\n\n e-Tugra's root certificates are being removed pursuant to an investigation prompted by reporting of security issues in their systems. Conclusions of Mozilla's investigation can be found [here](https://groups.google.com/a/mozilla.org/g/dev-security",
+        "aliases": [
+          "CVE-2023-37920",
+          "PYSEC-2023-135"
+        ],
+        "modified": "2026-02-04T04:37:03.387402Z",
+        "published": "2023-07-25T14:43:53Z",
+        "related": [
+          "CGA-fhcx-m79g-26vp"
+        ],
+        "database_specific": {
+          "cwe_ids": [
+            "CWE-345"
+          ],
+          "github_reviewed_at": "2023-07-25T14:43:53Z",
+          "github_reviewed": true,
+          "nvd_published_at": "2023-07-25T21:15:10Z",
+          "severity": "HIGH"
+        },
+        "references": [
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/security/advisories/GHSA-xqr8-7jwr-rhp7"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-37920"
+          },
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/commit/8fb96ed81f71e7097ed11bc4d9b19afd7ea5c909"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "certifi",
+              "ecosystem": "PyPI",
+              "purl": "pkg:pypi/certifi"
+            },
+            "ranges": [
+              {
+                "type": "ECOSYSTEM",
+                "events": [
+                  {
+                    "introduced": "2015.4.28"
+                  },
+                  {
+                    "fixed": "2023.7.22"
+                  }
+                ]
+              }
+            ],
+            "versions": [
+              "2015.04.28",
+              "2015.11.20",
+              "2015.11.20.1",
+              "2015.9.6",
+              "2015.9.6.1",
+              "2015.9.6.2",
+              "2016.2.28",
+              "2016.8.2",
+              "2016.8.31",
+              "2016.8.8",
+              "2016.9.26",
+              "2017.1.23",
+              "2017.11.5",
+              "2017.4.17",
+              "2017.7.27",
+              "2017.7.27.1",
+              "2018.1.18",
+              "2018.10.15",
+              "2018.11.29",
+              "2018.4.16",
+              "2018.8.13",
+              "2018.8.24",
+              "2019.11.28",
+              "2019.3.9",
+              "2019.6.16",
+              "2019.9.11",
+              "2020.11.8",
+              "2020.12.5",
+              "2020.4.5",
+              "2020.4.5.1",
+              "2020.4.5.2",
+              "2020.6.20",
+              "2021.10.8",
+              "2021.5.30",
+              "2022.12.7",
+              "2022.5.18",
+              "2022.5.18.1",
+              "2022.6.15",
+              "2022.6.15.1",
+              "2022.6.15.2",
+              "2022.9.14",
+              "2022.9.24",
+              "2023.5.7"
+            ],
+            "database_specific": {
+              "source": "https://github.com/github/advisory-database/blob/main/advisories/github-reviewed/2023/07/GHSA-xqr8-7jwr-rhp7/GHSA-xqr8-7jwr-rhp7.json"
+            }
+          }
+        ],
+        "schema_version": "1.7.3",
+        "severity": [
+          {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N"
+          }
+        ]
+      },
+      {
+        "id": "PYSEC-2022-42986",
+        "details": "Certifi is a curated collection of Root Certificates for validating the trustworthiness of SSL certificates while verifying the identity of TLS hosts. Certifi 2022.12.07 removes root certificates from \"TrustCor\" from the root store. These are in the process of being removed from Mozilla's trust store. TrustCor's root certificates are being removed pursuant to an investigation prompted by media rep",
+        "aliases": [
+          "CVE-2022-23491",
+          "GHSA-43fp-rhv2-5gv8"
+        ],
+        "modified": "2023-11-08T04:08:19.066843Z",
+        "published": "2022-12-07T22:15:00Z",
+        "references": [
+          {
+            "type": "WEB",
+            "url": "https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/oxX69KFvsm4/m/yLohoVqtCgAJ"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://github.com/certifi/python-certifi/security/advisories/GHSA-43fp-rhv2-5gv8"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "certifi",
+              "ecosystem": "PyPI",
+              "purl": "pkg:pypi/certifi"
+            },
+            "ranges": [
+              {
+                "type": "ECOSYSTEM",
+                "events": [
+                  {
+                    "introduced": "2017.11.5"
+                  },
+                  {
+                    "fixed": "2022.12.7"
+                  }
+                ]
+              }
+            ],
+            "versions": [
+              "2017.11.5",
+              "2018.1.18",
+              "2018.10.15",
+              "2018.11.29",
+              "2018.4.16",
+              "2018.8.13",
+              "2018.8.24",
+              "2019.11.28",
+              "2019.3.9",
+              "2019.6.16",
+              "2019.9.11",
+              "2020.11.8",
+              "2020.12.5",
+              "2020.4.5",
+              "2020.4.5.1",
+              "2020.4.5.2",
+              "2020.6.20",
+              "2021.10.8",
+              "2021.5.30",
+              "2022.5.18",
+              "2022.5.18.1",
+              "2022.6.15",
+              "2022.6.15.1",
+              "2022.6.15.2",
+              "2022.9.14",
+              "2022.9.24"
+            ],
+            "database_specific": {
+              "source": "https://github.com/pypa/advisory-database/blob/main/vulns/certifi/PYSEC-2022-42986.yaml"
+            }
+          }
+        ],
+        "schema_version": "1.7.3"
+      },
+      {
+        "id": "PYSEC-2023-135",
+        "details": "Certifi 2023.07.22 removes root certificates from \"e-Tugra\" from the root store. These are in the process of being removed from Mozilla's trust store. e-Tugra's root certificates are being removed pursuant to an investigation prompted by reporting of security issues in their systems.",
+        "aliases": [
+          "CVE-2023-37920",
+          "GHSA-xqr8-7jwr-rhp7"
+        ],
+        "modified": "2023-11-08T04:13:04.801823Z",
+        "published": "2023-08-03T19:36:12Z",
+        "references": [
+          {
+            "type": "WEB",
+            "url": "https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/C-HrP1SEq1A"
+          },
+          {
+            "type": "WEB",
+            "url": "https://github.com/certifi/python-certifi/commit/8fb96ed81f71e7097ed11bc4d9b19afd7ea5c909"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2023-37920"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "certifi",
+              "ecosystem": "PyPI",
+              "purl": "pkg:pypi/certifi"
+            },
+            "ranges": [
+              {
+                "type": "ECOSYSTEM",
+                "events": [
+                  {
+                    "introduced": "2015.4.28"
+                  },
+                  {
+                    "fixed": "2023.7.22"
+                  }
+                ]
+              }
+            ],
+            "versions": [
+              "2015.04.28",
+              "2015.11.20",
+              "2015.11.20.1",
+              "2015.9.6",
+              "2015.9.6.1",
+              "2015.9.6.2",
+              "2016.2.28",
+              "2016.8.2",
+              "2016.8.31",
+              "2016.8.8",
+              "2016.9.26",
+              "2017.1.23",
+              "2017.11.5",
+              "2017.4.17",
+              "2017.7.27",
+              "2017.7.27.1",
+              "2018.1.18",
+              "2018.10.15",
+              "2018.11.29",
+              "2018.4.16",
+              "2018.8.13",
+              "2018.8.24",
+              "2019.11.28",
+              "2019.3.9",
+              "2019.6.16",
+              "2019.9.11",
+              "2020.11.8",
+              "2020.12.5",
+              "2020.4.5",
+              "2020.4.5.1",
+              "2020.4.5.2",
+              "2020.6.20",
+              "2021.10.8",
+              "2021.5.30",
+              "2022.12.7",
+              "2022.5.18",
+              "2022.5.18.1",
+              "2022.6.15",
+              "2022.6.15.1",
+              "2022.6.15.2",
+              "2022.9.14",
+              "2022.9.24",
+              "2023.5.7"
+            ],
+            "database_specific": {
+              "source": "https://github.com/pypa/advisory-database/blob/main/vulns/certifi/PYSEC-2023-135.yaml"
+            }
+          }
+        ],
+        "schema_version": "1.7.3"
+      },
+      {
+        "id": "PYSEC-2024-230",
+        "details": "Certifi is a curated collection of Root Certificates for validating the trustworthiness of SSL certificates while verifying the identity of TLS hosts. Certifi starting in 2021.05.30 and prior to 2024.07.4 recognized root certificates from `GLOBALTRUST`. Certifi 2024.07.04 removes root certificates from `GLOBALTRUST` from the root store. These are in the process of being removed from Mozilla's trus",
+        "aliases": [
+          "CVE-2024-39689",
+          "GHSA-248v-346w-9cwc"
+        ],
+        "modified": "2026-06-10T17:14:18.786020835Z",
+        "published": "2024-07-05T19:15:10Z",
+        "references": [
+          {
+            "type": "ADVISORY",
+            "url": "https://github.com/certifi/python-certifi/security/advisories/GHSA-248v-346w-9cwc"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://security.netapp.com/advisory/ntap-20241206-0001/"
+          },
+          {
+            "type": "ARTICLE",
+            "url": "https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/XpknYMPO8dI"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "certifi",
+              "ecosystem": "PyPI",
+              "purl": "pkg:pypi/certifi"
+            },
+            "ranges": [
+              {
+                "type": "GIT",
+                "repo": "https://github.com/certifi/python-certifi",
+                "events": [
+                  {
+                    "introduced": "0"
+                  },
+                  {
+                    "fixed": "bd8153872e9c6fc98f4023df9c2deaffea2fa463"
+                  }
+                ]
+              },
+              {
+                "type": "ECOSYSTEM",
+                "events": [
+                  {
+                    "introduced": "2021.5.30"
+                  },
+                  {
+                    "fixed": "2024.7.4"
+                  }
+                ]
+              }
+            ],
+            "versions": [
+              "2021.10.8",
+              "2021.5.30",
+              "2022.12.7",
+              "2022.5.18",
+              "2022.5.18.1",
+              "2022.6.15",
+              "2022.6.15.1",
+              "2022.6.15.2",
+              "2022.9.14",
+              "2022.9.24",
+              "2023.11.17",
+              "2023.5.7",
+              "2023.7.22",
+              "2024.2.2",
+              "2024.6.2",
+              "2024.06.02",
+              "2024.02.02",
+              "2023.07.22",
+              "2023.05.07",
+              "2022.12.07",
+              "2022.09.24",
+              "2022.09.14",
+              "2022.06.15.2",
+              "2022.06.15.1",
+              "2022.06.15",
+              "2022.05.18.1",
+              "2022.05.18",
+              "2021.10.08",
+              "2021.05.30",
+              "2020.12.05",
+              "2020.11.08",
+              "2020.06.20",
+              "2020.04.05.2",
+              "2020.04.05.1",
+              "2020.04.05",
+              "2019.11.28",
+              "2019.09.11",
+              "2019.06.16",
+              "2019.03.09",
+              "2018.11.29",
+              "2018.10.15",
+              "2018.08.24",
+              "2018.08.13",
+              "2018.04.16",
+              "2018.01.18",
+              "2017.11.05",
+              "2017.07.27.1",
+              "2017.04.17",
+              "2017.01.23",
+              "2016.09.26",
+              "2016.08.31",
+              "2016.08.08",
+              "2016.08.02",
+              "2016.02.28",
+              "2015.11.20.1",
+              "2015.11.20",
+              "2015.09.06.2",
+              "2015.09.06.1",
+              "2015.09.06",
+              "2015.04.28",
+              "v1.0.1",
+              "v1.0.0"
+            ],
+            "database_specific": {
+              "source": "https://github.com/pypa/advisory-database/blob/main/vulns/certifi/PYSEC-2024-230.yaml"
+            }
+          }
+        ],
+        "schema_version": "1.7.5",
+        "severity": [
+          {
+            "type": "CVSS_V3",
+            "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:N"
+          }
+        ]
+      }
+    ]
+  }
+}
