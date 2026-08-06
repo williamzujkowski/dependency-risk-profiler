@@ -73,11 +73,13 @@ from dependency_risk_profiler.community import analyzer as community_analyzer
 from dependency_risk_profiler.go_modules import GoModuleResolver
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
-from dependency_risk_profiler.parsers import maven_central as maven_central_module
+from dependency_risk_profiler.parsers import (
+    maven_repositories as maven_repositories_module,
+)
 from dependency_risk_profiler.parsers import nuget_registry as nuget_registry_module
 from dependency_risk_profiler.parsers.gradle import GradleParser
 from dependency_risk_profiler.parsers.gradle_dsl import BUILD_FILE_NAMES
-from dependency_risk_profiler.parsers.maven_central import pom_url
+from dependency_risk_profiler.parsers.maven_repositories import DEFAULT_REPOSITORIES
 from dependency_risk_profiler.parsers.nuget import NuGetParser
 from dependency_risk_profiler.parsers.nuget_cpm import BUILD_DEPENDENCY_KEY
 from dependency_risk_profiler.parsers.nuget_registry import (
@@ -591,21 +593,61 @@ def _score_maven(
     # published, and the branch the fallback exists for.
     absent = list(case.absent_urls)
     if case.installed_version != coordinate.version:
-        absent.append(
-            pom_url(
-                PomCoordinate(
-                    coordinate.group_id, coordinate.artifact_id, case.installed_version
-                )
-            )
+        installed = PomCoordinate(
+            coordinate.group_id, coordinate.artifact_id, case.installed_version
         )
+        absent.extend(
+            repository.pom_url(installed) for repository in DEFAULT_REPOSITORIES
+        )
+    absent.extend(_other_repository_urls(served, absent))
 
     get = replay_requests_get(served, absent=absent)
-    with (
-        mock.patch.object(maven_module.requests, "get", side_effect=get),
-        mock.patch.object(maven_central_module.requests, "get", side_effect=get),
+    with mock.patch.object(
+        maven_repositories_module.requests, "get", side_effect=get
     ):
         dep = analyzer.analyze({name: dep})[name]
     return _finish(dep, analyzer.metadata_cache.get(name, {"name": name}))
+
+
+def _other_repository_urls(
+    served: Mapping[str, RegistryFixture], absent: Sequence[str]
+) -> List[str]:
+    """Return the same documents' URLs at every repository that does not serve them.
+
+    #278 made the Maven client ask more than one repository, so a case that
+    records Maven Central's copy of guava now has to say what Google's Maven
+    repository answers for it. It answers 404, and that is an assumption this
+    harness states rather than one it hides: the two repositories carry
+    disjoint artifact sets for everything captured here, which was checked by
+    hand against ``dl.google.com`` for a sample including ``com.google.guava:
+    guava``, ``com.squareup.okio:okio`` and ``org.jetbrains.kotlin:
+    kotlin-stdlib``.
+
+    Deriving it mechanically rather than listing it per case is the point: a
+    hand-maintained absence list would go stale the moment a repository is
+    added, and staleness here reads as "the adapter never asked", which is
+    exactly the failure #278 is about.
+
+    Args:
+        served: The fixtures this case replays.
+        absent: URLs already declared absent.
+
+    Returns:
+        The mirrored URLs, for repositories that neither serve nor already
+        declare the document.
+    """
+    known = {fixture.source_url for fixture in served.values()} | set(absent)
+    mirrored: List[str] = []
+    for url in sorted(known):
+        for repository in DEFAULT_REPOSITORIES:
+            if not url.startswith(repository.base_url + "/"):
+                continue
+            tail = url[len(repository.base_url) + 1 :]
+            for other in DEFAULT_REPOSITORIES:
+                candidate = f"{other.base_url}/{tail}"
+                if candidate not in known and candidate not in mirrored:
+                    mirrored.append(candidate)
+    return mirrored
 
 
 def _maven_coordinate(fixture: RegistryFixture) -> PomCoordinate:
@@ -693,10 +735,11 @@ def _score_gradle(
     analyzer.clone_repos = False
     dep = DependencyMetadata(name=name, installed_version=version)
 
-    get = replay_requests_get(registry, absent=list(case.absent_urls))
-    with (
-        mock.patch.object(maven_module.requests, "get", side_effect=get),
-        mock.patch.object(maven_central_module.requests, "get", side_effect=get),
+    absent = list(case.absent_urls)
+    absent.extend(_other_repository_urls(registry, absent))
+    get = replay_requests_get(registry, absent=absent)
+    with mock.patch.object(
+        maven_repositories_module.requests, "get", side_effect=get
     ):
         dep = analyzer.analyze({name: dep})[name]
     return _finish(dep, analyzer.metadata_cache.get(name, {"name": name}))
@@ -3106,6 +3149,81 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             ),
         ),
     ),
+    FixtureCase(
+        ecosystem="maven",
+        fixture="material.pom",
+        extra_fixtures=("material.metadata",),
+        installed_version="1.12.0",
+        purpose=(
+            "#278's case in the maven driver: an artifact Maven Central does "
+            "not have. com.google.android.material:material is published to "
+            "Google's Maven repository and nowhere else, so before #278 both "
+            "of its documents 404'd and every signal below was unmeasured — "
+            "not because the artifact is obscure (it is on essentially every "
+            "Android application) but because the resolver knew one base URL. "
+            "Captured from dl.google.com, and the harness answers 404 for the "
+            "same two URLs at repo1.maven.org, which is what Central really "
+            "does. Its <scm> names GitHub rather than googlesource, so it also "
+            "holds the branch androidx cannot: a Google-published artifact "
+            "whose source repository actually resolves."
+        ),
+        expected_latest_version="1.14.0",
+        expected_repository_url=(
+            "https://github.com/material-components/material-components-android"
+        ),
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        ground_truth=(
+            "curl against repo1.maven.org returns 404 for both "
+            "com/google/android/material/material/maven-metadata.xml and the "
+            "1.12.0 POM; dl.google.com returns 200 for both. The artifact "
+            "exists — it is simply not on Central.",
+            "the POM's <scm><connection> is "
+            "scm:git:https://github.com/material-components/"
+            "material-components-android.git, which normalizes to a cloneable "
+            "forge root and makes source_repository DECLARED.",
+            "the POM has no <parent>, so its <licenses> and <scm> are its own "
+            "and no #178 walk is involved.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.0,
+                because=(
+                    "THE #278 assertion for maven: this is 1.0 (undeclared) "
+                    "for as long as the resolver only asks Central, because "
+                    "no POM is ever read. It can only be 0.0 if a second "
+                    "repository was asked"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because=(
+                    "Apache 2.0, out of a POM that Central cannot serve"
+                ),
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off Google Maven's <lastUpdated>; the step moves "
+                    "with the calendar so the range is the assertion"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "the POM's shipped <dependencies> are a measured set "
+                    "rather than an assumed-empty one (#199); the bucket "
+                    "moves as the library's own dependencies do"
+                ),
+            ),
+        ),
+    ),
 )
 
 NUGET_CASES: Tuple[FixtureCase, ...] = (
@@ -3640,6 +3758,109 @@ GRADLE_CASES: Tuple[FixtureCase, ...] = (
                 "maintainer",
                 unmeasured=True,
                 because="Maven Central publishes no owner list",
+            ),
+        ),
+    ),
+    FixtureCase(
+        ecosystem="gradle",
+        fixture="appcompat.pom",
+        extra_fixtures=(
+            "appcompat.metadata",
+            "signal.build.gradle.kts",
+            "signal.libs.versions.toml",
+        ),
+        installed_version="1.7.1",
+        expected_version_source="version-catalog",
+        purpose=(
+            "#278's own reproduction, end to end and offline. Signal-Android's "
+            "app/build.gradle.kts declares implementation(libs.androidx."
+            "appcompat) and its catalog resolves that to androidx.appcompat:"
+            "appcompat 1.7.1 — the parse was never the problem. The problem "
+            "was the next step: androidx is published to Google's Maven "
+            "repository and to no other, so on Central both documents 404 and "
+            "all thirteen signals came back unmeasured. 55 of Signal's 94 "
+            "dependencies were androidx and every one of them was in this "
+            "state.\n\n"
+            "It is also the pair to material.pom rather than a repeat of it. "
+            "androidx declares an <scm> pointing at android.googlesource.com, "
+            "which is a real declaration and not a cloneable git forge, so it "
+            "lands on UNUSABLE — the middle state #176 added — where material "
+            "lands on DECLARED. A resolver that reached only one of the two "
+            "would look correct against either case alone."
+        ),
+        expected_latest_version="1.8.0-rc01",
+        expected_repository_url=None,
+        expected_license_id="APACHE",
+        expected_deprecated=False,
+        ground_truth=(
+            "app/build.gradle.kts at tag v8.22.1 declares implementation("
+            "libs.androidx.appcompat); the catalog's [libraries] entry is "
+            "{ module = 'androidx.appcompat:appcompat', version.ref = "
+            "'androidx-appcompat' } and [versions] androidx-appcompat = "
+            "'1.7.1'. Both captures are pinned to that tag so the script and "
+            "the version it names cannot drift apart.",
+            "curl against repo1.maven.org returns 404 for "
+            "androidx/appcompat/appcompat/maven-metadata.xml and for the 1.7.1 "
+            "POM; dl.google.com returns 200 for both. This is the exact pair "
+            "of requests #278 reported.",
+            "the POM's <scm><connection> is scm:git:https://android."
+            "googlesource.com/platform/frameworks/support — a declaration, and "
+            "not a forge git clone can reach, so the repository-derived "
+            "signals stay dark for a *measured* reason rather than an unread "
+            "one.",
+        ),
+        signals=(
+            SignalValue(
+                "source_repository",
+                equals=0.75,
+                because=(
+                    "THE #278 assertion for gradle. Ask only Central and no "
+                    "POM is read at all, so this is unmeasured-then-1.0 "
+                    "(undeclared); 0.75 is the UNUSABLE branch, and it is "
+                    "only reachable if a second repository answered"
+                ),
+            ),
+            SignalValue(
+                "version",
+                equals=0.5,
+                because=(
+                    "1.7.1 against a 1.8.0-rc01 <release> is a minor-version "
+                    "gap. Central names no version for this artifact at all, "
+                    "so before #278 the signal left numerator and denominator "
+                    "alike (#74) and nothing here could be scored"
+                ),
+            ),
+            SignalValue(
+                "license",
+                equals=0.0,
+                because="Apache 2.0, from the POM Central does not have",
+            ),
+            SignalValue(
+                "staleness",
+                minimum=0.0,
+                maximum=1.0,
+                because=(
+                    "read off Google Maven's <lastUpdated>; the step moves "
+                    "with the calendar so the range is the assertion"
+                ),
+            ),
+            SignalValue(
+                "transitive",
+                equals=0.25,
+                because=(
+                    "appcompat's POM declares seventeen shipped dependencies "
+                    "— a measured set, and one no Central-only resolver could "
+                    "ever have read, since Central serves no POM for this "
+                    "artifact to count them from"
+                ),
+            ),
+            SignalValue(
+                "maintainer",
+                unmeasured=True,
+                because=(
+                    "a Maven repository publishes no owner list, and Google's "
+                    "is a Maven repository like any other"
+                ),
             ),
         ),
     ),

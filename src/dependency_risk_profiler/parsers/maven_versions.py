@@ -21,7 +21,8 @@ an explicit pin wins; here the explicit pin always wins. And resolution stops
 once every version the caller asked for is known, so a BOM that manages
 thousands of artifacts nobody depends on is never fully walked.
 
-Every remote read goes through :class:`~.maven_central.MavenCentralClient`, which
+Every remote read goes through
+:class:`~.maven_repositories.MavenRepositoryClient`, which
 is where the size, host, redirect, and count limits live. Resolution is lazy: a
 POM whose dependencies are all pinned inline never touches the network.
 """
@@ -30,7 +31,7 @@ import logging
 from dataclasses import dataclass, replace
 from typing import Dict, FrozenSet, Iterator, List, Optional, Set
 
-from .maven_central import MavenCentralClient
+from .maven_repositories import MavenRepositoryClient
 from .pom_model import (
     PomCoordinate,
     PomDocument,
@@ -75,7 +76,7 @@ class _Scope:
 class ManagedVersionResolver:
     """Resolves the effective managed versions visible to a POM."""
 
-    def __init__(self, client: MavenCentralClient) -> None:
+    def __init__(self, client: MavenRepositoryClient) -> None:
         """Initialize the resolver.
 
         Args:
@@ -117,7 +118,7 @@ class ManagedVersionResolver:
         metadata inheritance added in #178 stops as soon as it has a licence
         and an SCM URL, and a caller that stops after the leaf POM costs no
         network request at all. Every fetch goes through the same
-        :class:`~.maven_central.MavenCentralClient` as the rest of this module,
+        :class:`~.maven_repositories.MavenRepositoryClient` as the rest of this module,
         so the host allowlist, redirect refusal, byte cap, XXE-safe parse,
         memoization and per-manifest fetch budget all apply unchanged.
 
@@ -135,7 +136,7 @@ class ManagedVersionResolver:
             parent_coordinate = current.parent
             if parent_coordinate is None:
                 return
-            parent = self.client.fetch_pom(parent_coordinate)
+            parent = self.client.fetch_pom(parent_coordinate).document
             if parent is None:
                 logger.debug(
                     "Parent POM %s:%s is not reachable; the walk stops here",
@@ -237,7 +238,7 @@ class ManagedVersionResolver:
         marker = f"{coordinate.key}:{coordinate.version}"
         if marker in scope.seen:  # a BOM import cycle
             return {}
-        bom = self.client.fetch_pom(coordinate)
+        bom = self.client.fetch_pom(coordinate).document
         if bom is None:
             return {}
         # The BOM is resolved as its own effective POM: it inherits from *its*

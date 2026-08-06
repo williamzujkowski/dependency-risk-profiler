@@ -273,7 +273,10 @@ def test_repository_derived_signals_get_the_repository_reason() -> None:
     for name in REPOSITORY_DERIVED_SIGNALS:
         assert (
             unmeasured_reason_for(
-                name, source_repository_unreadable=True, advisory_lookup=None
+                name,
+                source_repository_unreadable=True,
+                advisory_lookup=None,
+                registry_lookup=None,
             )
             is UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
         )
@@ -281,7 +284,10 @@ def test_repository_derived_signals_get_the_repository_reason() -> None:
     for name in set(SIGNAL_CATALOG) - REPOSITORY_DERIVED_SIGNALS:
         assert (
             unmeasured_reason_for(
-                name, source_repository_unreadable=True, advisory_lookup=None
+                name,
+                source_repository_unreadable=True,
+                advisory_lookup=None,
+                registry_lookup=None,
             )
             is not UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
         )
@@ -294,4 +300,5 @@ def test_an_unnamed_signal_raises_rather_than_defaulting() -> None:
             "not_a_signal",
             source_repository_unreadable=False,
             advisory_lookup=None,
+            registry_lookup=None,
         )

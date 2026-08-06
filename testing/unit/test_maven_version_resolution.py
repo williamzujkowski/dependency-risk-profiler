@@ -2,14 +2,14 @@
 
 Every test here runs offline. ``testing/manifests/maven/repository`` is a small
 on-disk mirror laid out exactly like Maven Central, and :class:`MirrorClient`
-serves it through the real :class:`MavenCentralClient` code path — so URL
+serves it through the real :class:`MavenRepositoryClient` code path — so URL
 construction, coordinate validation, and the fetch budget are all exercised
 without a socket.
 """
 
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional
+from typing import Dict, Iterator, List, Optional, Tuple
 from unittest import mock
 
 import pytest
@@ -23,12 +23,12 @@ from dependency_risk_profiler.parsers.maven import (
     VERSION_SOURCE_UNMANAGED,
     MavenPomParser,
 )
-from dependency_risk_profiler.parsers.maven_central import (
-    MAVEN_CENTRAL_BASE,
+from dependency_risk_profiler.parsers.maven_repositories import (
+    CENTRAL,
     NO_REMOTE_POMS_ENV,
-    MavenCentralClient,
+    MavenRepositoryClient,
+    RepositoryOutcome,
     is_valid_coordinate,
-    pom_url,
 )
 from dependency_risk_profiler.parsers.pom_model import PomCoordinate
 from dependency_risk_profiler.parsers.xml_utils import parse_xml_bytes
@@ -37,27 +37,40 @@ MANIFESTS = Path(__file__).resolve().parents[1] / "manifests" / "maven"
 MIRROR = MANIFESTS / "repository"
 
 
-class MirrorClient(MavenCentralClient):
-    """Serves POMs from the on-disk Maven Central mirror instead of the network."""
+class MirrorClient(MavenRepositoryClient):
+    """Serves POMs from the on-disk Maven Central mirror instead of the network.
+
+    Narrowed to Central on purpose. Every test in this module is about the
+    parent/BOM walk and its budget, and asking a second repository would change
+    the fetch counts those tests assert without changing what they are testing.
+    Multi-repository behaviour has its own file (#278).
+    """
 
     def __init__(self, root: Path = MIRROR, fetch_budget: int = 48) -> None:
         """Initialize the mirror-backed client."""
-        super().__init__(fetch_budget=fetch_budget, enabled=True)
+        super().__init__(
+            fetch_budget=fetch_budget, enabled=True, repositories=(CENTRAL,)
+        )
         self.root = root
         self.requested: List[str] = []
 
-    def _fetch_xml(self, url: str) -> Optional[ElementTree.Element]:
+    def _fetch_document(
+        self, url: str
+    ) -> Tuple[Optional[ElementTree.Element], RepositoryOutcome]:
         """Resolve a Maven Central URL against the local mirror tree."""
         self.requested.append(url)
-        prefix = MAVEN_CENTRAL_BASE + "/"
+        prefix = CENTRAL.base_url + "/"
         assert url.startswith(prefix), url
         path = self.root.joinpath(*url[len(prefix) :].split("/"))
         if not path.is_file():
-            return None
-        return parse_xml_bytes(path.read_bytes(), url)
+            return None, RepositoryOutcome.ABSENT
+        root = parse_xml_bytes(path.read_bytes(), url)
+        if root is None:
+            return None, RepositoryOutcome.UNANSWERED
+        return root, RepositoryOutcome.FOUND
 
 
-def _versions(path: Path, client: MavenCentralClient) -> Dict[str, str]:
+def _versions(path: Path, client: MavenRepositoryClient) -> Dict[str, str]:
     """Parse a POM and return name -> installed version."""
     deps = MavenPomParser(str(path), client=client).parse()
     return {name: dep.installed_version for name, dep in deps.items()}
@@ -217,13 +230,13 @@ def test_malformed_coordinates_never_become_urls(
     assert is_valid_coordinate(coordinate) is False
 
     client = MirrorClient()
-    assert client.fetch_pom(coordinate) is None
+    assert client.fetch_pom(coordinate).document is None
     assert client.requested == []  # never reached the transport at all
 
 
 def test_pom_url_pins_host_scheme_and_layout() -> None:
     """SECURITY: URLs are built for one host under one scheme."""
-    url = pom_url(PomCoordinate("com.example.platform", "platform-bom", "3.4.0"))
+    url = CENTRAL.pom_url(PomCoordinate("com.example.platform", "platform-bom", "3.4.0"))
 
     assert url == (
         "https://repo1.maven.org/maven2/com/example/platform/platform-bom/"
@@ -247,17 +260,18 @@ def test_fetch_budget_bounds_how_far_a_pom_chain_can_go() -> None:
 
 def test_remote_fetch_refuses_redirects_and_non_200() -> None:
     """SECURITY: a redirect cannot steer the fetch off Maven Central."""
-    client = MavenCentralClient(enabled=True)
+    client = MavenRepositoryClient(enabled=True, repositories=(CENTRAL,))
     response = mock.MagicMock()
     response.status_code = 302
     response.__enter__.return_value = response
     response.__exit__.return_value = False
 
     with mock.patch(
-        "dependency_risk_profiler.parsers.maven_central.requests.get",
+        "dependency_risk_profiler.parsers.maven_repositories.requests.get",
         return_value=response,
     ) as get:
-        assert client.fetch_pom(PomCoordinate("com.example", "art", "1.0")) is None
+        lookup = client.fetch_pom(PomCoordinate("com.example", "art", "1.0"))
+    assert lookup.document is None
 
     assert get.call_args.kwargs["allow_redirects"] is False
     assert get.call_args.kwargs["stream"] is True
@@ -279,12 +293,13 @@ def test_oversized_pom_response_is_abandoned_mid_stream() -> None:
     response.__enter__.return_value = response
     response.__exit__.return_value = False
 
-    client = MavenCentralClient(enabled=True)
+    client = MavenRepositoryClient(enabled=True, repositories=(CENTRAL,))
     with mock.patch(
-        "dependency_risk_profiler.parsers.maven_central.requests.get",
+        "dependency_risk_profiler.parsers.maven_repositories.requests.get",
         return_value=response,
     ):
-        assert client.fetch_pom(PomCoordinate("com.example", "art", "1.0")) is None
+        lookup = client.fetch_pom(PomCoordinate("com.example", "art", "1.0"))
+    assert lookup.document is None
 
     # It stopped; it did not read an infinite stream into memory.
     assert 0 < chunks_served < 64
@@ -292,13 +307,14 @@ def test_oversized_pom_response_is_abandoned_mid_stream() -> None:
 
 def test_transport_failures_are_absorbed() -> None:
     """A dead network degrades to unresolved versions, never to a crash."""
-    client = MavenCentralClient(enabled=True)
+    client = MavenRepositoryClient(enabled=True, repositories=(CENTRAL,))
 
     with mock.patch(
-        "dependency_risk_profiler.parsers.maven_central.requests.get",
+        "dependency_risk_profiler.parsers.maven_repositories.requests.get",
         side_effect=requests.RequestException("no route to host"),
     ):
-        assert client.fetch_pom(PomCoordinate("com.example", "art", "1.0")) is None
+        lookup = client.fetch_pom(PomCoordinate("com.example", "art", "1.0"))
+    assert lookup.document is None
 
 
 def test_external_entities_are_never_resolved() -> None:

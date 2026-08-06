@@ -6,7 +6,7 @@ If the prewarm wrote under the raw manifest ecosystem (``pyproject``), every
 such dependency would miss on read and re-query OSV despite the prewarm.
 """
 
-from typing import Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 import pytest
 
@@ -18,6 +18,10 @@ from dependency_risk_profiler.org_scan.pipeline import (
     VulnerabilityOptions,
 )
 from dependency_risk_profiler.parsers.base import BaseParser
+from dependency_risk_profiler.parsers.maven_repositories import (
+    ArtifactVersioning,
+    RepositoryLookup,
+)
 from dependency_risk_profiler.parsers.registry import EcosystemRegistry
 from dependency_risk_profiler.vulnerabilities.aggregator import (
     get_cache_key,
@@ -36,12 +40,30 @@ MANIFEST_ECOSYSTEM_FETCHERS = (
     ("rubygems", "_get_gem_info"),
     ("composer", "_get_latest_release"),
     ("nuget", "_get_latest_version"),
-    ("maven", "_get_latest_version"),
+    # Maven's entry point is ``_get_versioning``, not ``_get_latest_version``.
+    # This table named the latter until #278, and ``MavenAnalyzer.analyze`` has
+    # never called it: the stub was inert and these two rows stayed offline only
+    # because ``"pkg"`` is not a ``groupId:artifactId`` and short-circuits
+    # before any URL is built. A stub that patches a method nobody calls is a
+    # gate that cannot fail (AGENTS.md rule 6).
+    ("maven", "_get_versioning"),
     # Gradle declares Maven coordinates and dispatches to the Maven analyzer,
     # which stamps them "maven"; the prewarm therefore has to canonicalize
     # "gradle" -> "maven" or it writes a key nothing reads (#101).
-    ("gradle", "_get_latest_version"),
+    ("gradle", "_get_versioning"),
 )
+
+#: What each stubbed entry point returns to mean "the registry said nothing".
+#: Almost all of them answer ``None``; Maven's answers with a lookup record
+#: that names no repository, because "nobody was asked" is a state its callers
+#: read rather than a null they check for (#278).
+OFFLINE_RETURNS: Dict[str, object] = {
+    "_get_versioning": ArtifactVersioning(
+        latest=None,
+        last_updated=None,
+        lookup=RepositoryLookup(outcomes=(), configured=()),
+    ),
+}
 
 
 def _osv_only_options() -> VulnerabilityOptions:
@@ -174,7 +196,8 @@ def test_prewarm_key_matches_read_key_for_every_ecosystem(
     analyzer = BaseAnalyzer.get_analyzer_for_ecosystem(manifest_ecosystem)
     assert analyzer is not None
     analyzer.clone_repos = False
-    monkeypatch.setattr(analyzer, fetcher, lambda name: None)
+    offline = OFFLINE_RETURNS.get(fetcher)
+    monkeypatch.setattr(analyzer, fetcher, lambda name: offline)
     analyzed = analyzer.analyze(
         {"pkg": DependencyMetadata(name="pkg", installed_version="1.0.0")}
     )["pkg"]

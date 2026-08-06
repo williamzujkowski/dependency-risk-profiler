@@ -50,7 +50,7 @@ from xml.etree import ElementTree
 
 import requests
 
-from .maven_central import remote_resolution_enabled
+from .maven_repositories import remote_resolution_enabled
 from .xml_utils import child_text, find_child, local_name, parse_xml_bytes
 
 logger = logging.getLogger(__name__)

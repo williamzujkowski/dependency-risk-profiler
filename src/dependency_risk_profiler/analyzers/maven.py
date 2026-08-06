@@ -2,16 +2,18 @@
 
 import logging
 import re
-import xml.etree.ElementTree as ElementTree
-from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
-
-import requests
 
 from ..analysis_helpers import analyze_repository
 from ..models import DependencyMetadata
-from ..parsers.maven_central import MavenCentralClient
+from ..parsers.maven_repositories import (
+    ArtifactVersioning,
+    MavenRepositoryClient,
+    PomLookup,
+    RepositoryLookup,
+    RepositoryOutcome,
+)
 from ..parsers.maven_versions import ManagedVersionResolver
 from ..parsers.pom_model import (
     InheritedMetadata,
@@ -19,24 +21,18 @@ from ..parsers.pom_model import (
     PomDocument,
     inherit_metadata,
 )
-from ..parsers.xml_utils import local_name
 from ..release_dates import (
     RepositoryResolution,
     apply_registry_release_date,
     record_source_repository,
     resolve_repository,
 )
+from ..signals import RegistryLookupState
 from ..transitive.analyzer_enhanced import record_transitive_source
 from ..utils import cloned_repo, is_cloneable_repo_url
 from .base import BaseAnalyzer
 
 logger = logging.getLogger(__name__)
-
-# maven-metadata.xml is small; cap the download to bound parse cost.
-_MAX_METADATA_BYTES = 2 * 1024 * 1024
-
-# Maven Central's <lastUpdated> spelling: yyyyMMddHHmmss, UTC, no separators.
-_LAST_UPDATED_FORMAT = "%Y%m%d%H%M%S"
 
 # Scopes that describe what actually ships with the artifact. "test" and
 # "provided" dependencies are not part of a consumer's runtime surface, so they
@@ -60,39 +56,49 @@ _SCP_STYLE = re.compile(r"^(?:[\w.-]+@)?([\w-]+(?:\.[\w-]+)+):(?!//)([^/].*/.*)$
 
 
 class MavenAnalyzer(BaseAnalyzer):
-    """Analyzer for Java dependencies published to Maven Central.
+    """Analyzer for Java dependencies published to a Maven repository.
 
-    Maven Central publishes each artifact's own POM alongside its jar, and that
-    POM carries the metadata every other ecosystem gets from its registry API:
-    the source repository, the license, and the artifact's own dependencies.
-    Reading it is what turns a Java scan from "here are your CVEs" into the same
-    signal set the profiler collects for npm, PyPI, and Go.
+    A Maven repository publishes each artifact's own POM alongside its jar, and
+    that POM carries the metadata every other ecosystem gets from its registry
+    API: the source repository, the license, and the artifact's own
+    dependencies. Reading it is what turns a Java scan from "here are your CVEs"
+    into the same signal set the profiler collects for npm, PyPI, and Go.
 
     Reading *only* it is not enough. Maven's convention is to declare the
     licence and the source repository once in a parent POM and inherit them, so
     the artifact's own POM is where those two are most often absent — guava's
     has neither, and neither does any Apache Commons artifact (#178). The parent
     chain is walked through the same bounded client version resolution uses.
+
+    Reading only *Maven Central* is not enough either, which is #278. Java is
+    the one ecosystem here whose registry is a set of repositories rather than
+    one API, and the tool knew exactly one of them: on Signal-Android, 62 of 94
+    dependencies are published to Google's Maven repository and to no other, so
+    they 404'd and every signal for them was unmeasured. The client now asks
+    each repository in :data:`~..parsers.maven_repositories.DEFAULT_REPOSITORIES`
+    and records what each one said, so this analyzer can tell "nobody publishes
+    it" from "nobody answered".
     """
 
     def __init__(
         self,
         timeout: int = 10,
-        client: Optional[MavenCentralClient] = None,
+        client: Optional[MavenRepositoryClient] = None,
     ) -> None:
         """Initialize the analyzer.
 
         Args:
             timeout: HTTP request timeout in seconds.
-            client: Bounded Maven Central client used to read artifact POMs.
-                Defaults to a fresh one; tests inject a disabled client.
+            client: Bounded Maven repository client used to read artifact POMs
+                and release metadata. Defaults to a fresh one; tests inject a
+                disabled client, or one narrowed to a single repository.
         """
         super().__init__(timeout)
         self.metadata_cache: Dict[str, Dict[str, object]] = {}
         self.client = (
             client
             if client is not None
-            else MavenCentralClient(timeout=timeout, fetch_budget=512)
+            else MavenRepositoryClient(timeout=timeout, fetch_budget=512)
         )
         # The parent walk #141 built for version resolution, reused here for the
         # metadata that lives in the parent POM (#178). One walk, one set of
@@ -103,7 +109,7 @@ class MavenAnalyzer(BaseAnalyzer):
     def analyze(
         self, dependencies: Dict[str, DependencyMetadata]
     ) -> Dict[str, DependencyMetadata]:
-        """Analyze Java dependencies and collect Maven Central metadata.
+        """Analyze Java dependencies and collect Maven repository metadata.
 
         Args:
             dependencies: Dictionary mapping ``groupId:artifactId`` to metadata.
@@ -117,16 +123,27 @@ class MavenAnalyzer(BaseAnalyzer):
             dep.additional_info["ecosystem"] = "maven"
 
             try:
-                latest, last_updated = self._get_versioning(name)
-                if latest:
-                    dep.latest_version = latest
+                versioning = self._get_versioning(name)
+                if versioning.latest:
+                    dep.latest_version = versioning.latest
                 # maven-metadata.xml states when the artifact last shipped, in
                 # <versioning><lastUpdated>. Nothing read it, so the release
                 # cadence was unmeasured for every Maven artifact and staleness
                 # — the signal the tool exists for — could only ever come from a
-                # clone (#73).
-                apply_registry_release_date(dep, last_updated)
-                inherited = self._collect_artifact_metadata(name, dep, latest)
+                # clone (#73). It is now merged across repositories rather than
+                # taken from the first that answers: Central's copy of the
+                # Android toolchain stopped in 2017, so first-hit-wins would
+                # report a live artifact as nine years stale (#278).
+                apply_registry_release_date(dep, versioning.last_updated)
+                inherited, state, unavailable = self._collect_artifact_metadata(
+                    name, dep, versioning
+                )
+                # Which repositories were asked, and what each said, decides
+                # what an absent signal *means* downstream. Recorded here
+                # because this is the one place that has both lookups in hand.
+                dep.record_registry_lookup(
+                    state, repositories_unavailable=unavailable
+                )
                 # What the POM says about its source is a measured fact, and it
                 # has three answers rather than two. The discriminator is not
                 # whether <scm> is present but whether what it names is a git
@@ -157,31 +174,90 @@ class MavenAnalyzer(BaseAnalyzer):
         self,
         name: str,
         dep: DependencyMetadata,
-        latest: Optional[str],
-    ) -> Optional[InheritedMetadata]:
+        versioning: ArtifactVersioning,
+    ) -> Tuple[Optional[InheritedMetadata], RegistryLookupState, Tuple[str, ...]]:
         """Read the artifact's published POM for repo, license, and deps.
 
         The installed version is preferred so the metadata describes what the
         project actually uses; the latest version is the fallback for artifacts
         whose version is managed somewhere we could not reach.
 
+        Args:
+            name: The ``groupId:artifactId`` being analyzed.
+            dep: The dependency the metadata is copied onto.
+            versioning: What the repositories jointly said about the artifact's
+                releases. Supplies the fallback version *and* the repositories
+                that were found to publish it, so the POM fetch does not pay a
+                404 at a repository the metadata lookup already ruled out.
+
         Returns:
-            The metadata the POM has once its parent chain is applied, or None
-            when no candidate version answered — which is a failed lookup, not
-            a statement about the artifact.
+            A triple of the metadata the POM has once its parent chain is
+            applied (None when no candidate version answered), the state the
+            registry lookups jointly established, and the names of any
+            repositories that were asked and did not answer.
         """
         group_id, _, artifact_id = name.partition(":")
         if not group_id or not artifact_id:
-            return None
+            return None, RegistryLookupState.NOT_ATTEMPTED, ()
 
-        for version in self._candidate_versions(dep, latest):
-            document = self.client.fetch_pom(
-                PomCoordinate(group_id, artifact_id, version)
+        lookups: List[PomLookup] = []
+        inherited: Optional[InheritedMetadata] = None
+        for version in self._candidate_versions(dep, versioning.latest):
+            lookup = self.client.fetch_pom(
+                PomCoordinate(group_id, artifact_id, version),
+                prefer=versioning.lookup.found_in,
             )
-            if document is None:
-                continue
-            return self._apply_artifact_metadata(name, dep, document)
-        return None
+            lookups.append(lookup)
+            if lookup.document is not None:
+                inherited = self._apply_artifact_metadata(name, dep, lookup.document)
+                break
+        state, unavailable = self._registry_state(versioning, lookups)
+        return inherited, state, unavailable
+
+    @staticmethod
+    def _registry_state(
+        versioning: ArtifactVersioning, lookups: Sequence[PomLookup]
+    ) -> Tuple[RegistryLookupState, Tuple[str, ...]]:
+        """Reduce the lookups this artifact needed to one recorded state.
+
+        The POM is the document nearly every signal is read from, so when a POM
+        lookup ran it is the one that decides. The metadata lookup answers only
+        when there was no candidate version to ask about — which is itself the
+        case where the metadata lookup found nothing.
+
+        Both are kept rather than merged. Merging them would let a metadata
+        ``FOUND`` mask a POM fetch that timed out, which is the #219 defect
+        arriving by way of an aggregation.
+
+        Args:
+            versioning: The artifact-level metadata lookup.
+            lookups: The per-version POM lookups, in the order they were made.
+
+        Returns:
+            The state to record and the names of repositories that did not
+            answer, which is non-empty exactly for ``FAILED``.
+        """
+        if not lookups:
+            state = versioning.lookup.state
+            return state, _names_for(state, versioning.lookup.unanswered)
+        if any(lookup.document is not None for lookup in lookups):
+            return RegistryLookupState.ANSWERED, ()
+        # Every candidate version failed. The worst outcome across them is the
+        # honest summary: one repository that did not answer is enough to make
+        # "not published" a claim we cannot support.
+        unavailable = tuple(
+            dict.fromkeys(
+                name for lookup in lookups for name in lookup.lookup.unanswered
+            )
+        )
+        if unavailable:
+            return RegistryLookupState.FAILED, unavailable
+        if all(
+            lookup.lookup.state is RegistryLookupState.ABSENT_EVERYWHERE
+            for lookup in lookups
+        ):
+            return RegistryLookupState.ABSENT_EVERYWHERE, ()
+        return RegistryLookupState.NOT_ATTEMPTED, ()
 
     @staticmethod
     def _candidate_versions(
@@ -303,96 +379,55 @@ class MavenAnalyzer(BaseAnalyzer):
                             "Error analyzing repository for %s: %s", dep.name, exc
                         )
 
-    def _get_latest_version(self, coordinate: str) -> Optional[str]:
-        """Return the release (or latest) version for a groupId:artifactId."""
-        return self._get_versioning(coordinate)[0]
+    def _get_versioning(self, coordinate: str) -> ArtifactVersioning:
+        """Return what every configured repository says about an artifact.
 
-    def _get_versioning(
-        self, coordinate: str
-    ) -> Tuple[Optional[str], Optional[datetime]]:
-        """Return the latest version and last-publication date for a coordinate.
+        The single network entry point for artifact-level metadata, and the
+        one place the analyzer learns which repositories publish a coordinate
+        at all. The fetch, the byte bound, the redirect refusal and the
+        per-repository merge all live in the client, so this analyzer does not
+        carry a second copy of the fences (#278).
 
         Args:
             coordinate: ``groupId:artifactId``.
 
         Returns:
-            The release (or latest) version and the ``<lastUpdated>`` timestamp,
-            either of which is None when maven-metadata.xml does not state it.
+            The merged versioning. ``latest`` and ``last_updated`` are None
+            when no repository stated them, and ``lookup`` records who was
+            asked — including the empty record for a string that is not a
+            coordinate at all, which is a lookup that never ran.
         """
-        if ":" not in coordinate:
-            return None, None
-        group, artifact = coordinate.split(":", 1)
-        group_path = group.replace(".", "/")
-        url = (
-            "https://repo1.maven.org/maven2/"
-            f"{group_path}/{artifact}/maven-metadata.xml"
-        )
-        headers = {"User-Agent": "dependency-risk-profiler (metadata lookup)"}
-        try:
-            response = requests.get(url, headers=headers, timeout=self.timeout)
-        except requests.RequestException as exc:
-            logger.debug("Maven Central lookup failed for %s: %s", coordinate, exc)
-            return None, None
-        if response.status_code != 200:
-            return None, None
-        content = response.content
-        if len(content) > _MAX_METADATA_BYTES:
-            return None, None
-        try:
-            root = ElementTree.fromstring(content)
-        except ElementTree.ParseError:
-            return None, None
-        return self._latest_from_metadata(root), self._last_updated(root)
+        group, _, artifact = coordinate.partition(":")
+        if not group or not artifact:
+            return ArtifactVersioning(
+                latest=None,
+                last_updated=None,
+                lookup=RepositoryLookup(
+                    outcomes=(), configured=self.client.repositories
+                ),
+            )
+        return self.client.fetch_versioning(group, artifact)
 
-    @staticmethod
-    def _latest_from_metadata(root: ElementTree.Element) -> Optional[str]:
-        """Return <release> (preferred) or <latest> from a maven-metadata root."""
-        for versioning in root:
-            if local_name(versioning.tag) != "versioning":
-                continue
-            release: Optional[str] = None
-            latest: Optional[str] = None
-            for child in versioning:
-                text = (child.text or "").strip()
-                if not text:
-                    continue
-                if local_name(child.tag) == "release":
-                    release = text
-                elif local_name(child.tag) == "latest":
-                    latest = text
-            return release or latest
-        return None
 
-    @staticmethod
-    def _last_updated(root: ElementTree.Element) -> Optional[datetime]:
-        """Return ``<versioning><lastUpdated>`` as a UTC timestamp, or None.
+def _names_for(
+    state: RegistryLookupState, unanswered: Tuple[str, ...]
+) -> Tuple[str, ...]:
+    """Return the casualty names a state is allowed to carry.
 
-        Maven Central writes it as a bare ``yyyyMMddHHmmss`` in UTC — no
-        separators and no zone marker, which is why it needs its own parse
-        rather than the shared ISO-8601 one.
+    ``record_registry_lookup`` refuses a state whose names disagree with it, on
+    purpose: a failure that cannot say what failed is not a report. A lookup
+    where one repository timed out and another answered is ``ANSWERED`` and has
+    no casualties to report, so the names are dropped rather than smuggled into
+    a state that does not mean what they would imply.
 
-        Args:
-            root: Root element of a ``maven-metadata.xml``.
+    Args:
+        state: The state about to be recorded.
+        unanswered: Every repository that was asked and did not answer.
 
-        Returns:
-            The publication timestamp, or None when the document omits it or
-            spells it in a shape this cannot read. None means unmeasured, never
-            "now".
-        """
-        for versioning in root:
-            if local_name(versioning.tag) != "versioning":
-                continue
-            for child in versioning:
-                if local_name(child.tag) != "lastUpdated":
-                    continue
-                text = (child.text or "").strip()
-                try:
-                    stamp = datetime.strptime(text, _LAST_UPDATED_FORMAT)
-                except ValueError:
-                    logger.debug("Unparseable maven-metadata lastUpdated: %r", text)
-                    return None
-                return stamp.replace(tzinfo=timezone.utc)
-        return None
+    Returns:
+        The names for ``FAILED``, and nothing for every other state.
+    """
+    return unanswered if state is RegistryLookupState.FAILED else ()
 
 
 def normalize_scm_url(raw_url: Optional[str]) -> Optional[str]:
