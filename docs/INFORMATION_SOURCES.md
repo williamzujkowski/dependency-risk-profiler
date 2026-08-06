@@ -238,13 +238,59 @@ unmeasured.
 
 ### Java (Maven)
 
-- **Method**: two reads from Maven Central. `maven-metadata.xml`
-  (`https://repo1.maven.org/maven2/{group-path}/{artifact}/maven-metadata.xml`)
-  for the latest version, and the artifact's own published POM
+- **Method**: two reads per artifact, against a fixed set of repositories —
+  Maven Central (`https://repo1.maven.org/maven2`) and Google's Maven
+  repository (`https://dl.google.com/dl/android/maven2`).
+  `maven-metadata.xml` (`{base}/{group-path}/{artifact}/maven-metadata.xml`)
+  for the release history, and the artifact's own published POM
   (`.../{version}/{artifact}-{version}.pom`) for everything else.
 - **Information Retrieved**: `<release>` (preferred) or `<latest>` version;
   `<scm>` source-repository URL; `<licenses>`; and the artifact's own shipped
   (compile/runtime scope) dependencies, which is the transitive signal.
+
+#### Why two repositories, and how they are combined
+
+Java is the only ecosystem here whose registry is a *set* of repositories.
+Until #278 the tool knew one of them, and every `androidx.*`,
+`com.google.android.*` and most `com.android.tools*` artifact is published to
+Google's repository and to no other — 62 of Signal-Android's 94 dependencies,
+all reported UNKNOWN because the one repository that was asked answered 404.
+
+The two questions take different rules, because they are different kinds of
+question:
+
+- **The POM at a pinned coordinate.** Content at a Maven coordinate is
+  immutable, so the first repository that has it is the whole answer and the
+  walk stops there. Central is asked first, which is why a project with no
+  Google-published dependencies pays no extra request: the second repository is
+  only reached on a miss.
+- **`maven-metadata.xml`.** This is a per-repository *view* of a global fact,
+  so one repository's answer is a floor rather than a total. Central's copy of
+  `com.android.tools.build:gradle` stops at 2.3.0 with `lastUpdated`
+  2017-03-06, the day Google moved the Android toolchain to its own repository;
+  Google's is current. Taking either one alone reports a live artifact as nine
+  years stale, or a current project as ahead of the latest release. Both
+  repositories are asked and the answer is merged on `lastUpdated`, with the
+  version and the date always taken from the same document.
+
+Four other repositories were measured against Signal-Android's dependency list
+and are deliberately **not** queried, because each one costs a request on every
+miss:
+
+| Repository | Answered for | Why not |
+|---|---|---|
+| JitPack | 0 of 94 | A build service, not a registry: a cold `maven-metadata.xml` request triggers a build and took 15.3 s, against ~45 ms for a miss elsewhere. Its answer is what it could build just now, not what a publisher published. |
+| Gradle plugin portal | 0 of 94 | 303-redirects a miss to Central, so it *is* Central plus plugin marker artifacts — and plugin coordinates live in `buildscript`/`plugins` blocks, which the Gradle reader deliberately does not read. |
+| `repo.spring.io/release` | 0 of 94 | Answers `401` to an anonymous request. Spring GA releases are on Central. |
+| Sonatype snapshots | 0 of 94 | Holds `-SNAPSHOT` versions by construction, which are mutable and are not what a released manifest pins. |
+
+The repository list is a compile-time constant and the manifest cannot add to
+it. Gradle's `repositories { }` and Maven's `<repositories>` name arbitrary
+URLs — Signal's own `settings.gradle.kts` names two under
+`raw.githubusercontent.com` and a `mavenLocal()` — and honouring them would
+turn a fetcher with a closed host set into one whose destination is chosen by
+the file under analysis. Artifacts that live only in such a repository stay
+honestly unmeasured.
 
 #### Maven coverage is a function of artifact age
 
@@ -287,12 +333,12 @@ invent data, and the unmeasured counts are the record of it.
 Most Java projects declare dependencies without an inline `<version>` and
 inherit it from `<dependencyManagement>`. Resolution follows Maven's rules
 across the project's own block, its parent POM chain, and any
-`<scope>import</scope>` BOM, fetching parent POMs and BOMs from Maven Central as
-needed. Every remote read is fenced: https and `repo1.maven.org` only, redirects
-refused, coordinates validated against a strict grammar before they become a URL
-path, response bodies streamed and abandoned past 2 MiB, and a hard per-manifest
-fetch budget with a per-import allowance so one sprawling vendor BOM cannot spend
-it all.
+`<scope>import</scope>` BOM, fetching parent POMs and BOMs from the configured
+repositories as needed. Every remote read is fenced: https only, and only the
+two constant hosts above; redirects refused; coordinates validated against a
+strict grammar before they become a URL path; response bodies streamed and
+abandoned past 2 MiB; and a hard per-manifest fetch budget on the POM graph
+with a per-import allowance so one sprawling vendor BOM cannot spend it all.
 
 Set `DEPENDENCY_RISK_NO_REMOTE_POMS=1` to disable remote resolution. Versions
 then resolve only from what the manifest itself proves; anything inherited is
@@ -312,7 +358,7 @@ drift.
 - **Information Retrieved**: the `groupId:artifactId` coordinate and, where it
   can be established statically, the installed version. Everything downstream —
   latest version, licence, source repository, shipped dependencies — comes from
-  Maven Central.
+  the Maven repositories described above.
 
 #### What "statically" means here, and what it costs
 
@@ -354,14 +400,14 @@ Two consequences worth knowing before you read a report:
    build script's version catalog is out of reach and catalog-declared versions
    come back unmanaged. The dependency set, the advisories and every registry
    signal are still measured; only version drift is not.
-2. Only Maven Central is read. Android projects routinely depend on `androidx.*`
-   and `com.google.android.*` artifacts, which are published to Google's Maven
-   repository and not to Maven Central, so their POM lookup finds nothing and
-   they score UNKNOWN with every registry signal unmeasured — the version is
-   resolved, and there is no registry behind it to ask. Profiling okhttp's
-   `okhttp/build.gradle.kts` is a fair illustration: 28 dependencies named, 25
-   scored, and the 3 UNKNOWNs are exactly the three `androidx` artifacts. That
-   is the tool declining to invent data rather than a parse failure.
+2. Repositories declared in the build are not read. Both Maven repositories in
+   the table above are asked for every artifact, so `androidx.*` and
+   `com.google.android.*` resolve (#278); an artifact published only to a
+   project's own repository — Signal keeps two under `raw.githubusercontent.com`
+   for its `org.signal.*` artifacts — is asked for at both and found at
+   neither, and reports as absent from every repository we know rather than as
+   unread. That is the tool declining to invent data rather than a parse
+   failure.
 
 ## Repository Analysis
 

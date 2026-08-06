@@ -146,6 +146,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every risk level, floor and exploit score in the corpus is byte-identical
   before and after. The only field that changed is the one that was lying.
 
+- **The Maven resolver knew one repository, so every `androidx` artifact was
+  unmeasurable.** `repo1.maven.org` was the only base URL in the tool. Every
+  `androidx.*`, `com.google.android.*` and most `com.android.tools*` artifact
+  is published to Google's Maven repository and to no other, so the lookup
+  404'd and the artifact came back with thirteen unmeasured signals and
+  `risk_level: UNKNOWN`. On Signal-Android that was **64 of 94 dependencies**
+  — a real, large, extremely ordinary Android project scoring nothing for two
+  thirds of what it ships, because of one missing constant.
+
+  Central and Google are both asked now, and the two questions a repository
+  answers get different rules. The POM at a pinned coordinate is immutable, so
+  the first repository that has it is the whole answer; Central is asked first,
+  which is why a project with no Google-published dependencies pays **zero**
+  extra POM requests. `maven-metadata.xml` is a per-repository *view* of a
+  global fact, so every repository is asked and the answer merged on
+  `lastUpdated` — Central's copy of `com.android.tools.build:gradle` stops at
+  2.3.0 and 2017-03-06, the day Google moved the Android toolchain to its own
+  repository, and taking it would report a live artifact as nine years stale
+  and a current project as *ahead* of the latest release. That is a confident
+  wrong number, which is worse than the unmeasured one being fixed.
+
+  On Signal-Android's `app/build.gradle.kts`: UNKNOWN **64 -> 2**, measured
+  signal coverage **373/1504 (24.8%) -> 685/1504 (45.6%)**. The two that remain
+  are honest. `com.mobilecoin:android-sdk` is published to none of the six
+  repositories that were measured — Signal serves it from its own repository —
+  and reports as absent from every repository we ask rather than as unread;
+  `net.zetetic:sqlcipher-android` resolves fine and simply has too little
+  evidence behind it, which it also did before. On WebGoat's `pom.xml` the
+  output is **identical in every field**: 46 dependencies, 1 UNKNOWN,
+  358/736 signals. Central resolution did not move.
+
+  The cost was measured rather than assumed, because a repository is a request
+  on every miss. WebGoat: 169 -> 215 requests, **+1 per dependency**, all of it
+  the metadata merge and none of it POM reads. Signal-Android: 189 -> 292,
+  +1.10 per dependency — and Central POM reads *fell* from 95 to 38, because
+  the metadata lookup already established which repository publishes an
+  artifact and the POM read starts there. Without that, Signal would have cost
+  358 requests instead of 292.
+
+  Four more repositories were measured against Signal's dependency list and
+  rejected, each with a reason beyond its zero: JitPack is a build service
+  whose cold metadata request triggers a build and took 15.3 s; Gradle's plugin
+  portal 303-redirects misses to Central and serves coordinates this tool
+  deliberately does not read; `repo.spring.io/release` answers 401 to an
+  anonymous request; a snapshot repository holds versions no released manifest
+  pins. The list stays a compile-time constant and the build file cannot add to
+  it — Gradle's `repositories { }` names arbitrary URLs, and honouring them
+  would turn a fetcher with a closed host set into one whose destination is
+  chosen by the file under analysis.
+
+  A repository that answers 404 and one that does not answer at all are now
+  different facts, and "every repository was asked and none has it" is
+  unreachable unless the recorded outcomes actually cover the configured set.
+  A spent fetch budget therefore leaves an artifact *unread*, never
+  *unpublished* — the #219 defect at repository scope, closed by construction
+  rather than by convention.
+
+  One inconsistency fixed alongside it: `DEPENDENCY_RISK_NO_REMOTE_POMS=1`
+  claimed to keep resolution fully offline and still fetched
+  `maven-metadata.xml` over the network. It no longer does.
+
 - **A Python constraint was scored as though it were the installed version.**
   `requests>=2.20.0` produced a record byte-identical to `requests==2.20.0`:
   the same `known_vulnerable: true`, decided from four advisories fixed in
