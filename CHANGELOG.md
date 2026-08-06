@@ -9,6 +9,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The abandonment pilot, and the answer is that the score loses to download
+  count.** `docs/validation-protocol.md` stages the validation work and stage 2
+  is a pilot on abandonment with release cadence and version drift ablated,
+  because "low cadence predicts the future absence of releases" predicts a
+  variable from itself. This is that pilot: 2,906 npm packages sampled at
+  T = 2024-08-01, labelled on whether they published anything in the two years
+  after, scored by the shipped `RiskScorer` at its shipped weights from inputs
+  reconstructed as they stood at T.
+
+  **Download count at T alone separates the two classes at AUC 0.696. The score
+  reaches 0.577 on the same packages** — 0.119 behind, clustered 95% CI
+  [−0.155, −0.085]. Against package age and dependency count it is nominally
+  ahead by 0.015 and 0.024 with intervals spanning zero, and against a star
+  count read *today* — which knows which of these projects went on to be
+  popular, and was left advantaged deliberately — it is a dead tie. The
+  protocol's stage 3 says to stop and report when the trivial baselines cannot
+  be beaten, and this is that report: `docs/abandonment-pilot.md`.
+
+  Two of the protocol's four falsification lines are met. Line 1, the primary
+  one, by 0.119 in the wrong direction. Line 3 because the HIGH bucket carries
+  1.11× the base rate against a 2× requirement, and no package in 2,906 reaches
+  CRITICAL at all. Neither triggers a documentation change here: the pilot is
+  one outcome on one ecosystem, and line 1 is written against the
+  advisory-arrival experiment that stage 4 has yet to run.
+
+  **N is measured, not assumed.** Abandonment needs a silence length, and two
+  years is the conventional one. Rather than inherit it, the harness builds an
+  actuarial life table of release silences over 36,420 sampled packages and
+  reads off the 12-month resumption hazard: after one year of silence an npm
+  package still has a 12.0% chance of publishing again within the year, after
+  two years 4.5%, after three 2.2%. N = 2 is the first whole year under 10%,
+  and the same answer comes out at all four candidate cut-off dates. The
+  convention turns out to be right. It is now also a measurement.
+
+  The population fed to that table is every sampled package, not the cohort,
+  and the difference is not pedantry. The cohort has to be alive at T, so its
+  silences are the ones that ended; built on it, the hazard plateaus near 40%
+  out to seven years and no year clears any cutoff. Selecting on activity and
+  then measuring how often activity resumes is the same circularity the pilot
+  exists to avoid, one level down.
+
+  **Three findings about shipped code fell out of driving it.** `deprecation`
+  cannot be reported unmeasured — `is_deprecated` is a `bool` with a `False`
+  default, so every package is scored with a confident "not deprecated" even
+  though #312 found the underlying npm field is unreconstructable at a past
+  date and applied retroactively. Leaving `advisory_lookup_state` unset hands
+  every package a confident clean `0.0` at the tool's largest single weight;
+  that is deliberate backward compatibility for offline runs, and for a
+  backtest it is a fabricated measurement — recording `NOT_ATTEMPTED` moved 174
+  packages into the HIGH bucket that were otherwise nowhere near it. And the
+  scorer declines a verdict on 79% of this cohort, because a package that
+  declares a repository nobody read has eight unexplained silent signals; that
+  is the rule working, and it means a registry-only deployment is mostly
+  abstentions.
+
+  The per-signal ablation says `maintainer` is the only one of the three
+  surviving signals carrying anything — drop it and the model falls to 0.488,
+  below chance — and that `license` is **actively harmful** here, since
+  dropping it *raises* AUC to 0.600 with an interval excluding zero.
+
+  The harness lives in `research/`, is not packaged, and adds no runtime
+  dependency: AUC is a rank sum and average precision is a walk down a sorted
+  list, so `research/abandonment_pilot/stats.py` is stdlib. The protocol asks
+  for a paired DeLong test and, separately, for clustered intervals because
+  packages sharing a maintainer are not independent; those two are in tension,
+  and the clustered paired bootstrap that replaces DeLong is argued in the
+  results document rather than substituted quietly. It is not a cosmetic
+  difference: on the star comparison the clustered interval is 3.7 times wider
+  than the independent one.
+
+  Data is pinned. `research/data/npm-2026-08-06/` carries a manifest of SHA-256
+  digests and the loader refuses a snapshot that has drifted, so a rerun either
+  reproduces the published numbers or says why it cannot. CI never touches a
+  registry: the negative control runs against the pinned snapshot, and a test
+  asserts that no analysis module can so much as import an HTTP client.
+
 - **A forge adapter contract, so a coverage gap is visible instead of silent.**
   The community pass was named `analyze_github_community_metrics` and gated on
   a regex that looked for `github.com` anywhere in the repository URL. A

@@ -45,6 +45,8 @@ nav:
     - 'Scoring': 'SCORING.md'
   - Reference:
     - 'Signals & Scorecard Mapping': 'signals.md'
+    - 'Validation Protocol': 'validation-protocol.md'
+    - 'Abandonment Pilot Results': 'abandonment-pilot.md'
     - 'Forge Coverage': 'forge-coverage.md'
     - 'Information Sources': 'INFORMATION_SOURCES.md'
     - 'Security': 'security/SECURITY.md'
