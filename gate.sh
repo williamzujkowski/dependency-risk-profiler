@@ -28,10 +28,34 @@ HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid -q .headRefOid)
 BASE_OK=$(gh pr view "$PR" --repo "$REPO" --json mergeable -q .mergeable)
 echo "PR #$PR head=$HEAD_SHA mergeable=$BASE_OK"
 
-# Assert the head commit is actually on top of current origin/main
+# Assert the head commit is actually on top of current origin/main.
+#
+# GitHub does not index a newly pushed head immediately, so the compare
+# endpoint 404s for a short window after a branch is pushed or a PR opened.
+# Without the retry the error body lands in $BEHIND, the string comparison
+# below is not "0", and the gate fails with a JSON blob where a number should
+# be. It fails CLOSED, which is right, but "1 commits behind" and "GitHub has
+# not caught up yet" are different facts and the operator has to be able to
+# tell them apart.
 MAIN_SHA=$(gh api "repos/$REPO/commits/main" -q .sha)
-BEHIND=$(gh api "repos/$REPO/compare/$MAIN_SHA...$HEAD_SHA" -q .behind_by)
-echo "behind_by=$BEHIND (must be 0: checks on a stale base prove nothing)"
+BEHIND=""
+for attempt in 1 2 3; do
+  BEHIND=$(gh api "repos/$REPO/compare/$MAIN_SHA...$HEAD_SHA" -q .behind_by 2>/dev/null)
+  case "$BEHIND" in
+    ''|*[!0-9]*) ;;          # empty or non-numeric: not an answer yet
+    *) break ;;
+  esac
+  [ "$attempt" -lt 3 ] && sleep 5
+done
+case "$BEHIND" in
+  ''|*[!0-9]*)
+    echo "behind_by=UNDETERMINED (compare endpoint gave no number after 3 tries)"
+    BEHIND="undetermined"
+    ;;
+  *)
+    echo "behind_by=$BEHIND (must be 0: checks on a stale base prove nothing)"
+    ;;
+esac
 
 RUNS=$(gh api "repos/$REPO/commits/$HEAD_SHA/check-runs?per_page=100" \
   -q '.check_runs[] | "\(.name)\t\(.status)\t\(.conclusion)"')
@@ -39,7 +63,13 @@ echo "--- all check-runs on $HEAD_SHA ---"
 echo "$RUNS"
 echo "--- gate ---"
 FAIL=0
-[ "$BEHIND" != "0" ] && { echo "FAIL: head is $BEHIND commits behind main"; FAIL=1; }
+if [ "$BEHIND" = "undetermined" ]; then
+  echo "FAIL: could not establish whether head is current -- refusing rather than guessing"
+  FAIL=1
+elif [ "$BEHIND" != "0" ]; then
+  echo "FAIL: head is $BEHIND commits behind main"
+  FAIL=1
+fi
 for name in "${REQUIRED[@]}"; do
   line=$(echo "$RUNS" | grep -P "^\Q$name\E\t" | head -1)
   if [ -z "$line" ]; then
