@@ -71,3 +71,16 @@ jobs:
     # then is that this job checks our code and the lockfile, and nothing else.
     - name: Run security checks
       run: bandit -r src -c .bandit.yml
+
+    # Bandit reads our source for unsafe constructs; it does not look for
+    # credentials. Conformance fixtures are captured verbatim from real
+    # third-party projects (rule 5), so a capture can pick up a real key --
+    # Signal's Android build file carried a Maps key and two Stripe
+    # publishable keys, and GitHub's own scanner found them before anything
+    # here did. This is the gate at the boundary rather than a check inside
+    # each capture script.
+    - name: Scan for secrets
+      uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
