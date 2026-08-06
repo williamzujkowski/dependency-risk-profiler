@@ -35,6 +35,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A clone that failed was not remembered, so one unusable repository cost 60
+  seconds per package that pointed at it.** Eight of the eighteen NuGet packages
+  in eShopOnWeb's `Web.csproj` resolve to `github.com/dotnet/dotnet`, the .NET
+  unified-source monorepo. A shallow clone of it does not finish inside the
+  60-second timeout, and it did not finish eight separate times: **480 of that
+  run's 576 seconds**, at a metronomic 60-63 second cadence, re-learning a fact
+  that was known after the first attempt. Every other ecosystem in the corpus
+  runs at 1.5-2 seconds per dependency; this one ran at 32.
+
+  A clone failure is now recorded for the rest of the process and keyed on the
+  normalized clone URL — the exact argument handed to `git clone`, which is
+  what decides the outcome. Not the package, because the eight packages are
+  eight names for one repository; not the registry's raw string, because
+  registries spell one repository several ways and each spelling would buy its
+  own timeout. Same manifest, same machine, two runs each way: **576s and 636s
+  before, 163s and 155s after, with one clone attempt against `dotnet/dotnet`
+  instead of eight.** A project whose clones succeed is unaffected — ripgrep's
+  `Cargo.toml` measured 20s before and 18s after.
+
+  The 60-second timeout is unchanged, and measuring it was what settled that.
+  It is not too generous; it is already tight. A successful shallow clone of
+  `Azure/azure-sdk-for-net` — which this same manifest depends on — takes **65
+  seconds** for 1.8 GB, which is why that one package flips between measured and
+  unmeasured from run to run. `dotnet/runtime` clones in 38s. Lowering the
+  timeout would buy at most a one-off `60 - T` seconds per unusable repository,
+  now that the cost no longer multiplies, and would pay for it by turning large
+  repositories that currently succeed into permanently unmeasured ones.
+
+  The cache does not outlive the run, and that is the design rather than a
+  shortcut. A cached failure silences eight signals, so persisting one to disk
+  would mean a network blip during today's run goes on reporting a repository
+  as unreadable tomorrow, after the condition has cleared — a stale negative
+  served past the fix, which is the shape of #219. Keeping the entry in the
+  process keeps it inside the run where the failure was actually observed, and
+  leaves nothing on disk for a URL built from package metadata to collide with
+  or escape from.
+
+  What a user gets back is unchanged, and that was the point: the cached answer
+  is the same `None` the failing clone returns, so there is one downstream code
+  path rather than two, and a cached failure cannot become a measured zero. The
+  JSON for all eighteen packages is identical across the change, signal for
+  signal and verdict for verdict.
+
+  Failed clones also stopped leaving their partial checkouts behind.
+  `clone_repo` creates the destination before it shells out, git writes into it
+  as it goes, and only the success path was ever cleaned up — one eShopOnWeb run
+  left eight orphaned trees at 340-410 MB each, and a machine that had been
+  running the corpus had 6.4 GB of them, the largest a single 1.3 GB fragment.
+  Those are now zero bytes. An *empty* directory can still survive, because the
+  timeout kills `git` but not the transport helper it spawned, which recreates
+  its destination on the way out; that last scrap is folded into #301.
+
+  Reusing a *successful* worktree across the dependencies that share it is the
+  same win in the healthier direction and is #301. A failed clone still reports
+  `no_data_from_source`, which names the wrong cause — the registry answered and
+  was right — and that is #302.
+
 - **A Python constraint was scored as though it were the installed version.**
   `requests>=2.20.0` produced a record byte-identical to `requests==2.20.0`:
   the same `known_vulnerable: true`, decided from four advisories fixed in
