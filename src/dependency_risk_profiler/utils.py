@@ -7,11 +7,12 @@ import re
 import shutil
 import subprocess  # nosec B404
 import tempfile
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional, Set, Tuple
 from urllib.parse import urlparse, urlunparse
 
 import requests
@@ -496,8 +497,78 @@ def is_cloneable_repo_url(repo_url: Optional[str]) -> bool:
     return normalize_clone_url(repo_url) is not None
 
 
+#: Normalized clone URLs whose clone already failed in this process.
+#:
+#: A repository that cannot be cloned costs ``CLONE_TIMEOUT_SECONDS`` per
+#: attempt, and eight of the eighteen NuGet packages in one eShopOnWeb
+#: manifest resolve to ``github.com/dotnet/dotnet``: 480 of that run's 582
+#: seconds were the same doomed clone, attempted once per package, into eight
+#: separate temp directories. Nothing about the seventh attempt differed from
+#: the first (#282).
+#:
+#: **Keyed on the normalized clone URL**, which is the exact argument handed to
+#: ``git clone`` and therefore the thing that decides the outcome. Not on the
+#: package: the eight packages are eight names for one repository, so a
+#: per-package key would cache nothing. Not on the raw registry string either,
+#: since registries spell one repository several ways (``git+https://…``,
+#: ``git@host:owner/repo``) and each spelling would buy its own timeout.
+#:
+#: **Scope is the process, so the TTL is the run.** That is a different answer
+#: from the advisory cache's 24 hours on disk, not a smaller one:
+#:
+#: * A cached clone failure silences eight signals. Persisting one means a
+#:   network blip during today's run goes on reporting a repository as
+#:   unreadable tomorrow, after the condition has cleared. A stale negative
+#:   served past the fix is the exact shape of #219. Bounding the entry to the
+#:   process bounds it to the run in which the failure was actually observed.
+#: * Nothing is written anywhere, so a URL built from package metadata —
+#:   attacker-influenceable input — never reaches a filename. The advisory
+#:   cache has to hash its key so one package's record cannot be served for
+#:   another or escape the cache directory (#212, #216); here there is no
+#:   directory to escape and no key to collide.
+#: * Separating a timeout from a repository that no longer exists only buys
+#:   something if the two deserve different expiries. Inside one process they
+#:   do not, so the classifier that would decide it is not built: it would
+#:   have no reader, and classifying git's stderr by substring is exactly the
+#:   kind of guess that fails quietly.
+#:
+#: Only failures are recorded. Reusing a *successful* worktree across the
+#: dependencies that share it is the same win in the healthier direction, and
+#: it is a separate change with its own lifetime and cleanup questions (#301).
+_failed_clone_urls: Set[str] = set()
+
+#: Guards :data:`_failed_clone_urls`. No threaded caller reaches ``clone_repo``
+#: today — org scans set ``clone_repos`` False and read the GitHub API instead
+#: — but module-level mutable state behind a public function should not depend
+#: on which callers happen to exist right now. ``org_scan.pipeline`` guards its
+#: own shared caches the same way.
+_failed_clone_lock = threading.Lock()
+
+
+def reset_failed_clone_cache() -> None:
+    """Forget every clone failure recorded in this process.
+
+    There is no expiry inside a run — that is the design — so anything wanting
+    a second opinion has to ask for one. The test suite is a single process for
+    the whole run and empties the cache around every test
+    (``testing/conftest.py``); without that, the first test to record a failure
+    for a URL would answer for every later test that touches it, and an
+    assertion about whether a clone was attempted would turn on collection
+    order.
+    """
+    with _failed_clone_lock:
+        _failed_clone_urls.clear()
+
+
 def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
     """Clone a git repository to a temporary directory.
+
+    A repository whose clone already failed in this process is not attempted
+    again; see :data:`_failed_clone_urls` for what the cache is keyed on and
+    why it does not outlive the run. The cached answer is the same ``None``
+    the failing path returns, so a caller cannot tell the two apart and there
+    is one downstream code path rather than two — which is what keeps a cached
+    failure an unmeasured signal instead of a measured zero (AGENTS.md rule 4).
 
     Args:
         repo_url: URL of the repository.
@@ -513,6 +584,15 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
             redact_credentials(repo_url),
         )
         return None
+    with _failed_clone_lock:
+        already_failed = normalized_url in _failed_clone_urls
+    if already_failed:
+        logger.debug(
+            "Skipping clone of %s: an earlier clone in this run failed",
+            redact_credentials(repo_url),
+        )
+        return None
+    temp_dir: Optional[str] = None
     try:
         parsed_url = urlparse(normalized_url)
         path_parts = parsed_url.path.strip("/").split("/")
@@ -531,8 +611,12 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
         # Never let git block on a credential/host prompt — fail fast instead.
         clone_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
 
-        # Clone the repository (shallow, no tags, non-interactive).
-        result = subprocess.run(
+        # Clone the repository (shallow, no tags, non-interactive). A non-zero
+        # exit raises rather than returning, so the handler below is the only
+        # way out of a failed clone — there is no second exit for the cache to
+        # miss. The `returncode == 0` branch that used to follow this call was
+        # unreachable under `check=True` and is gone.
+        subprocess.run(
             [  # nosec B603, B607
                 "git",
                 "clone",
@@ -548,16 +632,18 @@ def clone_repo(repo_url: str) -> Optional[Tuple[str, str]]:
             timeout=CLONE_TIMEOUT_SECONDS,
             env=clone_env,
         )
-
-        if result.returncode == 0:
-            return repo_dir, repo_name
-        else:
-            logger.error(
-                "Error cloning %s: %s", redact_credentials(repo_url), result.stderr
-            )
-            return None
+        return repo_dir, repo_name
     except Exception as e:
         logger.error("Error cloning %s: %s", redact_credentials(repo_url), e)
+        with _failed_clone_lock:
+            _failed_clone_urls.add(normalized_url)
+        # Remove the destination this attempt created. git writes into it as it
+        # goes, so a clone killed at the timeout leaves a partial checkout that
+        # nothing else will ever clean up: a single eShopOnWeb run left eight of
+        # them at roughly 390 MB each, and `cloned_repo` only removes the tree
+        # when the clone succeeded.
+        if temp_dir is not None:
+            shutil.rmtree(temp_dir, ignore_errors=True)
         return None
 
 

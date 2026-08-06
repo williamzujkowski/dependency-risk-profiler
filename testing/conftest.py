@@ -7,6 +7,21 @@ from typing import Dict, Iterator
 import pytest
 
 from dependency_risk_profiler.models import DependencyMetadata
+from dependency_risk_profiler.utils import reset_failed_clone_cache
+
+
+@pytest.fixture(autouse=True)
+def _forget_clone_failures() -> Iterator[None]:
+    """Empty the process-scoped clone-failure cache around every test.
+
+    The cache (#282) lives for the life of the process, which in a test run is
+    the whole suite. Left alone, the first test to record a failure for a URL
+    would answer for every later test that touches it, and a test asserting a
+    clone was attempted would pass or fail on collection order.
+    """
+    reset_failed_clone_cache()
+    yield
+    reset_failed_clone_cache()
 
 
 @pytest.fixture
