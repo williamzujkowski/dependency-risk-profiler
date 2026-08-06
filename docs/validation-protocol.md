@@ -135,9 +135,16 @@ packages than MEDIUM).
 These are chosen before data collection. If any is met, the stated change happens.
 
 1. **If full-model AUC does not exceed the best single trivial baseline by
-   ≥ 0.05 with non-overlapping 95% CIs**, the "predicts risk" claim is removed
-   from the README and the tool describes itself as a heuristic hygiene
+   ≥ 0.05, by a paired DeLong test at alpha 0.05**, the "predicts risk" claim is
+   removed from the README and the tool describes itself as a heuristic hygiene
    checklist. This is the primary line.
+
+   The first version of this document said "with non-overlapping 95% CIs". That
+   is the wrong test. Both models are scored on the **same** packages, so the
+   comparison is paired and DeLong applies; treating the two AUCs as independent
+   discards the pairing and is far more conservative than the question warrants.
+   The cost of the error was not theoretical — see the power table below, where
+   it nearly doubles the sample required.
 2. **If model L does not beat model G**, the comparative claim — "leading beats
    lagging" — is withdrawn regardless of how L performs against the baselines.
 3. **If the HIGH bucket's 12-month advisory rate is < 2× the base rate**, the
@@ -147,6 +154,51 @@ These are chosen before data collection. If any is met, the stated change happen
 
 A result meeting any of these is a **successful** outcome for this protocol.
 Finding it ourselves is much cheaper than a reader finding it.
+
+## Power, against the measured base rate
+
+Feasibility (#312) measured the advisory-arrival base rate at **1.56%** and
+abandonment at **15.05%**. Those numbers decide whether the falsification lines
+above are reachable at all, so the arithmetic is here rather than assumed.
+
+Positives needed to detect the 0.05 AUC delta, assuming a model AUC of 0.70
+(Hanley–McNeil standard error):
+
+| outcome | test | positives | packages to sample |
+|---|---|---:|---:|
+| advisory arrival (1.56%) | non-overlapping independent CIs | ~549 | **~35,200** |
+| advisory arrival (1.56%) | **paired DeLong** | ~286 | **~18,300** |
+| abandonment (15.05%) | paired DeLong | ~301 | **~2,000** |
+
+Three things follow.
+
+**The paired test is not a nicety.** It halves the harvest. Requiring independent
+CIs not to overlap would have cost ~17,000 extra packages to answer the same
+question no more reliably.
+
+**The primary outcome is expensive but reachable.** ~18,300 packages is well
+within what npm and PyPI hold; the binding constraint is API rate limits and
+clone time, not availability. That is a scheduling problem, not a feasibility
+one, and it must be budgeted before the harvest starts rather than discovered
+partway through.
+
+**The best-powered outcome is the partly-circular one**, which is an awkward but
+useful fact. Abandonment needs ~2,000 packages — a ninth of the advisory
+harvest — because its base rate is ten times higher. So the abandonment
+appendix, with cadence and drift ablated, is now the **pilot**: it is cheap,
+well-powered, and it exercises every stage of the harness end to end before the
+expensive harvest is attempted. It cannot settle the primary claim, and it is
+not permitted to be reported as if it could.
+
+Revised staging, replacing the order given below:
+
+1. Feasibility. **Done — #312.**
+2. **Abandonment pilot**, ~2,000 packages, cadence and drift ablated. Proves the
+   harness and answers whether maintainer concentration and provenance predict
+   anything at all.
+3. Trivial baselines on that pilot. **Stop and report if they cannot be beaten.**
+4. Advisory-arrival harvest, ~18,300 packages, only if stage 3 justifies the cost.
+5. Head-to-head L vs G vs C, ablations, negative control throughout.
 
 ## Scope honesty
 
