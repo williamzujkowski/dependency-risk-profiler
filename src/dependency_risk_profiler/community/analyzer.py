@@ -1,65 +1,17 @@
 """Community metrics analyzer for dependencies."""
 
 import logging
-import re
 import subprocess  # nosec B404
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
+from ..forges import CanonicalRepo, ForgeCapability, ForgeRegistry
 from ..models import CommunityMetrics, DependencyMetadata
 from ..signals import FieldSource, ProvenancedField
-from ..utils import (
-    extract_github_repo_info,
-    fetch_url,
-    github_commit_frequency,
-    github_contributor_count,
-    is_shallow_clone,
-)
+from ..utils import is_shallow_clone
 from ..versioning import match_release_date
 
 logger = logging.getLogger(__name__)
-
-
-# We'll use extract_github_repo_info from utils.py instead
-
-
-def extract_star_count(html_content: str) -> Optional[int]:
-    """Extract star count from GitHub repository HTML.
-
-    Args:
-        html_content: GitHub repository HTML content.
-
-    Returns:
-        Star count or None if not found.
-    """
-    if not html_content:
-        return None
-
-    # Look for star count in HTML
-    star_patterns = [
-        r'aria-label="([0-9,]+) users starred this repository"',
-        r'<span class="Counter js-social-count">([0-9,k]+)</span>',
-        r'<a class="social-count js-social-count" [^>]*>([0-9,k]+)</a>',
-    ]
-
-    for pattern in star_patterns:
-        match = re.search(pattern, html_content)
-        if match:
-            count_str = match.group(1).replace(",", "")
-            if "k" in count_str.lower():
-                # Handle cases like "1.2k"
-                count_str = count_str.lower().replace("k", "")
-                try:
-                    return int(float(count_str) * 1000)
-                except ValueError:
-                    continue
-            else:
-                try:
-                    return int(count_str)
-                except ValueError:
-                    continue
-
-    return None
 
 
 def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float]:
@@ -114,84 +66,84 @@ def calculate_commit_frequency(repo_dir: str, months: int = 6) -> Optional[float
         return None
 
 
-def analyze_github_community_metrics(
+def analyze_forge_community_metrics(
     dependency: DependencyMetadata,
     github_token: Optional[str] = None,
 ) -> DependencyMetadata:
-    """Analyze GitHub community metrics for a dependency.
+    """Ask whichever forge hosts this dependency for the facts a clone lacks.
+
+    Three facts, routed by repository host through
+    :class:`~dependency_risk_profiler.forges.ForgeRegistry`. A host no adapter
+    claims yields three ``UNMEASURED`` answers naming that, rather than three
+    signals that quietly never appear — which is the visible-coverage half of
+    #292. The repository is still cloned and still answers every clone-derived
+    signal either way.
 
     Args:
-        dependency: Dependency metadata.
-        github_token: Optional GitHub token used to read the true contributor
-            count from the API. Without it, the count stays unknown rather than
-            being guessed from a shallow clone.
+        dependency: Dependency metadata, updated in place.
+        github_token: A GitHub token, when the caller resolved one. The two
+            REST-backed facts need it; without one they stay unknown rather
+            than being guessed from a shallow clone, whose answer is one
+            contributor and one commit for every repository on earth.
 
     Returns:
-        Updated dependency metadata with community metrics.
+        The same dependency, carrying whatever the forge supplied.
     """
-    if not dependency.repository_url:
+    repo = CanonicalRepo.from_url(dependency.repository_url)
+    if repo is None:
         return dependency
 
-    repo_info = extract_github_repo_info(dependency.repository_url)
-    if not repo_info:
-        return dependency
+    dependency.forge = ForgeRegistry.match_forge_by_host(repo.host)
+    logger.info(
+        "Asking %s for community metrics for %s/%s",
+        dependency.forge.value if dependency.forge else f"no adapter ({repo.host})",
+        repo.owner,
+        repo.name,
+    )
 
-    owner, repo = repo_info
-    logger.info(f"Analyzing GitHub community metrics for {owner}/{repo}")
-
-    # Reuse whatever the repository clone already measured. This step used to
-    # assign a fresh CommunityMetrics, which discarded the clone-derived commit
-    # frequency because the analyze pipeline runs the clone first (#166).
+    # Reuse whatever the repository clone already measured. Assigning a fresh
+    # CommunityMetrics here would discard the clone-derived commit frequency,
+    # because the analyze pipeline runs the clone first (#166).
     community_metrics = dependency.community_metrics or CommunityMetrics()
 
-    # Prefer the real contributor count from the GitHub API. Fall back to any
-    # count already collected, but never to a shallow-clone guess (which is
-    # always ~1 and would falsely read as "single maintainer").
-    api_count = github_contributor_count(dependency.repository_url, github_token)
-    if api_count is not None:
-        dependency.maintainer_count = api_count
-        community_metrics.contributor_count = api_count
-        dependency.record_field_source(
-            ProvenancedField.MAINTAINER_COUNT, FieldSource.GITHUB_API_CONTRIBUTORS
-        )
-        dependency.record_field_source(
-            ProvenancedField.CONTRIBUTOR_COUNT, FieldSource.GITHUB_API_CONTRIBUTORS
-        )
+    contributors = ForgeRegistry.ask(
+        repo, ForgeCapability.CONTRIBUTOR_COUNT, github_token
+    )
+    dependency.forge_answers[ForgeCapability.CONTRIBUTOR_COUNT] = contributors
+    if contributors.is_measured:
+        count = int(contributors.value or 0)
+        dependency.maintainer_count = count
+        community_metrics.contributor_count = count
+        source = contributors.field_source
+        if source is not None:
+            dependency.record_field_source(ProvenancedField.MAINTAINER_COUNT, source)
+            dependency.record_field_source(ProvenancedField.CONTRIBUTOR_COUNT, source)
     elif dependency.maintainer_count is not None:
         community_metrics.contributor_count = dependency.maintainer_count
         # A copy, so it inherits the copied field's provenance rather than
         # claiming one of its own. If nothing recorded a source for
-        # ``maintainer_count`` — an adapter this step has not reached — the
-        # copy stays unattributed, which is the honest answer.
+        # ``maintainer_count`` — an ecosystem whose registry does not publish
+        # maintainers — the copy stays unattributed, which is the honest answer.
         copied = dependency.field_sources.get(ProvenancedField.MAINTAINER_COUNT)
         if copied is not None:
             dependency.record_field_source(ProvenancedField.CONTRIBUTOR_COUNT, copied)
 
-    # Development cadence, for the same reason and by the same route. The clone
-    # is shallow, so it can only supply this when someone hands us a full one;
-    # otherwise the API answers, and if neither can, the cadence half of the
-    # community score stays honestly unmeasured (#166).
-    api_frequency = github_commit_frequency(dependency.repository_url, github_token)
-    if api_frequency is not None:
-        community_metrics.commit_frequency = api_frequency
+    cadence = ForgeRegistry.ask(repo, ForgeCapability.COMMIT_FREQUENCY, github_token)
+    dependency.forge_answers[ForgeCapability.COMMIT_FREQUENCY] = cadence
+    if cadence.is_measured and cadence.field_source is not None:
+        community_metrics.commit_frequency = cadence.value
         dependency.record_field_source(
-            ProvenancedField.COMMIT_FREQUENCY, FieldSource.GITHUB_API_COMMITS
+            ProvenancedField.COMMIT_FREQUENCY, cadence.field_source
         )
 
-    # Fetch repository HTML and regex a star count out of it. The weakest source
-    # in the tool, and the one that motivated #164 step 7: in an org scan the
-    # authenticated API overwrites this a few lines later, and until now the
-    # payload gave a consumer no way to tell which of the two they were holding.
-    html_content = fetch_url(f"https://github.com/{owner}/{repo}")
-    if html_content:
-        scraped_stars = extract_star_count(html_content)
-        if scraped_stars is not None:
-            community_metrics.star_count = scraped_stars
-            dependency.record_field_source(
-                ProvenancedField.STAR_COUNT, FieldSource.GITHUB_HTML_SCRAPE
-            )
+    stars = ForgeRegistry.ask(repo, ForgeCapability.STAR_COUNT, github_token)
+    dependency.forge_answers[ForgeCapability.STAR_COUNT] = stars
+    if stars.is_measured and stars.field_source is not None:
+        community_metrics.star_count = int(stars.value or 0)
+        dependency.record_field_source(
+            ProvenancedField.STAR_COUNT, stars.field_source
+        )
 
-    # Set community metrics
     dependency.community_metrics = community_metrics
 
     return dependency
@@ -341,9 +293,10 @@ def analyze_community_metrics(
         if not dependency.community_metrics:
             dependency.community_metrics = CommunityMetrics()
 
-        # Analyze GitHub metrics if repository URL is available
+        # Ask the forge for what a clone cannot supply, if there is a repository
+        # to ask about.
         if dependency.repository_url:
-            dependency = analyze_github_community_metrics(dependency, github_token)
+            dependency = analyze_forge_community_metrics(dependency, github_token)
 
         # Analyze package registry specific metrics
         if metadata:

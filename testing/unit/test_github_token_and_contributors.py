@@ -16,6 +16,7 @@ import requests
 
 from dependency_risk_profiler import analysis_helpers, utils
 from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.forges import github as github_forge
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.signals import FieldSource, ProvenancedField
 
@@ -236,14 +237,14 @@ class TestAMeasuredZeroIsAnAnswer:
 
         with (
             mock.patch.object(
-                community_analyzer, "github_contributor_count", return_value=None
+                github_forge, "github_contributor_count", return_value=None
             ),
             mock.patch.object(
-                community_analyzer, "github_commit_frequency", return_value=None
+                github_forge, "github_commit_frequency", return_value=None
             ),
-            mock.patch.object(community_analyzer, "fetch_url", return_value=None),
+            mock.patch.object(github_forge, "fetch_url", return_value=None),
         ):
-            community_analyzer.analyze_github_community_metrics(dependency)
+            community_analyzer.analyze_forge_community_metrics(dependency)
 
         assert dependency.community_metrics is not None
         assert dependency.community_metrics.contributor_count == 0

@@ -30,7 +30,7 @@ from typing import Callable, Dict, List, Set
 
 import pytest
 
-from dependency_risk_profiler.community.analyzer import analyze_github_community_metrics
+from dependency_risk_profiler.community.analyzer import analyze_forge_community_metrics
 from dependency_risk_profiler.contract import field_sources_to_dict, scored_dependency
 from dependency_risk_profiler.models import (
     CommunityMetrics,
@@ -70,6 +70,10 @@ SINGLE_SOURCE_FIELDS: Dict[str, str] = {
     # v2 does not serialize it; provenance for a dict of strings would be
     # provenance for forty-eight unrelated things.
     "additional_info": "a keyed bag; each key has one writer.",
+    # A capability-keyed bag. The three sites write three different keys, and
+    # each ForgeAnswer already carries its own field_source, so provenance for
+    # the container would duplicate what the values state.
+    "forge_answers": "a keyed bag; each answer carries its own field_source.",
     # Qualifies on write-path count and is deliberately out of scope. See the
     # ProvenancedField docstring.
     "repository_url": (
@@ -336,7 +340,7 @@ def test_a_scraped_star_count_says_it_was_scraped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The github.com HTML regex is the weakest source here, and says so."""
-    module = "dependency_risk_profiler.community.analyzer"
+    module = "dependency_risk_profiler.forges.github"
     monkeypatch.setattr(f"{module}.github_contributor_count", lambda *_: None)
     monkeypatch.setattr(f"{module}.github_commit_frequency", lambda *_: None)
     monkeypatch.setattr(
@@ -349,7 +353,7 @@ def test_a_scraped_star_count_says_it_was_scraped(
         repository_url="https://github.com/pallets/jinja",
     )
 
-    analyze_github_community_metrics(dependency)
+    analyze_forge_community_metrics(dependency)
 
     assert dependency.community_metrics is not None
     assert dependency.community_metrics.star_count == 4321
@@ -375,7 +379,7 @@ def test_the_api_overwrites_the_scrape_and_the_record_follows(
         VulnerabilityOptions,
     )
 
-    module = "dependency_risk_profiler.community.analyzer"
+    module = "dependency_risk_profiler.forges.github"
     monkeypatch.setattr(f"{module}.github_contributor_count", lambda *_: None)
     monkeypatch.setattr(f"{module}.github_commit_frequency", lambda *_: None)
     monkeypatch.setattr(
@@ -404,7 +408,7 @@ def test_the_api_overwrites_the_scrape_and_the_record_follows(
         community_metrics=CommunityMetrics(),
     )
 
-    analyze_github_community_metrics(dependency)
+    analyze_forge_community_metrics(dependency)
     assert (
         dependency.field_sources[ProvenancedField.STAR_COUNT]
         is FieldSource.GITHUB_HTML_SCRAPE

@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
+from .forges import ForgeAnswer, ForgeCapability, ForgeSoftware
 from .signals import (
     SIGNAL_SOURCE_REPOSITORY,
     SOURCE_REPOSITORY_UNREADABLE,
@@ -205,6 +206,19 @@ class DependencyMetadata:
     # repository's own short ``name``, never its URL — because this is rendered
     # into reports.
     registry_sources_unavailable: Tuple[str, ...] = ()
+
+    # Which forge software serves this dependency's repository host, when a
+    # registered adapter claims it. None means no adapter does, which is not a
+    # failure: the repository is still cloneable and still answers every
+    # clone-derived signal. Written only by
+    # ``community.analyzer.analyze_forge_community_metrics`` (#292).
+    forge: Optional[ForgeSoftware] = None
+    # What the forge was asked and what came back, per capability. The forge-only
+    # facts a shallow clone cannot supply, each carrying either a value and its
+    # provenance or the reason there is none. Empty means nothing asked a forge
+    # about this dependency at all — no repository URL, or one that names no
+    # usable repository.
+    forge_answers: Dict[ForgeCapability, ForgeAnswer] = field(default_factory=dict)
 
     # Which acquisition path last wrote each of the seven fields that have more
     # than one (#164 step 7). Written only through ``record_field_source``,

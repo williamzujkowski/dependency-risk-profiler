@@ -70,6 +70,7 @@ from dependency_risk_profiler.analyzers.nuget import NuGetAnalyzer
 from dependency_risk_profiler.analyzers.python import PythonAnalyzer
 from dependency_risk_profiler.analyzers.ruby import RubyGemsAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.forges import github as github_forge
 from dependency_risk_profiler.go_modules import GoModuleResolver
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
@@ -298,7 +299,7 @@ def _finish(
     """
     dep = analyze_license(dep, dict(metadata))
     with mock.patch.object(
-        community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
+        github_forge, "fetch_url", return_value=GITHUB_REPO_HTML
     ):
         dep = community_analyzer.analyze_community_metrics(dep, dict(metadata))
     return RiskScorer().score_dependency(dep)

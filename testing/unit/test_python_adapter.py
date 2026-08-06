@@ -34,6 +34,7 @@ from signal_floors import (
 
 from dependency_risk_profiler.analyzers.python import PythonAnalyzer
 from dependency_risk_profiler.community import analyzer as community_analyzer
+from dependency_risk_profiler.forges import github as github_forge
 from dependency_risk_profiler.license.analyzer import analyze_license
 from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
 from dependency_risk_profiler.release_dates import (
@@ -211,7 +212,7 @@ def _score_offline(
     dep = _analyze(payload, installed_version)
     dep = analyze_license(dep, payload)
     with mock.patch.object(
-        community_analyzer, "fetch_url", return_value=GITHUB_REPO_HTML
+        github_forge, "fetch_url", return_value=GITHUB_REPO_HTML
     ):
         dep = community_analyzer.analyze_community_metrics(dep, payload)
     return RiskScorer().score_dependency(dep)
