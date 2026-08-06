@@ -1,38 +1,55 @@
-# Branch Protection policy
+# Allstar branch-protection policy.
 # https://github.com/ossf/allstar/blob/main/pkg/policies/branch/README.md
-
+#
+# This file must describe the protection that is ACTUALLY set on `main`, not
+# the protection someone would like. It previously demanded approvals and
+# status checks while `main` had no protection at all (404 from the branch
+# protection API) -- and the README carried an "Allstar Protected" badge on
+# top of that. A policy that disagrees with the repository is the same defect
+# this project keeps finding in its own scoring code: a value that satisfies
+# its declared shape and does not describe reality.
+#
+# Set on `main` 2026-08-05, and reflected below:
+#
+#   required_status_checks.strict = true   (branch must be up to date)
+#   contexts = test (3.10) | test (3.11) | test (3.12) | security
+#              Analyze (actions) | Analyze (python)
+#   allow_force_pushes = false
+#   allow_deletions    = false
+#   enforce_admins     = false
+#
+# `requireApproval` is deliberately FALSE. This repository has one human
+# maintainer; requiring an approving review would mean every change waits on
+# the only person who could give it, including the automated dependency
+# updates this project exists to encourage. That is a real trade-off rather
+# than an oversight, and it is written here so Allstar does not open an issue
+# for a policy nobody adopted. Flip both this and the branch setting together
+# if a second maintainer ever appears.
+#
+# The context list must be updated when the CI matrix changes. `test (3.9)`
+# was removed on 2026-08-04 when Python 3.9 support was dropped (#239), and a
+# required context naming a job that no longer runs blocks every merge.
 optConfig:
   optOutStrategy: false  # Set to false to opt-in
-
 policy:
-  # Specifies which branch(es) this policy applies to
   branches:
     - main
-
-  # Enforce branch protection for all matching branches
   requireBranchProtection: true
-
-  # Enforces approval by at least one reviewer
-  requireApproval: true
-  approvalCount: 1
-
-  # Require status checks to pass before merging
+  requireApproval: false
+  approvalCount: 0
   requireStatusChecks: true
-
-  # Prevents force pushes to matching branches
+  requiredStatusChecks:
+    - "test (3.10)"
+    - "test (3.11)"
+    - "test (3.12)"
+    - "security"
+    - "Analyze (actions)"
+    - "Analyze (python)"
   disallowForcePushes: true
-
-  # Prevents deletion of matching branches
   disallowDeletion: true
-
-  # Require linear history
   requireLinearHistory: false
-
 action:
-  # Create an issue when non-compliant
   issue: true
-
-  # Add labels to created issues
   issueLabels:
     - security
     - allstar
