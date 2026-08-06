@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`main` is now branch-protected, and the Allstar policy describes what is
+  actually set rather than what someone hoped.** The policy file demanded
+  approvals, required status checks, and no force pushes while the branch had
+  **no protection at all** — `gh api .../branches/main/protection` returned 404 —
+  and the README carried a hardcoded `OSSF Allstar Protected` badge on top of
+  that, published to PyPI through the long description.
+
+  Set on `main`: the six CI jobs that do real work as required contexts, strict
+  up-to-date branches, no force pushes, no deletions. That closes all seven ways
+  found in one day for a pull request to reach "no red anywhere" without being
+  tested (#152) — a conflicting PR gets zero runs, a stacked PR matches no
+  trigger, retargeting does not re-fire, an aggregate check reports `neutral`
+  over red jobs, and a required check can analyse an empty file set. GitHub
+  blocks on an **absent** required check exactly as it blocks on a red one.
+
+  `requireApproval` is deliberately `false` and says so: one maintainer means an
+  approval requirement blocks every change on the only person who could approve
+  it, including the dependency updates this project exists to encourage. Written
+  down as a trade-off rather than left for Allstar to file an issue about.
+
+  The static badge is gone. It rendered green unconditionally — a shields.io
+  image, not a status endpoint — beside two badges that do report real state.
+
+
 ### Fixed
 
 - **A Python constraint was scored as though it were the installed version.**
