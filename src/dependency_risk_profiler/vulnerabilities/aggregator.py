@@ -193,7 +193,7 @@ class SourceLookup:
     The record is typed ``Dict[str, object]`` rather than ``Dict[str, Any]``,
     which is the spelling the rest of the advisory pipeline already uses —
     ``annotate_vulnerabilities_for_scoring`` and everything downstream of it.
-    New code does not need a new ``Any`` (AGENTS.md rule 7), and ``object``
+    New code does not need a new ``Any`` (AGENTS.md rule 8), and ``object``
     keeps the record mutable, which ``Mapping`` would not: the annotation step
     writes ``counted_in_score`` and its siblings onto these dicts.
     """

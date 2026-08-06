@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **AGENTS.md states the ponytail ladder rather than gesturing at it, and adds
+  a rule about comments.** The ponytail section named "the reuse rung" without
+  ever listing the rungs, so the operative mechanism was a reference rather
+  than an instruction. All seven are now written out, each with a worked
+  example from this repository — including one where the ladder's first rung
+  applied to a fix already in progress: a terminal-width budget was computed to
+  size a report column and reproduced the bug it was meant to fix, because the
+  columns already exceed any terminal and there was no budget to spend.
+
+  New rule 7: **comments are evergreen.** A comment states what is true now and
+  why the code is as it is; it does not narrate the change that produced it.
+  The test is to delete the history and ask whether what remains still explains
+  the code. Trailing issue references stay as pointers, rationale stays, and
+  test docstrings may still name the defect they guard — a regression test's
+  subject *is* the historical defect.
+
+  Rule 7 is not mechanised, and the reason is recorded rather than left as a
+  gap: a grep for "previously" or "no longer" fires on legitimate prose about
+  external facts, and this file's own standard is that a check firing on
+  legitimate work is a bug in the check.
+
+  Four comments fixed as demonstration, one of them written the same day the
+  rule was: a column-width comment that explained itself by reference to the
+  constant it replaced. The remaining sweep is #309, measured at 255 comments
+  carrying issue references and 165 written in past tense about the code — an
+  upper bound, since both forms are sometimes legitimate.
+
+
+### Changed
+
 - **`main` is now branch-protected, and the Allstar policy describes what is
   actually set rather than what someone hoped.** The policy file demanded
   approvals, required status checks, and no force pushes while the branch had

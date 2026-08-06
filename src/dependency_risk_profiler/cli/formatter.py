@@ -55,16 +55,16 @@ class TerminalFormatter(BaseFormatter):
     ADVISORIES_WIDTH = 26
     TABLE_SEPARATOR = "  "
 
-    # The dependency column is sized to the names actually present, between
-    # these bounds. 12 was the fixed width and is kept as the floor so short
-    # names render exactly as before.
+    # The dependency column is sized to the names present, between these
+    # bounds. 12 is the floor because shorter names need no more; 48 is the cap
+    # because a longer name is rarer than the cost of a table that wide.
     #
-    # No terminal-width arithmetic here, deliberately. The other four columns
-    # plus separators already total 117, so this table has never fitted an
-    # 80-column terminal and does not fit 100 either; there is no slack to
-    # redistribute and pretending otherwise just reproduces the truncation
-    # under a more complicated calculation. The table gets as wide as the
-    # names require, up to the cap.
+    # There is deliberately no terminal-width arithmetic. The other four
+    # columns and their separators total 117 cells, which already exceeds any
+    # terminal this is likely to run in, so there is no slack to redistribute
+    # between columns -- a budget computed against the terminal yields the
+    # floor and truncates every namespaced name. The table is as wide as its
+    # content requires.
     MIN_DEPENDENCY_WIDTH = 12
     MAX_DEPENDENCY_WIDTH = 48
 
@@ -79,16 +79,15 @@ class TerminalFormatter(BaseFormatter):
     def _apply_layout(self, profile: ProjectRiskProfile) -> None:
         """Size the dependency column to the names this report will render.
 
-        ``DEPENDENCY_WIDTH`` was a constant 12. Every ecosystem with
-        namespaced names -- golang import paths, maven ``group:artifact``,
-        ``Microsoft.*``, ``androidx.*`` -- shares a prefix longer than that, so
-        the column rendered the prefix and cut the part that distinguishes one
-        dependency from another. On gin's ``go.mod``, 26 of 35 rows read
-        ``github.com/…`` (#279).
+        Namespaced ecosystems -- golang import paths, maven ``group:artifact``,
+        ``Microsoft.*``, ``androidx.*`` -- share a prefix longer than any fixed
+        width worth choosing. A column narrower than the prefix renders the
+        part every row has in common and cuts the part that tells them apart,
+        which names nothing (#279).
 
-        Instance attributes shadow the class constants, so a caller that
-        renders rows without going through ``format_profile`` still gets the
-        old fixed layout rather than an exception.
+        Sets instance attributes that shadow the class constants, so a caller
+        rendering rows without going through ``format_profile`` gets the
+        default layout rather than an exception.
 
         Args:
             profile: The profile about to be rendered.
