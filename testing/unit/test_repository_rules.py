@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -435,6 +436,99 @@ def test_every_required_codeql_language_has_something_to_analyse() -> None:
         "which is what `Analyze (go)` did for months.\n"
         "Either remove the language from the matrix, or fix the scope so it "
         "reaches the files it claims to cover.\n\n" + "\n".join(empty)
+    )
+
+
+# --------------------------------------------------------------------------
+# Rule 5 -- a captured fixture may not carry a credential
+# --------------------------------------------------------------------------
+
+# High-confidence credential shapes. Deliberately narrow: this check runs over
+# decoded fixture payloads, which are third-party source files full of ordinary
+# identifiers, so a broad entropy heuristic would fire constantly and teach
+# people to ignore it. Each pattern here is issued by a named provider in a
+# fixed format.
+_CREDENTIAL_PATTERNS: Tuple[Tuple[str, str], ...] = (
+    (r"AIza[0-9A-Za-z_-]{35}", "Google API key"),
+    (r"sk_live_[0-9A-Za-z]{20,}", "Stripe secret key"),
+    (r"pk_live_[0-9A-Za-z]{20,}", "Stripe publishable key"),
+    (r"gh[pousr]_[0-9A-Za-z]{36}", "GitHub token"),
+    (r"github_pat_[0-9A-Za-z_]{50,}", "GitHub fine-grained token"),
+    (r"AKIA[0-9A-Z]{16}", "AWS access key id"),
+    (r"glpat-[0-9A-Za-z_-]{20}", "GitLab token"),
+    (r"npm_[0-9A-Za-z]{36}", "npm token"),
+    (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key"),
+)
+
+# Values written by a redaction, which must not be mistaken for the thing they
+# replaced.
+_REDACTION_MARKER = re.compile(r"REDACTED-[A-Z-]+")
+
+
+def _decoded_strings(node: object) -> List[str]:
+    """Return every string value in a parsed JSON document.
+
+    Args:
+        node: A value from ``json.loads``.
+
+    Returns:
+        Every string reachable from the node, decoded -- so a payload stored as
+        an escaped JSON string is searched as the text it represents.
+    """
+    found: List[str] = []
+    if isinstance(node, str):
+        found.append(node)
+    elif isinstance(node, dict):
+        for value in node.values():
+            found.extend(_decoded_strings(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(_decoded_strings(value))
+    return found
+
+
+def test_captured_fixtures_carry_no_credentials() -> None:
+    """AGENTS.md rule 5: a capture may not republish someone's credentials.
+
+    Conformance fixtures are captured verbatim from live third-party projects,
+    which is what makes them able to reveal a dead read -- and what makes them
+    able to carry a real key. Signal's Android build file arrived with a Google
+    Maps key and two Stripe publishable keys.
+
+    This check exists because a general secret scanner cannot see them. A
+    fixture stores its payload as a JSON string, so a key inside it is written
+    ``\\"AIza...\\"`` -- the escaped quote defeats the trailing word boundary
+    that provider rules use, and the scanner reports the file clean. Verified
+    against gitleaks: the identical key is found in a ``.txt`` file, found in a
+    ``.json`` file as raw text, and **missed** once JSON-encoded.
+
+    So the payloads are decoded first and searched as the source they are.
+    """
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+    if not fixtures.is_dir():  # pragma: no cover - fixtures are committed
+        return
+
+    offenders: List[str] = []
+    for path in sorted(fixtures.rglob("*.json")):
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, UnicodeDecodeError):  # pragma: no cover
+            continue
+        for text in _decoded_strings(document):
+            for pattern, label in _CREDENTIAL_PATTERNS:
+                for match in re.finditer(pattern, text):
+                    if _REDACTION_MARKER.search(match.group(0)):
+                        continue
+                    offenders.append(
+                        f"{path.relative_to(fixtures.parent.parent)}: {label}"
+                    )
+
+    assert not offenders, (
+        "AGENTS.md rule 5: a captured fixture may not carry a credential.\n"
+        "Capturing from a live project is what lets a fixture reveal a dead "
+        "read; it is also how a real key arrives. Redact the value, record the "
+        "redaction and its reason in the fixture, and keep the capture "
+        "otherwise verbatim.\n\n" + "\n".join(sorted(set(offenders)))
     )
 
 

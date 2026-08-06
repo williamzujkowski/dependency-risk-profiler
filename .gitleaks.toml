@@ -1,0 +1,31 @@
+# gitleaks configuration.
+#
+# The default ruleset is used in full. This file records only the values that
+# are deliberately credential-shaped, with the reason each one is here -- an
+# allowlist entry without a reason is indistinguishable from a mistake.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately credential-shaped values, and paths that are not ours."
+
+# Vendored dependencies and build output. Not committed; scanned only when a
+# working tree is swept.
+paths = [
+  '''(^|/)\.venv/''',
+  '''(^|/)venv/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)htmlcov/''',
+  '''(^|/)\.mypy_cache/''',
+  '''(^|/)\.pytest_cache/''',
+]
+
+# `FieldSource` must refuse anything that could carry a secret, and the only
+# way to assert that is to hand it strings shaped like secrets. The token below
+# is a counting sequence. Deleting it would delete the test that keeps real
+# credentials out of serialized provenance.
+regexes = [
+  '''ghp_0123456789abcdefghij''',
+  '''REDACTED-THIRD-PARTY-[A-Z-]+''',
+]

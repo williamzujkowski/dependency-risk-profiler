@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **A captured fixture republished three of Signal's credentials.** GitHub's
+  secret scanner opened an alert for a Google Maps API key in
+  `testing/fixtures/registry/gradle/signal.build.gradle.kts.json`; a local
+  sweep found two Stripe publishable keys in the same file.
+
+  All three belong to `signalapp/Signal-Android` and are published in their own
+  repository. An Android Maps key ships inside every APK by design and is
+  restricted by package name and signing certificate rather than by secrecy; a
+  Stripe `pk_` key is the publishable half and can only tokenize, never charge.
+  So this is not a leak of anything that was secret. It is us republishing a
+  third party's credentials, which is not ours to do, and a fixture that trips
+  every scanner trains people to ignore the scanner.
+
+  Redacted, with a `redactions` block recording what was replaced and why, so a
+  recapture cannot quietly restore them. No assertion read the values — the
+  fixture exercises Gradle dependency-coordinate parsing.
+
+  The cause is structural rather than careless: rule 5 requires conformance
+  fixtures to be **captured** from live sources, never authored, and a real file
+  from a real project can contain real credentials. So the fix is a gate at the
+  boundary rather than a check inside each capture script — gitleaks now runs in
+  the `security` job, which is a required status check. `.gitleaks.toml` records
+  the deliberately credential-shaped values with the reason each is allowlisted,
+  because an allowlist entry without a reason is indistinguishable from a
+  mistake.
+
+  The repository had **no** secret scanning of its own before this. GitHub's
+  scanner found it first, which is a fine outcome once and a poor arrangement
+  twice.
+
+  **And gitleaks alone would not have caught it.** Verified by reintroducing the
+  key and scanning: a fixture stores its payload as a JSON string, so a key
+  inside it is written `\"AIza...\"`, and the escaped quote defeats the trailing
+  word boundary that provider rules use. The identical key is found in a `.txt`
+  file, found in a `.json` file as raw text, and **missed** once JSON-encoded.
+  So gitleaks covers source and configuration, where it works, and a repository
+  rule decodes fixture payloads and searches them as the source they are. On the
+  same tree with the same key: gitleaks reports *no leaks found*; the rule fails
+  and names the file.
+
+
 ### Added
 
 - **A forge adapter contract, so a coverage gap is visible instead of silent.**
