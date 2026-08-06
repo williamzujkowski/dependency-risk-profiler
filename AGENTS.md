@@ -131,6 +131,7 @@ Rule 6 says a gate never observed to fail is unverified. A file of prose is exac
 | 1 — no simulated implementations | Fails on stub markers in `src/` (`in a real implementation`, `for simulation purposes`, `simulate ...ing`, `always clean in this example`) |
 | 3 — landed code must be reachable | Fails on a module-level function or class in `src/` with no reference outside its own definition |
 | 6 — a required check must analyse its own subject | Fails when an enrolled CodeQL language has **zero** tracked files surviving `paths-ignore` |
+| 5 — a capture may not carry a credential | Fails on a provider-issued key shape inside a **decoded** fixture payload |
 | 8 — the bar | Fails on `# type: ignore` or `# noqa`; fails on a first-party `ignore_errors` entry; **ratchets `Any` down** |
 
 Rule 7 (evergreen comments) is **not** mechanised, and the reason is worth stating rather than leaving as an omission. A grep for `used to`, `previously` or `no longer` fires on legitimate prose — `git tag -v` output *previously* meaning something, an advisory that is *no longer* withdrawn — and this file's own standard is that a check firing on legitimate work is a bug in the check. It is review-time judgment, like rules 2, 4 and 5.

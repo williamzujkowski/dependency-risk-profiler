@@ -39,6 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scanner found it first, which is a fine outcome once and a poor arrangement
   twice.
 
+  **And gitleaks alone would not have caught it.** Verified by reintroducing the
+  key and scanning: a fixture stores its payload as a JSON string, so a key
+  inside it is written `\"AIza...\"`, and the escaped quote defeats the trailing
+  word boundary that provider rules use. The identical key is found in a `.txt`
+  file, found in a `.json` file as raw text, and **missed** once JSON-encoded.
+  So gitleaks covers source and configuration, where it works, and a repository
+  rule decodes fixture payloads and searches them as the source they are. On the
+  same tree with the same key: gitleaks reports *no leaks found*; the rule fails
+  and names the file.
+
 
 ### Added
 
