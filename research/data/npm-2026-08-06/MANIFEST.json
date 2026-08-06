@@ -1,0 +1,50 @@
+{
+  "baselines_at": "2024-08-01",
+  "candidate_T": [
+    "2022-08-01",
+    "2023-08-01",
+    "2024-08-01",
+    "2025-08-01"
+  ],
+  "counts": {
+    "sampled": 60000,
+    "silence_histories": 36420,
+    "stored": 6140
+  },
+  "download_window_days": 30,
+  "ecosystem": "npm",
+  "eligibility": {
+    "min_age_days": 365,
+    "min_releases_before_T": 3,
+    "recent_activity_days": 365
+  },
+  "files": {
+    "downloads.json.gz": {
+      "sha256": "93883423c1e870278a93b479a0e53a5dab165351b7eb0eeb229b81c8d52ec978"
+    },
+    "ledger.json.gz": {
+      "sha256": "8dbd9a0acd35111d085508c3b798e5a2214e0e9bc4863eeb6576eab454f89d72"
+    },
+    "packages.jsonl.gz": {
+      "sha256": "ca9efeddb80c0b9bd0638d1651881c093c7414767aa17a87164fc598b43531fb"
+    },
+    "silences.jsonl.gz": {
+      "sha256": "06153e78bf8e86ec1d4e17fabab25ebcca0d796fc9de75083f113aff6d3c24de"
+    },
+    "stars.json.gz": {
+      "sha256": "95906cb112da920238ed7a039f3d9aad439aaa5ccb59b2a1f53ac3c4c82080d1"
+    }
+  },
+  "harvested_at": "2026-08-06T14:37:36.018815+00:00",
+  "name_universe": {
+    "names": 4314619,
+    "names_json_sha256": "dc25a021066446564317ddbea4818a5bf9cd5961d11c3e44088cec9b85ca5dff",
+    "package": "all-the-package-names"
+  },
+  "registry": "https://registry.npmjs.org",
+  "sample": {
+    "seed": 20260806,
+    "size": 60000
+  },
+  "star_source": "GitHub GraphQL stargazerCount, current state at harvest"
+}
