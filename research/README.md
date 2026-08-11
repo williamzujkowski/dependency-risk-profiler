@@ -63,3 +63,50 @@ A re-harvest will not be byte-identical to a previous one: npm unpublishes
 versions and GitHub stars move. Every record carries the SHA-256 of the
 packument it was reduced from, so drift is detectable per package rather than
 only in aggregate.
+
+## `transfer_study/`
+
+The fifth and final outcome, pre-registered in
+`docs/transfer-outcome-protocol.md`: does the composite identify packages whose
+GitHub repository changes owner? It is the only outcome measured to be
+independent of project activity (release cadence scores 0.5104 against it), and
+it is the capstone — either branch completes `docs/outcome-landscape.md`.
+
+| Path | What it is |
+|---|---|
+| `transfer_study/detect.py` | The pre-registered decision procedure. Pure; takes fetched documents, opens nothing |
+| `transfer_study/pilot.py` | **The only module here that opens a socket.** Measures the detection channel on the burned cohort |
+
+**Nothing has been harvested.** The procedure exists before the cohort on
+purpose: it is condition 3 of the protocol's review, and its fixtures live in
+`testing/unit/test_transfer_detection.py`.
+
+The discriminator is the GitHub account **id**, not the login. A rename and a
+transfer are indistinguishable through `GET /repos/{owner}/{repo}`, which
+follows both transparently — and account renames are not distributed like
+handovers, so a procedure that conflates them re-couples the outcome to project
+activity through the measurement channel, which is the coupling the whole
+outcome was chosen to escape.
+
+The first version of the procedure was **rejected 7-0** for a subtler form of
+the same defect: the id at T was never observed, only the login, so every
+id-at-T came from resolving that login today — and GitHub frees renamed logins
+for re-registration. A squatted login resolves to a live account with a
+different id, which read as a transfer. Details and the fix in §14 of the
+protocol; the creation-date guard and the same-login id check are both
+mutation-verified.
+
+### The pilot must clear before the harvest
+
+```bash
+GITHUB_TOKEN=$(gh auth token) PYTHONPATH=research \
+  uv run python -m transfer_study.pilot \
+    --declarations research/results/transfer-pilot-declarations.json \
+    --limit 300 --out research/results/transfer-pilot.json
+```
+
+It runs on the **burned** 2026-08-06 cohort, which §1 already excludes from the
+fresh frame, so the two populations are disjoint by construction and no pilot
+row can reach the confirmatory analysis. It reads classification buckets only —
+enforced by a test, not by a promise. Its decision rule was fixed in §15 before
+the module existed.
