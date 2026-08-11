@@ -1,0 +1,891 @@
+{
+ "ablation_is_absence": "The input is withheld and the shipped scorer reports the signal unmeasured, renormalising over the remaining weights. No neutral value is substituted.",
+ "bootstrap": {
+  "replicates": 2000,
+  "seed": 20260811
+ },
+ "signals": [
+  "community_activity",
+  "dependency_update",
+  "health_indicators",
+  "maintained",
+  "security_policy"
+ ],
+ "unstratified_over_the_arm": {
+  "composite": {
+   "arm": "registry_plus_repository",
+   "auc_arm": 0.6216651080917542,
+   "auc_comparator": 0.6134389417316206,
+   "clustered": {
+    "ci95": [
+     -0.12066222595874021,
+     0.11498368619111654
+    ],
+    "excludes_zero": false,
+    "replicates": 2000
+   },
+   "clustered_resamples": 2000,
+   "clustered_resamples_at_or_below_zero": 746,
+   "comparator": "registry_only",
+   "delta": 0.008226166360133624,
+   "effective_maintainer_clusters": 1348,
+   "nominal_n": 1869,
+   "p_value_clustered": 0.746,
+   "population": "the repository arm, unstratified (no popularity control)",
+   "positives": 742,
+   "realised_correlation_between_arms": -0.4945759388021451,
+   "se_arm": 0.06004465825228872,
+   "se_comparator": 0.01743152614837459,
+   "se_delta": 0.07031738557634912,
+   "statistic": "pooled AUC",
+   "unclustered_for_reference": {
+    "ci95": [
+     -0.019350911765125933,
+     0.0337218477647131
+    ],
+    "excludes_zero": false,
+    "replicates": 2000
+   }
+  },
+  "effective_maintainer_clusters": 1348,
+  "largest_maintainer_cluster": 127,
+  "line_3": {
+   "carriers": [],
+   "carriers_ignored_because_not_evaluable": [
+    "community_activity",
+    "maintained"
+   ],
+   "composite_delta": 0.008226166360133624,
+   "evaluable": false,
+   "fired": false,
+   "meaning_if_fired": "that is the finding, reported per signal and not folded into a composite claim (protocol 7 line 3)",
+   "not_evaluable_because": "the composite shows no effect on this population, so there is nothing for one signal to carry and the share ratios have an approximately-zero denominator",
+   "rule": "a signal both supplies at least 0.8 of the composite delta on its own and costs at least that much when removed, evaluated only where the composite itself clears the line-1 bar with an interval off zero",
+   "shares": {
+    "community_activity": {
+     "share_lost_when_removed": 2.606701555458649,
+     "share_supplied_alone": 6.549861898531772
+    },
+    "dependency_update": {
+     "share_lost_when_removed": -1.3933711295246363,
+     "share_supplied_alone": -4.572975723215602
+    },
+    "health_indicators": {
+     "share_lost_when_removed": 0.28499781945049785,
+     "share_supplied_alone": 3.8461985753743284
+    },
+    "maintained": {
+     "share_lost_when_removed": 1.2339002762029354,
+     "share_supplied_alone": 1.0771914522459705
+    },
+    "security_policy": {
+     "share_lost_when_removed": -1.6389010030527718,
+     "share_supplied_alone": -5.713839220817004
+    }
+   }
+  },
+  "nominal_n": 1869,
+  "per_signal": {
+   "community_activity": {
+    "add_one_in": {
+     "arm": "only:community_activity",
+     "auc_arm": 0.6673191953448436,
+     "auc_comparator": 0.6134389417316206,
+     "clustered": {
+      "ci95": [
+       0.006967294780160338,
+       0.09704149873776524
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 25,
+     "comparator": "registry_only",
+     "delta": 0.05388025361322302,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.025,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.06594908637276616,
+     "se_arm": 0.020354544298796202,
+     "se_comparator": 0.01743152614837459,
+     "se_delta": 0.025910744587597064,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.041069168119611144,
+       0.06671414497501449
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6216651080917542,
+     "auc_comparator": 0.6002219474453323,
+     "clustered": {
+      "ci95": [
+       0.01277330983442726,
+       0.031233790461283606
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 0,
+     "comparator": "without:community_activity",
+     "delta": 0.021443160646421933,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.0,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.9981200473108499,
+     "se_arm": 0.06004465825228872,
+     "se_comparator": 0.056791872092995944,
+     "se_delta": 0.004837569398625384,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.01619460059350053,
+       0.026398108247608243
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    }
+   },
+   "dependency_update": {
+    "add_one_in": {
+     "arm": "only:dependency_update",
+     "auc_arm": 0.5758208826715967,
+     "auc_comparator": 0.6134389417316206,
+     "clustered": {
+      "ci95": [
+       -0.11904985683739888,
+       0.03181714198566421
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1337,
+     "comparator": "registry_only",
+     "delta": -0.03761805906002391,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.663,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": -0.3688492738126411,
+     "se_arm": 0.033670670682854,
+     "se_comparator": 0.01743152614837459,
+     "se_delta": 0.04324986062996671,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.05897738060938684,
+       -0.01671045403520499
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6216651080917542,
+     "auc_comparator": 0.6331272108046312,
+     "clustered": {
+      "ci95": [
+       -0.020190845056776374,
+       -0.0018817148937629868
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1979,
+     "comparator": "without:dependency_update",
+     "delta": -0.011462102712876954,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.021,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.9974482977290272,
+     "se_arm": 0.06004465825228872,
+     "se_comparator": 0.05789848116854741,
+     "se_delta": 0.004727370725163405,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.018320039880358907,
+       -0.004266427718040644
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    }
+   },
+   "health_indicators": {
+    "add_one_in": {
+     "arm": "only:health_indicators",
+     "auc_arm": 0.6450784110667588,
+     "auc_comparator": 0.6134389417316206,
+     "clustered": {
+      "ci95": [
+       0.018497435449406074,
+       0.045068871640016495
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 0,
+     "comparator": "registry_only",
+     "delta": 0.03163946933513817,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.0,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.9285687171965222,
+     "se_arm": 0.018066764756494946,
+     "se_comparator": 0.01743152614837459,
+     "se_delta": 0.006737612267275332,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.019556778858282553,
+       0.04363891520946395
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6216651080917542,
+     "auc_comparator": 0.6193206686166791,
+     "clustered": {
+      "ci95": [
+       -0.004600895794714566,
+       0.007984419978444457
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 526,
+     "comparator": "without:health_indicators",
+     "delta": 0.002344439475075122,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.526,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.999011999538033,
+     "se_arm": 0.06004465825228872,
+     "se_comparator": 0.0618732566823312,
+     "se_delta": 0.003268780957875545,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.0021844290899781793,
+       0.007076029115806737
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    }
+   },
+   "maintained": {
+    "add_one_in": {
+     "arm": "only:maintained",
+     "auc_arm": 0.6223000978195099,
+     "auc_comparator": 0.6134389417316206,
+     "clustered": {
+      "ci95": [
+       -0.07044285015058582,
+       0.077059761806474
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 718,
+     "comparator": "registry_only",
+     "delta": 0.008861156087889288,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.718,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": -0.3751882725605628,
+     "se_arm": 0.032983090535094656,
+     "se_comparator": 0.01743152614837459,
+     "se_delta": 0.042698572129613005,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.01049587589580947,
+       0.028308150806369503
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6216651080917542,
+     "auc_comparator": 0.6115148391478941,
+     "clustered": {
+      "ci95": [
+       0.002420112781954864,
+       0.019978822842120714
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 7,
+     "comparator": "without:maintained",
+     "delta": 0.010150268943860175,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.007,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.9979418396355485,
+     "se_arm": 0.06004465825228872,
+     "se_comparator": 0.057558669736673417,
+     "se_delta": 0.004517357247212418,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.004071601798874558,
+       0.016042619222477628
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    }
+   },
+   "security_policy": {
+    "add_one_in": {
+     "arm": "only:security_policy",
+     "auc_arm": 0.5664359497461237,
+     "auc_comparator": 0.6134389417316206,
+     "clustered": {
+      "ci95": [
+       -0.14536931117241997,
+       0.030091289251738984
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1280,
+     "comparator": "registry_only",
+     "delta": -0.047002991985496956,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.72,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": -0.3108540913751646,
+     "se_arm": 0.04514912463886397,
+     "se_comparator": 0.01743152614837459,
+     "se_delta": 0.053212753934607476,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.066968801990689,
+       -0.028057154457952205
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6216651080917542,
+     "auc_comparator": 0.6351469803906562,
+     "clustered": {
+      "ci95": [
+       -0.04038410506535739,
+       0.009727723171341185
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1435,
+     "comparator": "without:security_policy",
+     "delta": -0.013481872298901965,
+     "effective_maintainer_clusters": 1348,
+     "nominal_n": 1869,
+     "p_value_clustered": 0.565,
+     "population": "the repository arm, unstratified (no popularity control)",
+     "positives": 742,
+     "realised_correlation_between_arms": 0.994363777731181,
+     "se_arm": 0.06004465825228872,
+     "se_comparator": 0.04717733116928052,
+     "se_delta": 0.014053472404852208,
+     "statistic": "pooled AUC",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.01966705171708416,
+       -0.007058364747172696
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    }
+   }
+  },
+  "population": "the whole repository arm; covers the arm, controls for nothing",
+  "positives": 742
+ },
+ "what_this_is": "Protocol 9 stage 7. Per-signal ablations, DESCRIPTIVE SECONDARY under protocol 4d. No claim rests on the best of five.",
+ "why_five_not_six": "community_popularity is unmeasured: stage 3 could not reconstruct it without a proxy protocol 4b forbids. signed_commits and branch_protection were unevaluable at any past date before the study began.",
+ "within_download_stratum": {
+  "composite": {
+   "arm": "registry_plus_repository",
+   "auc_arm": 0.6211343549005359,
+   "auc_comparator": 0.5617019410004367,
+   "clustered": {
+    "ci95": [
+     0.0013731379840743463,
+     0.11384778914252536
+    ],
+    "excludes_zero": true,
+    "replicates": 2000
+   },
+   "clustered_resamples": 2000,
+   "clustered_resamples_at_or_below_zero": 45,
+   "comparator": "registry_only",
+   "delta": 0.059432413900099235,
+   "effective_maintainer_clusters": 849,
+   "nominal_n": 979,
+   "p_value_clustered": 0.045,
+   "population": "download-reported packages (NOT the cohort; see protocol 12)",
+   "positives": 401,
+   "realised_correlation_between_arms": 0.18646474789462592,
+   "se_arm": 0.027306145883278312,
+   "se_comparator": 0.01659742568476776,
+   "se_delta": 0.029190479980830682,
+   "statistic": "unweighted mean of the within-download-bin AUCs",
+   "unclustered_for_reference": {
+    "ci95": [
+     0.021707887126898084,
+     0.09483637082073804
+    ],
+    "excludes_zero": true,
+    "replicates": 2000
+   }
+  },
+  "effective_maintainer_clusters": 849,
+  "largest_maintainer_cluster": 25,
+  "line_3": {
+   "carriers": [],
+   "carriers_ignored_because_not_evaluable": [],
+   "composite_delta": 0.059432413900099235,
+   "evaluable": true,
+   "fired": false,
+   "meaning_if_fired": "that is the finding, reported per signal and not folded into a composite claim (protocol 7 line 3)",
+   "not_evaluable_because": null,
+   "rule": "a signal both supplies at least 0.8 of the composite delta on its own and costs at least that much when removed, evaluated only where the composite itself clears the line-1 bar with an interval off zero",
+   "shares": {
+    "community_activity": {
+     "share_lost_when_removed": 0.4419618699391718,
+     "share_supplied_alone": 1.1079356375918
+    },
+    "dependency_update": {
+     "share_lost_when_removed": -0.17116062233577772,
+     "share_supplied_alone": -0.11607908315196097
+    },
+    "health_indicators": {
+     "share_lost_when_removed": 0.07527245203261747,
+     "share_supplied_alone": 0.40928227041522625
+    },
+    "maintained": {
+     "share_lost_when_removed": 0.25678302986727564,
+     "share_supplied_alone": 0.6331941173583681
+    },
+    "security_policy": {
+     "share_lost_when_removed": -0.09985204392574071,
+     "share_supplied_alone": -0.22131482354551216
+    }
+   }
+  },
+  "nominal_n": 979,
+  "per_signal": {
+   "community_activity": {
+    "add_one_in": {
+     "arm": "only:community_activity",
+     "auc_arm": 0.6275492303884629,
+     "auc_comparator": 0.5617019410004367,
+     "clustered": {
+      "ci95": [
+       0.03454213060939826,
+       0.09370938915313698
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 0,
+     "comparator": "registry_only",
+     "delta": 0.0658472893880262,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.0,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.6568992293289588,
+     "se_arm": 0.01980999362456219,
+     "se_comparator": 0.01659742568476776,
+     "se_delta": 0.01536034367695558,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.04352145660447826,
+       0.08734321168856363
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6211343549005359,
+     "auc_comparator": 0.5948674941182492,
+     "clustered": {
+      "ci95": [
+       0.0145969927802998,
+       0.0385011902465443
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 0,
+     "comparator": "without:community_activity",
+     "delta": 0.026266860782286683,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.0,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.9745510274654239,
+     "se_arm": 0.027306145883278312,
+     "se_comparator": 0.026303922775805528,
+     "se_delta": 0.006128812747455733,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.015063204415323161,
+       0.03833602167015204
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    }
+   },
+   "dependency_update": {
+    "add_one_in": {
+     "arm": "only:dependency_update",
+     "auc_arm": 0.5548030808854053,
+     "auc_comparator": 0.5617019410004367,
+     "clustered": {
+      "ci95": [
+       -0.045492814701569295,
+       0.02810283818562409
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1221,
+     "comparator": "registry_only",
+     "delta": -0.00689886011503138,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.779,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.49661513228543774,
+     "se_arm": 0.02016066558777984,
+     "se_comparator": 0.01659742568476776,
+     "se_delta": 0.01869698059803588,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.03431262618740227,
+       0.020390553628995
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6211343549005359,
+     "auc_comparator": 0.6313068438505944,
+     "clustered": {
+      "ci95": [
+       -0.02351202678101405,
+       0.0026573493464669973
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1875,
+     "comparator": "without:dependency_update",
+     "delta": -0.010172488950058511,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.125,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.9700006464374237,
+     "se_arm": 0.027306145883278312,
+     "se_comparator": 0.02658602004703442,
+     "se_delta": 0.0066389266567688275,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.022418769039322384,
+       0.002578232765614974
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    }
+   },
+   "health_indicators": {
+    "add_one_in": {
+     "arm": "only:health_indicators",
+     "auc_arm": 0.5860265742977268,
+     "auc_comparator": 0.5617019410004367,
+     "clustered": {
+      "ci95": [
+       0.0006867722324113146,
+       0.04693231268190956
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 45,
+     "comparator": "registry_only",
+     "delta": 0.024324633297290066,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.045,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.8107545345038867,
+     "se_arm": 0.020193831714549415,
+     "se_comparator": 0.01659742568476776,
+     "se_delta": 0.011823336429510209,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.00042447278910007213,
+       0.04722625748212095
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6211343549005359,
+     "auc_comparator": 0.616660731376058,
+     "clustered": {
+      "ci95": [
+       -0.007434844498358739,
+       0.015477687571539889
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 432,
+     "comparator": "without:health_indicators",
+     "delta": 0.004473623524477888,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.432,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.9765096023988552,
+     "se_arm": 0.027306145883278312,
+     "se_comparator": 0.027273283247746447,
+     "se_delta": 0.005915150496657929,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.007641050454716192,
+       0.016160417678173222
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    }
+   },
+   "maintained": {
+    "add_one_in": {
+     "arm": "only:maintained",
+     "auc_arm": 0.5993341958623872,
+     "auc_comparator": 0.5617019410004367,
+     "clustered": {
+      "ci95": [
+       0.00027835698307709933,
+       0.06951707664317208
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 49,
+     "comparator": "registry_only",
+     "delta": 0.03763225486195054,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.049,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.5222919280966208,
+     "se_arm": 0.01966737849375003,
+     "se_comparator": 0.01659742568476776,
+     "se_delta": 0.017924816617181004,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.01571913904938449,
+       0.059549050149788396
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6211343549005359,
+     "auc_comparator": 0.6058731195869425,
+     "clustered": {
+      "ci95": [
+       0.006416345730863915,
+       0.02608780964855195
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 2,
+     "comparator": "without:maintained",
+     "delta": 0.015261235313593469,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.002,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.9825566316550279,
+     "se_arm": 0.027306145883278312,
+     "se_comparator": 0.026313985655402813,
+     "se_delta": 0.005104083857006827,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       0.0066655283089133155,
+       0.02419395782494782
+      ],
+      "excludes_zero": true,
+      "replicates": 2000
+     }
+    }
+   },
+   "security_policy": {
+    "add_one_in": {
+     "arm": "only:security_policy",
+     "auc_arm": 0.5485486668052524,
+     "auc_comparator": 0.5617019410004367,
+     "clustered": {
+      "ci95": [
+       -0.054670518695068004,
+       0.02115835150168377
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1398,
+     "comparator": "registry_only",
+     "delta": -0.013153274195184306,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.602,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.49218518484643486,
+     "se_arm": 0.021484938368833924,
+     "se_comparator": 0.01659742568476776,
+     "se_delta": 0.019648305041008098,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.03583606064468858,
+       0.007862631562504552
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    },
+    "leave_one_out": {
+     "arm": "registry_plus_repository",
+     "auc_arm": 0.6211343549005359,
+     "auc_comparator": 0.6270688029039014,
+     "clustered": {
+      "ci95": [
+       -0.016863106976321207,
+       0.005540244949370665
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     },
+     "clustered_resamples": 2000,
+     "clustered_resamples_at_or_below_zero": 1657,
+     "comparator": "without:security_policy",
+     "delta": -0.005934448003365511,
+     "effective_maintainer_clusters": 849,
+     "nominal_n": 979,
+     "p_value_clustered": 0.343,
+     "population": "download-reported packages (NOT the cohort; see protocol 12)",
+     "positives": 401,
+     "realised_correlation_between_arms": 0.9788919869486836,
+     "se_arm": 0.027306145883278312,
+     "se_comparator": 0.025268601720395606,
+     "se_delta": 0.0057688944265433,
+     "statistic": "unweighted mean of the within-download-bin AUCs",
+     "unclustered_for_reference": {
+      "ci95": [
+       -0.014867724689478612,
+       0.001867661720029834
+      ],
+      "excludes_zero": false,
+      "replicates": 2000
+     }
+    }
+   }
+  },
+  "population": "download-reported packages, NOT the cohort (protocol 12)",
+  "positives": 401
+ }
+}

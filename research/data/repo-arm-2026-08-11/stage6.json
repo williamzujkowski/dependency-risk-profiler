@@ -1,0 +1,385 @@
+{
+ "arm": {
+  "distinct_score_values": {
+   "registry_only_on_the_arm": 5,
+   "registry_only_on_the_support": 5,
+   "repository_on_the_arm": 99,
+   "repository_on_the_support": 81
+  },
+  "effective_maintainer_clusters": 1348,
+  "largest_maintainer_cluster": 127,
+  "largest_maintainer_cluster_on_the_support": 25,
+  "nominal_n": 1869,
+  "per_bin": {
+   "registry_only": [
+    {
+     "abandoned": 134,
+     "auc": 0.5595179838512356,
+     "base_rate": 0.6871794871794872,
+     "bin": 1,
+     "downloads_at_t": [
+      2,
+      83
+     ],
+     "effective_maintainer_clusters": 187,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 82,
+     "auc": 0.5776494711849773,
+     "base_rate": 0.4205128205128205,
+     "bin": 2,
+     "downloads_at_t": [
+      83,
+      237
+     ],
+     "effective_maintainer_clusters": 182,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 73,
+     "auc": 0.5281271053222547,
+     "base_rate": 0.37435897435897436,
+     "bin": 3,
+     "downloads_at_t": [
+      239,
+      1354
+     ],
+     "effective_maintainer_clusters": 190,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 63,
+     "auc": 0.5749158249158249,
+     "base_rate": 0.3230769230769231,
+     "bin": 4,
+     "downloads_at_t": [
+      1388,
+      13643
+     ],
+     "effective_maintainer_clusters": 184,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 49,
+     "auc": 0.5682993197278912,
+     "base_rate": 0.24623115577889448,
+     "bin": 5,
+     "downloads_at_t": [
+      14934,
+      199959655
+     ],
+     "effective_maintainer_clusters": 156,
+     "nominal_n": 199
+    }
+   ],
+   "registry_plus_repository": [
+    {
+     "abandoned": 134,
+     "auc": 0.6246023978468315,
+     "base_rate": 0.6871794871794872,
+     "bin": 1,
+     "downloads_at_t": [
+      2,
+      83
+     ],
+     "effective_maintainer_clusters": 187,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 82,
+     "auc": 0.5886574573710339,
+     "base_rate": 0.4205128205128205,
+     "bin": 2,
+     "downloads_at_t": [
+      83,
+      237
+     ],
+     "effective_maintainer_clusters": 182,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 73,
+     "auc": 0.556478778351673,
+     "base_rate": 0.37435897435897436,
+     "bin": 3,
+     "downloads_at_t": [
+      239,
+      1354
+     ],
+     "effective_maintainer_clusters": 190,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 63,
+     "auc": 0.6825998075998077,
+     "base_rate": 0.3230769230769231,
+     "bin": 4,
+     "downloads_at_t": [
+      1388,
+      13643
+     ],
+     "effective_maintainer_clusters": 184,
+     "nominal_n": 195
+    },
+    {
+     "abandoned": 49,
+     "auc": 0.6533333333333333,
+     "base_rate": 0.24623115577889448,
+     "bin": 5,
+     "downloads_at_t": [
+      14934,
+      199959655
+     ],
+     "effective_maintainer_clusters": 156,
+     "nominal_n": 199
+    }
+   ],
+   "why": "The endpoint is a mean over five numbers. Publishing the mean without them hides which bin moved it."
+  },
+  "positives": 742,
+  "registry_baseline_contains_no_release_cadence": "staleness and version are ablated by the abandonment protocol (release cadence cannot predict the absence of releases without circularity), so the paired baseline scores maintainer count and the source-repository declaration and nothing else. Protocol 10's pre-registered interpretation says an improvement over this baseline is 'improvement beyond cadence' because the baseline 'already contains release recency'. It does not. Recorded here because the measurement stands and the interpretation attached to it does not.",
+  "registry_only_signals_the_composite_actually_scores": [
+   "maintainer",
+   "source_repository"
+  ],
+  "repository_block": "five signals: health_indicators, security_policy, dependency_update, community_activity, maintained. community_popularity is unmeasured (stage 3) and is not in the block; signed_commits and branch_protection were unevaluable at any past date (protocol 4).",
+  "signals_measured": {
+   "community_activity": 1869,
+   "dependency_update": 1869,
+   "health_indicators": 1869,
+   "license": 1825,
+   "maintained": 1869,
+   "maintainer": 1869,
+   "security_policy": 1869,
+   "source_repository": 1869
+  }
+ },
+ "bootstrap": {
+  "replicates": 2000,
+  "seed": 20260811
+ },
+ "descriptive_not_preregistered": {
+  "no_download_count_reported": {
+   "arm": "registry_plus_repository",
+   "auc_arm": 0.5710195556837545,
+   "auc_comparator": 0.6344166145858372,
+   "clustered": {
+    "ci95": [
+     -0.25225998186641596,
+     0.15102704039280102
+    ],
+    "excludes_zero": false,
+    "replicates": 2000
+   },
+   "clustered_resamples": 2000,
+   "clustered_resamples_at_or_below_zero": 1235,
+   "comparator": "registry_only",
+   "delta": -0.06339705890208269,
+   "effective_maintainer_clusters": 578,
+   "nominal_n": 890,
+   "p_value_clustered": 0.765,
+   "population": "the repository arm, unstratified (no popularity control)",
+   "positives": 341,
+   "realised_correlation_between_arms": -0.7681928397536159,
+   "se_arm": 0.09892114316384883,
+   "se_comparator": 0.03433914674662104,
+   "se_delta": 0.12721426169652927,
+   "statistic": "pooled AUC",
+   "unclustered_for_reference": {
+    "ci95": [
+     -0.1144530210274155,
+     -0.011986015866612854
+    ],
+    "excludes_zero": true,
+    "replicates": 2000
+   }
+  },
+  "why": "The within-stratum and unstratified figures disagree. The first question protocol 12 makes one ask is whether the disagreement is stratification or population. Holding the population fixed answers it, and the complement below is the half the endpoint cannot see. Descriptive: no claim rests on either, and neither is a headline."
+ },
+ "falsification_lines": {
+  "line_1_repo_arm_must_exceed_by_0.05_within_stratum": {
+   "clustered_ci95": [
+    0.0013731379840743463,
+    0.11384778914252536
+   ],
+   "delta": 0.059432413900099235,
+   "fired": false,
+   "meaning_if_fired": "the repository signals are reported as adding nothing, subject to the MDE qualification in the verdict above"
+  },
+  "line_2_negative_control": {
+   "band": [
+    0.47,
+    0.53
+   ],
+   "fired": false,
+   "primary_within_download_bin_mean": 0.5013125053974443,
+   "secondary_global_mean": 0.4991811741689528,
+   "where": "stage 4, before any model result"
+  },
+  "line_3_one_signal_carries_the_effect": {
+   "evaluated_in": "stage 7, per signal, descriptive secondary"
+  },
+  "line_4_effect_unstratified_but_not_within_stratum": {
+   "fired_against_the_whole_arm": false,
+   "fired_on_the_same_population": false,
+   "meaning_if_fired": "the effect is reported as a popularity effect. Protocol 7 names this the most likely way the study produces a misleading positive.",
+   "unstratified_delta_same_population": 0.06377438756051057,
+   "unstratified_delta_whole_arm": 0.008226166360133624,
+   "within_stratum_delta": 0.059432413900099235
+  }
+ },
+ "mde": {
+  "mde_at_realised_rho_on_published_se": 0.05610566004804223,
+  "mde_at_realised_rho_on_realised_se": 0.09758148650633508,
+  "note": "The MDE is read from the SE published in amendment 1 before this stage ran. The realised SE is reported beside it; where it is larger, the larger MDE is the honest bar and the verdict below uses whichever is larger.",
+  "published_se": 0.0157,
+  "published_table": [
+   {
+    "assumed_correlation": 0.0,
+    "mde": 0.0623
+   },
+   {
+    "assumed_correlation": 0.5,
+    "mde": 0.0441
+   },
+   {
+    "assumed_correlation": 0.8,
+    "mde": 0.0279
+   },
+   {
+    "assumed_correlation": 0.9,
+    "mde": 0.0197
+   }
+  ],
+  "realised_correlation": 0.18646474789462592,
+  "realised_se_per_arm": {
+   "arm": 0.027306145883278312,
+   "comparator": 0.01659742568476776,
+   "paired_difference": 0.029190479980830682
+  },
+  "row_selected": "independent (worst case)"
+ },
+ "neither_is_promoted": "Protocol 12. The within-stratum figure describes download-reported packages; the unstratified figure describes the arm and controls for nothing. Both are reported; the pair is the answer and the gap between them is information.",
+ "primary_within_download_stratum": {
+  "arm": "registry_plus_repository",
+  "auc_arm": 0.6211343549005359,
+  "auc_comparator": 0.5617019410004367,
+  "clustered": {
+   "ci95": [
+    0.0013731379840743463,
+    0.11384778914252536
+   ],
+   "excludes_zero": true,
+   "replicates": 2000
+  },
+  "clustered_resamples": 2000,
+  "clustered_resamples_at_or_below_zero": 45,
+  "comparator": "registry_only",
+  "delta": 0.059432413900099235,
+  "effective_maintainer_clusters": 849,
+  "nominal_n": 979,
+  "p_value_clustered": 0.045,
+  "population": "download-reported packages (NOT the cohort; see protocol 12)",
+  "positives": 401,
+  "realised_correlation_between_arms": 0.18646474789462592,
+  "se_arm": 0.027306145883278312,
+  "se_comparator": 0.01659742568476776,
+  "se_delta": 0.029190479980830682,
+  "statistic": "unweighted mean of the within-download-bin AUCs",
+  "unclustered_for_reference": {
+   "ci95": [
+    0.021707887126898084,
+    0.09483637082073804
+   ],
+   "excludes_zero": true,
+   "replicates": 2000
+  }
+ },
+ "unstratified_on_the_stratified_support": {
+  "arm": "registry_plus_repository",
+  "auc_arm": 0.65431576767424,
+  "auc_comparator": 0.5905413801137295,
+  "clustered": {
+   "ci95": [
+    0.013658907363420458,
+    0.11038222750603865
+   ],
+   "excludes_zero": true,
+   "replicates": 2000
+  },
+  "clustered_resamples": 2000,
+  "clustered_resamples_at_or_below_zero": 17,
+  "comparator": "registry_only",
+  "delta": 0.06377438756051057,
+  "effective_maintainer_clusters": 849,
+  "nominal_n": 979,
+  "p_value_clustered": 0.017,
+  "population": "the repository arm, unstratified (no popularity control)",
+  "positives": 401,
+  "realised_correlation_between_arms": 0.3171656944045896,
+  "se_arm": 0.02493528402465902,
+  "se_comparator": 0.015418634684364772,
+  "se_delta": 0.02481174202359451,
+  "statistic": "pooled AUC",
+  "unclustered_for_reference": {
+   "ci95": [
+    0.03166259168704155,
+    0.09489444111542444
+   ],
+   "excludes_zero": true,
+   "replicates": 2000
+  },
+  "why": "Diagnostic for falsification line 4: comparing stratified against unstratified on different populations would confound stratification with selection."
+ },
+ "unstratified_over_the_arm": {
+  "arm": "registry_plus_repository",
+  "auc_arm": 0.6216651080917542,
+  "auc_comparator": 0.6134389417316206,
+  "clustered": {
+   "ci95": [
+    -0.12066222595874021,
+    0.11498368619111654
+   ],
+   "excludes_zero": false,
+   "replicates": 2000
+  },
+  "clustered_resamples": 2000,
+  "clustered_resamples_at_or_below_zero": 746,
+  "comparator": "registry_only",
+  "delta": 0.008226166360133624,
+  "effective_maintainer_clusters": 1348,
+  "nominal_n": 1869,
+  "p_value_clustered": 0.746,
+  "population": "the repository arm, unstratified (no popularity control)",
+  "positives": 742,
+  "realised_correlation_between_arms": -0.4945759388021451,
+  "se_arm": 0.06004465825228872,
+  "se_comparator": 0.01743152614837459,
+  "se_delta": 0.07031738557634912,
+  "statistic": "pooled AUC",
+  "unclustered_for_reference": {
+   "ci95": [
+    -0.019350911765125933,
+    0.0337218477647131
+   ],
+   "excludes_zero": false,
+   "replicates": 2000
+  }
+ },
+ "verdict": {
+  "bar": 0.05,
+  "below_governing_mde": true,
+  "clustered_ci95": [
+   0.0013731379840743463,
+   0.11384778914252536
+  ],
+  "delta": 0.059432413900099235,
+  "finding": "the repository block exceeds the registry-only arm by the bar",
+  "governing_mde": 0.09758148650633508,
+  "interval_excludes_zero": true,
+  "population": "download-reported packages, not the cohort (protocol 12)",
+  "uninformative_does_not_mean_the_composite_survives": "Protocol 12 pre-commits this: 'uninformative' means this study cannot speak. The withdrawn README claim (#330) stays withdrawn under every branch of this study."
+ },
+ "what_this_is": "Protocol 9 stage 6. Primary endpoint: the block composite, paired, within download stratum, maintainer-clustered bootstrap."
+}
