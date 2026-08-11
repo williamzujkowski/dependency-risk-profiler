@@ -40,6 +40,7 @@ from dependency_risk_profiler.signals import (
     SIGNAL_CATALOG,
     SIGNAL_LICENSE,
     SIGNAL_SIGNED_COMMITS,
+    SIGNAL_BRANCH_PROTECTION,
     Measurement,
     MeasurementState,
     ScorecardFidelity,
@@ -180,7 +181,11 @@ def test_the_scorer_weighs_exactly_the_signals_the_catalog_marks_scored() -> Non
         f"weighed but not marked: {sorted(weighed - SCORED_SIGNALS)}, "
         f"marked but not weighed: {sorted(SCORED_SIGNALS - weighed)}"
     )
-    assert set(SIGNAL_CATALOG) - SCORED_SIGNALS == {SIGNAL_LICENSE}, (
+    assert set(SIGNAL_CATALOG) - SCORED_SIGNALS == {
+        SIGNAL_LICENSE,
+        SIGNAL_SIGNED_COMMITS,
+        SIGNAL_BRANCH_PROTECTION,
+    }, (
         "license is the one measured signal published beside the verdict "
         "rather than inside it (#340); a second one needs its own argument"
     )

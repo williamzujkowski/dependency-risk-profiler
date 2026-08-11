@@ -94,7 +94,7 @@ def test_scoring_system() -> None:
     medium_risk_score = scorer.score_dependency(medium_risk)
     # Missing enhanced metadata is excluded instead of scored as moderate risk.
     assert medium_risk_score.risk_level == RiskLevel.LOW
-    assert medium_risk_score.unknown_signal_count == 7
+    assert medium_risk_score.unknown_signal_count == 5
     assert medium_risk_score.total_score < 3.5
 
     # Test a high-risk dependency
@@ -196,7 +196,7 @@ def test_partial_data() -> None:
     # Every weighed signal, because a bare manifest entry establishes nothing:
     # nothing resolved the tree (#199), nobody asked an advisory source (#321),
     # and no registry answered the deprecation question (#320).
-    assert score.unknown_signal_count == 14
+    assert score.unknown_signal_count == 12
     for silent in ("staleness", "transitive", "maintainer", "version"):
         assert silent in score.unknown_signals
 
@@ -554,7 +554,7 @@ def test_aggregate_ignores_unknown_signals() -> None:
     # *raises* the reported risk from 2.0 to 5.0 — the same two risky signals,
     # now over an honest denominator, which is the direction this rule always
     # moves a score and the reason it has to be argued rather than assumed.
-    assert score.unknown_signal_count == 12
+    assert score.unknown_signal_count == 10
     assert score.measured_signal_count == 2
     assert score.insufficient_data is True
     assert score.total_score == 5.0 * (1.0 + 1.0) / 2.0

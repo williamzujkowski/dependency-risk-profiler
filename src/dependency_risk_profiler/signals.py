@@ -872,6 +872,14 @@ SIGNAL_CATALOG: Mapping[str, SignalSpec] = {
             SIGNAL_SIGNED_COMMITS,
             "Whether the project signs its commits, tags, or enforces signing.",
             repository_derived=True,
+            # Retired from the composite (#339). Audited across eight real
+            # repositories: it abstained on six, and the two findings tracked
+            # merge tooling rather than signing practice -- the signatures it
+            # does see are GitHub's web-flow key, applied to merge-button
+            # merges. Still measured and published on its own axis, because
+            # "these commits carry signature objects" remains a fact worth
+            # reporting; it is not a forecast and no longer weighs on one.
+            scored=False,
             scorecard_fidelity=ScorecardFidelity.REMOVED_UPSTREAM,
             scorecard_note=(
                 "No Scorecard check asks this at v5.5.0, and this row is why "
@@ -890,6 +898,12 @@ SIGNAL_CATALOG: Mapping[str, SignalSpec] = {
             SIGNAL_BRANCH_PROTECTION,
             "Whether the default branch is protected.",
             repository_derived=True,
+            # Retired from the composite (#339). Returned an identical 0.10
+            # for five of eight audited repositories: real branch protection
+            # is a GitHub API property and a clone cannot observe it, so what
+            # was scored were file-based hints standing in for it. Re-specify
+            # it against the API and it can come back.
+            scored=False,
             scorecard_check="Branch-Protection",
             scorecard_fidelity=ScorecardFidelity.CLOSE,
             scorecard_note=(
