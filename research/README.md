@@ -124,6 +124,8 @@ coupled to.
 | `composition/battery.py` | The five activity measures at T, and the two composites |
 | `composition/analysis.py` | Rank statistics: Spearman, rank-R², clustered bootstrap and permutation null, grouped cross-validation |
 | `composition/experiment.py` | The run, in the pre-registered order |
+| `composition/lookup.py` | The composite's input surface, reduced to what it can distinguish |
+| `composition/enumerate_table.py` | Prints the whole table. `docs/lookup-table-result.md` |
 
 Offline and seeded; two runs produce identical files.
 
