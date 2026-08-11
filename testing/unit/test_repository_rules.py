@@ -678,6 +678,57 @@ def test_the_compromise_protocol_still_says_what_a_null_costs() -> None:
     )
 
 
+def test_no_test_has_another_test_s_docstring_stranded_in_its_body() -> None:
+    """AGENTS.md rule 6: catch a test that was absorbed into its neighbour.
+
+    #330 added a test by replacing the ``def`` line of the one below it and
+    not restoring it. The neighbour's docstring and assertions were absorbed
+    into the new function, so ``test_mypy_first_party_exemption_list_stays_
+    empty`` -- the rule-8 ratchet -- stopped existing under its own name and
+    became trailing statements behind another test's early ``return``.
+
+    It shipped green. Every assertion still ran in the ordinary case, so no
+    count changed and no failure appeared; the gate was present, passing, and
+    no longer guarding what it named. Nothing in CI could have caught it,
+    because "this file has fewer tests than it used to" is not something
+    pytest knows.
+
+    The syntactic fingerprint is specific and cheap to find: a bare string
+    expression somewhere other than position 0 of a function body. Python
+    evaluates it and throws it away, so it is never anything but a mistake --
+    either two functions merged, or a docstring that drifted below a
+    statement and stopped being a docstring.
+
+    Scoped to the test tree because that is where the damage is silent. The
+    same slip in ``src/`` tends to surface as a failure somewhere.
+    """
+    root = PYPROJECT.parent
+    offenders: List[str] = []
+    for path in sorted((root / "testing").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for index, statement in enumerate(node.body):
+                if index == 0:
+                    continue  # position 0 is the docstring, which is the point
+                if isinstance(statement, ast.Expr) and isinstance(
+                    statement.value, ast.Constant
+                ):
+                    if isinstance(statement.value.value, str):
+                        offenders.append(
+                            f"{path.relative_to(root)}:{statement.lineno} "
+                            f"in {node.name}()"
+                        )
+
+    assert not offenders, (
+        "AGENTS.md rule 6: a string literal is being evaluated and discarded "
+        "inside a test body, which is the fingerprint of two functions "
+        "merged into one -- the second one's name, and whatever it guarded, "
+        "is gone while the suite stays green.\n\n" + "\n".join(offenders)
+    )
+
+
 def test_mypy_first_party_exemption_list_stays_empty() -> None:
     """AGENTS.md rule 8: the first-party mypy exemption list stays empty.
 
