@@ -532,6 +532,71 @@ def test_captured_fixtures_carry_no_credentials() -> None:
     )
 
 
+def test_secret_scan_reads_the_tree_and_proves_it_can_fail() -> None:
+    """AGENTS.md rule 6: a required check must analyse its own subject.
+
+    The secret scan is the second check to fail this rule, and it failed it
+    twice over. It ran ``gitleaks-action``, which scans a commit range on
+    ``pull_request`` events:
+
+    * The range never resolved. ``actions/checkout`` fetches shallow, so
+      ``<base>^`` was absent, git errored, and the scan printed
+      ``scanned ~0 bytes (0)`` and then ``no leaks found``. The job went red
+      only because the action surfaced git's exit code; the scanner's own
+      verdict on zero bytes was a pass.
+    * A range scan cannot see a secret already in the tree. Signal's key
+      entered in ``b43e41e`` and was redacted in ``ec45676``; every pull
+      request in between was clean under a diff scan because the key was in
+      no diff. GitHub's scanner found it. This job could not have.
+
+    So two properties are asserted, not one. Reading the whole tree is what
+    makes the scan capable of finding the thing; scanning the canary first is
+    what makes a pass mean something, because a scanner that cannot fail is
+    indistinguishable from one that found nothing.
+    """
+    root = PYPROJECT.parent
+    workflow = root / ".github" / "workflows" / "ci.yml"
+    if not workflow.exists():  # pragma: no cover - workflow is committed
+        return
+    text = workflow.read_text(encoding="utf-8")
+
+    step = re.search(
+        r"^\s*-\s*name:\s*Scan for secrets\s*$(.*?)(?=^\s*-\s*name:|\Z)",
+        text,
+        re.M | re.S,
+    )
+    assert step, (
+        "AGENTS.md rule 6: no 'Scan for secrets' step in ci.yml. If it was "
+        "renamed, rename it here too -- a parser that silently finds nothing "
+        "is the defect it is meant to catch."
+    )
+    body = step.group(1)
+
+    assert "--no-git" in body and "--source ." in body, (
+        "AGENTS.md rule 6: the secret scan must read the working tree "
+        "(`--no-git --source .`), not a commit range. A diff scan is clean "
+        "for every secret that is already in the tree -- which is how "
+        "Signal's key survived from b43e41e to ec45676."
+    )
+    assert "gitleaks-action" not in body, (
+        "AGENTS.md rule 6: gitleaks-action scans a commit range on "
+        "pull_request and its scan mode is not overridable. It reported "
+        "'no leaks found' over ~0 bytes here. Invoke the binary directly."
+    )
+
+    canary = root / ".github" / "secret-scan-canary.txt"
+    assert canary.exists(), (
+        "AGENTS.md rule 6: the secret scan's canary is missing. Without a "
+        "planted credential to find first, a passing scan and a broken "
+        "scanner produce the same output."
+    )
+    assert canary.name in body, (
+        "AGENTS.md rule 6: the secret scan must scan "
+        f"{canary.name} and require a finding before it trusts its own "
+        "verdict on the tree."
+    )
+
+
 def test_mypy_first_party_exemption_list_stays_empty() -> None:
     """AGENTS.md rule 8: the first-party mypy exemption list stays empty.
 

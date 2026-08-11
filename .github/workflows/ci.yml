@@ -79,8 +79,56 @@ jobs:
     # publishable keys, and GitHub's own scanner found them before anything
     # here did. This is the gate at the boundary rather than a check inside
     # each capture script.
+    # Scan the WORKING TREE, not the pull request's diff.
+    #
+    # gitleaks-action scans a commit range on pull_request events. Two things
+    # were wrong with that, and the first hid the second:
+    #
+    #   1. The range never resolved. actions/checkout fetches shallow, so
+    #      `<base>^` is not in the local object store, git errored, and the
+    #      scan reported `scanned ~0 bytes (0)` followed by `no leaks found`.
+    #      A clean verdict over zero bytes is rule 6 exactly: a required check
+    #      that does not analyse its own subject. It went red here only
+    #      because the action surfaced git's exit code -- the scanner's own
+    #      answer was a pass.
+    #
+    #   2. Even resolved, a diff scan cannot find a secret that is already in
+    #      the tree. Signal's key entered in b43e41e and was redacted in
+    #      ec45676; every PR in between was legitimately clean under a diff
+    #      scan, because the key was in no PR's diff. That is why GitHub's
+    #      scanner found it and this job did not.
+    #
+    # `--no-git --source .` reads every file that is about to be merged, so
+    # neither failure mode is expressible. Run the binary directly rather than
+    # through the action: the action's only remaining value was installing it,
+    # its scan mode is not overridable, and dropping it takes a third-party
+    # JavaScript action holding GITHUB_TOKEN out of this job.
     - name: Scan for secrets
-      uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+        GITLEAKS_VERSION: 8.24.3
+        GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
+      run: |
+        set -euo pipefail
+        tarball="$RUNNER_TEMP/gitleaks.tar.gz"
+        curl -sSfL -o "$tarball" \
+          "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+        echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum -c -
+        tar xz -f "$tarball" -C "$RUNNER_TEMP" gitleaks
+
+        # Prove the scanner bites before trusting it to pass. A scanner that
+        # cannot fail is indistinguishable from one that found nothing, and
+        # that is the shape of every silent-pass defect this repo has had.
+        # The canary runs under the same --config as the real scan, so it
+        # tests the deployed configuration rather than stock gitleaks: an
+        # allowlist widened until it swallows everything fails here too.
+        canary="$RUNNER_TEMP/canary"
+        mkdir -p "$canary"
+        cp .github/secret-scan-canary.txt "$canary/planted.txt"
+        if "$RUNNER_TEMP/gitleaks" detect --no-git --source "$canary" \
+             --config "$GITHUB_WORKSPACE/.gitleaks.toml" --redact --no-banner; then
+          echo "::error::secret scan did not flag a planted credential -- the scanner is not working, so its verdict on the tree means nothing"
+          exit 1
+        fi
+
+        "$RUNNER_TEMP/gitleaks" detect --no-git --source . \
+          --config .gitleaks.toml --redact -v --no-banner
