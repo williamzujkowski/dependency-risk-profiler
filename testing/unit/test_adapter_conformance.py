@@ -881,12 +881,20 @@ def test_unproven_branches_are_named_rather_than_assumed_closed() -> None:
     for line in waived:
         assert len(line) > 80, f"a waiver needs a reason, not a shrug: {line}"
     assert any(line.startswith("rubygems.deprecation") for line in waived)
-    assert any(line.startswith("maven.deprecation") for line in waived), (
-        "the sharpest waiver of the eight: Maven Central publishes no "
-        "retirement marker of any kind, so the deprecation signal reads as "
-        "measured and False for every artifact in the repository and no "
-        "captured payload can make it read otherwise. Deleting this entry "
-        "would turn a known #142-shaped hole back into a silent green (#179)."
+    # Maven and Gradle carry no deprecation waiver, and the absence is the
+    # point rather than an omission. A waiver says "this signal is measured and
+    # no fixture can prove the other branch", which was true while Maven
+    # Central's silence was scored as a confident False. It publishes no
+    # retirement marker at all, so the adapter now records nothing and the
+    # signal is honestly unmeasured — which the floors catch, and which is what
+    # #179 asked for (#320).
+    assert not any(
+        line.startswith(("maven.deprecation", "gradle.deprecation"))
+        for line in waived
+    ), (
+        "a signal an ecosystem does not measure has no polarity to waive; "
+        "declaring one here would put the #142-shaped hole back by asserting "
+        "that Maven Central answers a question it does not answer"
     )
 
 

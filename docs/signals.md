@@ -146,7 +146,7 @@ a signal ought to apply to a package.
 | `lookup_not_attempted` | The pipeline step that answers this signal never ran for this manifest. Distinct from "it ran and found nothing", which is a measured zero. |
 | `source_lookup_failed` | The lookup ran and the source did not answer: unreachable after the retries, an error status, a GraphQL error block, or a body this code cannot read. Distinct from `no_data_from_source`, which is a source that *answered* and had nothing to say (#219). |
 
-### The advisory lookup has three outcomes, not one
+### The advisory lookup has four outcomes, and two of them measure nothing
 
 `exploit` is the signal this distinction was hardest-won on. Every advisory
 source used to return the empty list for a connection failure, a 4xx, a GraphQL
@@ -161,6 +161,24 @@ outlived the outage until the TTL expired (#219).
 | Measured, none found | measured `0.0` | yes |
 | Lookup failed | **unmeasured**, `source_lookup_failed` | **no** |
 | No source could be asked | **unmeasured**, `lookup_not_attempted` | no |
+
+**A scan that asks no advisory source is the fourth row, and that is the
+default.** `DependencyMetadata.advisory_lookup_state` is not optional and
+starts at `NOT_ATTEMPTED`, so a dependency nobody has asked about carries the
+honest state rather than an absent one. There is no fifth spelling meaning "no
+state was recorded": a second way to say "nobody looked" is how this reading
+and the transitive signal's came to disagree, and it is what let `exploit`
+score a confident `0.0` from `has_known_exploits` at the tool's largest single
+weight (#321).
+
+That has a consequence worth stating plainly rather than discovering later.
+Vulnerability lookup is opt-in on the analyze path and off entirely in the
+offline conformance runs, so **every registry-only scan reports `exploit`
+unmeasured** and loses 0.5 of the 3.5 available weight. Four of the nine
+ecosystems then fall under the insufficient-data bar and report UNKNOWN from
+registry metadata alone; see `testing/unit/signal_floors.py` for the
+per-ecosystem arithmetic. Asking a source is the single input that moves every
+ecosystem in that table up by one.
 
 **Partial failures.** Sources are not interchangeable, so a failure in one is
 not a failure in another's clothing. OSV and the GitHub Advisory Database are
@@ -178,6 +196,38 @@ not a clean answer. No `NOT_APPLICABLE` is invented for it: the source records
 that it was never asked, and the aggregate decides what that means from whether
 anybody else answered.
 
+### Which registries publish a deprecation, and which do not
+
+`deprecation` has the same two-state shape and reached it for the same reason.
+`DependencyMetadata.is_deprecated` is `Optional[bool]` and defaults to `None`;
+`record_deprecation` is the only writer and takes the answer as a required
+keyword-only argument. `False` is a measurement — "the registry states this
+package is live" — and `None` is the absence of one.
+
+| Registry | Marker it publishes | Dated |
+|---|---|---|
+| npm | `deprecated` on the version manifest, `versions[<v>].deprecated` | no — applied retroactively to every version |
+| Packagist | `abandoned`, either `true` or the replacement package's name | no |
+| crates.io | `yanked` on the version entry | per release |
+| PyPI | `yanked` on the release, plus a summary line the maintainer writes | per release for `yanked` |
+| RubyGems | nothing durable: a yanked release is removed rather than tombstoned, so the gem's own description is the only evidence the payload carries (#170) | n/a |
+| NuGet | a `deprecation` object on the SemVer2 catalog entry — reasons, message, replacement | per catalog entry |
+| Go module proxy | a `// Deprecated:` block above the `module` directive in `go.mod` | per version |
+| Maven Central | **none.** There is no POM element and no `maven-metadata` field for retirement. The nearest thing is `<distributionManagement><relocation>`, which says an artifact *moved*, not that it was retired (#179). |  |
+| Gradle | inherits Maven Central's answer, because it publishes Maven coordinates and resolves there | |
+
+Maven and Gradle therefore record nothing and report `deprecation` unmeasured.
+A `bool` could only have said "affirmatively not deprecated" about every
+artifact in Maven Central, which is the shape that let npm's dead read of a
+top-level `deprecated` key survive for the life of that adapter — measured for
+every package, and measured wrong (#142, #320).
+
+**Two of these markers are undated and leak backwards.** npm applies
+`deprecated` retroactively to every version of a package, and Packagist's
+`abandoned` likewise carries no date. Anything reading today's flag at a past
+moment is scoring the future into the past; the unmeasured state is what makes
+that signal ablatable rather than unavoidable.
+
 ### Classification is centralized
 
 `signals.unmeasured_reason_for()` is the only place that decides why a signal
@@ -188,8 +238,9 @@ opinions, and the design made centralization a binding condition for exactly
 that reason.
 
 The `source_repository_unreadable` and `advisory_lookup` arguments are both
-keyword-only with no default, so the fallback cannot be reached by forgetting to
-pass one. That is the shape `record_source_repository` established in #189,
+keyword-only with no default, and `advisory_lookup` admits no `None`, so
+neither the fallback nor an unstated advisory outcome can be reached by
+forgetting to pass one. That is the shape `record_source_repository` established in #189,
 generalized.
 
 ---

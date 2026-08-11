@@ -760,7 +760,7 @@ class RiskScorer:
         signal: str,
         score: Optional[float],
         context: Tuple[
-            bool, Optional[AdvisoryLookupState], Optional[RegistryLookupState]
+            bool, AdvisoryLookupState, Optional[RegistryLookupState]
         ],
     ) -> Measurement:
         """Lift one scorer result into a measurement, with its reason.
@@ -990,39 +990,49 @@ class RiskScorer:
             return maintained_score
         return max(0.0, maintained_score * self.staleness_popularity_dampening)
 
-    def _calculate_deprecation_score(self, is_deprecated: bool) -> float:
-        """Calculate deprecation score.
+    def _calculate_deprecation_score(
+        self, is_deprecated: Optional[bool]
+    ) -> Optional[float]:
+        """Calculate deprecation score, or None when no registry answered.
 
         Args:
-            is_deprecated: Whether the dependency is deprecated.
+            is_deprecated: What the registry said, or None when this
+                ecosystem's adapter reports nothing either way.
 
         Returns:
-            Deprecation score of 0.0 or 1.0.
+            1.0 for a deprecated package, 0.0 for one the registry says is
+            live, None when nobody established which.
         """
+        if is_deprecated is None:
+            return None
         return 1.0 if is_deprecated else 0.0
 
     def _calculate_exploit_score(
         self,
         has_known_exploits: bool,
-        security_metrics: Optional[SecurityMetrics] = None,
-        advisory_lookup: Optional[AdvisoryLookupState] = None,
+        security_metrics: Optional[SecurityMetrics],
+        advisory_lookup: AdvisoryLookupState,
     ) -> Optional[float]:
         """Calculate exploit score, or None when nobody could measure one.
 
-        The ``None`` return is the point of #219. Every path through this
-        method used to end at a number: a lookup that never happened, a lookup
-        that failed, and a package with no advisories all scored ``0.0``, the
-        most reassuring value in the range, at the tool's highest-weighted
-        signal. A lookup that established nothing now measures nothing, and the
-        reason travels with it through ``unmeasured_reason_for``.
+        The ``None`` return is the point of #219 and #321. Every path through
+        this method once ended at a number: a lookup that never happened, a
+        lookup that failed, and a package with no advisories all scored
+        ``0.0``, the most reassuring value in the range, at the tool's
+        highest-weighted signal. A lookup that established nothing measures
+        nothing, and the reason travels with it through
+        ``unmeasured_reason_for``.
+
+        ``advisory_lookup`` carries no default, so a caller cannot reach a
+        score without saying what the sources established. A registry-only
+        scan says ``NOT_ATTEMPTED`` and gets no exploit score, which is the
+        true statement about what such a scan can know.
 
         Args:
             has_known_exploits: Whether the dependency has known exploits.
-            security_metrics: Optional vulnerability metrics from aggregation.
-            advisory_lookup: What the advisory sources established. ``None``
-                means no lookup ran, which keeps the pre-#219 behaviour — see
-                ``signals.advisory_lookup_is_measured`` for why that is not the
-                same as a lookup that failed.
+            security_metrics: Vulnerability metrics from aggregation, or None
+                when none were gathered.
+            advisory_lookup: What the advisory sources established.
 
         Returns:
             Exploit score between 0.0 and 1.0, or None when the advisory
@@ -1511,7 +1521,7 @@ class RiskScorer:
         dependency: DependencyMetadata,
         staleness_score: Optional[float],
         maintainer_score: Optional[float],
-        deprecation_score: float,
+        deprecation_score: Optional[float],
         exploit_score: Optional[float],
         version_score: Optional[float],
         health_score: Optional[float],

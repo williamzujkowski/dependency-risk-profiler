@@ -146,11 +146,14 @@ class ComposerAnalyzer(BaseAnalyzer):
 
         # Packagist marks a replaced package with `abandoned`: either `true` or
         # the name of the package that supersedes it.
+        # An entry without the key is Packagist saying the package is current,
+        # so both answers are measurements and the read is recorded either way
+        # (#320).
         abandoned = release.get("abandoned")
-        if abandoned is True or (isinstance(abandoned, str) and abandoned):
-            dep.is_deprecated = True
-            if isinstance(abandoned, str):
-                dep.additional_info["abandoned_in_favor_of"] = abandoned
+        retired = abandoned is True or (isinstance(abandoned, str) and bool(abandoned))
+        dep.record_deprecation(deprecated=retired)
+        if retired and isinstance(abandoned, str):
+            dep.additional_info["abandoned_in_favor_of"] = abandoned
 
     @staticmethod
     def _resolve_repository(

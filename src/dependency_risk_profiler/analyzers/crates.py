@@ -182,9 +182,14 @@ class CratesIOAnalyzer(BaseAnalyzer):
             ),
         )
 
-        # A yanked release is crates.io's explicit "do not use this" marker.
-        if metadata.get("yanked") is True:
-            dep.is_deprecated = True
+        # A yanked release is crates.io's explicit "do not use this" marker,
+        # and the version entry states it either way — so both answers are
+        # measurements. The key is absent only when no release entry was
+        # merged in, which is nobody having looked rather than a clean crate
+        # (#320).
+        yanked = metadata.get("yanked")
+        if isinstance(yanked, bool):
+            dep.record_deprecation(deprecated=yanked)
 
         description = self._string_value(metadata, "description")
         if description:

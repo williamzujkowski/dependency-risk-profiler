@@ -52,7 +52,6 @@ SINGLE_SOURCE_FIELDS: Dict[str, str] = {
     # One adapter runs per dependency, so the eight sites are eight ecosystems,
     # not eight sources for one package.
     "latest_version": "one source per package: its own registry.",
-    "is_deprecated": "one source per package: its own registry.",
     "category": "two branches of one function over one registry payload.",
     "license_id": "two branches of one function over one registry payload.",
     "is_approved": "two branches of one function over one registry payload.",

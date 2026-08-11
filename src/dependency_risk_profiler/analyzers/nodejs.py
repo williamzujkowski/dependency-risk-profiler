@@ -136,15 +136,17 @@ class NodeJSAnalyzer(BaseAnalyzer):
                 dep.name,
                 latest,
             )
-            dep.is_deprecated = True
+            dep.record_deprecation(deprecated=True)
             dep.additional_info["npm_security_holding_package"] = "true"
             # Nothing downstream may read the placeholder as a release: not the
             # latest version, not its (empty) dependency list, not the manifest
             # it publishes. Dropping it here is what keeps every one of those
             # reads unmeasured rather than confidently wrong.
             latest = None
-        elif self._is_deprecated(npm_data, latest):
-            dep.is_deprecated = True
+        else:
+            deprecated = self._is_deprecated(npm_data, latest)
+            if deprecated is not None:
+                dep.record_deprecation(deprecated=deprecated)
 
         if latest:
             dep.latest_version = latest
@@ -288,22 +290,28 @@ class NodeJSAnalyzer(BaseAnalyzer):
     @classmethod
     def _is_deprecated(
         cls, npm_data: Dict[str, object], latest_version: Optional[str]
-    ) -> bool:
-        """Return whether the package's current release is deprecated.
+    ) -> Optional[bool]:
+        """Return whether the package's current release is deprecated, or None.
 
         npm records deprecation per version manifest, not on the packument, so
-        the top-level ``deprecated`` key this used to read never existed.
+        the top-level ``deprecated`` key never existed (#142). ``None`` is the
+        answer when no manifest was read at all: a mirror that answered without
+        the ``versions`` map, or a ``latest`` that resolved from the
+        ``/latest`` document. Reading that as "not deprecated" is the same dead
+        read one layer down, and it is what a bare ``bool`` return could not
+        express (#320).
 
         Args:
             npm_data: ``registry.npmjs.org/<package>`` packument.
             latest_version: Latest version, when one resolved.
 
         Returns:
-            True when the latest release carries a deprecation notice.
+            Whether the latest release carries a deprecation notice, or None
+            when its manifest is not in this packument.
         """
         manifest = cls._version_manifest(npm_data, latest_version)
         if manifest is None:
-            return False
+            return None
         return bool(manifest.get("deprecated"))
 
     @classmethod

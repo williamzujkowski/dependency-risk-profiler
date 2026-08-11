@@ -421,25 +421,30 @@ ADVISORY_LOOKUP_DEGRADED: FrozenSet[AdvisoryLookupState] = frozenset(
 )
 
 
-def advisory_lookup_is_measured(state: Optional[AdvisoryLookupState]) -> bool:
+def advisory_lookup_is_measured(state: AdvisoryLookupState) -> bool:
     """Decide whether the advisory lookup produced a measurement.
 
-    Unlike :func:`transitive_is_measured`, ``None`` here reads as measured, and
-    the asymmetry is deliberate rather than an oversight. ``None`` means the
-    aggregator never ran for this dependency at all — vulnerability lookup is
-    opt-in on the analyze path and is switched off entirely in the offline
-    adapter-conformance runs — and in that configuration the exploit signal has
-    always come from ``has_known_exploits``. #219 is about a lookup that *ran*
-    and did not answer; widening it to cover "nobody looked" would drop the
-    exploit signal out of every registry-only run and take nine per-ecosystem
-    floors down with it, which #158 forbids in that direction.
+    Fails **closed**, exactly like :func:`transitive_is_measured`: only a state
+    that positively claims an answer counts as one. A dependency nobody asked
+    any advisory source about carries :attr:`AdvisoryLookupState.NOT_ATTEMPTED`
+    — the field's own default, and the honest description of a registry-only
+    scan — so the exploit signal leaves both the numerator and the denominator
+    rather than being handed ``has_known_exploits``'s ``False``. A confident
+    ``0.0`` at the tool's largest single weight is exactly the reassurance
+    nobody measured (#321).
+
+    The argument takes no ``None``, which is the other half of the same
+    property. Two spellings for "nobody looked" is how the reading here and the
+    reading in :func:`transitive_is_measured` came to disagree; there is one
+    spelling now, and the type refuses the other.
 
     Args:
         state: The dependency's ``advisory_lookup_state``, as written by
-            ``DependencyMetadata.record_advisory_lookup``.
+            ``DependencyMetadata.record_advisory_lookup`` or left at the
+            unmeasured default.
 
     Returns:
-        False only when a lookup ran and established nothing.
+        True only when a lookup ran and established something.
     """
     return state not in ADVISORY_LOOKUP_UNMEASURED
 
@@ -913,7 +918,7 @@ def unmeasured_reason_for(
     signal: str,
     *,
     source_repository_unreadable: bool,
-    advisory_lookup: Optional[AdvisoryLookupState],
+    advisory_lookup: AdvisoryLookupState,
     registry_lookup: Optional[RegistryLookupState],
 ) -> UnmeasuredReason:
     """Decide why a signal came back unmeasured. The only place that decides.
@@ -924,15 +929,15 @@ def unmeasured_reason_for(
     are states the pipeline *recorded*, not inferences about the package.
 
     All three are keyword-only and none has a default, so a caller cannot reach
-    a fallback by forgetting one. ``advisory_lookup`` and ``registry_lookup``
-    may be ``None``; that is itself the recorded fact that no such lookup ran.
+    a fallback by forgetting one. ``registry_lookup`` may be ``None``; that is
+    itself the recorded fact that no such lookup ran.
 
     Args:
         signal: A stable signal name from :data:`SIGNAL_CATALOG`.
         source_repository_unreadable: Whether the registry answered and no
             readable source repository came out of it.
-        advisory_lookup: What the advisory sources established, or None when
-            the aggregator never ran for this dependency.
+        advisory_lookup: What the advisory sources established.
+            ``NOT_ATTEMPTED`` is the answer for a scan that asked none.
         registry_lookup: What the package registries established, or None when
             no registry-lookup state was recorded — which is every ecosystem
             but Maven today (#278).

@@ -169,8 +169,9 @@ class NuGetAnalyzer(BaseAnalyzer):
                 dep.record_field_source(
                     ProvenancedField.LAST_UPDATED, FieldSource.REGISTRY_RELEASE
                 )
-            if catalog.is_deprecated:
-                dep.is_deprecated = True
+            # The catalog entry states the deprecation either way, so reading
+            # one is a measurement whichever answer it carries (#320).
+            dep.record_deprecation(deprecated=catalog.is_deprecated)
 
         # analyze_license() reads a registry-metadata mapping; give it one built
         # from whichever document states an SPDX expression.

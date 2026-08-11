@@ -423,4 +423,47 @@ def test_a_failed_lookup_cannot_decline_to_say_what_failed() -> None:
             cast(AdvisoryLookupState, "failed"), sources_unavailable=("OSV",)
         )
 
-    assert dependency.advisory_lookup_state is None
+    # Every rejected call left the state where it started, and where it starts
+    # is the one an unasked question deserves.
+    assert dependency.advisory_lookup_state is AdvisoryLookupState.NOT_ATTEMPTED
+
+
+def test_the_constructor_is_held_to_the_recorder_s_rule() -> None:
+    """A state set at construction gets no weaker check than a recorded one.
+
+    The recorder is the writer, but a dataclass field is settable at
+    construction too, and that is the shape a deserializer takes: read a state
+    out of a stored record and hand it to the constructor. If only the recorder
+    validated, that path would be the way back to a failure that cannot say
+    what failed — #219's defect arriving through the back door instead of the
+    front.
+
+    The last case is the one that matters most and is easiest to miss: a
+    dependency built with nothing said about advisories must come out claiming
+    nothing, rather than inheriting a state that reads as a measurement (#321).
+    """
+    with pytest.raises(ValueError):
+        DependencyMetadata(
+            name="flask",
+            installed_version="1.0.0",
+            advisory_lookup_state=AdvisoryLookupState.FAILED,
+        )
+
+    with pytest.raises(ValueError):
+        DependencyMetadata(
+            name="flask",
+            installed_version="1.0.0",
+            advisory_lookup_state=AdvisoryLookupState.COMPLETE,
+            advisory_sources_unavailable=("OSV",),
+        )
+
+    with pytest.raises(TypeError):
+        DependencyMetadata(
+            name="flask",
+            installed_version="1.0.0",
+            advisory_lookup_state=cast(AdvisoryLookupState, "complete"),
+        )
+
+    silent = DependencyMetadata(name="flask", installed_version="1.0.0")
+    assert silent.advisory_lookup_state is AdvisoryLookupState.NOT_ATTEMPTED
+    assert silent.advisory_sources_unavailable == ()

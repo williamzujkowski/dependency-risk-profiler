@@ -314,16 +314,19 @@ def test_total_score_calculation_with_partial_metrics() -> None:
     score = scorer.score_dependency(dep)
 
     # Assert
-    assert score.total_score == 0.0, "Only measured low-risk booleans remain"
+    assert score.total_score == 0.0, "Nothing was measured, so nothing was weighed"
     assert score.total_score <= 5.0, "Score should not exceed max_score"
     assert score.risk_level == RiskLevel.UNKNOWN
     assert score.insufficient_data is True
-    # A minimal package measures two signals, not three: nothing resolved its
-    # transitive tree, and since #199 an unset marker reads as unmeasured
-    # rather than as a confident "no transitive dependencies".
-    assert score.unknown_signal_count == 13
-    assert score.measured_signal_count == 2
-    assert "transitive" in score.unknown_signals
+    # A package nobody looked anything up about measures nothing at all. Three
+    # signals used to survive on defaults that were not measurements: an
+    # unresolved transitive tree read as "resolved, and empty" (#199), an
+    # unrecorded advisory lookup read as "asked, and clean" (#321), and a
+    # `bool` deprecation flag read as "asked, and live" (#320).
+    assert score.unknown_signal_count == 15
+    assert score.measured_signal_count == 0
+    for silent in ("transitive", "exploit", "deprecation"):
+        assert silent in score.unknown_signals
 
 
 def test_project_profile_creation() -> None:
@@ -1052,7 +1055,11 @@ def test_risk_factor_determination_performance_sla() -> None:
         staleness_score = scorer._calculate_staleness_score(dep.last_updated)
         maintainer_score = scorer._calculate_maintainer_score(dep.maintainer_count)
         deprecation_score = scorer._calculate_deprecation_score(dep.is_deprecated)
-        exploit_score = scorer._calculate_exploit_score(dep.has_known_exploits)
+        exploit_score = scorer._calculate_exploit_score(
+            dep.has_known_exploits,
+            dep.security_metrics,
+            dep.advisory_lookup_state,
+        )
         version_score = scorer._calculate_version_difference_score(
             dep.installed_version, dep.latest_version
         )

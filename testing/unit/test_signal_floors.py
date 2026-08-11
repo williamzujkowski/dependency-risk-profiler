@@ -1,14 +1,14 @@
 """The arithmetic behind the per-ecosystem floors, pinned on its own (#136).
 
-``signal_floors`` used to hold two jobs in one number. Every ecosystem was
-floored at seven measured signals, and seven was chosen because seven of
-fourteen is exactly where the scorer flips to UNKNOWN — an interesting property
-about the scorer, and a useless regression floor, because an ecosystem sitting
-at eight could lose a field, collapse to all-UNKNOWN, and still pass.
+The floors in ``signal_floors`` sit at what each ecosystem measures. The edge
+arithmetic that used to *be* the floor is still worth documenting, so it lives
+here, where it can be true without being load-bearing.
 
-The floors now sit at what each ecosystem measures. The edge arithmetic is
-still worth documenting, so it lives here, where it can be true without being
-load-bearing.
+The edge: the scorer reports UNKNOWN when ``unmeasured > measured``, so with
+sixteen weighed signals a dependency reaches a verdict at eight measured and
+loses it at seven. A floor of seven therefore admits a fully collapsed
+ecosystem — the all-UNKNOWN state of #127 / #132 — while still reporting
+green, which is what :data:`SUPERSEDED_FLOOR` is kept as a literal to show.
 
 These tests reuse the recorded crates.io payload from ``test_crates_adapter``
 rather than a synthetic score: the claim is about a real adapter reaching a
@@ -22,6 +22,8 @@ from typing import Dict
 from signal_floors import (
     MIN_MEASURED_SIGNALS,
     REGISTRY_MEASURED_SIGNALS,
+    REGISTRY_ONLY_CEILING,
+    REGISTRY_UNANSWERED_SIGNALS,
     SCORES_FROM_REGISTRY_ALONE,
 )
 from test_crates_adapter import (
@@ -55,64 +57,60 @@ def _owners_response_without_owners() -> Dict[str, object]:
     return payload
 
 
-def _collapsed_score() -> DependencyRiskScore:
-    """Score anyhow two registry fields short of the real payload.
+def _one_field_short() -> DependencyRiskScore:
+    """Score anyhow one registry field short of the real payload.
 
-    Two, not one, since #204: reading the dependencies endpoint took cargo from
-    eight measured signals to nine, so the ecosystem now has exactly one signal
-    of headroom above the edge. Losing the licence *and* the owner list is what
-    puts it back on the collapsed side, and that is the whole content of the
-    re-baseline — a floor of nine fails on the first loss, one step before the
-    verdict disappears.
+    One is enough. cargo measures eight of sixteen and the edge sits at seven,
+    so dropping the licence is the whole distance between a verdict and the
+    all-UNKNOWN state of #127 / #132.
     """
+    return _score_crate_offline(_crate_response_without_license())
+
+
+def _two_fields_short() -> DependencyRiskScore:
+    """Score anyhow two registry fields short, one step past the edge."""
     return _score_crate_offline(
         _crate_response_without_license(), _owners_response_without_owners()
     )
 
 
-def test_a_healthy_crate_clears_the_bar_by_exactly_one_signal() -> None:
-    """Cargo measures nine and is unmeasured on seven, one clear of the edge.
+def test_a_healthy_crate_clears_the_bar_by_exactly_nothing() -> None:
+    """Cargo measures eight and is unmeasured on eight, which is the edge itself.
 
-    The seventh unmeasured signal is the community pair, which counts once —
-    an absent community record is one gap, not two (#166). Before #204 this
-    read eight and eight, clearing by nothing; the dependency list is the
-    signal that bought the margin.
+    ``insufficient_data`` is ``unmeasured > measured``, so eight against eight
+    reaches a verdict with no margin at all: cargo cannot lose a signal and
+    still be scored. The eighth unmeasured signal is the community pair, which
+    counts once — an absent community record is one gap, not two (#166).
+
+    The margin cargo used to appear to have was the exploit signal, and it was
+    not a measurement: no advisory source is asked in this mode, and the score
+    came from ``has_known_exploits``'s default (#321).
     """
     score = _score_crate_offline(ANYHOW_CRATE_RESPONSE)
 
-    assert score.measured_signal_count == 9
-    assert score.unknown_signal_count == 7
-    assert score.insufficient_data is False
-
-
-def test_losing_two_registry_fields_collapses_the_whole_ecosystem() -> None:
-    """The #127 / #132 failure reproduced, at the depth it now takes to reach."""
-    score = _collapsed_score()
-
-    assert score.measured_signal_count == 7
-    assert score.insufficient_data is True
-    assert score.risk_level is RiskLevel.UNKNOWN
-
-
-def test_one_lost_field_still_reaches_a_verdict_and_still_fails_the_floor() -> None:
-    """The margin the floor is supposed to catch, shown from both sides.
-
-    A floor that only fired once the ecosystem had already collapsed would be
-    reporting the fire after the building was gone. cargo losing one field is
-    exactly the state the floor exists to fail on: eight measured, still a
-    verdict, and already below nine.
-    """
-    score = _score_crate_offline(_crate_response_without_license())
-
     assert score.measured_signal_count == 8
+    assert score.unknown_signal_count == 8
     assert score.insufficient_data is False
-    assert score.risk_level is not RiskLevel.UNKNOWN
-    assert score.measured_signal_count < MIN_MEASURED_SIGNALS["cargo"]
+    assert "exploit" in score.unknown_signals
+
+
+def test_losing_one_registry_field_collapses_the_whole_ecosystem() -> None:
+    """The #127 / #132 failure reproduced, at the depth it now takes to reach."""
+    one_short = _one_field_short()
+    two_short = _two_fields_short()
+
+    assert one_short.measured_signal_count == 7
+    assert one_short.insufficient_data is True
+    assert one_short.risk_level is RiskLevel.UNKNOWN
+
+    assert two_short.measured_signal_count == 6
+    assert two_short.insufficient_data is True
+    assert two_short.risk_level is RiskLevel.UNKNOWN
 
 
 def test_the_superseded_floor_of_seven_admitted_a_collapsed_ecosystem() -> None:
-    """Why the floors were re-baselined: seven passed the state it existed to catch."""
-    score = _collapsed_score()
+    """Why the floors are set where they are: seven passes the state it exists to catch."""
+    score = _one_field_short()
 
     assert score.risk_level is RiskLevel.UNKNOWN
     assert score.measured_signal_count >= SUPERSEDED_FLOOR
@@ -160,3 +158,53 @@ def test_each_floor_equals_the_signals_it_names() -> None:
     for ecosystem, floor in MIN_MEASURED_SIGNALS.items():
         named = sorted(REGISTRY_MEASURED_SIGNALS[ecosystem])
         assert floor == len(named), f"{ecosystem}: floor {floor} but names {named}"
+
+
+def test_every_floor_is_the_ceiling_minus_what_its_registry_withholds() -> None:
+    """Each floor is a subtraction with a named subtrahend, not a tuned number.
+
+    A floor is only worth what its attribution is worth. Nine numbers with a
+    prose column beside them can drift apart silently: swap an ecosystem's
+    missing signal for a different one and the count is unmoved, so every
+    arithmetic check still passes while the recorded reason is false. Naming
+    the withheld signals as data is what makes the reason falsifiable.
+
+    Deliberately *not* derived from the scorer or the signal catalog. A floor
+    computed from whatever the code measures cannot disagree with the code,
+    which is the one thing a floor exists to be able to do.
+    """
+    for ecosystem, floor in MIN_MEASURED_SIGNALS.items():
+        withheld = REGISTRY_UNANSWERED_SIGNALS[ecosystem]
+
+        unknown = sorted(withheld - REGISTRY_ONLY_CEILING)
+        assert not unknown, (
+            f"{ecosystem} is recorded as not answering {unknown}, which a "
+            "registry-only scan could not reach in any ecosystem; subtracting "
+            "it from the ceiling would explain a gap that was never there"
+        )
+        assert floor == len(REGISTRY_ONLY_CEILING) - len(withheld), (
+            f"{ecosystem} is floored at {floor}, but the ceiling is "
+            f"{len(REGISTRY_ONLY_CEILING)} and it is recorded as not answering "
+            f"{sorted(withheld)}. Fix whichever of the two is wrong; do not "
+            "move the floor to match an implementation."
+        )
+        assert REGISTRY_MEASURED_SIGNALS[ecosystem] == (
+            REGISTRY_ONLY_CEILING - withheld
+        ), (
+            f"{ecosystem} names {sorted(REGISTRY_MEASURED_SIGNALS[ecosystem])} "
+            f"as measured, but the ceiling minus {sorted(withheld)} is "
+            f"{sorted(REGISTRY_ONLY_CEILING - withheld)}"
+        )
+
+
+def test_the_two_signals_no_registry_only_scan_reaches_are_outside_the_ceiling() -> None:
+    """``exploit`` and the repository-derived signals are absent by name.
+
+    The ceiling is the subtrahend every floor is measured against, so what it
+    leaves out is load-bearing. ``exploit`` is out because this mode asks no
+    advisory source anything, and it scored a confident ``0.0`` here until
+    #321. ``maintained`` stands for the seven that need a clone or a token.
+    """
+    assert "exploit" not in REGISTRY_ONLY_CEILING
+    assert "maintained" not in REGISTRY_ONLY_CEILING
+    assert len(REGISTRY_ONLY_CEILING) == 8
