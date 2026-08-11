@@ -7,129 +7,116 @@ like it ran. That was #127 (rubygems, 167/167 UNKNOWN) and #132 (cargo and
 composer, 0% scored on ripgrep and drupal), one root cause each time: registry
 metadata never reached the fields the scorer reads.
 
-Each floor below is what its ecosystem must be able to measure from **registry
-metadata alone** — no repository clone, no GitHub token — which is the weakest
-environment the tool runs in and the one a regression shows up in first.
+Each floor below is what its ecosystem measures in the **weakest deployment
+mode the tool has**: no repository clone, no GitHub token, and no advisory
+lookup. That is the mode a regression shows up in first, and it is also the
+mode a great many real scans run in.
 
-Transitive resolution used to be excluded from that for most ecosystems, on the
-grounds that it understood only npm lockfiles and Python requirement sets and a
-lockfile is not registry metadata. That was never the whole story, and #204
-retired it: eight of the nine registries publish the package's own dependency
-list beside it, and now eight of the nine adapters read it. nuget from the
-``.nuspec`` (#129), maven from the POM's scope-filtered ``<dependencies>``,
-composer from the p2 ``require`` block minus platform constraints (#180), and —
-new in #204 — nodejs from ``versions[<latest>].dependencies``, python from
-``info.requires_dist``, rubygems from ``dependencies.runtime``, and cargo from
-the per-version dependencies endpoint, which is the one of the four that costs
-a request rather than reading a payload already in hand. gradle inherits
-maven's read rather than earning its own; it reaches the same POM through the
-same analyzer, and it is listed explicitly in
-``TRANSITIVE_RECORDING_ECOSYSTEMS`` so that the route going quiet fails there
-instead of passing as a plausible ``None``.
+What that mode can reach at all
+-------------------------------
+The scorer weighs sixteen signals. Eight of them are out of reach here before
+any adapter is written, and naming them is what makes every floor below a
+subtraction rather than an opinion:
 
-golang is the one abstainer, and it says so out loud rather than staying quiet:
-``go.mod`` states no dependency scope, so a module's test-only requirements sit
-in the same direct ``require`` block as its runtime ones and the block cannot
-answer the question the signal asks. Nothing in the harness marks any of this
-on an adapter's behalf — :func:`mark_transitive_unmeasured` existed to
-reproduce the pipeline's marker here (#141) and was deleted with #199, which
-made an unset marker read as unmeasured everywhere. So golang is scored as
-unmeasured *because its adapter said so*, which is the property
-``adapter_conformance.assert_transitive_is_recorded_not_assumed`` pins from
-both directions.
+* **Seven need the source repository.** ``health_indicators``,
+  ``community_activity``, ``security_policy``, ``dependency_update``,
+  ``signed_commits``, ``branch_protection`` and ``maintained`` are read from a
+  clone's worktree, its git history, or an authenticated forge API. With
+  cloning off and no token there is nothing to read.
+* **``exploit`` needs an advisory source, and none is asked.** Vulnerability
+  lookup is opt-in on the analyze path and off entirely here, so the advisory
+  state stays ``NOT_ATTEMPTED`` and the signal leaves both the numerator and
+  the denominator. It scored ``0.0`` for every package in this mode until
+  #321: ``has_known_exploits`` defaults to ``False``, and an unrecorded lookup
+  state read as measured, so the tool's largest single weight published a
+  confident clean answer nobody had asked for.
 
-**The floor sits at the measured value, not below it.** Every number here was
-read off the offline adapter test it guards, and it is the exact count that
-test produces today — not a round number with headroom. Headroom is what this
-table used to have and it was the bug (#136): every ecosystem was pinned at
-seven, and seven of fourteen is precisely where the scorer flips to UNKNOWN
-(``unmeasured > measured``). A floor of seven therefore admitted a *fully
-collapsed* ecosystem — the all-UNKNOWN state of #127 / #132 — while still
-reporting green. Dropping cargo's license field takes it from eight measured
-to seven and straight to UNKNOWN, and the old floor passed that. So: a floor
-below the measured value is not a floor, it is a permission slip.
+``community_popularity`` is the one repository-derived signal that survives,
+and it is worth stating plainly rather than leaving inside a count: it is a
+star count regex-scraped off an unauthenticated github.com page, which needs
+no clone and no token. The eight remaining candidates are therefore
+``staleness``, ``maintainer``, ``deprecation``, ``version``, ``license``,
+``community``, ``transitive`` and ``source_repository``.
+
+Where each ecosystem lands, and why
+-----------------------------------
+Eight is the ceiling. Every floor below it is a registry that does not publish
+one of the eight, not an adapter that has not got round to it:
+
+===========  =====  =====================================================
+Ecosystem    Floor  What the registry does not answer
+===========  =====  =====================================================
+cargo            8  —
+composer         8  —
+nuget            8  —
+python           8  —
+rubygems         8  —
+nodejs           7  ``maintainer``: npm publishes no cheap owner count.
+maven            6  ``maintainer`` (``<developers>`` is inherited free
+                    text), ``deprecation`` (Maven Central publishes no
+                    retirement marker of any kind — see #179).
+gradle           6  the same two, by construction: Gradle publishes Maven
+                    coordinates and resolves against Maven Central, so a
+                    different number here would mean the route lost
+                    something on the way through the build-script parser.
+golang           5  ``maintainer`` (Go has no module-level owner concept),
+                    ``license`` (proxy.golang.org publishes none), and
+                    ``transitive`` (``go.mod``'s ``require`` block states
+                    no scope, so it cannot answer a *runtime* dependency
+                    count).
+===========  =====  =====================================================
+
+That right-hand column is data rather than prose.
+:data:`REGISTRY_ONLY_CEILING` names the eight and
+:data:`REGISTRY_UNANSWERED_SIGNALS` names what each registry withholds, and
+every floor is checked to be exactly that subtraction. An attribution nothing
+verifies is how a floor comes to be a number somebody tuned, with a reason
+beside it that stopped being true.
+
+**The floor sits at the measured value, not below it.** Every number here is
+the exact count its offline test produces today, not a round number with
+headroom. Headroom is what this table used to have and it was the bug (#136):
+every ecosystem was pinned at seven, and seven of fourteen was precisely where
+the scorer flipped to UNKNOWN. A floor below the measured value is not a floor,
+it is a permission slip.
 
 The consequence is that this table ratchets. Improve an ecosystem's coverage
 and you raise its number in the same change; that is the intended cost, and it
 is how a conformance gate differs from a smoke test. The collapse arithmetic
-itself is still worth documenting, so it lives in ``test_signal_floors.py`` as
-its own assertion instead of masquerading as the floor.
+itself lives in ``test_signal_floors.py`` as its own assertion instead of
+masquerading as the floor.
 
-Where the numbers come from: crates.io, PyPI, RubyGems, Packagist and NuGet each
-answer nine signals unaided, Maven Central answers eight and npm answers eight,
-which is exactly the insufficient-data bar. :data:`SCORES_FROM_REGISTRY_ALONE`
-records where each lands rather than papering over it. PyPI was one short until
-#171: it publishes a top-level ``ownership`` object the adapter had never read.
-npm was one short until #204, which is the change that retired the last ``False``
-in that table — npm still publishes no cheap maintainer count, and the
-dependency list in its version manifest is the signal that replaces it. It
-clears the bar by nothing at all, eight measured against eight unmeasured, so
-losing any one signal puts express back to UNKNOWN. That is a true statement
-about npm rather than a comfortable one.
+Which of them reach a verdict at all
+------------------------------------
+Sixteen signals and the ``unmeasured > measured`` bar mean the answer is
+arithmetic, and :data:`SCORES_FROM_REGISTRY_ALONE` records it rather than
+smoothing it over: eight measured against eight unmeasured clears the bar by
+exactly nothing, and anything under eight does not clear it. So five
+ecosystems reach a verdict from a registry document alone and four do not.
 
-Packagist used to be the highest of the eight on its own: #180 found the p2
-entry's ``require`` block unread, which made it the only registry document that
-answered a maintainer count *and* a dependency list. #204 closed that gap from
-the other side, so cargo, python and rubygems now sit level with it at nine.
-maven's floor did not move
-when #178 closed the parent-POM gap, and that is not an oversight — maven was
-already floored at everything Maven Central can answer, and the artifacts the
-fix rescues (guava, slf4j-api: licence and repository declared only in a parent)
-were below the floor rather than at it. The re-baseline there is in
-``adapter_conformance``, where both cases now assert the floor instead of
-asserting their own blindness.
+That is a true statement about what a registry-only scan can know, and it is
+not a target to tune back. The four are not reporting UNKNOWN because a
+threshold is set wrong; they are reporting it because the largest weight in
+the scale is a question nobody asked, and three of them are missing one or two
+registry fields on top. A scan that wants a verdict for them asks an advisory
+source, which is the one input that moves every ecosystem in the table up by
+one.
 
-gradle is the one entry here that is not a registry. Gradle publishes Maven
-coordinates and resolves against Maven Central, so its floor is maven's floor
-and its signal set is maven's signal set, deliberately and to the letter — a
-different number would mean the route had lost something on the way through the
-build-script parser, which is precisely what this entry exists to catch. #127's
-collapse arrived through registry metadata never reaching the scorer; the Gradle
-equivalent arrives through a parse producing a key Maven Central is not
-addressed by, and it looks identical from here: every dependency UNKNOWN, every
-other count green. That is why an ecosystem with no registry of its own still
-gets a floor, and why its conformance case runs the real parser over a captured
-build script rather than handing the analyzer a coordinate by hand (#101).
-
-The Go module proxy is the outlier at six, and its floor is set where it is on
-purpose. ``proxy.golang.org`` publishes a version, a release date and a
-``go.mod``; it publishes no licence and no owner list, because Go has neither
-concept at the module level, and the ``go.mod``'s ``require`` block states no
-scope, so it cannot answer a runtime dependency count either (#204). Six is the
-number that survived #204 unchanged for that reason, and it is a real registry
-difference rather than an unfinished adapter. Six is what golang measures today
-and therefore
-what it is floored at — the number was read off the conformance fixtures rather
-than rounded up to match its neighbours, because a floor above measured
-coverage is a test that fails for a reason nobody can fix, and a floor below it
-is a permission slip (#158). Go modules do not clear the insufficient-data bar
-from proxy metadata alone, and that is recorded rather than papered over too.
-
-maven's floor is the newest of the eight and it did not exist before #73's
-conformance capture: #141 had left the ecosystem with no entry in this table at
-all. Both readings behind it were found by the same capture —
-``maven-metadata.xml`` states ``<lastUpdated>`` and nothing read it, and the
-adapter never recorded whether the POM declares a source repository — so the
-floor is eight rather than the six it would have been.
-
+Per-signal coverage
+-------------------
 :data:`REGISTRY_MEASURED_SIGNALS` names the signals behind each count, because
 a count cannot see a swap: an ecosystem that loses one signal and gains another
 holds its total steady while a real regression lands. Naming them is #145's
-first item ("extend it from a count to a per-signal set").
+first item.
 
-It is not all of #145. The dead read that issue is named for — npm looked for a
-top-level ``deprecated`` key that npm has never sent, so no npm package could
-ever be flagged deprecated (#142) — would still pass here, because the
-deprecation score is computed from a boolean that defaults to False and is
-therefore always "measured", just always measured wrong. Catching that needs an
-assertion on a signal's *value* against a live-captured fixture.
-
-That half now exists, in ``adapter_conformance`` (#73). It consumes the tables
-below rather than restating them, adds per-signal *value* assertions against
-provenance-dated payloads captured from the live registries, and enforces the
-rule the npm case generalizes to: every signal whose read collapses to a fixed
-default when its key is absent needs at least one fixture where the correct
-answer is the non-default value. All nine ecosystems are now converted;
+It is not all of #145. A dead read of the #142 class — npm looking for a
+top-level ``deprecated`` key npm has never sent — needs an assertion on a
+signal's *value* against a live-captured fixture. That half lives in
+``adapter_conformance`` (#73): it consumes the tables below rather than
+restating them, adds per-signal value assertions against provenance-dated
+payloads, and enforces the rule the npm case generalizes to — every signal
+whose read collapses to a fixed default when its key is absent needs at least
+one fixture where the correct answer is the non-default value.
 ``adapter_conformance.CONVERSION_STATUS`` carries the ledger, and
 ``unproven_branches()`` names every polarized branch no captured payload can
 reach, with the reason.
@@ -139,14 +126,14 @@ other direction, for #146: a package abandoned a decade ago must still produce
 a measured release cadence and a risk verdict, because that is the population
 the maintenance-cadence signal exists to flag and the one it used to fail on.
 
-Refresh cadence: every floor here is now backed by payloads captured from the
-live registry into ``testing/fixtures/registry/``, each carrying its source URL
-and capture date, refreshed with ``scripts/capture_registry_fixtures.py`` — see
+Refresh cadence: every floor here is backed by payloads captured from the live
+registry into ``testing/fixtures/registry/``, each carrying its source URL and
+capture date, refreshed with ``scripts/capture_registry_fixtures.py`` — see
 ``registry_fixtures`` for the cadence and who owns it. Adapters keep their own
 hand-written fixtures for the paths a captured payload cannot reach (a fallback
-that depends on trimmed volume, an error branch); those are legitimate uses of a
-synthetic fixture and are not floors. A floor is only as honest as the fixture
-underneath it.
+that depends on trimmed volume, an error branch); those are legitimate uses of
+a synthetic fixture and are not floors. A floor is only as honest as the
+fixture underneath it.
 """
 
 from datetime import datetime, timezone
@@ -154,100 +141,131 @@ from typing import Dict, FrozenSet
 
 from dependency_risk_profiler.models import DependencyRiskScore, RiskLevel
 
-# Minimum signals an ecosystem must measure from registry metadata alone, set
-# at what each one measures today. Raising these is a normal part of improving
-# an adapter; lowering one is a regression that needs a reason in the commit.
+# Minimum signals an ecosystem must measure with no clone, no token and no
+# advisory lookup, set at what each one measures today. Raising these is a
+# normal part of improving an adapter; lowering one is a regression that needs
+# a reason in the commit.
 #
-# npm still sits below the registries that publish a maintainer count, and it
-# still publishes none without a clone; what moved it 7 -> 8 is #204's read of
-# the version manifest's dependency list. PyPI, RubyGems and crates.io moved
-# 8 -> 9 in the same change, and cargo's nine is the only one of the four that
-# costs an extra request to reach.
-#
-# Everything at nine clears the insufficient-data bar by one signal. npm clears
-# it by none — eight measured against eight unmeasured — which is recorded here
-# rather than rounded away, because it means npm is the ecosystem where losing
-# any single signal returns every package to UNKNOWN.
+# Eight is the ceiling in this mode and five ecosystems reach it. The four
+# below it are missing a registry field rather than an adapter read: npm
+# publishes no cheap owner count; Maven Central publishes neither an owner list
+# a machine can read nor any retirement marker; proxy.golang.org publishes no
+# licence, no owner list and a scopeless ``go.mod``. The module docstring
+# derives each subtraction.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
-    "cargo": 9,
-    "composer": 9,
-    "golang": 6,
-    "gradle": 8,
-    "maven": 8,
-    "nuget": 9,
-    "nodejs": 8,
-    "python": 9,
-    "rubygems": 9,
+    "cargo": 8,
+    "composer": 8,
+    "golang": 5,
+    "gradle": 6,
+    "maven": 6,
+    "nuget": 8,
+    "nodejs": 7,
+    "python": 8,
+    "rubygems": 8,
+}
+
+# The eight signals a registry-only scan can reach at all, written out rather
+# than derived from the scorer's catalog. Deriving it would make every floor
+# below a restatement of whatever the code happens to measure, which is a
+# tautology: the number would move with the implementation and could never
+# contradict it. The module docstring's subtraction starts here.
+REGISTRY_ONLY_CEILING: FrozenSet[str] = frozenset(
+    {
+        "staleness",
+        "maintainer",
+        "deprecation",
+        "version",
+        "license",
+        "community",
+        "transitive",
+        "source_repository",
+    }
+)
+
+# What each registry does not publish, which is the whole of why any floor sits
+# below the ceiling. This is the docstring's right-hand column as data: without
+# it the attribution is prose, and prose cannot fail. An ecosystem could have
+# its missing signal swapped for a different one and every count below would
+# still agree while the stated reason quietly became false.
+#
+# Each entry is a fact about a registry, not about an adapter. npm publishes no
+# cheap owner count; Maven Central publishes neither a machine-readable owner
+# list nor any retirement marker (``<distributionManagement><relocation>`` says
+# an artifact moved, not that it was retired — #179); Gradle inherits both by
+# publishing Maven coordinates and resolving against Maven Central;
+# proxy.golang.org publishes no licence, no module-level owner concept, and a
+# ``go.mod`` whose ``require`` block states no scope, so it cannot answer a
+# *runtime* dependency count.
+REGISTRY_UNANSWERED_SIGNALS: Dict[str, FrozenSet[str]] = {
+    "cargo": frozenset(),
+    "composer": frozenset(),
+    "golang": frozenset({"maintainer", "license", "transitive"}),
+    "gradle": frozenset({"maintainer", "deprecation"}),
+    "maven": frozenset({"maintainer", "deprecation"}),
+    "nuget": frozenset(),
+    "nodejs": frozenset({"maintainer"}),
+    "python": frozenset(),
+    "rubygems": frozenset(),
 }
 
 # Which signals make up each count. Asserted by name so that losing one signal
 # and gaining another fails instead of passing under an unchanged total (#145).
 #
-# The membership differences are real registry differences, not oversights.
-# Since #204 the transitive signal is the near-universal one: every registry
-# here publishes the package's own dependency list somewhere, and every adapter
-# but golang's reads it. What still separates the ecosystems is the maintainer
-# count — npm publishes none cheaply, and Go has no module-level owner concept
-# at all — plus Go's missing licence field and its scopeless ``go.mod``, which
-# is why golang is short by three rather than by one.
+# ``exploit`` is in none of them, and that is the point rather than an
+# omission: this mode asks no advisory source anything, so the signal is
+# unmeasured everywhere here and belongs to whichever runs do ask (#321).
+# ``deprecation`` is in every set but maven's and gradle's, because Maven
+# Central is the one registry publishing no retirement marker at all — the
+# nearest thing it has is ``<distributionManagement><relocation>``, which says
+# an artifact moved rather than that it was retired (#179).
 #
-# nuget used to be the odd one out for a second, worse reason: it resolved a
-# repository off the nuspec and then recorded nothing about whether one was
-# declared, so it alone measured 15 signals where the rest measured 16 and the
-# absence read as though nuget.org had said nothing either way. It does say
-# something — the nuspec either carries ``<repository>`` or it does not — so
-# the floor moved 8 -> 9 with the signal added here in the same change (#183,
-# #158).
+# ``community`` names the star count, which is scraped from an unauthenticated
+# github.com page rather than from a registry document. It is in this mode
+# because it needs neither a clone nor a token, not because a registry answers
+# it.
 _REGISTRY_CORE: FrozenSet[str] = frozenset(
     {
         "staleness",
-        "deprecation",
-        "exploit",
         "version",
         "license",
         "community",
     }
 )
 REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
-    "cargo": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
-    "composer": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
-    "golang": (_REGISTRY_CORE - {"license"}) | {"source_repository"},
+    "cargo": _REGISTRY_CORE
+    | {"deprecation", "maintainer", "source_repository", "transitive"},
+    "composer": _REGISTRY_CORE
+    | {"deprecation", "maintainer", "source_repository", "transitive"},
+    "golang": (_REGISTRY_CORE - {"license"}) | {"deprecation", "source_repository"},
     "gradle": _REGISTRY_CORE | {"transitive", "source_repository"},
     "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
-    "nuget": _REGISTRY_CORE | {"maintainer", "transitive", "source_repository"},
-    "nodejs": _REGISTRY_CORE | {"source_repository", "transitive"},
-    "python": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
-    "rubygems": _REGISTRY_CORE | {"maintainer", "source_repository", "transitive"},
+    "nuget": _REGISTRY_CORE
+    | {"deprecation", "maintainer", "transitive", "source_repository"},
+    "nodejs": _REGISTRY_CORE | {"deprecation", "source_repository", "transitive"},
+    "python": _REGISTRY_CORE
+    | {"deprecation", "maintainer", "source_repository", "transitive"},
+    "rubygems": _REGISTRY_CORE
+    | {"deprecation", "maintainer", "source_repository", "transitive"},
 }
 
 # Whether that floor is on its own enough to clear the insufficient-data bar.
 #
-# python moved to True when #171 was settled against a live payload: PyPI's
-# top-level ``ownership`` object lists every account holding a role on the
-# project. The honest caveat is captured rather than hidden — a project
-# transferred to a PyPI organization reports ``roles: []`` and its maintainer
-# count stays unmeasured. ``adapter_conformance``'s ``python/flask`` case is
-# that package, and the floor here is what a project PyPI does answer for must
-# measure.
+# Pure arithmetic over sixteen signals: the bar is ``unmeasured > measured``,
+# so eight measured against eight unmeasured clears it by exactly nothing and
+# seven does not clear it at all. The five at eight are therefore True and the
+# four below it are False, and every one of the four is one advisory lookup
+# away from clearing — asking a source is the single input that moves every
+# ecosystem in this table up by one.
 #
-# nodejs moved to True with #204 and is the last entry to have moved. npm still
-# publishes no cheap maintainer count, so the signal that got it over the bar
-# is the dependency list in ``versions[<latest>]``, which was in the packument
-# the adapter already fetched the whole time. It clears by zero margin: eight
-# measured, eight unmeasured, and ``unmeasured > measured`` is what the bar
-# tests. Losing any one signal puts every npm package back to UNKNOWN, which is
-# worth knowing rather than smoothing over.
-#
-# golang is the only False left, and it is a registry fact rather than an
-# unfinished adapter: proxy.golang.org publishes no licence, no owner list, and
-# a ``go.mod`` with no dependency scope in it (#204).
+# The margins are recorded rather than rounded away, because zero margin means
+# losing any single signal returns every package in that ecosystem to UNKNOWN.
 SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "cargo": True,
     "composer": True,
     "golang": False,
-    "gradle": True,
-    "maven": True,
-    "nodejs": True,
+    "gradle": False,
+    "maven": False,
+    "nodejs": False,
     "nuget": True,
     "python": True,
     "rubygems": True,
@@ -263,6 +281,7 @@ _ECOSYSTEMS = frozenset(MIN_MEASURED_SIGNALS)
 _TABLES = {
     "SCORES_FROM_REGISTRY_ALONE": frozenset(SCORES_FROM_REGISTRY_ALONE),
     "REGISTRY_MEASURED_SIGNALS": frozenset(REGISTRY_MEASURED_SIGNALS),
+    "REGISTRY_UNANSWERED_SIGNALS": frozenset(REGISTRY_UNANSWERED_SIGNALS),
 }
 _DRIFT = {
     name: (sorted(_ECOSYSTEMS - keys), sorted(keys - _ECOSYSTEMS))
@@ -284,6 +303,26 @@ _MISCOUNTED = {
 assert not _MISCOUNTED, (
     "MIN_MEASURED_SIGNALS disagrees with REGISTRY_MEASURED_SIGNALS; "
     f"(floor, named signals) per ecosystem: {_MISCOUNTED}"
+)
+
+# Every floor is the ceiling minus what its registry does not publish, so the
+# attribution is checked rather than asserted in prose. A number that cannot be
+# reached by that subtraction is either a registry fact nobody wrote down or a
+# floor tuned to whatever the code currently produces, and the two are
+# indistinguishable once the reason lives only in a docstring.
+_MISATTRIBUTED = {
+    ecosystem: (
+        sorted(REGISTRY_MEASURED_SIGNALS[ecosystem]),
+        sorted(REGISTRY_ONLY_CEILING - REGISTRY_UNANSWERED_SIGNALS[ecosystem]),
+    )
+    for ecosystem in MIN_MEASURED_SIGNALS
+    if REGISTRY_MEASURED_SIGNALS[ecosystem]
+    != REGISTRY_ONLY_CEILING - REGISTRY_UNANSWERED_SIGNALS[ecosystem]
+}
+assert not _MISATTRIBUTED, (
+    "a floor does not equal the ceiling minus the signals its registry is "
+    "recorded as not answering; (measured, ceiling minus unanswered) per "
+    f"ecosystem: {_MISATTRIBUTED}"
 )
 
 # The oldest release date the tool must still describe as a measured cadence.

@@ -148,6 +148,58 @@ class SecurityMetrics:
     vulnerability_details: List[Dict[str, object]] = field(default_factory=list)
 
 
+def _checked_advisory_evidence(
+    state: AdvisoryLookupState, sources_unavailable: Sequence[str]
+) -> Tuple[str, ...]:
+    """Return the named casualties, refusing any set that contradicts the state.
+
+    One validator for the two ways an advisory state reaches a dependency:
+    :meth:`DependencyMetadata.record_advisory_lookup`, and the constructor.
+    The second is the shape a deserializer takes — read a state out of a record
+    and hand it to the dataclass — so holding both to one rule is what stops a
+    stored record from installing a state the recorder would have refused.
+
+    The ``isinstance`` check is the half mypy cannot do: it does not run in
+    production, and an untyped caller — a plugin, a REPL, a fixture — is
+    otherwise one assignment away from a state nobody chose. A string that
+    happens to spell a member's value is not a member.
+
+    Args:
+        state: What the sources established.
+        sources_unavailable: Names of the sources that were asked and did not
+            answer. Required to be non-empty exactly when the state says
+            something failed, and empty otherwise.
+
+    Returns:
+        The names, as a tuple.
+
+    Raises:
+        TypeError: If ``state`` is not an :class:`AdvisoryLookupState`.
+        ValueError: If the names disagree with the state — a failure that
+            cannot say what failed is not a report, and a complete lookup that
+            names a casualty is a contradiction.
+    """
+    if not isinstance(state, AdvisoryLookupState):
+        raise TypeError(
+            f"state must be an AdvisoryLookupState member, not {type(state).__name__}"
+        )
+    names = tuple(sources_unavailable)
+    degraded = state in (AdvisoryLookupState.PARTIAL, AdvisoryLookupState.FAILED)
+    if degraded and not names:
+        raise ValueError(
+            f"advisory lookup state {state.value!r} must name the sources "
+            "that did not answer: an unexplained failure is the empty list "
+            "wearing a different hat (#219)"
+        )
+    if not degraded and names:
+        raise ValueError(
+            f"advisory lookup state {state.value!r} means every source "
+            f"that was asked answered, so it cannot also report {names!r} "
+            "as unavailable"
+        )
+    return names
+
+
 @dataclass
 class DependencyMetadata:
     """Metadata for a dependency."""
@@ -157,7 +209,14 @@ class DependencyMetadata:
     latest_version: Optional[str] = None
     last_updated: Optional[datetime] = None
     maintainer_count: Optional[int] = None
-    is_deprecated: bool = False
+    # Whether the registry marks the package as deprecated, yanked or
+    # abandoned. None means nobody looked, which is the honest answer for a
+    # registry that publishes no deprecation concept at all — Maven Central
+    # publishes none, and a ``bool`` here could only say "affirmatively not
+    # deprecated" about every artifact in it. Written only by
+    # ``record_deprecation`` below, and read by the scorer through
+    # ``_calculate_deprecation_score``, which returns None for None (#320).
+    is_deprecated: Optional[bool] = None
     has_known_exploits: bool = False
     repository_url: Optional[str] = None
     has_tests: Optional[bool] = None
@@ -188,9 +247,13 @@ class DependencyMetadata:
     # What the advisory sources established, so the scorer can tell "they
     # answered and found nothing" from "they did not answer". Written only by
     # ``record_advisory_lookup`` below, from the vulnerability aggregator, and
-    # read only through ``signals.advisory_lookup_is_measured``. None means no
-    # lookup ran at all; see that function for why that is not a failure (#219).
-    advisory_lookup_state: Optional[AdvisoryLookupState] = None
+    # read only through ``signals.advisory_lookup_is_measured``, which fails
+    # closed. The default is the state of a dependency nobody has asked an
+    # advisory source about yet, which is what every manifest parser produces
+    # and what a registry-only scan ends on; there is no fourth answer meaning
+    # "no state recorded", because a second spelling of "nobody looked" is what
+    # let the exploit signal read as a measured clean 0.0 (#219, #321).
+    advisory_lookup_state: AdvisoryLookupState = AdvisoryLookupState.NOT_ATTEMPTED
     # Which advisory sources were asked and did not answer. Names only — the
     # source's own ``name``, never a URL or a token-bearing request — because
     # this is rendered into reports.
@@ -228,6 +291,31 @@ class DependencyMetadata:
     field_sources: Dict[ProvenancedField, FieldSource] = field(default_factory=dict)
 
     additional_info: Dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Hold an advisory state given at construction to the recorder's rule.
+
+        :meth:`record_advisory_lookup` is the writer, but a dataclass field is
+        settable at construction too, and that is exactly the shape a
+        deserializer takes. Validating here is what makes the state's
+        invariants a property of the *object* rather than of one code path
+        through it: however a dependency comes to exist — parsed, recorded, or
+        read back out of a stored record — it either carries a state that
+        agrees with the evidence beside it or it does not exist at all.
+
+        There is no fallback for an omitted state, and that absence is the
+        design. The field's default is ``NOT_ATTEMPTED``, which is the honest
+        description of a dependency nobody has asked an advisory source about,
+        so a record that says nothing produces a dependency that claims nothing
+        (#321).
+
+        Raises:
+            TypeError: If the state is not an :class:`AdvisoryLookupState`.
+            ValueError: If the state and the sources named beside it disagree.
+        """
+        self.advisory_sources_unavailable = _checked_advisory_evidence(
+            self.advisory_lookup_state, self.advisory_sources_unavailable
+        )
 
     def record_field_source(
         self, field_name: ProvenancedField, source: FieldSource
@@ -270,6 +358,40 @@ class DependencyMetadata:
             )
         self.field_sources[field_name] = source
 
+    def record_deprecation(self, *, deprecated: bool) -> None:
+        """Record what the registry said about the package's deprecation.
+
+        The only writer of :attr:`is_deprecated`, and the argument is
+        keyword-only and required for the same reason
+        :meth:`record_advisory_lookup`'s is: an adapter that reaches this line
+        has read a registry document and can say which answer it found, while
+        an adapter that never reaches it has established nothing. Only the
+        registries that publish a deprecation, yank or abandonment marker call
+        it; the rest leave the signal unmeasured, which is what the reason
+        table then explains.
+
+        ``False`` is a measurement here and not a default. That distinction is
+        the whole of #320: a ``bool`` field could only say "affirmatively not
+        deprecated", so the npm dead read of #142 — a top-level ``deprecated``
+        key npm has never sent — was scored as a measured clean answer for
+        every package in the ecosystem for as long as it lasted.
+
+        Args:
+            deprecated: What the registry document said.
+
+        Raises:
+            TypeError: If ``deprecated`` is not a ``bool``. Never coerced: a
+                truthy registry value is the shape this signal is meant to
+                stop reading as an answer.
+        """
+        if not isinstance(deprecated, bool):
+            raise TypeError(
+                "deprecated must be a bool, not "
+                f"{type(deprecated).__name__}: a value coerced to True or "
+                "False is a registry field nobody classified"
+            )
+        self.is_deprecated = deprecated
+
     def record_advisory_lookup(
         self,
         state: AdvisoryLookupState,
@@ -297,25 +419,7 @@ class DependencyMetadata:
                 cannot say what failed is not a report, and a complete lookup
                 that names a casualty is a contradiction.
         """
-        if not isinstance(state, AdvisoryLookupState):
-            raise TypeError(
-                "state must be an AdvisoryLookupState member, not "
-                f"{type(state).__name__}"
-            )
-        names = tuple(sources_unavailable)
-        degraded = state in (AdvisoryLookupState.PARTIAL, AdvisoryLookupState.FAILED)
-        if degraded and not names:
-            raise ValueError(
-                f"advisory lookup state {state.value!r} must name the sources "
-                "that did not answer: an unexplained failure is the empty list "
-                "wearing a different hat (#219)"
-            )
-        if not degraded and names:
-            raise ValueError(
-                f"advisory lookup state {state.value!r} means every source "
-                f"that was asked answered, so it cannot also report {names!r} "
-                "as unavailable"
-            )
+        names = _checked_advisory_evidence(state, sources_unavailable)
         self.advisory_lookup_state = state
         self.advisory_sources_unavailable = names
 

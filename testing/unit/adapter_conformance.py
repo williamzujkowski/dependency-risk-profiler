@@ -206,12 +206,17 @@ class FixtureCase:
     installed_version: str
     purpose: str
     signals: Sequence[SignalValue]
+    # What the registry document says about retirement, or None when the
+    # ecosystem publishes no such marker and the adapter must therefore record
+    # nothing. Required rather than defaulted: None is a real expected value
+    # here, so a default would make "this case does not assert deprecation"
+    # and "this case asserts nobody measured it" the same declaration (#320).
+    expected_deprecated: Optional[bool]
     extra_fixtures: Sequence[str] = ()
     absent_urls: Sequence[str] = ()
     expected_latest_version: Optional[str] = None
     expected_repository_url: Optional[str] = None
     expected_license_id: Optional[str] = None
-    expected_deprecated: Optional[bool] = None
     # How the manifest-reading ecosystems must have established the installed
     # version — one of the ``version_sources`` constants. Asserted by the two
     # ecosystems whose *manifest* is captured, gradle and nuget: the difference
@@ -993,23 +998,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "branch has to be proven by value."
             ),
         ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why=(
-                "has_known_exploits defaults to False, the same shape as the "
-                "npm deprecation bug."
-            ),
-            proven_elsewhere=(
-                "Not registry-driven: the exploit signal is set by the "
-                "vulnerability aggregator from OSV, not by the adapter, so no "
-                "registry payload can flip it. Its non-default branch is "
-                "covered by testing/unit/test_comprehensive_vulnerability_"
-                "aggregator.py and the OSV routing tests. #73's "
-                "'known-CVE package -> >0 advisories per ecosystem' "
-                "regression test is the piece that would bring it in here."
-            ),
-        ),
     },
     "python": {
         "deprecation": Polarity(
@@ -1031,20 +1019,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "produces."
             ),
         ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Worth noting that "
-                "the captured payloads do carry a top-level 'vulnerabilities' "
-                "list the adapter does not read (#171). It is left unread "
-                "deliberately: the aggregator already queries OSV, which is "
-                "the same data with a wider ecosystem reach and a real "
-                "severity model. The key is kept in the fixtures so that the "
-                "decision stays visible."
-            ),
-        ),
     },
     "cargo": {
         "deprecation": Polarity(
@@ -1064,15 +1038,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "UNDECLARED and scores 1.0, which a dead read also produces."
             ),
         ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Same aggregator, "
-                "same coverage, same gap."
-            ),
-        ),
     },
     "composer": {
         "deprecation": Polarity(
@@ -1090,20 +1055,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
             why=(
                 "Same as npm's: a source.url read that finds nothing records "
                 "UNDECLARED and scores 1.0, which a dead read also produces."
-            ),
-        ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Packagist is the "
-                "second registry to publish its own advisory feed the adapter "
-                "does not read — the p2 document carries a top-level "
-                "'security-advisories' key, kept in the fixtures so the "
-                "decision stays visible. Left unread for PyPI's reason (#171): "
-                "OSV answers the same question across every ecosystem and with "
-                "a real severity model."
             ),
         ),
     },
@@ -1130,15 +1081,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "absent from the score rather than measured either way."
             ),
         ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Same aggregator, "
-                "same coverage, same gap."
-            ),
-        ),
     },
     "gradle": {
         "source_repository": Polarity(
@@ -1153,52 +1095,8 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "arriving from a third direction (#182, #178)."
             ),
         ),
-        "deprecation": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="is_deprecated defaults to False, as it does for any Maven artifact.",
-            proven_elsewhere=(
-                "UNPROVEN for the same structural reason as maven's, and it is "
-                "the same fact rather than a second instance of it: Gradle "
-                "publishes to Maven Central, which has no retirement marker at "
-                "all. See POLARIZED_SIGNALS['maven']['deprecation'] and #179."
-            ),
-        ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Same aggregator, "
-                "same coverage, same gap."
-            ),
-        ),
     },
     "maven": {
-        "deprecation": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why=(
-                "is_deprecated defaults to False, and for a Maven artifact it "
-                "stays there."
-            ),
-            proven_elsewhere=(
-                "UNPROVEN, and structurally so: Maven Central publishes no "
-                "retirement marker at all. There is no POM element and no "
-                "maven-metadata field for it — the closest thing Maven has is "
-                "<distributionManagement><relocation>, which says an artifact "
-                "MOVED, not that it was retired, and which the adapter does "
-                "not read either. So the deprecation signal reads as measured "
-                "and False for every artifact in Maven Central, and no "
-                "captured payload can make it read otherwise. This is #142's "
-                "shape with no ground truth to capture: the fix is either to "
-                "read <relocation> as the nearest available fact or to stop "
-                "reporting deprecation as measured for this ecosystem, and "
-                "both are scoring changes rather than fixture work, and both are "
-                "filed as #179. Recorded here rather than left as a silent "
-                "green."
-            ),
-        ),
         "source_repository": Polarity(
             default=1.0,
             non_default=0.0,
@@ -1207,15 +1105,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "<url> records UNDECLARED and scores 1.0, which is also what "
                 "the adapter produced for every artifact before #73, because "
                 "it never recorded the answer at all."
-            ),
-        ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Same aggregator, "
-                "same coverage, same gap."
             ),
         ),
     },
@@ -1247,15 +1136,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
                 "truth, and the two hives were captured side by side to prove "
                 "the key's absence was the registry's shape and not a fetch "
                 "failure."
-            ),
-        ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Same aggregator, "
-                "same coverage, same gap."
             ),
         ),
     },
@@ -1292,15 +1172,6 @@ POLARIZED_SIGNALS: Dict[str, Dict[str, Polarity]] = {
             why=(
                 "Same as npm's: a repository read that finds nothing records "
                 "UNDECLARED and scores 1.0, which a dead read also produces."
-            ),
-        ),
-        "exploit": Polarity(
-            default=0.0,
-            non_default=1.0,
-            why="has_known_exploits defaults to False.",
-            proven_elsewhere=(
-                "Not registry-driven; see the nodejs entry. Same aggregator, "
-                "same coverage, same gap."
             ),
         ),
     },
@@ -2665,7 +2536,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="2.22.1",
         expected_repository_url="https://github.com/FasterXML/jackson-databind",
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         meets_signal_floor=True,
         ground_truth=(
             "maven-metadata.xml states <lastUpdated> as a bare yyyyMMddHHmmss "
@@ -2698,10 +2571,10 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "deprecation",
-                equals=0.0,
+                unmeasured=True,
                 because=(
-                    "the default branch, and the only branch Maven Central can "
-                    "reach — see the maven deprecation waiver"
+                    "Maven Central publishes no retirement marker, so the "
+                    "adapter records nothing — see the maven deprecation waiver"
                 ),
             ),
             SignalValue(
@@ -2762,7 +2635,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="33.6.0-jre",
         expected_repository_url="https://github.com/google/guava",
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         meets_signal_floor=True,
         ground_truth=(
             "guava's own POM has no <licenses> and no <scm>; both are in "
@@ -2796,8 +2671,8 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "deprecation",
-                equals=0.0,
-                because="the default branch; see the maven deprecation waiver",
+                unmeasured=True,
+                because="nothing in a POM states retirement; see the waiver",
             ),
             SignalValue(
                 "maintainer",
@@ -2827,7 +2702,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="2.1.0-alpha1",
         expected_repository_url="https://github.com/qos-ch/slf4j",
         expected_license_id="MIT",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         meets_signal_floor=True,
         ground_truth=(
             "no <scm>, no <licenses> and no usable <url> anywhere in the first "
@@ -2899,7 +2776,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         ),
         expected_repository_url=None,
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         ground_truth=(
             "maven-metadata.xml states neither <release> nor <latest>, only a "
             "<versions> list of one, so latest_version is honestly unmeasured "
@@ -2975,7 +2854,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="1.10.17",
         expected_repository_url=None,
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         ground_truth=(
             "ant's own POM has no <scm> and no <licenses>; ant-parent has "
             "both, and its <scm> is "
@@ -3046,7 +2927,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="1.2.17",
         expected_repository_url=None,
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         ground_truth=(
             "<scm> is present and carries all three of <connection>, "
             "<developerConnection> and <url>; every one of them is Subversion.",
@@ -3110,7 +2993,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="20040616",
         expected_repository_url=None,
         expected_license_id=None,
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         ground_truth=(
             "the POM has no <scm> element and no <licenses> block; its only "
             "<url> is the organization's, http://www.apache.org.",
@@ -3173,7 +3058,9 @@ MAVEN_CASES: Tuple[FixtureCase, ...] = (
             "https://github.com/material-components/material-components-android"
         ),
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         ground_truth=(
             "curl against repo1.maven.org returns 404 for both "
             "com/google/android/material/material/maven-metadata.xml and the "
@@ -3589,7 +3476,9 @@ GRADLE_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="3.18.1",
         expected_repository_url="https://github.com/square/okio",
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         meets_signal_floor=True,
         ground_truth=(
             "okhttp/build.gradle.kts at tag parent-5.4.0 declares "
@@ -3652,10 +3541,10 @@ GRADLE_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "deprecation",
-                equals=0.0,
+                unmeasured=True,
                 because=(
-                    "the default branch, and the only one Maven Central can "
-                    "reach — see the gradle deprecation waiver"
+                    "Maven Central publishes no retirement marker, so the "
+                    "adapter records nothing — see the gradle deprecation waiver"
                 ),
             ),
             SignalValue(
@@ -3696,7 +3585,9 @@ GRADLE_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="1.0.4",
         expected_repository_url="https://github.com/reactive-streams/reactive-streams",
         expected_license_id="MIT",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         meets_signal_floor=True,
         ground_truth=(
             "build.gradle at tag v3.1.12 sets reactiveStreamsVersion = '1.0.4' "
@@ -3752,8 +3643,8 @@ GRADLE_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "deprecation",
-                equals=0.0,
-                because="the default branch; see the gradle deprecation waiver",
+                unmeasured=True,
+                because="nothing in a POM states retirement; see the waiver",
             ),
             SignalValue(
                 "maintainer",
@@ -3792,7 +3683,9 @@ GRADLE_CASES: Tuple[FixtureCase, ...] = (
         expected_latest_version="1.8.0-rc01",
         expected_repository_url=None,
         expected_license_id="APACHE",
-        expected_deprecated=False,
+        # Maven Central publishes no retirement marker of any kind, so
+        # the adapter records nothing and the signal is unmeasured.
+        expected_deprecated=None,
         ground_truth=(
             "app/build.gradle.kts at tag v8.22.1 declares implementation("
             "libs.androidx.appcompat); the catalog's [libraries] entry is "
@@ -4294,11 +4187,12 @@ def assert_case_conforms(case: FixtureCase) -> DependencyRiskScore:
         f"{case.slug}: repository_url is {dep.repository_url!r}, expected "
         f"{case.expected_repository_url!r}"
     )
-    if case.expected_deprecated is not None:
-        assert dep.is_deprecated is case.expected_deprecated, (
-            f"{case.slug}: is_deprecated is {dep.is_deprecated}, expected "
-            f"{case.expected_deprecated}"
-        )
+    assert dep.is_deprecated is case.expected_deprecated, (
+        f"{case.slug}: is_deprecated is {dep.is_deprecated}, expected "
+        f"{case.expected_deprecated}. None means no adapter recorded an "
+        f"answer, which is what an ecosystem publishing no retirement marker "
+        f"must produce; True and False are both measurements (#320)."
+    )
     actual_license = dep.license_info.license_id if dep.license_info else None
     assert actual_license == case.expected_license_id, (
         f"{case.slug}: license_id is {actual_license!r}, expected "

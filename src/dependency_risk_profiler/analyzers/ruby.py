@@ -162,11 +162,17 @@ class RubyGemsAnalyzer(BaseAnalyzer):
         # ecosystem over — the difference is the registry's model, not the read.
         # The read stays because it costs nothing and is right the day
         # rubygems.org starts sending it; it is not the deprecation signal here.
-        if info.get("yanked") is True:
-            dep.is_deprecated = True
-
-        if self._description_declares_deprecation(info):
-            dep.is_deprecated = True
+        #
+        # Recorded either way once there is a gem document to read: "the gem's
+        # own blurb does not name it retired" is what rubygems.org answers, and
+        # it is a measurement rather than an assumption (#320).
+        if info:
+            dep.record_deprecation(
+                deprecated=(
+                    info.get("yanked") is True
+                    or self._description_declares_deprecation(info)
+                )
+            )
 
     @staticmethod
     def _description_declares_deprecation(info: Dict[str, object]) -> bool:

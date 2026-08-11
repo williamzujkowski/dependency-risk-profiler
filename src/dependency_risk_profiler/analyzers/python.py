@@ -178,12 +178,22 @@ class PythonAnalyzer(BaseAnalyzer):
             )
 
         # A yanked release is PyPI's explicit "do not use this" marker, the
-        # same field RubyGems and crates.io publish and this adapter never read.
-        if info_map.get("yanked") is True:
-            dep.is_deprecated = True
-
-        if self._summary_declares_deprecation(info_map):
-            dep.is_deprecated = True
+        # same field RubyGems and crates.io publish. The summary read is
+        # additive: it can raise a deprecation verdict, never clear a yank.
+        #
+        # Recorded either way when there is an `info` object to read, because
+        # its answer is then a measurement and "PyPI does not say this project
+        # is withdrawn" is a fact worth having (#320). A payload carrying no
+        # `info` block is not a document to read an answer off, so it records
+        # nothing. PEP 792's `project-status` is the field that would replace
+        # both reads; it is new, unversioned, and carries no history.
+        if info_map:
+            dep.record_deprecation(
+                deprecated=(
+                    info_map.get("yanked") is True
+                    or self._summary_declares_deprecation(info_map)
+                )
+            )
 
     @staticmethod
     def _summary_declares_deprecation(info_map: Mapping[str, object]) -> bool:

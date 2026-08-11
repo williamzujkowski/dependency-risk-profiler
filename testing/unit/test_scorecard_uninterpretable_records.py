@@ -61,7 +61,7 @@ from dependency_risk_profiler.scorecard.signed_commits import (
     check_signed_commits,
 )
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
-from dependency_risk_profiler.signals import UnmeasuredReason
+from dependency_risk_profiler.signals import AdvisoryLookupState, UnmeasuredReason
 
 FAILED = UnmeasuredReason.SOURCE_LOOKUP_FAILED.value
 
@@ -547,15 +547,21 @@ _SECURITY_METRIC_FIELDS: List[str] = [
 def _with_metric(field: str, value: Optional[bool]) -> DependencyMetadata:
     """A dependency carrying exactly one security-metrics answer.
 
-    Stale enough that the denominator is observable: with every other signal
-    scoring zero the three cases below come out numerically identical and the
-    test passes whatever the scorer does.
+    Two risky signals and one clean one, so the denominator is observable:
+    with every measured signal scoring 1.0 the three cases below come out
+    numerically identical and the test passes whatever the scorer does. The
+    clean signal is a completed advisory lookup that found nothing, which is a
+    measurement rather than the fabricated zero an unrecorded lookup used to
+    supply (#321).
     """
     dependency = DependencyMetadata(
         name="probe",
         installed_version="1.0.0",
         latest_version="9.9.9",
         last_updated=datetime.now(timezone.utc) - timedelta(days=1500),
+    )
+    dependency.record_advisory_lookup(
+        AdvisoryLookupState.COMPLETE, sources_unavailable=()
     )
     dependency.security_metrics = SecurityMetrics()
     setattr(dependency.security_metrics, field, value)

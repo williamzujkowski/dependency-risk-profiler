@@ -177,8 +177,9 @@ class GoAnalyzer(BaseAnalyzer):
                         "name": name,
                         "latest_version": latest_version,
                     }
-                    if self._is_deprecated(name, latest_version):
-                        dep.is_deprecated = True
+                    deprecated = self._is_deprecated(name, latest_version)
+                    if deprecated is not None:
+                        dep.record_deprecation(deprecated=deprecated)
 
                 # ``@latest`` dates the release it names. Nothing read that
                 # field, so a Go module's cadence was unmeasured unless the
@@ -289,8 +290,13 @@ class GoAnalyzer(BaseAnalyzer):
             return None, None
         return version, parse_registry_timestamp(data.get("Time"))
 
-    def _is_deprecated(self, package_name: str, version: str) -> bool:
-        """Return True when the module's own ``go.mod`` retires it.
+    def _is_deprecated(self, package_name: str, version: str) -> Optional[bool]:
+        """Return what the module's own ``go.mod`` says about retirement.
+
+        ``None`` is the answer when no ``go.mod`` was read: a version string
+        the grammar refuses, or a proxy that did not send one. A marker nobody
+        could read is not a marker saying the module is fine, and the state
+        that says so is where that answer goes (#320).
 
         Args:
             package_name: Go module path.
@@ -298,18 +304,17 @@ class GoAnalyzer(BaseAnalyzer):
 
         Returns:
             True when a ``// Deprecated:`` comment precedes the ``module``
-            directive. False also covers "the proxy did not answer", which is
-            the honest reading: a marker nobody could read is not a marker that
-            says the module is fine, but the flag has nowhere else to go.
+            directive, False when a ``go.mod`` was read and carries none, None
+            when none was read.
         """
         if not _MODULE_VERSION.match(version):
             logger.debug("Refusing malformed Go module version: %r", version)
-            return False
+            return None
         url = (
             f"https://proxy.golang.org/{_escape_module_path(package_name)}"
             f"/@v/{_escape_module_path(version)}.mod"
         )
         body = fetch_url(url, self.timeout)
         if not isinstance(body, str) or not body:
-            return False
+            return None
         return deprecation_notice(body) is not None

@@ -141,38 +141,54 @@ Of sixteen signals, **three vary across this cohort**:
 | `maintainer` | 2,906 / 2,906 | Maintainer count frozen into the version document in force at T |
 | `source_repository` | 2,906 / 2,906 | Declared / unusable / undeclared, from the same document |
 | `license` | 2,695 / 2,906 | 211 packages declare no license at T |
-| `deprecation` | 2,906 / 2,906 | **Constant.** See below |
+| `deprecation` | 0 / 2,906 | Unmeasured. See below |
 
 Everything else is unmeasured and drops out of both numerator and denominator,
 which is the scorer's own rule.
 
-**`deprecation` cannot be ablated, and that is a finding.**
-`DependencyMetadata.is_deprecated` is a `bool` with a `False` default, not an
-`Optional[bool]`, so there is no way to tell the scorer that nobody measured it.
-Every package here is scored with a confident "not deprecated". Being constant
-it cannot change a ranking or an AUC, but it enters the denominator and pulls
-every absolute score toward zero, which moves the calibration buckets. #312
-separately found the underlying npm field is *unreconstructable* at a past date
-— `deprecated` is applied retroactively to every version — so the honest value
-is unmeasured and the type cannot express it. That is a rule-4 hole in shipped
-code, found by trying to use it.
+**`deprecation` is unmeasured here, and saying so was once impossible.**
+#312 found the underlying npm field is *unreconstructable* at a past date —
+`deprecated` is applied retroactively to every version — so unmeasured is the
+only honest answer. Until #320 the type could not express it:
+`DependencyMetadata.is_deprecated` was a `bool` defaulting to `False`, so every
+package here was scored with a confident "not deprecated". It is now
+`Optional[bool]` defaulting to `None`, and this pilot records nothing, which is
+how the fixed model spells "nobody looked".
 
-**Recording `advisory_lookup_state` is load-bearing, and the default points the
-wrong way.** Leaving it unset is documented to mean "the aggregator never ran",
-and in that state the scorer falls back to `has_known_exploits`, whose default
-is `False` — so every package in a registry-only run gets a confident clean
-`0.0` at the tool's **largest single weight**. That is deliberate backward
-compatibility for offline conformance runs, not a defect, but for a backtest it
-is a fabricated measurement. Recording `NOT_ATTEMPTED`, which is what actually
-happened, moved 174 packages out of the LOW and MEDIUM buckets and into HIGH.
-The first version of these results had an empty HIGH bucket entirely, for that
-reason and no other.
+What that cost, on this cohort: being constant, the fabricated value could not
+change a ranking or an AUC — and did not, 0.5658 → 0.5665. It entered the
+denominator, which pulled every absolute score toward zero and moved the
+calibration buckets: LOW 2,144 → 882, MEDIUM 588 → 1,349, HIGH 174 → 496,
+CRITICAL 0 → 179.
 
-**2,303 of 2,906 packages — 79% — score `insufficient_data`.** A package that
-declares a repository nobody read leaves eight repository-derived signals
-unmeasured with no measured fact explaining the silence, and the scorer's own
-rule is that this means it knows less about the package than it knows. **The
-shipped tool abstains from a verdict on four fifths of this cohort**, and it is
+**Read those buckets with the abstention rate.** `insufficient_data` goes
+2,303 → **2,906** — every package. With npm answering neither the advisory
+question nor the deprecation one, a registry-only scan of this cohort declines
+to score all of it. The four numbers above are where the thresholds land, not
+verdicts the tool will publish.
+
+**Recording `advisory_lookup_state` is load-bearing, and this pilot is how the
+default was found pointing the wrong way.** It used to be optional, and leaving
+it unset meant "the aggregator never ran" — in which state the scorer fell back
+to `has_known_exploits`, whose default is `False`, so every package in a
+registry-only run got a confident clean `0.0` at the tool's **largest single
+weight**. It was defended as backward compatibility for offline conformance
+runs; on a backtest it is plainly a fabricated measurement, and #321 removed
+the option. The state is now required and validated at construction, so the
+unset case this paragraph describes is unreachable.
+
+Recording `NOT_ATTEMPTED` — what actually happened here — moved 174 packages
+out of the LOW and MEDIUM buckets into HIGH. The first version of these results
+had an empty HIGH bucket entirely, for that reason and no other.
+
+**All 2,906 packages score `insufficient_data`.** A package that declares a
+repository nobody read leaves eight repository-derived signals unmeasured with
+no measured fact explaining the silence, and the scorer's own rule is that this
+means it knows less about the package than it knows. That took 2,303 of 2,906 —
+79% — over the bar on its own; #320 took the rest of the way, because once
+`deprecation` stops answering a question npm cannot answer at a past date, the
+four remaining registry signals no longer outnumber the unmeasured ones.
+**The shipped tool abstains from a verdict on this entire cohort**, and it is
 right to.
 The discrimination below is computed from `total_score`, which is always
 produced; the verdict buckets come from the same thresholds the scorer applies,
@@ -373,8 +389,8 @@ and asserts the AUC goes to 1.0. Without that, a harness wired to a constant
   that goes quiet is a maintenance risk; the tool's headline claim is about
   risk, and the two are related by argument rather than by this measurement.
 - **Nothing about the repository arm.** No repository was cloned at T, so the
-  eight repository-derived signals are absent — and their absence is why three
-  quarters of the cohort scores `insufficient_data`. A repository arm might do
+  eight repository-derived signals are absent — and their absence is most of
+  why the whole cohort scores `insufficient_data`. A repository arm might do
   better. It would also cost a clone per package per T.
 - **Nothing that survives the ecosystem.** npm is the only registry that
   publishes dated maintainer history. This result does not transfer to PyPI,

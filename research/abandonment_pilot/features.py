@@ -21,31 +21,25 @@ Ablated for the pilot, per the protocol:
 Not available, and therefore honestly unmeasured:
 
 * ``exploit`` — the advisory lookup is recorded as ``NOT_ATTEMPTED``, which is
-  what happened: this pilot asks no advisory source anything. Recording it
-  matters and the default is the wrong way round. Leaving
-  ``advisory_lookup_state`` unset is documented to mean "the aggregator never
-  ran", and in that state the scorer falls back to ``has_known_exploits``,
-  whose default is ``False`` — so every package in a registry-only run is
-  handed a confident clean ``0.0`` at the tool's **largest** single weight.
-  That is deliberate backward compatibility for the offline conformance runs
-  and not a defect, but for a backtest it is a fabricated measurement, and it
-  deflates every score toward the bottom of the scale.
+  what happened: this pilot asks no advisory source anything. The scorer reads
+  that state and leaves the signal out of both the numerator and the
+  denominator, so no package here is averaged against a clean bill of health
+  nobody issued. It carries the tool's largest single weight, 0.5 of 3.5, so
+  the difference between an absent signal and a fabricated ``0.0`` is the
+  largest one this experiment could make to an absolute score.
+* ``deprecation`` — ``is_deprecated`` is left unset, which the scorer reads as
+  unmeasured for the same reason. There is no as-of-T value to supply: #312
+  established the field is *unreconstructable* at a past date, because npm
+  applies ``deprecated`` retroactively to every version of a package, so a
+  version document published years before T can carry a flag set after it.
+  The signal is therefore excluded from the mean rather than held at a
+  constant, and it is the one input this pilot could not have reconstructed
+  even with an unlimited harvest budget.
 * the eight repository-derived signals — no repository is cloned at T.
 * ``transitive`` — npm freezes each version's **direct** dependency list, not
   its resolved closure, and the shipped scorer's transitive signal reads a
   closure. Feeding it a direct count would be scoring a different input than
   production sends, so the count is used only as a trivial baseline.
-
-**``deprecation`` cannot be ablated, and that is a finding rather than a
-choice.** ``DependencyMetadata.is_deprecated`` is a ``bool`` with a ``False``
-default, not an ``Optional[bool]``, so there is no way to tell the scorer that
-nobody measured it. Every package in this pilot is therefore scored with a
-confident "not deprecated". It is constant across the cohort, so it cannot
-change any ranking or any AUC; it does enter the denominator, which pulls every
-absolute score toward zero and moves the calibration buckets. #312 separately
-found the underlying field is *unreconstructable* at a past date — npm applies
-``deprecated`` retroactively to every version — so the honest value here would
-be unmeasured, and the type cannot express it.
 """
 
 from __future__ import annotations
@@ -71,8 +65,8 @@ from .cohort import CohortMember
 from .snapshot import PackageRecord, dep_count_at, license_at, repository_at
 
 #: The signals this pilot can both reconstruct at T and vary. Everything else
-#: is either ablated by the protocol, unmeasurable from a registry, or — in
-#: ``deprecation``'s case — stuck measured at a constant.
+#: is ablated by the protocol, needs a repository nobody clones here, or has no
+#: as-of-T value that any harvest could recover.
 PILOT_SIGNALS: FrozenSet[str] = frozenset(
     {SIGNAL_MAINTAINER, SIGNAL_LICENSE, SIGNAL_SOURCE_REPOSITORY}
 )

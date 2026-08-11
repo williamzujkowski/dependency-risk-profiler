@@ -40,7 +40,11 @@ from dependency_risk_profiler.analyzers.nodejs import NodeJSAnalyzer, npm_regist
 from dependency_risk_profiler.community import analyzer as community_analyzer
 from dependency_risk_profiler.forges import github as github_forge
 from dependency_risk_profiler.license.analyzer import analyze_license
-from dependency_risk_profiler.models import DependencyMetadata, DependencyRiskScore
+from dependency_risk_profiler.models import (
+    DependencyMetadata,
+    DependencyRiskScore,
+    RiskLevel,
+)
 from dependency_risk_profiler.release_dates import (
     RELEASE_DATE_SOURCE_KEY,
     RELEASE_DATE_SOURCE_REGISTRY,
@@ -534,30 +538,31 @@ def test_nodejs_measures_the_signals_the_registry_provides() -> None:
     assert_measures_registry_signals(_express_score(), "nodejs")
 
 
-def test_npm_clears_the_verdict_bar_by_exactly_nothing() -> None:
-    """The npm floor reaches a verdict from registry metadata, and only just (#204).
+def test_npm_lands_one_signal_short_of_a_verdict_from_the_packument_alone() -> None:
+    """A packument on its own does not reach a verdict, and this says which signal.
 
-    This test used to assert the opposite, and its own docstring said what to do
-    when that stopped being true. npm still publishes no cheap maintainer count;
-    what changed is that the packument's version manifest carries a dependency
-    list the adapter never read, and reading it took npm from seven measured
-    signals to eight.
+    Seven measured against nine unmeasured, and ``insufficient_data`` is
+    ``unmeasured > measured``, so every npm package scored from registry
+    metadata alone is UNKNOWN. Two facts put it there and both are named here
+    rather than left to the count: npm publishes no cheap owner list, and no
+    advisory source is asked, so the tool's largest single weight has no
+    answer behind it (#321).
 
-    Eight against eight is the bar exactly — ``insufficient_data`` is
-    ``unmeasured > measured`` — so npm clears it with no margin at all. That is
-    worth pinning rather than rounding to "npm scores fine now": lose any one
-    signal and every npm package is UNKNOWN again.
+    The second one is the one to act on. An npm scan that asks OSV measures
+    eight of sixteen and clears the bar by exactly nothing, which is what the
+    packument alone used to appear to do while the exploit signal was quietly
+    filled in with ``has_known_exploits``'s ``False``.
     """
     score = _express_score()
 
-    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is True
+    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is False
     assert "maintainer" in score.unknown_signals, "npm still publishes no owner list"
+    assert "exploit" in score.unknown_signals, "no advisory source was asked"
     assert "transitive" not in score.unknown_signals
-    assert score.insufficient_data is False
-    assert score.measured_signal_count == score.unknown_signal_count, (
-        "npm is supposed to clear the insufficient-data bar by zero margin; if "
-        "this changed, SCORES_FROM_REGISTRY_ALONE's comment needs updating too"
-    )
+    assert score.insufficient_data is True
+    assert score.risk_level is RiskLevel.UNKNOWN
+    assert score.measured_signal_count == 7
+    assert score.unknown_signal_count == 9
 
 
 def test_dev_dependencies_are_not_runtime_dependencies() -> None:

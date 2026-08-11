@@ -13,6 +13,7 @@ per-ecosystem adapter work (#72) can't regress cross-ecosystem comparability.
 
 from dependency_risk_profiler.models import DependencyMetadata, RiskLevel
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import AdvisoryLookupState
 
 
 def test_sparse_data_reports_unknown_not_a_confident_level() -> None:
@@ -34,12 +35,19 @@ def test_missing_signals_are_excluded_not_scored_as_zero() -> None:
     weights keeps the score reflective of what was actually measured.
     """
     scorer = RiskScorer()
+    # Both state that their advisory lookup completed. Without it the exploit
+    # signal is unmeasured for both and this test compares two zeros, which is
+    # the shape #321 closed: an unrecorded lookup is not a clean one.
     exploited = DependencyMetadata(
         name="exploited", installed_version="1.0.0", has_known_exploits=True
+    )
+    exploited.record_advisory_lookup(
+        AdvisoryLookupState.COMPLETE, sources_unavailable=()
     )
     clean = DependencyMetadata(
         name="clean", installed_version="1.0.0", has_known_exploits=False
     )
+    clean.record_advisory_lookup(AdvisoryLookupState.COMPLETE, sources_unavailable=())
 
     exploited_score = scorer.score_dependency(exploited)
     clean_score = scorer.score_dependency(clean)

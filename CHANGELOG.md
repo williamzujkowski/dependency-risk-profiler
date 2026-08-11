@@ -282,6 +282,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Two questions nobody asked, and the reassuring answers the scorer invented
+  for them.** `advisory_lookup_state` was `Optional` and an unrecorded state
+  read as *measured*, so `exploit` scored a confident `0.0` from
+  `has_known_exploits` for every dependency nobody asked an advisory source
+  about — at the tool's largest single weight, 0.5 of 3.5. `is_deprecated` was
+  a `bool` defaulting to `False`, so `deprecation` was *always* measured and no
+  adapter could say nobody looked, which is the only honest answer for Maven
+  Central: it publishes no retirement marker of any kind. Both are the same
+  defect, a type whose most reassuring inhabitant is also its default, and they
+  are fixed together because fixing either alone re-baselines the same nine
+  per-ecosystem floors twice (#320, #321).
+
+  The cost, measured rather than argued. Driving the production scorer over a
+  pinned 2,906-package npm cohort at a past date, the unrecorded advisory state
+  put a fabricated `0.0` into the weighted mean for every package and left the
+  HIGH bucket **entirely empty**; recording the honest `NOT_ATTEMPTED` moved
+  **174 packages** out of LOW and MEDIUM into HIGH. A reader of the first table
+  would have concluded the thresholds were unreachable.
+
+  `advisory_lookup_state` is no longer optional. It is an `AdvisoryLookupState`
+  defaulting to `NOT_ATTEMPTED`, which is what a manifest parser produces and
+  what a registry-only scan ends on, and `advisory_lookup_is_measured` now
+  fails closed exactly as `transitive_is_measured` has since #199. Recording
+  the state explicitly and recording nothing are byte-identical — verified on
+  the same cohort — so the fabricated zero is unreachable from any call site
+  rather than merely discouraged at all of them. `is_deprecated` is
+  `Optional[bool]` defaulting to `None`, written only through
+  `record_deprecation`, whose argument is required and keyword-only. `False` is
+  a measurement; `None` is the absence of one.
+
+  Seven registries state retirement and their adapters now record both answers:
+  npm's per-version `deprecated`, Packagist's `abandoned`, crates.io's and
+  PyPI's `yanked`, RubyGems' description, NuGet's SemVer2 catalog `deprecation`
+  block, and Go's `// Deprecated:` directive. Three of those reads could not
+  express "no document was read" and returned `False` for it — npm when the
+  packument carries no manifest for `latest`, Go when the proxy sends no
+  `go.mod`, crates.io when no release entry was merged — and each now returns
+  `None` instead. Maven and Gradle record nothing.
+
+  **The nine measured-signal floors are re-baselined in the same change, and
+  four ecosystems lose their verdict.** They are derived from what each
+  registry answers in the weakest deployment mode — no clone, no token, no
+  advisory lookup — not chosen to reproduce the previous output distribution,
+  which would only move the lie from the signal into the floor. cargo, composer,
+  nuget, python and rubygems 9 → 8; nodejs 8 → 7; maven and gradle 8 → 6;
+  golang 6 → 5. Eight of sixteen is the insufficient-data edge, so golang,
+  gradle, maven and nodejs now report UNKNOWN from registry metadata alone and
+  `SCORES_FROM_REGISTRY_ALONE` says so. That is a true statement about what a
+  registry-only scan can know, and asking one advisory source is the single
+  input that moves every ecosystem in the table back up by one.
+
+  **Scores move, and both directions are the honest one.** Dropping a signal
+  from the denominator raises the score of anything carrying risk: across the
+  34-case captured conformance corpus, LOW 20 → 5, MEDIUM 12 → 13, HIGH 0 → 3,
+  CRITICAL 0 → 1, UNKNOWN 2 → 12. On the npm cohort the shift is larger still,
+  because npm packages never answered the deprecation question either: LOW
+  2144 → 882, MEDIUM 588 → 1349, HIGH 174 → 496, CRITICAL 0 → 179. Nothing in
+  the scale changed. Two fabricated zeros left it.
+
+  **Read that npm row with its abstention rate or it says more than it knows.**
+  On the same run, `insufficient_data` goes 2303 → **2906**: every package in
+  the cohort, without exception. So those four buckets are where the thresholds
+  land, not verdicts the tool will publish — a registry-only npm scan now
+  declines to score the entire cohort, which is the honest answer once npm
+  answers neither the advisory question nor the deprecation one. Quoting the
+  distribution without the abstention would repeat, in the entry describing the
+  fix, the shape of the defect being fixed. Discrimination is unchanged
+  (AUC 0.5658 → 0.5665), exactly as expected: `deprecation` was constant across
+  the cohort, so removing it cannot reorder anything — it moves absolute scores
+  and the calibration buckets, and nothing else.
+
+  **One ecosystem was measured; eight were derived.** The cohort above is npm.
+  The other eight floors — including maven and gradle, which fall by two and
+  are therefore the largest claim in the table — rest on the attribution
+  argument and the conformance corpus, not on distribution data. The npm run
+  does not vouch for them.
+
+  The state is validated wherever it is set, not only where it is recorded.
+  `record_advisory_lookup` is the writer, but a dataclass field is settable at
+  construction too, and that is the shape a deserializer takes: read a state
+  out of a stored record and hand it to the constructor. Both now go through
+  one validator, so a `FAILED` that cannot name what failed is rejected however
+  it arrives, and a dependency built with nothing said about advisories comes
+  out claiming nothing rather than inheriting a state that reads as a
+  measurement. There is no compatibility fallback for an omitted state.
+
+  The floors carry their attribution as data rather than as prose.
+  `REGISTRY_ONLY_CEILING` names the eight signals a registry-only scan can
+  reach and `REGISTRY_UNANSWERED_SIGNALS` names what each registry withholds,
+  and every floor is checked to be exactly that subtraction. The tables are
+  hand-maintained and deliberately not derived from the scorer: a floor
+  computed from whatever the code measures cannot disagree with the code, which
+  is the one thing a floor exists to be able to do. Before this, an ecosystem's
+  missing signal could be swapped for a different one with every count
+  unchanged, leaving the recorded reason quietly false.
+
+  This is a **contract change**. Schema v2 emits `is_deprecated: null` for a
+  package no registry answered for, and `signals.deprecation` and
+  `signals.exploit` carry `{"state": "unmeasured", "reason": …}` where they
+  previously carried a measured `0.0`. `NOT_ATTEMPTED` and `FAILED` remain
+  distinct as *reasons* — an operator needs to tell an outage from a scan that
+  asked nobody — and collapse to one thing only at the scoring boundary, where
+  both mean the signal has no value.
+
 - **A clone that failed was not remembered, so one unusable repository cost 60
   seconds per package that pointed at it.** Eight of the eighteen NuGet packages
   in eShopOnWeb's `Web.csproj` resolve to `github.com/dotnet/dotnet`, the .NET

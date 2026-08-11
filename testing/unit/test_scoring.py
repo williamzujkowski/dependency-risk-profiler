@@ -13,9 +13,31 @@ from dependency_risk_profiler.models import (
     SecurityMetrics,
 )
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
+from dependency_risk_profiler.signals import AdvisoryLookupState
 from dependency_risk_profiler.vulnerabilities.aggregator import (
     _update_dependency_with_vulnerabilities,
 )
+
+
+def _lookup_completed(dependency: DependencyMetadata) -> DependencyMetadata:
+    """Record the advisory lookup a scored dependency is assumed to have had.
+
+    A fixture that wants a measured exploit signal has to say that every
+    advisory source it asked answered, because the alternative — leaving the
+    state alone — means nobody asked, and the scorer then reports the signal
+    unmeasured rather than handing it ``has_known_exploits``'s ``False``
+    (#321).
+
+    Args:
+        dependency: The metadata under test.
+
+    Returns:
+        The same object, so it can be wrapped around a constructor call.
+    """
+    dependency.record_advisory_lookup(
+        AdvisoryLookupState.COMPLETE, sources_unavailable=()
+    )
+    return dependency
 
 
 def test_scoring_system() -> None:
@@ -28,18 +50,20 @@ def test_scoring_system() -> None:
     # supported manifest. Before #199 the fixtures got that for free by saying
     # nothing, and the free signal was load-bearing: it is what kept the
     # low-risk case one measured signal clear of the insufficient-data bar.
-    low_risk = DependencyMetadata(
-        name="low-risk",
-        installed_version="1.0.0",
-        latest_version="1.0.0",
-        last_updated=datetime.now() - timedelta(days=15),
-        maintainer_count=5,
-        is_deprecated=False,
-        has_known_exploits=False,
-        has_tests=True,
-        has_ci=True,
-        has_contribution_guidelines=True,
-        transitive_source="manifest",
+    low_risk = _lookup_completed(
+        DependencyMetadata(
+            name="low-risk",
+            installed_version="1.0.0",
+            latest_version="1.0.0",
+            last_updated=datetime.now() - timedelta(days=15),
+            maintainer_count=5,
+            is_deprecated=False,
+            has_known_exploits=False,
+            has_tests=True,
+            has_ci=True,
+            has_contribution_guidelines=True,
+            transitive_source="manifest",
+        )
     )
 
     low_risk_score = scorer.score_dependency(low_risk)
@@ -49,18 +73,20 @@ def test_scoring_system() -> None:
     assert low_risk_score.total_score < 3.0
 
     # Test a medium-risk dependency
-    medium_risk = DependencyMetadata(
-        name="medium-risk",
-        installed_version="1.0.0",
-        latest_version="1.2.0",
-        last_updated=datetime.now() - timedelta(days=120),
-        maintainer_count=2,
-        is_deprecated=False,
-        has_known_exploits=False,
-        has_tests=True,
-        has_ci=False,
-        has_contribution_guidelines=False,
-        transitive_source="manifest",
+    medium_risk = _lookup_completed(
+        DependencyMetadata(
+            name="medium-risk",
+            installed_version="1.0.0",
+            latest_version="1.2.0",
+            last_updated=datetime.now() - timedelta(days=120),
+            maintainer_count=2,
+            is_deprecated=False,
+            has_known_exploits=False,
+            has_tests=True,
+            has_ci=False,
+            has_contribution_guidelines=False,
+            transitive_source="manifest",
+        )
     )
 
     medium_risk_score = scorer.score_dependency(medium_risk)
@@ -70,18 +96,20 @@ def test_scoring_system() -> None:
     assert medium_risk_score.total_score < 3.5
 
     # Test a high-risk dependency
-    high_risk = DependencyMetadata(
-        name="high-risk",
-        installed_version="1.0.0",
-        latest_version="2.0.0",
-        last_updated=datetime.now() - timedelta(days=370),
-        maintainer_count=1,
-        is_deprecated=False,
-        has_known_exploits=False,
-        has_tests=False,
-        has_ci=False,
-        has_contribution_guidelines=False,
-        transitive_source="manifest",
+    high_risk = _lookup_completed(
+        DependencyMetadata(
+            name="high-risk",
+            installed_version="1.0.0",
+            latest_version="2.0.0",
+            last_updated=datetime.now() - timedelta(days=370),
+            maintainer_count=1,
+            is_deprecated=False,
+            has_known_exploits=False,
+            has_tests=False,
+            has_ci=False,
+            has_contribution_guidelines=False,
+            transitive_source="manifest",
+        )
     )
 
     high_risk_score = scorer.score_dependency(high_risk)
@@ -91,18 +119,20 @@ def test_scoring_system() -> None:
     assert high_risk_score.total_score > medium_risk_score.total_score
 
     # Test a critical-risk dependency
-    critical_risk = DependencyMetadata(
-        name="critical-risk",
-        installed_version="1.0.0",
-        latest_version="3.0.0",
-        last_updated=datetime.now() - timedelta(days=730),
-        maintainer_count=1,
-        is_deprecated=True,
-        has_known_exploits=True,
-        has_tests=False,
-        has_ci=False,
-        has_contribution_guidelines=False,
-        transitive_source="manifest",
+    critical_risk = _lookup_completed(
+        DependencyMetadata(
+            name="critical-risk",
+            installed_version="1.0.0",
+            latest_version="3.0.0",
+            last_updated=datetime.now() - timedelta(days=730),
+            maintainer_count=1,
+            is_deprecated=True,
+            has_known_exploits=True,
+            has_tests=False,
+            has_ci=False,
+            has_contribution_guidelines=False,
+            transitive_source="manifest",
+        )
     )
 
     critical_risk_score = scorer.score_dependency(critical_risk)
@@ -118,17 +148,19 @@ def test_risk_factors() -> None:
     scorer = RiskScorer()
 
     # Test a dependency with multiple risk factors
-    dep = DependencyMetadata(
-        name="risky-dep",
-        installed_version="1.0.0",
-        latest_version="2.0.0",
-        last_updated=datetime.now() - timedelta(days=400),
-        maintainer_count=1,
-        is_deprecated=True,
-        has_known_exploits=True,
-        has_tests=False,
-        has_ci=False,
-        has_contribution_guidelines=False,
+    dep = _lookup_completed(
+        DependencyMetadata(
+            name="risky-dep",
+            installed_version="1.0.0",
+            latest_version="2.0.0",
+            last_updated=datetime.now() - timedelta(days=400),
+            maintainer_count=1,
+            is_deprecated=True,
+            has_known_exploits=True,
+            has_tests=False,
+            has_ci=False,
+            has_contribution_guidelines=False,
+        )
     )
 
     score = scorer.score_dependency(dep)
@@ -159,13 +191,12 @@ def test_partial_data() -> None:
     assert score.total_score == 0.0
     assert score.risk_level == RiskLevel.UNKNOWN
     assert score.insufficient_data is True
-    # Thirteen since #199: transitive joins the unmeasured set for a
-    # dependency nothing resolved, instead of scoring a confident 0.0.
-    assert score.unknown_signal_count == 13
-    assert "staleness" in score.unknown_signals
-    assert "transitive" in score.unknown_signals
-    assert "maintainer" in score.unknown_signals
-    assert "version" in score.unknown_signals
+    # Every weighed signal, because a bare manifest entry establishes nothing:
+    # nothing resolved the tree (#199), nobody asked an advisory source (#321),
+    # and no registry answered the deprecation question (#320).
+    assert score.unknown_signal_count == 15
+    for silent in ("staleness", "transitive", "maintainer", "version"):
+        assert silent in score.unknown_signals
 
 
 def test_all_missing_data_is_unknown_not_medium() -> None:
@@ -182,6 +213,12 @@ def test_all_missing_data_is_unknown_not_medium() -> None:
     assert score.unknown_signals == [
         "staleness",
         "maintainer",
+        # No registry answered whether this package is retired, and a `bool`
+        # field could only have said "affirmatively not" (#320).
+        "deprecation",
+        # Nobody asked an advisory source anything, and an unrecorded lookup
+        # used to read as one that answered clean (#321).
+        "exploit",
         "version",
         "health_indicators",
         "license",
@@ -249,37 +286,44 @@ def test_measured_cadence_moves_the_community_score() -> None:
 def test_full_data_scoring_is_unchanged() -> None:
     """Measured full-data signals keep their calibrated component scores."""
     scorer = RiskScorer()
-    dep = DependencyMetadata(
-        name="full-data",
-        installed_version="1.0.0",
-        latest_version="1.1.0",
-        last_updated=datetime.now() - timedelta(days=120),
-        maintainer_count=2,
-        has_tests=True,
-        has_ci=False,
-        has_contribution_guidelines=False,
-        license_info=LicenseInfo(
-            license_id="MIT",
-            category=LicenseCategory.PERMISSIVE,
-            is_approved=True,
-            risk_level=RiskLevel.LOW,
-        ),
-        community_metrics=CommunityMetrics(
-            star_count=1000,
-            commit_frequency=5.0,
-        ),
-        transitive_dependencies={"a", "b", "c", "d", "e"},
-        # Full data means every signal has provenance. A populated set with no
-        # source marker is data of unknown origin, and since #199 the scorer
-        # declines to score it rather than assuming someone looked.
-        transitive_source="manifest",
-        security_metrics=SecurityMetrics(
-            has_security_policy=True,
-            has_dependency_update_tools=True,
-            has_signed_commits=True,
-            has_branch_protection=True,
-            is_maintained=True,
-        ),
+    dep = _lookup_completed(
+        DependencyMetadata(
+            name="full-data",
+            installed_version="1.0.0",
+            latest_version="1.1.0",
+            last_updated=datetime.now() - timedelta(days=120),
+            maintainer_count=2,
+            # Full data means every signal has an answer behind it, and for
+            # these two the answer is a recorded state rather than a value: a
+            # registry that says the package is live, and an advisory lookup
+            # every source answered.
+            is_deprecated=False,
+            has_tests=True,
+            has_ci=False,
+            has_contribution_guidelines=False,
+            license_info=LicenseInfo(
+                license_id="MIT",
+                category=LicenseCategory.PERMISSIVE,
+                is_approved=True,
+                risk_level=RiskLevel.LOW,
+            ),
+            community_metrics=CommunityMetrics(
+                star_count=1000,
+                commit_frequency=5.0,
+            ),
+            transitive_dependencies={"a", "b", "c", "d", "e"},
+            # A populated set with no source marker is data of unknown origin,
+            # and since #199 the scorer declines to score it rather than
+            # assuming someone looked.
+            transitive_source="manifest",
+            security_metrics=SecurityMetrics(
+                has_security_policy=True,
+                has_dependency_update_tools=True,
+                has_signed_commits=True,
+                has_branch_protection=True,
+                is_maintained=True,
+            ),
+        )
     )
 
     score = scorer.score_dependency(dep)
@@ -444,23 +488,26 @@ def test_missing_popularity_data_keeps_stale_and_maintenance_signals() -> None:
 def test_high_adoption_maintenance_signal_is_softened_in_terminal_formatter() -> None:
     """REGRESSION: quiet mature projects get a soft cadence label, not abandonment."""
     scorer = RiskScorer()
-    dependency = DependencyMetadata(
-        name="mature-stable",
-        installed_version="1.0.0",
-        latest_version="1.0.0",
-        last_updated=datetime.now() - timedelta(days=500),
-        maintainer_count=5,
-        community_metrics=CommunityMetrics(star_count=5000),
-        has_tests=True,
-        has_ci=True,
-        has_contribution_guidelines=True,
-        license_info=LicenseInfo(
-            license_id="MIT",
-            category=LicenseCategory.PERMISSIVE,
-            is_approved=True,
-            risk_level=RiskLevel.LOW,
-        ),
-        security_metrics=SecurityMetrics(is_maintained=False),
+    dependency = _lookup_completed(
+        DependencyMetadata(
+            name="mature-stable",
+            installed_version="1.0.0",
+            latest_version="1.0.0",
+            last_updated=datetime.now() - timedelta(days=500),
+            maintainer_count=5,
+            community_metrics=CommunityMetrics(star_count=5000),
+            is_deprecated=False,
+            has_tests=True,
+            has_ci=True,
+            has_contribution_guidelines=True,
+            license_info=LicenseInfo(
+                license_id="MIT",
+                category=LicenseCategory.PERMISSIVE,
+                is_approved=True,
+                risk_level=RiskLevel.LOW,
+            ),
+            security_metrics=SecurityMetrics(is_maintained=False),
+        )
     )
 
     score = scorer.score_dependency(dependency)
@@ -499,14 +546,17 @@ def test_aggregate_ignores_unknown_signals() -> None:
 
     score = scorer.score_dependency(dep)
 
-    # Four measured, not five: nothing resolved this dependency's tree, so
-    # transitive leaves the denominator instead of contributing a fabricated
-    # 0.0 (#199). Dropping that zero *raises* the reported risk from 2.0 to
-    # 2.5 — the same two risky signals, now over an honest denominator.
-    assert score.unknown_signal_count == 11
-    assert score.measured_signal_count == 4
+    # Two measured, not five: three signals leave the denominator rather than
+    # contributing a fabricated 0.0 apiece — nothing resolved this
+    # dependency's tree (#199), nobody asked an advisory source (#321), and no
+    # registry answered the deprecation question (#320). Dropping those zeros
+    # *raises* the reported risk from 2.0 to 5.0 — the same two risky signals,
+    # now over an honest denominator, which is the direction this rule always
+    # moves a score and the reason it has to be argued rather than assumed.
+    assert score.unknown_signal_count == 13
+    assert score.measured_signal_count == 2
     assert score.insufficient_data is True
-    assert score.total_score == 5.0 * (1.0 + 1.0) / 4.0
+    assert score.total_score == 5.0 * (1.0 + 1.0) / 2.0
 
 
 def test_info_and_withdrawn_vulnerabilities_do_not_raise_exploit_score() -> None:
@@ -803,27 +853,31 @@ def test_staleness_is_computed_in_utc_regardless_of_timestamp_tz() -> None:
 def test_critical_vulnerability_scores_higher_than_low() -> None:
     """Exploit scoring should be graduated by counted advisory severity."""
     scorer = RiskScorer()
-    low = DependencyMetadata(
-        name="low-vuln",
-        installed_version="1.0.0",
-        security_metrics=SecurityMetrics(
-            vulnerability_count=1,
-            counted_vulnerability_count=1,
-            filtered_vulnerability_count=0,
-            max_cvss_score=3.1,
-            max_vulnerability_severity="LOW",
-        ),
+    low = _lookup_completed(
+        DependencyMetadata(
+            name="low-vuln",
+            installed_version="1.0.0",
+            security_metrics=SecurityMetrics(
+                vulnerability_count=1,
+                counted_vulnerability_count=1,
+                filtered_vulnerability_count=0,
+                max_cvss_score=3.1,
+                max_vulnerability_severity="LOW",
+            ),
+        )
     )
-    critical = DependencyMetadata(
-        name="critical-vuln",
-        installed_version="1.0.0",
-        security_metrics=SecurityMetrics(
-            vulnerability_count=1,
-            counted_vulnerability_count=1,
-            filtered_vulnerability_count=0,
-            max_cvss_score=9.8,
-            max_vulnerability_severity="CRITICAL",
-        ),
+    critical = _lookup_completed(
+        DependencyMetadata(
+            name="critical-vuln",
+            installed_version="1.0.0",
+            security_metrics=SecurityMetrics(
+                vulnerability_count=1,
+                counted_vulnerability_count=1,
+                filtered_vulnerability_count=0,
+                max_cvss_score=9.8,
+                max_vulnerability_severity="CRITICAL",
+            ),
+        )
     )
 
     low_score = scorer.score_dependency(low)

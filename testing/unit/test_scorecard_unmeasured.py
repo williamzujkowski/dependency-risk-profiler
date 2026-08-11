@@ -36,7 +36,11 @@ from dependency_risk_profiler.scorecard.maintained import check_maintained_statu
 from dependency_risk_profiler.scorecard.security_policy import check_security_policy
 from dependency_risk_profiler.scorecard.signed_commits import check_signed_commits
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
-from dependency_risk_profiler.signals import SIGNAL_SECURITY_POLICY, UnmeasuredReason
+from dependency_risk_profiler.signals import (
+    SIGNAL_SECURITY_POLICY,
+    AdvisoryLookupState,
+    UnmeasuredReason,
+)
 
 CheckResult = Tuple[Optional[bool], Optional[float], List[str]]
 Check = Callable[[DependencyMetadata, Optional[str]], CheckResult]
@@ -294,14 +298,22 @@ def test_analyze_repository_records_all_five_on_a_readable_repository(
 def _stale(policy: Optional[bool], *, with_metrics: bool = True) -> DependencyMetadata:
     """A dependency stale enough that the denominator is observable.
 
-    With every signal scoring zero the three cases below are numerically
-    identical and the test would pass whatever the scorer did.
+    Two risky signals and one clean one. Without the clean one every measured
+    signal scores 1.0, the weighted mean is 1.0 whatever is in the
+    denominator, and the three cases below come out numerically identical —
+    the test would then pass whatever the scorer did. The clean signal is a
+    completed advisory lookup that found nothing, which is a measurement
+    rather than the fabricated zero an unrecorded lookup used to supply
+    (#321).
     """
     dependency = DependencyMetadata(
         name="probe",
         installed_version="1.0.0",
         latest_version="9.9.9",
         last_updated=datetime.now(timezone.utc) - timedelta(days=1500),
+    )
+    dependency.record_advisory_lookup(
+        AdvisoryLookupState.COMPLETE, sources_unavailable=()
     )
     if with_metrics:
         dependency.security_metrics = SecurityMetrics()

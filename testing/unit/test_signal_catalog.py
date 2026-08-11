@@ -33,6 +33,7 @@ from dependency_risk_profiler.models import (
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.signals import (
     REPOSITORY_DERIVED_SIGNALS,
+    AdvisoryLookupState,
     SCORECARD_CHECKS,
     SCORECARD_VERSION,
     SIGNAL_CATALOG,
@@ -116,6 +117,14 @@ def _fully_measured_dependency() -> DependencyMetadata:
     dependency.transitive_dependencies = {"a", "b"}
     dependency.source_repository_state = SourceRepositoryState.DECLARED
     dependency.transitive_source = "manifest"
+    # The two signals that carry a recorded state rather than a value: an
+    # advisory lookup that answered, and a registry that said the package is
+    # live. Both have to be asked for, which is what stops either reading as
+    # measured on a dependency nobody looked at (#320, #321).
+    dependency.record_advisory_lookup(
+        AdvisoryLookupState.COMPLETE, sources_unavailable=()
+    )
+    dependency.record_deprecation(deprecated=False)
     return dependency
 
 
@@ -275,7 +284,7 @@ def test_repository_derived_signals_get_the_repository_reason() -> None:
             unmeasured_reason_for(
                 name,
                 source_repository_unreadable=True,
-                advisory_lookup=None,
+                advisory_lookup=AdvisoryLookupState.COMPLETE,
                 registry_lookup=None,
             )
             is UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
@@ -286,7 +295,7 @@ def test_repository_derived_signals_get_the_repository_reason() -> None:
             unmeasured_reason_for(
                 name,
                 source_repository_unreadable=True,
-                advisory_lookup=None,
+                advisory_lookup=AdvisoryLookupState.COMPLETE,
                 registry_lookup=None,
             )
             is not UnmeasuredReason.SOURCE_REPOSITORY_UNREADABLE
@@ -299,6 +308,6 @@ def test_an_unnamed_signal_raises_rather_than_defaulting() -> None:
         unmeasured_reason_for(
             "not_a_signal",
             source_repository_unreadable=False,
-            advisory_lookup=None,
+            advisory_lookup=AdvisoryLookupState.COMPLETE,
             registry_lookup=None,
         )

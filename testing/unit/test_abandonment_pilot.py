@@ -35,10 +35,14 @@ from abandonment_pilot.experiment import ScoredCohort
 from abandonment_pilot.snapshot import PackageRecord, Snapshot, load_snapshot
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
 from dependency_risk_profiler.signals import (
+    SIGNAL_DEPRECATION,
+    SIGNAL_EXPLOIT,
     SIGNAL_MAINTAINER,
     SIGNAL_STALENESS,
     SIGNAL_VERSION,
+    AdvisoryLookupState,
     MeasurementState,
+    UnmeasuredReason,
 )
 
 SNAPSHOT_DIR = Path(__file__).resolve().parents[2] / "research" / "data" / "npm-2026-08-06"
@@ -211,6 +215,40 @@ def test_cadence_and_drift_are_never_measured_in_any_arm() -> None:
         result = scorer.score_dependency(features.build_metadata(record, member, enabled))
         assert SIGNAL_STALENESS in result.unknown_signals
         assert SIGNAL_VERSION in result.unknown_signals
+
+
+def test_the_two_signals_this_pilot_cannot_reconstruct_are_left_unmeasured() -> None:
+    """Neither the advisory verdict nor the retirement marker is invented here.
+
+    Both were scored as a confident clean answer for all 2,906 packages before
+    #321 and #320: the exploit signal fell back to ``has_known_exploits``'s
+    ``False`` at the largest single weight in the scale, and ``is_deprecated``
+    was a ``bool`` that could only say "affirmatively not retired". Neither is
+    reconstructable at a past date — this pilot asks no advisory source
+    anything, and npm applies ``deprecated`` retroactively to every version
+    (#312) — so a value for either would be fabricated rather than harvested.
+
+    Asserted on the reason as well as the state: "nobody ran the lookup" and
+    "the source published nothing" are different facts about a backtest, and a
+    reader of the coverage table is entitled to which one applies.
+    """
+    record = _record()
+    member = _member(record)
+    for enabled in (features.PILOT_SIGNALS, frozenset()):
+        metadata = features.build_metadata(record, member, enabled)
+        assert metadata.advisory_lookup_state is AdvisoryLookupState.NOT_ATTEMPTED
+        assert metadata.is_deprecated is None
+
+        result = RiskScorer().score_dependency(metadata)
+        exploit = result.measurements[SIGNAL_EXPLOIT]
+        deprecation = result.measurements[SIGNAL_DEPRECATION]
+
+        assert exploit.state is MeasurementState.UNMEASURED
+        assert exploit.reason is UnmeasuredReason.LOOKUP_NOT_ATTEMPTED
+        assert result.exploit_score is None
+        assert deprecation.state is MeasurementState.UNMEASURED
+        assert deprecation.reason is UnmeasuredReason.NO_DATA_FROM_SOURCE
+        assert result.deprecation_score is None
 
 
 def test_ablating_a_signal_makes_the_scorer_report_it_unmeasured() -> None:

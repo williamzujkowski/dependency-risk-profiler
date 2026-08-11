@@ -3,32 +3,32 @@
   "T": "2024-08-01",
   "ablations": {
     "ablate:license": {
-      "auc_moved_by": -0.03391849514372225,
-      "auc_with": 0.5658283689198222,
+      "auc_moved_by": -0.03325149423931417,
+      "auc_with": 0.5664953698242303,
       "auc_without": 0.5997468640635445,
       "ci95_clustered": [
-        -0.0623292389490433,
-        -0.01282417359284782
+        -0.061207753983558266,
+        -0.012063683779940493
       ],
       "insufficient_data": 2906
     },
     "ablate:maintainer": {
-      "auc_moved_by": 0.0783426231764382,
-      "auc_with": 0.5658283689198222,
-      "auc_without": 0.48748574574338405,
+      "auc_moved_by": 0.07632367976092175,
+      "auc_with": 0.5664953698242303,
+      "auc_without": 0.4901716900633086,
       "ci95_clustered": [
-        0.05542247410678003,
-        0.10041172961529016
+        0.053022131462282185,
+        0.09927082959399797
       ],
       "insufficient_data": 2906
     },
     "ablate:source_repository": {
-      "auc_moved_by": -0.008427706342652663,
-      "auc_with": 0.5658283689198222,
-      "auc_without": 0.5742560752624749,
+      "auc_moved_by": -0.009020978333529883,
+      "auc_with": 0.5664953698242303,
+      "auc_without": 0.5755163481577602,
       "ci95_clustered": [
-        -0.025460249931504753,
-        0.009247242486531526
+        -0.024629382696682134,
+        0.007612812754392517
       ],
       "insufficient_data": 2906
     }
@@ -38,17 +38,17 @@
       "auc_as_recorded": 0.44918971924029727,
       "auc_oriented": 0.5508102807597027,
       "ci95_clustered": [
-        -0.03253672820557296,
-        0.057782868625973316
+        -0.032245874148843945,
+        0.058376550169109254
       ],
       "ci95_unclustered": [
-        -0.010677648692522856,
-        0.04158659667377529
+        -0.010174459451797513,
+        0.04195259908423621
       ],
-      "model_auc_on_support": 0.5658283689198222,
-      "model_minus_baseline": 0.015018088160119514,
+      "model_auc_on_support": 0.5664953698242303,
+      "model_minus_baseline": 0.01568508906452759,
       "orientation": "less is riskier",
-      "p_value_clustered": 0.554,
+      "p_value_clustered": 0.537,
       "positives": 1176,
       "support": 2906
     },
@@ -56,17 +56,17 @@
       "auc_as_recorded": 0.4479282722585461,
       "auc_oriented": 0.5520717277414539,
       "ci95_clustered": [
-        -0.03269243819583323,
-        0.08227230341200925
+        -0.0327926578802733,
+        0.08342417417417414
       ],
       "ci95_unclustered": [
-        -0.00709041129985688,
-        0.05561457330627906
+        -0.006456455011690898,
+        0.0559061843928812
       ],
-      "model_auc_on_support": 0.5764801017375558,
-      "model_minus_baseline": 0.024408373996101962,
+      "model_auc_on_support": 0.577001921402209,
+      "model_minus_baseline": 0.024930193660755107,
       "orientation": "less is riskier",
-      "p_value_clustered": 0.408,
+      "p_value_clustered": 0.391,
       "positives": 991,
       "support": 2451
     },
@@ -74,15 +74,15 @@
       "auc_as_recorded": 0.30403369743699576,
       "auc_oriented": 0.6959663025630042,
       "ci95_clustered": [
-        -0.15488835608181417,
-        -0.08529228229799912
+        -0.15525939559265778,
+        -0.08567772020725384
       ],
       "ci95_unclustered": [
-        -0.15177093070855563,
-        -0.08598606906877582
+        -0.1519419508545966,
+        -0.08563716184148074
       ],
-      "model_auc_on_support": 0.577401095370682,
-      "model_minus_baseline": -0.11856520719232222,
+      "model_auc_on_support": 0.57733684178319,
+      "model_minus_baseline": -0.11862946077981418,
       "orientation": "less is riskier",
       "p_value_clustered": 0.0,
       "positives": 609,
@@ -92,17 +92,17 @@
       "auc_as_recorded": 0.43096670837461937,
       "auc_oriented": 0.5690332916253806,
       "ci95_clustered": [
-        -0.12979615134999878,
-        0.12836136732127612
+        -0.12864690376195165,
+        0.12913037126398974
       ],
       "ci95_unclustered": [
-        -0.03526829610052018,
-        0.03433180555054316
+        -0.034745079000164214,
+        0.0350805134590213
       ],
-      "model_auc_on_support": 0.5684203293722833,
-      "model_minus_baseline": -0.0006129622530973711,
+      "model_auc_on_support": 0.5690158128590681,
+      "model_minus_baseline": -1.747876631252865e-05,
       "orientation": "less is riskier",
-      "p_value_clustered": 0.894,
+      "p_value_clustered": 0.902,
       "positives": 722,
       "support": 1871
     }
@@ -128,9 +128,8 @@
       "unscoped_measured": 1029,
       "unscoped_total": 1029
     },
-    "insufficient_data": 2303,
+    "insufficient_data": 2906,
     "signals_measured": {
-      "deprecation": 2906,
       "license": 2695,
       "maintainer": 2906,
       "source_repository": 2906
@@ -140,60 +139,60 @@
   "model": {
     "auc": {
       "ci95": [
-        0.5357111352114284,
-        0.593931218355642
+        0.5361166095173733,
+        0.5944728554534433
       ],
-      "estimate": 0.5658283689198222,
+      "estimate": 0.5664953698242303,
       "replicates": 2000
     },
-    "average_precision": 0.44599295063792316,
+    "average_precision": 0.44974709955207376,
     "calibration": [
       {
         "bucket": "LOW",
-        "count": 2144,
-        "positives": 858,
-        "rate": 0.4001865671641791
+        "count": 882,
+        "positives": 242,
+        "rate": 0.2743764172335601
       },
       {
         "bucket": "MEDIUM",
-        "count": 588,
-        "positives": 240,
-        "rate": 0.40816326530612246
+        "count": 1349,
+        "positives": 638,
+        "rate": 0.4729429206819867
       },
       {
         "bucket": "HIGH",
-        "count": 174,
-        "positives": 78,
-        "rate": 0.4482758620689655
+        "count": 496,
+        "positives": 215,
+        "rate": 0.4334677419354839
       },
       {
         "bucket": "CRITICAL",
-        "count": 0,
-        "positives": 0,
-        "rate": null
+        "count": 179,
+        "positives": 81,
+        "rate": 0.45251396648044695
       }
     ],
     "operating_points": [
       {
-        "flagged": 762,
-        "precision": 0.41732283464566927,
-        "recall": 0.27040816326530615,
+        "flagged": 2024,
+        "precision": 0.4614624505928854,
+        "recall": 0.79421768707483,
         "threshold": 0.25,
-        "true_positives": 318
+        "true_positives": 934
       },
       {
-        "flagged": 174,
-        "precision": 0.4482758620689655,
-        "recall": 0.0663265306122449,
+        "flagged": 675,
+        "precision": 0.43851851851851853,
+        "recall": 0.25170068027210885,
         "threshold": 0.5,
-        "true_positives": 78
+        "true_positives": 296
       },
       {
-        "flagged": 0,
-        "precision": null,
-        "recall": 0.0,
+        "flagged": 179,
+        "precision": 0.45251396648044695,
+        "recall": 0.06887755102040816,
         "threshold": 0.75,
-        "true_positives": 0
+        "true_positives": 81
       }
     ],
     "signals": [
@@ -458,11 +457,11 @@
     "rule": "N is read off the life table by two rules in order: the first whole year whose 12-month resumption hazard is below the cutoff, or failing that the first year after which the hazard stops falling. Where the candidate cut-off dates disagree, the largest N is taken: it is the conservative one, because it labels fewer packages abandoned."
   },
   "negative_control": {
-    "observed_auc": 0.5658283689198222,
+    "observed_auc": 0.5664953698242303,
     "rounds": 200,
-    "shuffled_auc_max": 0.5277419782942079,
-    "shuffled_auc_mean": 0.4993123992371513,
-    "shuffled_auc_min": 0.4669207856553026
+    "shuffled_auc_max": 0.5283696571113995,
+    "shuffled_auc_mean": 0.4991828722818606,
+    "shuffled_auc_min": 0.4668910483268452
   },
   "note": "Labels are lower bounds: a package counted as abandoned may yet publish again after the observation window closes.",
   "snapshot": {
@@ -507,7 +506,7 @@
           2,
           74
         ],
-        "model_auc": 0.5597560975609757,
+        "model_auc": 0.5593292682926829,
         "stratum": 1
       },
       {
@@ -518,7 +517,7 @@
           75,
           208
         ],
-        "model_auc": 0.5439889336016096,
+        "model_auc": 0.5426307847082495,
         "stratum": 2
       },
       {
@@ -529,7 +528,7 @@
           208,
           693
         ],
-        "model_auc": 0.5339048303475181,
+        "model_auc": 0.528360967096145,
         "stratum": 3
       },
       {
@@ -540,7 +539,7 @@
           693,
           6411
         ],
-        "model_auc": 0.48928014553014554,
+        "model_auc": 0.49330821205821207,
         "stratum": 4
       },
       {
@@ -551,7 +550,7 @@
           6438,
           199959655
         ],
-        "model_auc": 0.5720295767465579,
+        "model_auc": 0.5725395206527282,
         "stratum": 5
       }
     ],
