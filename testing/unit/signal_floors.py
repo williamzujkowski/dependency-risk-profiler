@@ -60,8 +60,9 @@ nuget            7  —
 python           7  —
 rubygems         7  —
 nodejs           7  —
-maven            5  ``maintainer`` (``<developers>`` is inherited free
-                    text), ``deprecation`` (Maven Central publishes no
+maven            5  ``maintainer`` (``<developers>`` is published, and is a
+                    credits list rather than a publish-rights list — see
+                    below), ``deprecation`` (Maven Central publishes no
                     retirement marker of any kind — see #179).
 gradle           5  the same two, by construction: Gradle publishes Maven
                     coordinates and resolves against Maven Central, so a
@@ -92,6 +93,38 @@ and you raise its number in the same change; that is the intended cost, and it
 is how a conformance gate differs from a smoke test. The collapse arithmetic
 itself lives in ``test_signal_floors.py`` as its own assertion instead of
 masquerading as the floor.
+
+Maven's ``maintainer``, which is withheld for a different reason
+--------------------------------------------------------------
+Every other entry above is withheld because the registry publishes nothing.
+Maven's is not, and the row said so wrongly for months: ``<developers>`` was
+recorded as "inherited free text", and it is neither.
+
+Measured against ``repo1.maven.org`` rather than against the comment: **13 of
+20 sampled artifacts publish a ``<developers>`` block, and 11 carry structured
+``<id>`` values** — ``commons-lang3`` has 27, ``commons-io`` 20, ``junit`` 17.
+Inheritance is not the obstacle either; the tool already walks parent chains
+(#278/#307), and ``guava`` carries none while ``guava-parent`` does, so
+resolving the chain would *raise* coverage.
+
+It stays withheld because it measures a different thing. ``<id>`` counts across
+a decade of the same artifact move — ``commons-lang3`` 16 → 25 → 28 → 27 from
+2012 to 2024 — so the list is maintained rather than dead. But it grows and
+almost never shrinks, which is a **credits list accumulating contributors**,
+not a publish-rights list. npm's ``maintainers`` answers *who can ship this
+today* and is enforced by the registry; 22.8% of npm packages changed that set
+within two years. Maven's moves by one to three entries across five-year gaps.
+
+For a bus-factor reading those point opposite ways: a high npm count means
+several people can act, while ``commons-lang3`` at 27 emphatically does not
+mean 27 people can cut a release. Feeding it into ``maintainer_count`` would
+make one signal mean "who can act" on npm and "who has ever been credited" on
+Maven — a construct mismatch behind a shared name, which is the defect shape
+this repository exists to remove.
+
+So the honest state is: **published, machine-readable, and not comparable.**
+Recording it as unpublished was false; recording it as ``maintainer`` would be
+worse.
 
 Which of them reach a verdict at all
 ------------------------------------
