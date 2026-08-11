@@ -1,0 +1,88 @@
+{
+  "protocol": "docs/composition-protocol.md",
+  "reads": "no outcome, no label, no network",
+  "t": "2023-08-01",
+  "seed": 20260811,
+  "bootstrap_rounds": 2000,
+  "permutation_rounds": 2000,
+  "qualifier": "the population is every cohort member; the composite exists even where the verdict is suppressed (\u00a79)",
+  "abstention": {
+    "cohort": 2536,
+    "analysed": 2536,
+    "ablated_abstention_rate": 1.0,
+    "shipped_abstention_rate": 0.73698738170347,
+    "shipped_verdicts_issued": 667,
+    "being_scored_r2_on_battery": 0.05721215876799213,
+    "being_scored_ci95": [
+      0.04151522121982609,
+      0.07983452121973256
+    ],
+    "battery_spearman_with_being_scored": {
+      "days_since_last_release": 0.035315009919729336,
+      "releases_1y": 0.06176419060063603,
+      "releases_90d": -0.011109200738180327,
+      "releases_total": 0.026522414987683117,
+      "release_span_days": -0.2128382801078853
+    }
+  },
+  "n_scored": 2536,
+  "ablated": {
+    "r2": 0.0936784225024111,
+    "adjusted_r2": 0.09188727313976752,
+    "ci95": [
+      0.07056291673206838,
+      0.12660415591884766
+    ],
+    "grouped_cv_r2": 0.08679004120169054,
+    "tie_structure": {
+      "distinct_values": 11.0,
+      "largest_level_share": 0.47634069400630913
+    },
+    "single_predictor_r2": {
+      "days_since_last_release": 0.04866307153218796,
+      "releases_1y": 0.02249555501275924,
+      "releases_90d": 0.04370211611592523,
+      "releases_total": 0.04057612455434756,
+      "release_span_days": 0.06416160038539498
+    },
+    "permutation_null_mean": 0.0021149018623848334,
+    "permutation_null_p95": 0.004731175808791455
+  },
+  "shipped": {
+    "note": "VOID at reconstructed T: staleness is 1.0 and version 0.0 for all 2,906 packages, so the shipped composite is an affine transform of the ablated one and rank-identical to it. Falsification line 4 is unanswerable, not answered.",
+    "staleness_distinct_values": 1,
+    "version_distinct_values": 1,
+    "r2": 0.0936784225024111,
+    "ci95": [
+      0.07056291673206838,
+      0.12660415591884766
+    ],
+    "tie_structure": {
+      "distinct_values": 11.0,
+      "largest_level_share": 0.47634069400630913
+    }
+  },
+  "spearman_ablated_vs_battery": {
+    "days_since_last_release": 0.2205970796093819,
+    "releases_1y": -0.14998518264401728,
+    "releases_90d": -0.20905051092002888,
+    "releases_total": -0.20143516215980647,
+    "release_span_days": -0.2533014022570641
+  },
+  "spearman_shipped_vs_battery": {
+    "days_since_last_release": 0.2205970796093819,
+    "releases_1y": -0.14998518264401728,
+    "releases_90d": -0.20905051092002888,
+    "releases_total": -0.20143516215980647,
+    "release_span_days": -0.2533014022570641
+  },
+  "per_signal_spearman_vs_days_since_last_release": {
+    "license_score": -0.10176948269252892,
+    "maintainer_score": 0.2404607118897571,
+    "source_repository_score": 0.03684935058011909,
+    "staleness_score": null,
+    "version_score": null
+  },
+  "branch": "claim-withdrawn",
+  "reason": "ablated R\u00b2 0.0937; the composite is not substantially a function of publication activity, and the project's headline conclusion is corrected in the same change"
+}

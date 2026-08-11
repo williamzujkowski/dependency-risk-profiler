@@ -110,3 +110,31 @@ fresh frame, so the two populations are disjoint by construction and no pilot
 row can reach the confirmatory analysis. It reads classification buckets only —
 enforced by a test, not by a promise. Its decision rule was fixed in §15 before
 the module existed.
+
+## `composition/`
+
+`docs/composition-protocol.md`, result in `docs/composition-result.md`. Asks
+what the composite score **is**, not what it predicts — **no outcome, no label,
+no window**, so none of the four requirements that closed
+`docs/outcome-landscape.md` apply. There is nothing for the signals to be
+coupled to.
+
+| Path | What it is |
+|---|---|
+| `composition/battery.py` | The five activity measures at T, and the two composites |
+| `composition/analysis.py` | Rank statistics: Spearman, rank-R², clustered bootstrap and permutation null, grouped cross-validation |
+| `composition/experiment.py` | The run, in the pre-registered order |
+
+Offline and seeded; two runs produce identical files.
+
+```bash
+PYTHONPATH=research uv run python -m composition.experiment \
+    --snapshot research/data/npm-2026-08-06 \
+    --t 2024-08-01 --out research/results/composition-2024.json
+```
+
+**Result: the claim was withdrawn.** Five direct measures of publication
+activity explain R² ≈ 0.099 of the composite's rank variance (0.075 / 0.094 /
+0.099 at three dates), about forty times the permutation null and well under
+the 0.15 floor. The composite is *not* an activity proxy — which corrects a
+sentence this project had been carrying as an inference for five studies.

@@ -186,13 +186,25 @@ if the composite discriminates this outcome at all, it does so **below 0.584**.
 The reason to write it down is the shape rather than the values. Every outcome
 these signals scored above chance on was substantially an activity proxy —
 abandonment at 0.7346 for release cadence alone. Given an outcome measured to
-be independent of activity, the composite lands on 0.4955. **If that survives
-power, the reading is that the signals detect activity rather than risk, and
-the outcomes they appeared to predict were activity in disguise.**
+be independent of activity, the composite lands on 0.4955.
 
-That is the claim most worth testing and least safe to assert from here. A
-replication needs a fresh cohort — not this one, whose answer is known — with
-the protocol fixed before the data is touched.
+**The reading that followed from that shape has since been measured, and it was
+wrong.** The sentence this section used to carry — *"the signals detect activity
+rather than risk, and the outcomes they appeared to predict were activity in
+disguise"* — asserted something about the composite's composition that nobody
+had checked. `composition-result.md` checked it: five direct measures of how
+recently and how often a package published explain **R² ≈ 0.099** of the
+composite's rank variance, stable at 0.075 / 0.094 / 0.099 across three dates,
+about forty times the permutation null and nowhere near the 0.15 floor the
+protocol pre-registered for the claim.
+
+So both halves of the shape are true and the conclusion drawn from them was
+not. The composite **is not an activity proxy**, and it still failed against
+every outcome tried. That is the harder reading #349 pointed at: it measures
+something largely orthogonal to the obvious proxies — ρ = −0.295 against log
+downloads, R² ≈ 0.10 against activity — *and that something barely predicts
+anything.* Adding more signals of the same family is not obviously the fix, and
+now there is a number behind that sentence rather than a suspicion.
 
 ### Outcomes that do not work, and why — so they are not re-proposed
 
