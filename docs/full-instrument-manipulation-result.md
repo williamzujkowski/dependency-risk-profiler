@@ -92,13 +92,40 @@ was offered or sought. It does not say the eight signals are badly built: read
 against a repository that genuinely belongs to the package, they may measure
 exactly what they claim. **The finding is about who chooses the input.**
 
-## Limits
+## The causal step, now measured — and the premise was wrong
 
-- **Constructed metadata, not a live clone.** The single reviewer who voted to
-  reject was right that the causal middle step — *does a real substituted
-  repository actually read uniformly healthy?* — is assumed here. Closing that
-  needs one end-to-end run through the production collectors against a recorded
-  repository, and it is the obvious next piece of work.
+The reviewer who voted to reject said the middle step was assumed: *does a real
+substituted repository actually read uniformly healthy?* It was, and it does
+not. Running three production collectors against `ossf/scorecard` — the
+OpenSSF's own security-scoring project, about as healthy as a repository gets:
+
+| collector | measured | risk score |
+|---|---|---:|
+| security policy | present | **0.79** |
+| branch protection | present | **0.30** |
+| signed commits | **unmeasured** | — |
+
+Not one of the three reads clean. **The 0.8710 ceiling above is not reachable
+by pointing at a good repository**, and it should be read as the arithmetic
+bound it was labelled as, nothing more.
+
+**Realised drop from those three collectors alone: 0.7333.** And that is the
+finding worth having, because it survives the premise being wrong:
+
+> **An attacker does not need a healthy repository. They need any repository.**
+
+A substituted repo scoring 0.79 on security policy is still an enormous
+improvement over declaring none, because "no repository" scores 1.0 — the top
+of the scale. Substitution pays even when the substitute is mediocre.
+
+**Correction to the section above.** The abstention flip reported there came
+from the constructed arm, where eight signals were asserted measured. With
+three collectors actually run, the package **remains `insufficient_data`**. The
+flip therefore requires enough of the suite to clear the sufficiency bar, which
+a real run would do and this partial one does not. The claim as originally
+written was broader than what has now been measured.
+
+## Limits
 - **Detection is unmodelled.** A package pointing at `facebook/react` is
   trivially spotted by a human and by nothing in the tool.
 - **The fix is not obvious.** npm provenance and a reciprocal reference in the
