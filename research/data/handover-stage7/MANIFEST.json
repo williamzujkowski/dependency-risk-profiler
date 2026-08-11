@@ -1,0 +1,20 @@
+{
+ "T": "2024-08-01",
+ "files": {
+  "github-owner-now.json": {
+   "sha256": "b82dba89171524924270e6e807c475c05c87a9b504248c77e3c900797692c56c"
+  },
+  "rename-audit.json": {
+   "sha256": "7681e304ad98e60fd179b62a8aed084b774756edb34f14197bd82b7b2e450c41"
+  }
+ },
+ "github_owner": {
+  "method": "gh api repos/<owner>/<repo> -q .full_name; GitHub resolves transfers and renames transparently",
+  "repos": 1749
+ },
+ "purpose": "stage 7 misclassification audit for docs/handover-outcome-protocol.md",
+ "rename_audit": {
+  "method": "registry.npmjs.org /-/v1/search?text=maintainer:<user>; the direct user endpoints are anti-bot blocked (401/403)",
+  "pairs": 59
+ }
+}
