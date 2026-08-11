@@ -131,6 +131,8 @@ coupled to.
 | `composition/enumerate_table.py` | Prints the whole table. `docs/lookup-table-result.md` |
 | `composition/manipulation.py` | Prices the attacker moves the table exposes |
 | `composition/price_manipulation.py` | Runs the pricing. `docs/manipulation-result.md` |
+| `composition/attacker_surface.py` | What share of the composite's weight a package chooses. Reads the scorer's own constructor |
+| `composition/substitution_demo.py` | The arithmetic ceiling on repository substitution, through the real scorer |
 
 Offline and seeded; two runs produce identical files.
 
