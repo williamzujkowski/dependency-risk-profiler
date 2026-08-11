@@ -1,0 +1,303 @@
+{
+  "cells": [
+    {
+      "cell": [
+        "0-1",
+        "DECLARED"
+      ],
+      "score": 0.571429,
+      "packages": 1262,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.571429,
+        "accounts_needed": 5,
+        "requires_publish": false
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "drop": 0.571429,
+        "accounts_needed": 5
+      }
+    },
+    {
+      "cell": [
+        "0-1",
+        "UNDECLARED"
+      ],
+      "score": 1.0,
+      "packages": 409,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 1.0,
+        "accounts_needed": 5,
+        "requires_publish": true
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "UNDECLARED"
+        ],
+        "drop": 0.571429,
+        "accounts_needed": 5
+      }
+    },
+    {
+      "cell": [
+        "5+",
+        "DECLARED"
+      ],
+      "score": 0.0,
+      "packages": 338,
+      "best_move": null,
+      "best_move_without_publish": null
+    },
+    {
+      "cell": [
+        "3-4",
+        "DECLARED"
+      ],
+      "score": 0.142857,
+      "packages": 281,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.142857,
+        "accounts_needed": 2,
+        "requires_publish": false
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "drop": 0.142857,
+        "accounts_needed": 2
+      }
+    },
+    {
+      "cell": [
+        "2",
+        "DECLARED"
+      ],
+      "score": 0.285714,
+      "packages": 266,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.285714,
+        "accounts_needed": 3,
+        "requires_publish": false
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "drop": 0.285714,
+        "accounts_needed": 3
+      }
+    },
+    {
+      "cell": [
+        "5+",
+        "UNDECLARED"
+      ],
+      "score": 0.428571,
+      "packages": 136,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.428571,
+        "accounts_needed": 0,
+        "requires_publish": true
+      },
+      "best_move_without_publish": null
+    },
+    {
+      "cell": [
+        "3-4",
+        "UNDECLARED"
+      ],
+      "score": 0.571429,
+      "packages": 90,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.571429,
+        "accounts_needed": 2,
+        "requires_publish": true
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "UNDECLARED"
+        ],
+        "drop": 0.14285799999999998,
+        "accounts_needed": 2
+      }
+    },
+    {
+      "cell": [
+        "2",
+        "UNDECLARED"
+      ],
+      "score": 0.714286,
+      "packages": 66,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.714286,
+        "accounts_needed": 3,
+        "requires_publish": true
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "UNDECLARED"
+        ],
+        "drop": 0.285715,
+        "accounts_needed": 3
+      }
+    },
+    {
+      "cell": [
+        "0-1",
+        "UNUSABLE"
+      ],
+      "score": 0.892857,
+      "packages": 30,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.892857,
+        "accounts_needed": 5,
+        "requires_publish": true
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "UNUSABLE"
+        ],
+        "drop": 0.571428,
+        "accounts_needed": 5
+      }
+    },
+    {
+      "cell": [
+        "2",
+        "UNUSABLE"
+      ],
+      "score": 0.607143,
+      "packages": 14,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.607143,
+        "accounts_needed": 3,
+        "requires_publish": true
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "UNUSABLE"
+        ],
+        "drop": 0.28571399999999997,
+        "accounts_needed": 3
+      }
+    },
+    {
+      "cell": [
+        "3-4",
+        "UNUSABLE"
+      ],
+      "score": 0.464286,
+      "packages": 8,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.464286,
+        "accounts_needed": 2,
+        "requires_publish": true
+      },
+      "best_move_without_publish": {
+        "to": [
+          "5+",
+          "UNUSABLE"
+        ],
+        "drop": 0.14285699999999996,
+        "accounts_needed": 2
+      }
+    },
+    {
+      "cell": [
+        "5+",
+        "UNUSABLE"
+      ],
+      "score": 0.321429,
+      "packages": 6,
+      "best_move": {
+        "to": [
+          "5+",
+          "DECLARED"
+        ],
+        "score_after": 0.0,
+        "drop": 0.321429,
+        "accounts_needed": 0,
+        "requires_publish": true
+      },
+      "best_move_without_publish": null
+    }
+  ],
+  "packages": 2906,
+  "movable_share": 0.8836889194769443,
+  "movable_without_publish_share": 0.8348245010323468,
+  "full_scale_move": {
+    "from": [
+      "0-1",
+      "UNDECLARED"
+    ],
+    "to": [
+      "5+",
+      "DECLARED"
+    ],
+    "drop": 1.0,
+    "accounts_needed": 5,
+    "requires_publish": true
+  },
+  "source": "docs/lookup-table-result.md, enumerated exhaustively"
+}
