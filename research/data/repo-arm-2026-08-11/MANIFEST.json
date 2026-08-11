@@ -1,0 +1,41 @@
+{
+ "T": "2024-08-01",
+ "clone_method": "git clone --filter=blob:none --bare --no-recurse-submodules --no-tags, URL after a -- separator and rebuilt from the validated owner/repo, GIT_TERMINAL_PROMPT=0, ambient git config neutralised, ulimit -f 512MiB and a 300s wall clock per clone (protocol 10).",
+ "clone_storage": "6.3 GB under /home/william/.cache/drp-repo-arm/clones; deleted after stage 4. signals.json carries the per-repo reads, so stages 5-7 do not need the clones back.",
+ "files": {
+  "bias.json": {
+   "sha256": "c223853373b588611edf7e885d2a8c051febe85a74253d533889ea953e2693a4"
+  },
+  "clones.json": {
+   "sha256": "14540a13925004f5bd8d34d0b415ab0ce27397c71030fe1a5f8b49087d5f70dc"
+  },
+  "declarations.json": {
+   "sha256": "e8ee0ed6dd7cd043c97af79612a8a57c0c83c0d5f10ec7ced3fa9a2f363681fd"
+  },
+  "signals.json": {
+   "sha256": "2d77c2c679c36813235e94bce0ebaafa6005c02abe5d53ce52ffcfd6cae5b352"
+  },
+  "stage2.json": {
+   "sha256": "53aee5bf5b4cb8565cf4a5c86a04826ebb2c1e23d80b3e33e542b05800d83b46"
+  },
+  "stage3.json": {
+   "sha256": "79877447e1e963be48e004d22d4adf1a8807607dfd345d0ae9bcbb0388b77c94"
+  },
+  "stage4.json": {
+   "sha256": "6773afd5635ce2d29ac3005a6df8ce072de853d1d6cd51f3d7cae3dff688405e"
+  }
+ },
+ "note": "No model AUC, no registry-only baseline and no ablation was computed in this run. Stage 4 measures only permuted-label distributions.",
+ "registers": "docs/repository-arm-protocol.md stages 2-4",
+ "snapshot": "research/data/npm-2026-08-06",
+ "stages_not_run": [
+  5,
+  6,
+  7
+ ],
+ "stages_run": [
+  2,
+  3,
+  4
+ ]
+}

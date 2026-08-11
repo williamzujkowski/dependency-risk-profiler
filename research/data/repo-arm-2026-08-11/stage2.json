@@ -1,0 +1,51 @@
+{
+ "T": "2024-08-01",
+ "clone_size_bytes_max": 434143795,
+ "clone_storage_bytes": 6517406170,
+ "cohort_abandoned": 1176,
+ "cohort_clusters": 2177,
+ "cohort_size": 2906,
+ "declaration_categories": {
+  "github": 2066,
+  "github_unparseable": 68,
+  "no_declaration": 701,
+  "other_host": 71
+ },
+ "distinct_repositories": 1749,
+ "gate_resolution": {
+  "observed": 0.9075508228460794,
+  "passed": true,
+  "threshold": 0.6
+ },
+ "github_packages": 2066,
+ "package_failures": {
+  "not_found": 191
+ },
+ "package_resolution_rate_of_cohort": 0.6452167928423951,
+ "package_resolution_rate_of_github": 0.9075508228460794,
+ "post_outcome_conditioning": {
+  "not_studied_any_reason": {
+   "abandoned": 432,
+   "clusters": 879,
+   "n": 1031,
+   "rate": 0.4190106692531523
+  },
+  "resolvable": {
+   "abandoned": 744,
+   "clusters": 1352,
+   "n": 1875,
+   "rate": 0.3968
+  },
+  "unresolvable_declared_github": {
+   "abandoned": 84,
+   "clusters": 150,
+   "n": 191,
+   "rate": 0.4397905759162304
+  }
+ },
+ "repositories_resolved": 1587,
+ "repository_failures": {
+  "not_found": 162
+ },
+ "repository_resolution_rate": 0.9073756432246999
+}

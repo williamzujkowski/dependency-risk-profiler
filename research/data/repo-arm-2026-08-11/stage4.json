@@ -1,0 +1,107 @@
+{
+ "arm": {
+  "abandoned": 742,
+  "base_rate": 0.3970037453183521,
+  "largest_cluster": 127,
+  "maintainer_clusters": 1348,
+  "nominal_n": 1869,
+  "signals_measured": {
+   "community_activity": 1869,
+   "dependency_update": 1869,
+   "health_indicators": 1869,
+   "license": 1825,
+   "maintained": 1869,
+   "maintainer": 1869,
+   "security_policy": 1869,
+   "source_repository": 1869
+  }
+ },
+ "download_support": {
+  "abandoned": 401,
+  "bins": [
+   {
+    "abandoned": 134,
+    "base_rate": 0.6871794871794872,
+    "bin": 1,
+    "clusters": 187,
+    "downloads_at_t": [
+     2,
+     83
+    ],
+    "n": 195
+   },
+   {
+    "abandoned": 82,
+    "base_rate": 0.4205128205128205,
+    "bin": 2,
+    "clusters": 182,
+    "downloads_at_t": [
+     83,
+     237
+    ],
+    "n": 195
+   },
+   {
+    "abandoned": 73,
+    "base_rate": 0.37435897435897436,
+    "bin": 3,
+    "clusters": 190,
+    "downloads_at_t": [
+     239,
+     1354
+    ],
+    "n": 195
+   },
+   {
+    "abandoned": 63,
+    "base_rate": 0.3230769230769231,
+    "bin": 4,
+    "clusters": 184,
+    "downloads_at_t": [
+     1388,
+     13643
+    ],
+    "n": 195
+   },
+   {
+    "abandoned": 49,
+    "base_rate": 0.24623115577889448,
+    "bin": 5,
+    "clusters": 156,
+    "downloads_at_t": [
+     14934,
+     199959655
+    ],
+    "n": 199
+   }
+  ],
+  "maintainer_clusters": 849,
+  "nominal_n": 979
+ },
+ "note": "No observed AUC is computed anywhere in this run. Stages 5-7 are not executed.",
+ "primary_control_within_download_bin": {
+  "band": [
+   0.47,
+   0.53
+  ],
+  "label_preservation": 0.560694586312564,
+  "max": 0.5656068930565236,
+  "mean": 0.5013125053974443,
+  "min": 0.4411220685225715,
+  "passed": true,
+  "rounds": 200,
+  "statistic": "unweighted mean of the five within-bin AUCs"
+ },
+ "secondary_control_global": {
+  "band": [
+   0.47,
+   0.53
+  ],
+  "max": 0.5325447183443869,
+  "mean": 0.4991811741689528,
+  "min": 0.4556499735719906,
+  "passed": true,
+  "rounds": 200,
+  "statistic": "pooled AUC over the arm"
+ }
+}
