@@ -3,7 +3,6 @@ name: "Dependency Risk Profiler CodeQL Configuration"
 paths-ignore:
   - "**/testing/**"
   - "**/examples/**"
-  - "**/test_dirs/**"
   - "**/venv/**"
   - "**/*.test.py"
   - "**/*_test.py"
