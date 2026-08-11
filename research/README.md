@@ -129,6 +129,8 @@ coupled to.
 | `composition/experiment.py` | The run, in the pre-registered order |
 | `composition/lookup.py` | The composite's input surface, reduced to what it can distinguish |
 | `composition/enumerate_table.py` | Prints the whole table. `docs/lookup-table-result.md` |
+| `composition/manipulation.py` | Prices the attacker moves the table exposes |
+| `composition/price_manipulation.py` | Runs the pricing. `docs/manipulation-result.md` |
 
 Offline and seeded; two runs produce identical files.
 
