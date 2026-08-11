@@ -102,3 +102,86 @@ necessary half only, and the write-up says so.
   Stated plainly rather than buried: knowing 12% of quiet packages had a
   maintainer change *at some point in two years* does not tell you whether the
   change came before or after anything mattered.
+
+---
+
+## 6. Amendment: the baseline was not T, and the bias ran the wrong way
+
+Reviewed **4-3, below supermajority — rejected.** Three reviewers independently
+found the same defect and it is decisive.
+
+### The defect
+
+The comparison baseline is the `maintainers` array in the version document in
+force at T. **That array was frozen at that version's publish date, not at T.**
+For a quiet package the two are by definition different, and can be years
+apart: a package that last published in 2017 gets a 2017 baseline, and a
+maintainer change in 2019 would have been counted as movement and reported
+under "N% of quiet packages over two years".
+
+The sharp part is what that does to the direction of the error. **The inflation
+is maximal exactly in the subset the claim is about.** The quieter the package,
+the older its baseline, the more pre-T drift leaks into the numerator — so
+falsification line 1 was biased *toward* passing its own 5% bar. A
+pre-registration may be biased in many ways; that is the one direction it must
+never be biased in, and committing it to git first would only have laundered it.
+
+This is the repository's fourth requirement — *observable at the date claimed,
+not merely reconstructable* — applied to a study that thought it had escaped by
+not having an outcome. That is now twice in a row.
+
+### The primary quantity changes
+
+**Band crossings per package-year**, with each package's window running from the
+publish date of the version in force at T to the harvest — its actual exposure,
+not an assumed two years. The baseline-age distribution is published beside
+every rate, because a rate over an unstated window is the thing this amendment
+exists to prevent.
+
+**The headline stratum is packages whose last pre-T publish falls within six
+months of T.** For those the baseline is close to T, the window is close to two
+years, and the original claim is answerable as stated. Everything else is
+reported as a per-package-year rate and is explicitly not the headline.
+
+### Five more conditions, all adopted
+
+- **The comparator is the active complement, not a bare 5%.** "Moves often
+  enough to carry information" only means something against the rate at which
+  the same signal moves for packages that are still publishing. An absolute
+  threshold with no anchor is a number I chose.
+- **"Inert in practice" is struck from line 1.** A two-snapshot design
+  *lower-bounds* the numerator: a crossing that reverts before the harvest is
+  invisible. Reading a lower bound as a substantive conclusion is precisely the
+  observability-limit-into-finding move this repository keeps catching.
+- **Maintainer accounts are clustered, and an effective n reported.** One bot
+  added across hundreds of packages, or an npm mass-admin action, could
+  manufacture the entire crossing rate. The 2,074-cases-to-43-campaign-days
+  lesson, applied to this study rather than cited by it.
+- **A datable validation subsample.** Packages that published both before *and*
+  after T have maintainer changes datable from successive version documents.
+  That subsample calibrates the undated top-level comparison and estimates the
+  noise floor from bots and support actions, which is a floor with an argument
+  attached rather than a round number.
+- **Sets are compared by npm username only, never email**, and unresolved
+  packages are reported as signal-correlated censoring rather than noise. The
+  harvest resolved 2,906 of 2,906, so line 4 is moot — recorded because a
+  future re-run may not be so lucky.
+
+### What survived review
+
+Two of the three attacks came back clean, and both matter.
+
+**The undateable-change limit is not the transfer study's mistake.** That study
+halted because event *identity* was contaminated — 41.3% of owner changes were
+indistinguishable from renames. A band crossing is a **cardinality** change, and
+cardinality is invariant to identity confusion: a rename, an email change or a
+bot re-listing the same human cannot change the count. What dates would buy is
+lead *time*, which the scope already disclaims.
+
+**The quiet subset is not circular this time.** The previous study's subset was
+defined by not-publishing and then tested for a property entailed by
+not-publishing. Here the conditioning variable and the measured event travel
+through **different mutation channels** — `npm owner add/rm` writes without a
+publish — so no-publish neither guarantees nor forbids a band change. If
+anything the selection biases *against* the claim, since quiet packages
+plausibly see less owner churn than active ones.
