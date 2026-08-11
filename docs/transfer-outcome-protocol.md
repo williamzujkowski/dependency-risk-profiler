@@ -293,3 +293,29 @@ possible. What the freeze buys is that at harvest time it is checkable, from
 git alone, whether the scorer being scored is the scorer that was pre-specified
 — and if it is not, that fact is recorded in the write-up instead of discovered
 afterwards.
+
+---
+
+## 13. Where the detection procedure lives
+
+Condition 3 of §11 requires the detection procedure to be written and
+fixture-tested before harvest. It is `research/transfer_study/detect.py`, with
+`testing/unit/test_transfer_detection.py` as its fixtures.
+
+**This section adds no specification and moves no threshold.** The categories
+and the 20% ceiling were fixed in §11 before the code existed; this records
+where they are implemented so the freeze is checkable against something. The
+one thing worth reading twice is the discriminator, because the obvious
+procedure is wrong:
+
+`GET /repos/{owner}/{repo}` follows renames, org migrations and true transfers
+identically and returns the current `full_name` in all three cases, so comparing
+owner *logins* counts a maintainer who renamed their account as having handed
+the project to a stranger. Logins are mutable and reusable; numeric account ids
+are neither. The procedure compares ids, and where the login declared at T no
+longer resolves to any account it returns AMBIGUOUS rather than guessing — that
+is the residue the ceiling caps.
+
+Verified by mutation: replacing the id comparison with a login comparison fails
+four fixtures, so the fixtures test the thing the module exists to prevent
+rather than merely covering its lines.

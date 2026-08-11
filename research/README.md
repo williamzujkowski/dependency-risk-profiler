@@ -63,3 +63,26 @@ A re-harvest will not be byte-identical to a previous one: npm unpublishes
 versions and GitHub stars move. Every record carries the SHA-256 of the
 packument it was reduced from, so drift is detectable per package rather than
 only in aggregate.
+
+## `transfer_study/`
+
+The fifth and final outcome, pre-registered in
+`docs/transfer-outcome-protocol.md`: does the composite identify packages whose
+GitHub repository changes owner? It is the only outcome measured to be
+independent of project activity (release cadence scores 0.5104 against it), and
+it is the capstone — either branch completes `docs/outcome-landscape.md`.
+
+| Path | What it is |
+|---|---|
+| `transfer_study/detect.py` | The pre-registered decision procedure. Pure; takes fetched documents, opens nothing |
+
+**Nothing has been harvested.** The procedure exists before the cohort on
+purpose: it is condition 3 of the protocol's review, and its fixtures live in
+`testing/unit/test_transfer_detection.py`.
+
+The discriminator is the GitHub account **id**, not the login. A rename and a
+transfer are indistinguishable through `GET /repos/{owner}/{repo}`, which
+follows both transparently — and account renames are not distributed like
+handovers, so a procedure that conflates them re-couples the outcome to project
+activity through the measurement channel, which is the coupling the whole
+outcome was chosen to escape.
