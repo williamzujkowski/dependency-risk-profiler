@@ -633,6 +633,52 @@ def test_the_readme_carries_the_result_that_bounds_its_own_claim() -> None:
         "The README must link the write-up its headline numbers come from, "
         "so a reader can check them rather than take them on trust."
     )
+
+
+def test_the_compromise_protocol_still_says_what_a_null_costs() -> None:
+    """A pre-registration keeps the commitments that are inconvenient to keep.
+
+    ``docs/compromise-backtest-protocol.md`` fixes, before any data is
+    touched, what a null result means and what would license restoring the
+    claim #330 withdrew. Those two sections are the ones with something to
+    lose: the study is underpowered below a 0.05 gap, so a null will be
+    ambiguous, and an ambiguous null is exactly where "we could not detect
+    it" starts being read as "there is nothing there to detect".
+
+    The commitments are asserted individually rather than by hashing the
+    file, because a hash breaks on a typo fix and teaches people to
+    re-baseline it on sight.
+
+    This does not prove the document was written first -- git does that. It
+    proves the terms have not quietly gone missing since.
+    """
+    protocol = PYPROJECT.parent / "docs" / "compromise-backtest-protocol.md"
+    if not protocol.exists():  # pragma: no cover - committed with this test
+        return
+    text = protocol.read_text(encoding="utf-8")
+
+    required = {
+        "a null leaves the claim withdrawn": (
+            "A null leaves the withdrawn claim withdrawn"
+        ),
+        "the reinstatement bar": "≥ 0.05",
+        "the negative-control band": "[0.47, 0.53]",
+        "the stop rule on campaign count": "below 75",
+        "clustering on campaign-day": "campaign-day",
+        "born-malicious entries excluded": "2,074",
+    }
+    missing = sorted(name for name, needle in required.items() if needle not in text)
+    assert not missing, (
+        "The compromise backtest's pre-registration has lost commitments it "
+        "fixed in advance: " + ", ".join(missing) + ".\n"
+        "These are the terms that cost something to keep. If one genuinely "
+        "needs to change, change it before the data is touched and say so in "
+        "the document -- a falsification line edited after seeing results is "
+        "not a falsification line."
+    )
+
+
+def test_mypy_first_party_exemption_list_stays_empty() -> None:
     """AGENTS.md rule 8: the first-party mypy exemption list stays empty.
 
     It once held eleven modules -- including every module where this
