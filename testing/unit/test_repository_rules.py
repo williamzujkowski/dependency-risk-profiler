@@ -780,6 +780,88 @@ def test_no_test_has_another_test_s_docstring_stranded_in_its_body() -> None:
     )
 
 
+#: Directory names that are conventionally excluded whether or not this
+#: repository happens to contain one. Excluding `node_modules` is correct even
+#: with no JavaScript in the tree; excluding a path that was renamed two
+#: refactors ago is not. Only the second kind is a defect, so the first is
+#: named here rather than inferred.
+_CONVENTIONAL_EXCLUSIONS = frozenset(
+    {
+        "build",
+        "dist",
+        "htmlcov",
+        "node_modules",
+        "venv",
+        ".venv",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".tox",
+        ".eggs",
+        "site-packages",
+    }
+)
+
+
+def test_no_tool_excludes_a_path_that_does_not_exist() -> None:
+    """AGENTS.md rule 6: an exclusion naming a phantom path is not a check.
+
+    #231 removed three exclusions that named paths which did not exist —
+    ``**/test_projects/**`` had been renamed to ``testing/projects/`` in a
+    consolidation, and ``dependabot_check/`` never existed at all. Each read
+    as a deliberate narrowing of a tool's scope and narrowed nothing, which
+    is the same defect as ``Analyze (go)`` succeeding over an empty file set:
+    a claim about coverage that the coverage does not have.
+
+    Nothing stopped a new one, and one had already appeared —
+    ``**/test_dirs/**`` in the CodeQL config, removed alongside this test.
+
+    The rule cannot simply be "every excluded path exists". Excluding
+    ``node_modules`` is right whether or not this tree has one, and
+    ``build/`` is absent here yet correct to exclude. Those are conventions,
+    listed in :data:`_CONVENTIONAL_EXCLUSIONS`; everything else names
+    something repository-specific and has to point at something real.
+    """
+    root = PYPROJECT.parent
+    config = root / ".github" / "codeql" / "codeql-config.yml"
+    if not config.exists():  # pragma: no cover - config is committed
+        return
+
+    block = re.search(
+        r"^paths-ignore:\s*\n((?:\s*-\s*.+\n)+)",
+        config.read_text(encoding="utf-8"),
+        re.M,
+    )
+    assert block, (
+        "AGENTS.md rule 6: could not read paths-ignore from the CodeQL "
+        "config. If it moved, move this check with it — a parser that "
+        "silently finds nothing is the defect it is meant to catch."
+    )
+
+    phantom: List[str] = []
+    for raw in re.findall(r"-\s*[\"']?([^\"'\n]+)[\"']?", block.group(1)):
+        entry = raw.strip()
+        # Only directory-shaped entries name a place. `**/*_test.py` is a
+        # filename pattern and matching nothing today is unremarkable.
+        segments = [s for s in entry.split("/") if s and s != "**"]
+        if not segments or any("*" in s for s in segments):
+            continue
+        name = segments[-1]
+        if name in _CONVENTIONAL_EXCLUSIONS:
+            continue
+        if not any(root.glob(f"**/{name}")):
+            phantom.append(entry)
+
+    assert not phantom, (
+        "AGENTS.md rule 6: a tool exclusion names a path that does not "
+        "exist, so it narrows nothing while reading as though it does.\n"
+        "Delete it, or correct it to the path it was renamed to. If it is a "
+        "convention that is legitimately absent here, add the directory name "
+        "to _CONVENTIONAL_EXCLUSIONS with the reason.\n\n" + "\n".join(phantom)
+    )
+
+
 def test_mypy_first_party_exemption_list_stays_empty() -> None:
     """AGENTS.md rule 8: the first-party mypy exemption list stays empty.
 
