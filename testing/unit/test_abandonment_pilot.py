@@ -275,6 +275,27 @@ def test_a_label_window_that_has_not_closed_is_refused() -> None:
         build_cohort([record], T, 3, T + timedelta(days=200))
 
 
+def test_a_chosen_t_too_close_to_the_harvest_is_refused() -> None:
+    """A T passed by hand must still leave the label window closed.
+
+    ``t_for`` picks a T that closes; ``--t`` lets a caller pick one that does
+    not, and the failure is silent rather than loud: every package whose
+    silence is still running gets counted as abandoned, so the base rate rises
+    and the labels describe a window that has not finished. Refusing is the
+    only version of this that cannot be misread, because the run would
+    otherwise produce a complete, plausible, wrong results document.
+
+    Driven against the pinned snapshot rather than a synthetic one because the
+    check needs N and the harvest instant, and both are read from the snapshot
+    it is guarding.
+    """
+    snapshot = Path(__file__).resolve().parents[2] / "research/data/npm-2026-08-06"
+    if not snapshot.exists():  # pragma: no cover - data is committed
+        pytest.skip("pinned snapshot not present")
+    with pytest.raises(ValueError, match="label window open"):
+        experiment.run(snapshot_dir=snapshot, moment=datetime.now(timezone.utc))
+
+
 def test_a_package_already_dormant_at_t_is_excluded() -> None:
     dormant = _record(
         name="dormant",

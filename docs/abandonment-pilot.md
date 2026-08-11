@@ -375,6 +375,57 @@ and asserts the AUC goes to 1.0. Without that, a harness wired to a constant
 
 ---
 
+## Replication at three dates
+
+The result above was measured at one T, which cannot tell a finding apart from
+an artefact of the year it was measured in. Re-run at 2022-08-01 and
+2023-08-01 from the same pinned snapshot — the release documents the model
+reads are frozen, so the cohort, the labels and every signal reconstruct
+without a new packument harvest. Only the download baseline needed harvesting,
+because it was collected at one date.
+
+**The headline replicates at all three, and the published date was the
+narrowest loss of the three.**
+
+| T | n | base rate | downloads AUC | model | delta | clustered 95% CI | p | support |
+|---|---:|---:|---:|---:|---:|---|---:|---:|
+| 2022-08-01 | 2398 | 0.405 | 0.729 | 0.587 | **−0.141** | [−0.177, −0.108] | 0.00 | 1346 |
+| 2023-08-01 | 2536 | 0.395 | 0.734 | 0.587 | **−0.147** | [−0.183, −0.112] | 0.00 | 1336 |
+| 2024-08-01 | 2906 | 0.405 | 0.696 | 0.577 | −0.119 | [−0.155, −0.086] | 0.00 | 1414 |
+
+Three dates, one direction, no interval touching zero. Whatever else is
+uncertain, "download count at T beats this score at ranking npm packages for
+abandonment" is not a single-date accident.
+
+The model's own discrimination declines monotonically across the three —
+0.605, 0.585, 0.567 — while the base rate stays flat at 0.395–0.405, so it is
+not the outcome shifting underneath. The three intervals overlap, so this is a
+trend and not a demonstrated decline; what it does establish is that
+"AUC 0.577" was never a property of the tool, only of the tool in 2024.
+
+Two baselines behave differently and are worth separating:
+
+- **`dep_count` and `age_days`.** The model *beats* both significantly at 2022
+  (+0.089 and +0.059, intervals excluding zero) and beats neither by 2024. The
+  single-date reading — that the score barely differs from dependency count —
+  was the end of a trend rather than a constant.
+- **`stars_today` is not a fair comparison and should not be read as one.** It
+  is the stargazer count read *today* and applied to a past T, so it carries
+  future information, and more of it the further back T sits. Its AUC rises
+  from 0.569 at 2024 to 0.679 at 2023 as T moves *away* from the present.
+  That is the contamination becoming visible, not the baseline improving. A
+  baseline that does better the more it is allowed to cheat is a leakage
+  check, not a rival.
+
+Reproduce with `--t`, which refuses a T that leaves the label window open:
+
+```bash
+python -m research.abandonment_pilot.experiment \
+  --snapshot research/data/npm-2026-08-06 --t 2022-08-01 --out /tmp/t2022.json
+```
+
+---
+
 ## What this pilot cannot show
 
 - **Nothing about the primary claim.** The protocol says the abandonment
