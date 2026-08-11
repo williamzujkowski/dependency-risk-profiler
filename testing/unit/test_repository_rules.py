@@ -910,4 +910,3 @@ def test_the_frozen_composite_spec_still_matches_its_recorded_hash() -> None:
         "edited, in which case it is not a freeze, or the hash was updated "
         "without one -- record an amendment instead."
     )
-
