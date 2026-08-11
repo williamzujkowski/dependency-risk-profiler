@@ -253,5 +253,11 @@ essentially independent events. Its weakness is requirement 1 and its size, not
 its structure — which makes it the first outcome here whose binding constraint
 is fixable.
 
+It is pre-registered in `transfer-outcome-protocol.md`, reviewed 7-0 with
+conditions, and frozen. It is also the **capstone**: either branch of it
+completes this table, and a null there does not license a sixth attempt. The
+honest reading of five attempts is not "keep looking for an outcome that
+works" — it is that the search itself is the result.
+
 That is a statement about what is knowable here, and it should temper how much
 weight any future single study is expected to carry.
