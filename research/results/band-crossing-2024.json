@@ -1,0 +1,116 @@
+{
+  "protocol": "docs/band-crossing-protocol.md (amended, \u00a76)",
+  "t": "2024-08-01",
+  "harvested_at": "2026-08-06T14:37:36.018815+00:00",
+  "resolved": 2906,
+  "requested": 2906,
+  "primary_quantity": "band crossings per package-year",
+  "headline_stratum": {
+    "definition": "quiet packages whose last pre-T publish is within 183 days of T, so the baseline is close to T and the two-year framing is answerable as asked",
+    "packages": 486,
+    "package_years": 1105.862259016658,
+    "set_change_rate": 0.1522633744855967,
+    "band_crossing_rate": 0.0720164609053498,
+    "crossings_per_package_year": 0.031649511243038796,
+    "collapse_ratio_set_over_band": 2.1142857142857143,
+    "direction": {
+      "risk_increasing": 16,
+      "risk_decreasing": 19
+    },
+    "window_years_median": 2.2850361250163194,
+    "window_years_p90": 2.465734276967038,
+    "modified_after_newest_release_rate": 1.0
+  },
+  "quiet_all": {
+    "packages": 1174,
+    "package_years": 3020.1218015973586,
+    "set_change_rate": 0.14054514480408858,
+    "band_crossing_rate": 0.07325383304940375,
+    "crossings_per_package_year": 0.028475672721051892,
+    "collapse_ratio_set_over_band": 1.9186046511627908,
+    "direction": {
+      "risk_increasing": 38,
+      "risk_decreasing": 48
+    },
+    "window_years_median": 2.6026268163236432,
+    "window_years_p90": 2.936644612353759,
+    "modified_after_newest_release_rate": 1.0
+  },
+  "active_comparator": {
+    "packages": 1732,
+    "package_years": 3901.8879073373,
+    "set_change_rate": 0.28752886836027713,
+    "band_crossing_rate": 0.13106235565819863,
+    "crossings_per_package_year": 0.05817696596899623,
+    "collapse_ratio_set_over_band": 2.193832599118943,
+    "direction": {
+      "risk_increasing": 113,
+      "risk_decreasing": 114
+    },
+    "window_years_median": 2.137192182511186,
+    "window_years_p90": 2.7011894446603986,
+    "modified_after_newest_release_rate": 1.0
+  },
+  "whole_cohort": {
+    "packages": 2906,
+    "package_years": 6922.009708934659,
+    "set_change_rate": 0.22814865794907088,
+    "band_crossing_rate": 0.10770818995182381,
+    "crossings_per_package_year": 0.04521808162100551,
+    "collapse_ratio_set_over_band": 2.1182108626198084,
+    "direction": {
+      "risk_increasing": 151,
+      "risk_decreasing": 162
+    },
+    "window_years_median": 2.3014632297391118,
+    "window_years_p90": 2.8627226411011923,
+    "modified_after_newest_release_rate": 1.0
+  },
+  "account_clustering_quiet": {
+    "nominal_crossings": 86,
+    "distinct_accounts_involved": 434,
+    "largest_account_share": 0.08139534883720931,
+    "top_accounts": [
+      {
+        "account": "swsnr",
+        "packages": 7
+      },
+      {
+        "account": "ewlsh",
+        "packages": 7
+      },
+      {
+        "account": "totto16",
+        "packages": 7
+      },
+      {
+        "account": "alan-cole",
+        "packages": 3
+      },
+      {
+        "account": "b-schiller",
+        "packages": 3
+      },
+      {
+        "account": "xgaitanis",
+        "packages": 3
+      },
+      {
+        "account": "deloitte-drupal-support",
+        "packages": 3
+      },
+      {
+        "account": "waitingallday",
+        "packages": 3
+      },
+      {
+        "account": "mattsb42-aws",
+        "packages": 2
+      },
+      {
+        "account": "cwjames19",
+        "packages": 2
+      }
+    ]
+  }
+}
