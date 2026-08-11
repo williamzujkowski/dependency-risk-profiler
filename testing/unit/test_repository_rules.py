@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+import hashlib
 import json
 import re
 import subprocess
@@ -879,3 +880,34 @@ def test_mypy_first_party_exemption_list_stays_empty() -> None:
         "Unmask the module and fix the errors, or leave the work undone and "
         "say so -- do not re-exempt.\n\n" + "\n".join(sorted(exempt))
     )
+
+
+def test_the_frozen_composite_spec_still_matches_its_recorded_hash() -> None:
+    """The transfer protocol's freeze is tamper-evident, not asserted.
+
+    Condition 1 of the protocol's review says the composite specification is
+    frozen before harvest. A sentence saying so is exactly the defect this
+    repository keeps finding in itself, so the freeze is a byte copy with a
+    recorded hash and this recomputes it.
+
+    Drift in the *shipped* scorer is not checked here on purpose: the frozen
+    copy is the artifact under test, and ordinary maintenance of the live
+    module has to stay possible.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    protocol = repo_root / "docs" / "transfer-outcome-protocol.md"
+    frozen = repo_root / "research" / "frozen" / "transfer-outcome" / "risk_scorer.py"
+
+    assert frozen.is_file(), f"{frozen} is missing; the freeze has no artifact"
+
+    recorded = re.search(r"sha256\s+([0-9a-f]{64})", protocol.read_text())
+    assert recorded is not None, "the protocol records no hash for the frozen spec"
+
+    actual = hashlib.sha256(frozen.read_bytes()).hexdigest()
+    assert actual == recorded.group(1), (
+        "the frozen composite spec no longer matches the hash the protocol "
+        f"recorded ({recorded.group(1)} -> {actual}). Either the freeze was "
+        "edited, in which case it is not a freeze, or the hash was updated "
+        "without one -- record an amendment instead."
+    )
+
