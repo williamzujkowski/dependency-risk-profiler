@@ -892,11 +892,12 @@ def test_the_frozen_composite_spec_still_matches_its_recorded_hash() -> None:
 
     Drift in the *shipped* scorer is not checked here on purpose: the frozen
     copy is the artifact under test, and ordinary maintenance of the live
-    module has to stay possible.
+    module has to stay possible. The copy carries a ``.frozen`` suffix so mypy
+    does not read a pinned artifact as first-party source.
     """
     repo_root = Path(__file__).resolve().parents[2]
     protocol = repo_root / "docs" / "transfer-outcome-protocol.md"
-    frozen = repo_root / "research" / "frozen" / "transfer-outcome" / "risk_scorer.py"
+    frozen = repo_root / "research" / "frozen" / "transfer-outcome" / "risk_scorer.py.frozen"
 
     assert frozen.is_file(), f"{frozen} is missing; the freeze has no artifact"
 

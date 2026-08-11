@@ -272,8 +272,12 @@ Condition 1 says the protocol and the composite specification are frozen before
 harvest. Written down, that is another bar with nothing checking it — the defect
 this repository keeps finding in itself. So it is discharged with an artifact.
 
-`research/frozen/transfer-outcome/risk_scorer.py` is a byte copy of
-`src/dependency_risk_profiler/scoring/risk_scorer.py` taken at freeze time:
+`research/frozen/transfer-outcome/risk_scorer.py.frozen` is a byte copy of
+`src/dependency_risk_profiler/scoring/risk_scorer.py` taken at freeze time. The
+`.frozen` suffix is load-bearing: under a `.py` name mypy type-checks the copy
+as first-party source and fails on its now-unrooted relative imports. A frozen
+artifact is data, and naming it as data is a smaller lie than adding a tool
+exclusion that says the repository does not check one of its own Python files.
 
 ```
 sha256  b836582833fa7cd4838e2cec7aa6b413f46bcb9849c602bb1e6f48dc2dca0973
