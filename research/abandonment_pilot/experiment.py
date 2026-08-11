@@ -15,7 +15,7 @@ import json
 import logging
 import sys
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
@@ -452,6 +452,7 @@ def run(
     replicates: int = DEFAULT_REPLICATES,
     control_rounds: int = DEFAULT_CONTROL_ROUNDS,
     seed: int = DEFAULT_SEED,
+    moment: Optional[datetime] = None,
 ) -> Dict[str, object]:
     """Run the whole pilot and return the results document.
 
@@ -460,6 +461,11 @@ def run(
         replicates: Bootstrap resamples per interval.
         control_rounds: Permutations for the negative control.
         seed: Seed for every resampling.
+        moment: T. Defaults to the latest candidate whose label window closes
+            by the harvest. Earlier candidates are what make the result
+            checkable against time rather than against one date: a run at a
+            single T cannot distinguish a finding from an artefact of the
+            year it was measured in.
 
     Returns:
         The results, ready to serialize.
@@ -471,7 +477,16 @@ def run(
     years = selection["N_years"]
     if not isinstance(years, int):
         raise ValueError("N selection did not produce a whole number of years")
-    moment = t_for(years, observed_until)
+    if moment is None:
+        moment = t_for(years, observed_until)
+    elif moment + timedelta(days=years * DAYS_PER_YEAR) > observed_until:
+        # A T this late leaves the label window open: packages would be
+        # counted as abandoned on the strength of a silence still running.
+        raise ValueError(
+            f"T={moment.date()} leaves the {years}-year label window open "
+            f"at the harvest ({observed_until.date()}); the labels would be "
+            "read off an unclosed window"
+        )
 
     members, excluded = build_cohort(snapshot.packages, moment, years, observed_until)
     if not members:
@@ -599,13 +614,28 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--replicates", type=int, default=DEFAULT_REPLICATES)
     parser.add_argument("--control-rounds", type=int, default=DEFAULT_CONTROL_ROUNDS)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--t",
+        type=str,
+        default=None,
+        metavar="YYYY-MM-DD",
+        help=(
+            "T, as a date. Defaults to the latest candidate whose label "
+            "window closes by the harvest. Pass an earlier one to check "
+            "whether a result holds across time or only in its own year."
+        ),
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    moment: Optional[datetime] = None
+    if args.t is not None:
+        moment = datetime.strptime(args.t, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     results = run(
         snapshot_dir=args.snapshot,
         replicates=args.replicates,
         control_rounds=args.control_rounds,
         seed=args.seed,
+        moment=moment,
     )
     with args.out.open("w", encoding="utf-8") as handle:
         json.dump(results, handle, indent=2, sort_keys=True)
