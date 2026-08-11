@@ -21,7 +21,23 @@ So the honest summary is: **no evidence yet supports ranking dependencies by thi
 - It floors a verdict under a live advisory affecting the installed version, so leading signals can raise a verdict but never lower it below a known fact. That is a policy, not a forecast.
 - It filters advisories that do not affect the installed version, which is arithmetic and checkable against OSV.
 
-The full result, its method, and its limits are in [`docs/abandonment-pilot.md`](docs/abandonment-pilot.md); the protocol that pre-registered the falsification lines is in [`docs/validation-protocol.md`](docs/validation-protocol.md). A compromise backtest is designed but **not run** (#327). If it supports a stronger claim, this section changes and cites it.
+### How much of the score has been tested: three signals of sixteen
+
+Worth knowing before reading anything else here. The pilot measured `maintainer`, `license` and `source_repository`. Across seven runs — two definitions of abandonment at four dates — one carries information, one is actively harmful, and one does nothing:
+
+| signal | effect of removing it | in how many runs |
+|---|---|---|
+| `maintainer` | **−0.073 to −0.084** — drops below chance in four of seven | 7 of 7, every interval excluding zero |
+| `license` | **+0.016 to +0.044** — the score is *better* without it | 7 of 7, every interval excluding zero |
+| `source_repository` | nothing, −0.015 to +0.013 | 7 of 7, every interval spanning zero |
+
+The other thirteen have never been in any arm. Eight are repository-derived and untested (#339); two of those — `signed_commits` and `branch_protection` — cannot be reconstructed at a past date at all, so they may never be testable this way. `staleness` and `version` were deliberately excluded from the abandonment study as circular: low release cadence predicting the future absence of releases predicts a variable from itself.
+
+So the composite's behaviour is unmeasured for most of what it computes. That is a statement about the evidence, not a defect report — but it is the context for every number above.
+
+The full result, its method, and its limits are in [`docs/abandonment-pilot.md`](docs/abandonment-pilot.md); the protocol that pre-registered the falsification lines is in [`docs/validation-protocol.md`](docs/validation-protocol.md).
+
+A compromise backtest was designed and pre-registered, and **halted at its own stop rule** — the 2,074 dated npm cases arrive on only 43 distinct campaign days against a threshold of 75, so it could not be run at a usable power ([`docs/compromise-backtest-stage1.md`](docs/compromise-backtest-stage1.md)). If a study ever supports a stronger claim, this section changes and cites it.
 
 ## Install
 
