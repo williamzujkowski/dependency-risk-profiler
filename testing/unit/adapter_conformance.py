@@ -1852,8 +1852,8 @@ PYTHON_CASES: Tuple[FixtureCase, ...] = (
                 unmeasured=True,
                 because=(
                     "the star scrape is GitHub-shaped, so a Codeberg "
-                    "repository has no popularity record — the one signal of "
-                    "sixteen that genuinely needs a forge API, and it stays "
+                    "repository has no popularity record — the only signal "
+                    "that genuinely needs a forge API, and it stays "
                     "unmeasured rather than defaulting to zero (#289 §1.3)"
                 ),
             ),

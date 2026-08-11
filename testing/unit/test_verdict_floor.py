@@ -1,13 +1,13 @@
 """A live advisory sets a floor under the verdict; it never sets a ceiling (#242).
 
-The scorer is a weighted mean over sixteen signals whose weights sum to 3.5.
-``exploit`` carries the largest single weight, 0.5, so its maximum share of the
-normalized score is ``0.5 / 3.5 = 0.143`` against a LOW/MEDIUM boundary of
-0.25. The arithmetic consequence is not a tuning problem: **a package with a
-maximal exploit signal and a perfect, zero-risk record on all fifteen other
-signals normalizes to 0.143 and reports LOW.** No advisory load, however
-severe, could cross the first boundary on its own, so the tool printed
-``risk_level: LOW`` on the same record where it printed
+The scorer is a weighted mean over the scored signals, whose weights sum to
+more than twice the largest one. ``exploit`` carries that largest weight, 0.5,
+so its maximum share of the normalized score is ``0.5 / 3.0 = 0.167`` against a
+LOW/MEDIUM boundary of 0.25. The arithmetic consequence is not a tuning
+problem: **a package with a maximal exploit signal and a perfect, zero-risk
+record on every other signal normalizes to 0.167 and reports LOW.** No advisory
+load, however severe, crosses the first boundary on its own, so the tool
+printed ``risk_level: LOW`` on the same record where it printed
 ``known_vulnerable: true``.
 
 The rule these tests pin is stated in ``docs/signals.md``: a weighted mean is a
@@ -70,10 +70,10 @@ RISK_ORDER = {level: index for index, level in enumerate(RISK_LEVEL_ORDER)}
 
 AXIOS_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "axios_1_6_5.json"
 
-# Every component score the live pre-fix run produced for axios 1.6.5, read off
-# that run. The floor must leave every one of them exactly where it was: that
-# is the difference between a floor and a re-weighting, and asserting it by
-# value is the only way to tell the two apart from the outside.
+# Every component score the live run produces for axios 1.6.5, read off that
+# run. The floor must leave every one of them exactly where it is: that is the
+# difference between a floor and a re-weighting, and asserting it by value is
+# the only way to tell the two apart from the outside.
 AXIOS_COMPONENT_SCORES = {
     "staleness_score": 0.0,
     "maintainer_score": 0.0,
@@ -81,6 +81,8 @@ AXIOS_COMPONENT_SCORES = {
     "exploit_score": 0.75,
     "version_score": 0.5,
     "health_indicators_score": 0.0,
+    # Read and reported; weighed into nothing, which is why it is asserted
+    # here beside the scores that are weighed rather than left out (#340).
     "license_score": 0.0,
     "community_score": 0.0,
     "transitive_score": 0.0,
@@ -92,9 +94,13 @@ AXIOS_COMPONENT_SCORES = {
     "source_repository_score": 0.0,
 }
 
-# The weighted mean the pre-fix run produced, on the 0-5 scale. Normalized that
-# is 0.2273 — inside LOW's 0.25 boundary, and exactly where it stays.
-AXIOS_UNFLOORED_SCORE = 1.1363636363636362
+# The weighted mean over the fifteen scored signals, on the 0-5 scale.
+# Normalized that is 0.25 to within a float epsilon, which lands on LOW's
+# boundary from below because the comparison is strict. axios is therefore the
+# sharpest case the fixture set has for the floor's job: the leading indicators
+# put it at the very top of LOW, and it is still the counted advisories that
+# decide the verdict.
+AXIOS_UNFLOORED_SCORE = 1.2499999999999998
 
 
 def _healthy_dependency(name: str) -> DependencyMetadata:
@@ -108,7 +114,7 @@ def _healthy_dependency(name: str) -> DependencyMetadata:
         name: Package name, so a parametrized case names its own subject.
 
     Returns:
-        Metadata with fifteen measured, zero-risk leading indicators.
+        Metadata with every leading indicator measured and at zero risk.
     """
     dependency = DependencyMetadata(
         name=name,
@@ -224,7 +230,7 @@ def test_a_counted_advisory_floors_the_verdict(severity: str, floor: RiskLevel) 
     assert RISK_ORDER[score.risk_level] >= RISK_ORDER[floor], (
         f"max counted severity {severity} must floor the verdict at "
         f"{floor.value}; got {score.risk_level.value} on a package whose "
-        f"other fifteen signals are measured and clean"
+        f"other signals are measured and clean"
     )
 
 
@@ -625,13 +631,15 @@ def test_axios_leading_indicators_are_untouched_by_the_floor() -> None:
     for name, expected in AXIOS_COMPONENT_SCORES.items():
         assert getattr(score, name) == expected, name
     assert score.total_score == pytest.approx(AXIOS_UNFLOORED_SCORE)
-    # Still 0.2273 of the maximum, still inside LOW's 0.25 boundary. The
-    # verdict moved; the number the verdict used to come from did not.
-    assert score.total_score / 5.0 == pytest.approx(0.2272727, abs=1e-6)
+    # 0.25 of the maximum, inside LOW's boundary because the comparison is
+    # strict. The verdict is MEDIUM anyway, which is the floor doing its work
+    # rather than the mean doing it.
+    assert score.total_score / 5.0 < 0.25
+    assert score.total_score / 5.0 == pytest.approx(0.25, abs=1e-6)
     assert score.insufficient_data is False
     assert score.unknown_signals == []
-    assert score.measured_signal_count == 16
-    assert score.total_signal_count == 16
+    assert score.measured_signal_count == 15
+    assert score.total_signal_count == 15
 
 
 # --------------------------------------------------------------------------

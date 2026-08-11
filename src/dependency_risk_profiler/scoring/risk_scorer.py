@@ -32,7 +32,6 @@ from ..signals import (
     SIGNAL_DEPRECATION,
     SIGNAL_EXPLOIT,
     SIGNAL_HEALTH_INDICATORS,
-    SIGNAL_LICENSE,
     SIGNAL_MAINTAINED,
     SIGNAL_MAINTAINER,
     SIGNAL_SECURITY_POLICY,
@@ -326,7 +325,6 @@ class RiskScorer:
         version_difference_weight: float = 0.15,
         health_indicators_weight: float = 0.1,
         # Enhanced risk factors
-        license_weight: float = 0.3,
         community_weight: float = 0.2,
         transitive_weight: float = 0.15,
         source_repository_weight: float = 0.15,
@@ -354,7 +352,6 @@ class RiskScorer:
             exploit_weight: Weight for known exploits score.
             version_difference_weight: Weight for version difference score.
             health_indicators_weight: Weight for health indicators score.
-            license_weight: Weight for license risk score.
             community_weight: Weight for community health risk score.
             transitive_weight: Weight for transitive dependency risk score.
             source_repository_weight: Weight for the "declares a source
@@ -386,7 +383,6 @@ class RiskScorer:
         self.health_indicators_weight = health_indicators_weight
 
         # Enhanced risk factors
-        self.license_weight = license_weight
         self.community_weight = community_weight
         self.transitive_weight = transitive_weight
         self.source_repository_weight = source_repository_weight
@@ -456,6 +452,9 @@ class RiskScorer:
         )
 
         # Enhanced risk scores
+        # The licence is measured for its own axis and never joins
+        # ``weighted_scores``: it states an obligation, not a forecast. See
+        # ``SIGNAL_CATALOG``'s row for it and ``contract.license_flagged``.
         license_score = self._calculate_license_score(dependency.license_info)
         # Popularity and development cadence are weighed apart, not averaged
         # into one confident number. `community_score` below is the reported
@@ -531,11 +530,6 @@ class RiskScorer:
                 self.health_indicators_weight,
             ),
             # Enhanced risk factors
-            (
-                SIGNAL_LICENSE,
-                measure(SIGNAL_LICENSE, license_score, context),
-                self.license_weight,
-            ),
             # The community budget splits evenly across its two halves. When
             # both are measured this is arithmetically identical to weighting
             # their average; when only one is, the missing half drops out of the
@@ -639,7 +633,6 @@ class RiskScorer:
             exploit_score,
             version_score,
             health_score,
-            license_score,
             popularity_score,
             development_activity_score,
             transitive_score,
@@ -783,8 +776,8 @@ class RiskScorer:
             carrying the reason the table assigns.
         """
         # The measured branch constructs directly rather than through
-        # ``Measurement.measured``: this runs sixteen times per dependency
-        # across an org scan's thousands and the classmethod hop was
+        # ``Measurement.measured``: this runs once per scored signal per
+        # dependency across an org scan's thousands and the classmethod hop was
         # measurable. The constructor is the same gate either way. The
         # unmeasured branch goes through the classmethod because that is where
         # the shared per-reason instances live, which is cheaper still.
@@ -1256,13 +1249,18 @@ class RiskScorer:
     def _calculate_license_score(
         self, license_info: Optional[LicenseInfo]
     ) -> Optional[float]:
-        """Calculate license risk score.
+        """Rank the obligation the declared licence places on a consumer.
+
+        The value of the licence axis, and of nothing else: it is published
+        beside the verdict and carries no weight inside it (#340). Reading it
+        as a prediction is the mistake the separate axis exists to prevent.
 
         Args:
             license_info: License information.
 
         Returns:
-            License risk score between 0.0 and 1.0.
+            License obligation score between 0.0 and 1.0, or None when no
+            licence was read at all.
         """
         if license_info is None:
             return None
@@ -1525,7 +1523,6 @@ class RiskScorer:
         exploit_score: Optional[float],
         version_score: Optional[float],
         health_score: Optional[float],
-        license_score: Optional[float],
         popularity_score: Optional[float],
         development_activity_score: Optional[float],
         transitive_score: Optional[float],
@@ -1537,6 +1534,11 @@ class RiskScorer:
     ) -> List[str]:
         """Determine risk factors that contribute to the risk score.
 
+        Every factor here names something the weighted composite actually
+        moved. Findings reported on their own axis — the licence obligation,
+        the counted advisories behind ``known_vulnerable`` — are published
+        beside the verdict by the output contract instead (#242, #340).
+
         Args:
             dependency: Dependency metadata.
             staleness_score: Staleness score.
@@ -1545,7 +1547,6 @@ class RiskScorer:
             exploit_score: Exploit score.
             version_score: Version difference score.
             health_score: Health indicators score.
-            license_score: License risk score.
             popularity_score: Community popularity risk score.
             development_activity_score: Development cadence risk score.
             transitive_score: Transitive dependency risk score.
@@ -1625,29 +1626,6 @@ class RiskScorer:
 
             if missing:
                 factors.append(f"Missing {', '.join(missing)}")
-
-        # License risk factors
-        if license_score and license_score > 0.5:
-            if dependency.license_info:
-                if dependency.license_info.category.value == "NETWORK_COPYLEFT":
-                    factors.append(
-                        "Network copyleft license "
-                        f"({dependency.license_info.license_id})"
-                    )
-                elif dependency.license_info.category.value == "COPYLEFT":
-                    factors.append(
-                        f"Copyleft license ({dependency.license_info.license_id})"
-                    )
-                elif dependency.license_info.category.value == "COMMERCIAL":
-                    factors.append(
-                        f"Commercial license ({dependency.license_info.license_id})"
-                    )
-                elif dependency.license_info.category.value == "UNKNOWN":
-                    factors.append("Unknown license")
-                elif not dependency.license_info.is_approved:
-                    factors.append(
-                        f"Non-approved license ({dependency.license_info.license_id})"
-                    )
 
         # Community health risk factors. Each half gates on its own score: an
         # averaged composite let a well-starred package with a dead commit log

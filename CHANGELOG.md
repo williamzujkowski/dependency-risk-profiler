@@ -226,6 +226,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`license` leaves the scored composite and is reported on its own axis
+  (#340).** Removing it *raised* the model's discrimination in all seven
+  abandonment ablations — two outcome definitions at four dates, effects from
+  +0.016 to +0.044 AUC, every maintainer-clustered 95% interval excluding zero.
+
+  **This is not the model getting better.** A signal measured to be harmful was
+  removed; the composite is still unvalidated, still scores 0.577 to 0.605
+  against a 0.696 download-count baseline, and the README's withdrawn claim
+  stays withdrawn. Twelve of the fifteen remaining signals have never been in
+  any arm. What changed is that one thing we know is wrong has stopped
+  happening.
+
+  The licence is not deleted, because a restrictive or unrecognized licence is
+  a genuine legal and compliance risk to a consumer. It is real; it is simply
+  not a forecast of abandonment, and averaging a compliance fact into a risk
+  forecast is the category error #242 fixed for advisories. So it is reported
+  the way `known_vulnerable` is: `license_flagged` beside `risk_level` in the
+  schema-2 payload (additive), a `LICENSE` column in the terminal table and the
+  CSV, and its own panel in the org report beside Advisories. It leaves
+  `risk_factors`, which names what moved the verdict.
+
+  **The predictive value of the licence axis has not been measured, for any
+  outcome.** It is published as a fact, labelled as one, and nothing here
+  claims it forecasts anything.
+
+  Three consequences, none of them absorbed quietly:
+
+  - **Every composite moves slightly.** A signal leaves the denominator as well
+    as the numerator (#74), so a package with a clean permissive licence scores
+    marginally *higher* and one with a flagged licence marginally lower. axios
+    1.6.5's unfloored mean goes 1.136 → 1.250 of 5.
+  - **No ecosystem reaches a verdict from a registry document alone any more.**
+    A verdict costs eight measured signals of fifteen, and seven is the most a
+    registry-only scan (no clone, no token, no advisory lookup) can reach. Six
+    ecosystems — cargo, composer, nodejs, nuget, python, rubygems — were sitting
+    exactly on the bar at eight of sixteen, and the eighth was the licence. Being
+    carried over the line by the one signal measured to make the forecast worse
+    was not a margin. Asking an advisory source restores a verdict for all six,
+    with a margin of one; it is the single input that moves every ecosystem up
+    by one.
+  - **`--license-weight` and the `scoring_weights.license` config key are
+    gone.** A weight on a signal nothing weighs is a flag that lies.
+
+  The measured-signal floors move with it: the registry-only ceiling is 7 rather
+  than 8, the six ecosystems above drop 8 → 7, maven and gradle 6 → 5, and
+  golang stays at 5 (its registry never published a licence, so the subtraction
+  loses a term on both sides). `SCORES_FROM_REGISTRY_ALONE` is now False for
+  every ecosystem.
+
+  Enforced rather than asserted in prose: `SIGNAL_CATALOG` carries a `scored`
+  flag, `docs/signals.md` publishes it in a column the catalog test reads back,
+  and a test scores one recorded crates.io payload twice — differing only in
+  whether a licence was declared — and requires the mean, the verdict, and both
+  signal counts to be identical.
+
 - **AGENTS.md states the ponytail ladder rather than gesturing at it, and adds
   a rule about comments.** The ponytail section named "the reuse rung" without
   ever listing the rungs, so the operative mechanism was a reference rather

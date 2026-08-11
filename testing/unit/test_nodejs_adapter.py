@@ -550,34 +550,29 @@ def test_nodejs_measures_the_signals_the_registry_provides() -> None:
     assert_measures_registry_signals(_express_score(), "nodejs")
 
 
-def test_npm_reaches_a_verdict_from_the_packument_by_exactly_one_signal() -> None:
-    """A packument alone now reaches a verdict, and it did not used to.
+def test_npm_reads_its_owner_list_and_still_lands_one_signal_short() -> None:
+    """A packument carries an owner list; it does not carry a verdict.
 
-    This test used to assert the opposite, under the name "lands one signal
-    short". The signal it was short of was ``maintainer``, and the stated
-    reason was that npm publishes no cheap owner list. npm publishes one on
+    npm was recorded as publishing no cheap owner list. It publishes one on
     every packument; the read was routed behind a test for whether the package
-    name is scoped, so every unscoped name missed it.
+    name is scoped, so every unscoped name missed it. That read works, and this
+    asserts it by name rather than through a count that a swap could hold flat.
 
-    Eight measured against eight unmeasured, and ``insufficient_data`` is
-    ``unmeasured > measured``, so eight clears the bar by exactly nothing.
-    That margin is the point rather than an aside: one signal moving back to
-    unmeasured returns every unscoped npm package to UNKNOWN, which is why
-    both counts are asserted and not just the verdict.
-
-    ``exploit`` is still unmeasured because no advisory source is asked
-    (#321), and that remains the single input which would move this and every
-    other ecosystem up by one.
+    Seven measured against eight unmeasured, and ``insufficient_data`` is
+    ``unmeasured > measured``, so a packument alone is one signal short of a
+    verdict. ``exploit`` is that signal: no advisory source is asked here
+    (#321), and asking one is the single input that moves this and every other
+    ecosystem up by one.
     """
     score = _express_score()
 
-    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is True
+    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is False
     assert "maintainer" not in score.unknown_signals
     assert "exploit" in score.unknown_signals, "no advisory source was asked"
     assert "transitive" not in score.unknown_signals
-    assert score.insufficient_data is False
-    assert score.risk_level is not RiskLevel.UNKNOWN
-    assert score.measured_signal_count == 8
+    assert score.insufficient_data is True
+    assert score.risk_level is RiskLevel.UNKNOWN
+    assert score.measured_signal_count == 7
     assert score.unknown_signal_count == 8
 
 

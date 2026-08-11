@@ -13,7 +13,12 @@ from rich.cells import cell_len, set_cell_size
 from rich.console import Console
 from rich.text import Text
 
-from ..contract import SCHEMA_VERSION, scored_dependency
+from ..contract import (
+    SCHEMA_VERSION,
+    license_flagged,
+    license_obligation,
+    scored_dependency,
+)
 from ..models import (
     DependencyRiskScore,
     ProjectRiskProfile,
@@ -53,18 +58,24 @@ class TerminalFormatter(BaseFormatter):
     VERSION_WIDTH = 18
     SIGNALS_WIDTH = 45
     ADVISORIES_WIDTH = 26
+    # Wide enough for an SPDX identifier and the obligation beside it, which is
+    # the whole of what this column says: "AGPL-3.0-only · network copyleft" is
+    # the longest pairing the licence analyzer produces and it fits exactly. It
+    # is a column rather than an entry in LEADING SIGNALS because a licence is a
+    # compliance fact and that column lists what moved the risk verdict (#340).
+    LICENSE_WIDTH = 32
     TABLE_SEPARATOR = "  "
 
     # The dependency column is sized to the names present, between these
     # bounds. 12 is the floor because shorter names need no more; 48 is the cap
     # because a longer name is rarer than the cost of a table that wide.
     #
-    # There is deliberately no terminal-width arithmetic. The other four
-    # columns and their separators total 117 cells, which already exceeds any
-    # terminal this is likely to run in, so there is no slack to redistribute
-    # between columns -- a budget computed against the terminal yields the
-    # floor and truncates every namespaced name. The table is as wide as its
-    # content requires.
+    # There is deliberately no terminal-width arithmetic. The other five
+    # columns and their separators total 139 cells before the dependency name
+    # gets any width at all, which already exceeds any terminal this is likely
+    # to run in, so there is no slack to redistribute between columns -- a
+    # budget computed against the terminal yields the floor and truncates every
+    # namespaced name. The table is as wide as its content requires.
     MIN_DEPENDENCY_WIDTH = 12
     MAX_DEPENDENCY_WIDTH = 48
 
@@ -210,6 +221,7 @@ class TerminalFormatter(BaseFormatter):
                 self._fit_cell("VERSION", self.VERSION_WIDTH),
                 self._fit_cell("LEADING SIGNALS", self.SIGNALS_WIDTH),
                 self._fit_cell("ADVISORIES", self.ADVISORIES_WIDTH),
+                self._fit_cell("LICENSE", self.LICENSE_WIDTH),
             ]
         )
 
@@ -225,8 +237,9 @@ class TerminalFormatter(BaseFormatter):
             + self.VERSION_WIDTH
             + self.SIGNALS_WIDTH
             + self.ADVISORIES_WIDTH
+            + self.LICENSE_WIDTH
         )
-        separator_width = len(self.TABLE_SEPARATOR) * 4
+        separator_width = len(self.TABLE_SEPARATOR) * 5
         return column_width + separator_width
 
     def _format_dependency_rows(self, dep: DependencyRiskScore) -> list[str]:
@@ -255,6 +268,9 @@ class TerminalFormatter(BaseFormatter):
                         self._format_vulnerability_summary(dep),
                         self.ADVISORIES_WIDTH,
                     ),
+                    self._fit_cell(
+                        self._format_license_summary(dep), self.LICENSE_WIDTH
+                    ),
                 ]
             )
         ]
@@ -268,6 +284,7 @@ class TerminalFormatter(BaseFormatter):
                         self._fit_cell("", self.VERSION_WIDTH),
                         self._fit_cell(signal_line, self.SIGNALS_WIDTH),
                         self._fit_cell("", self.ADVISORIES_WIDTH),
+                        self._fit_cell("", self.LICENSE_WIDTH),
                     ]
                 )
             )
@@ -359,11 +376,6 @@ class TerminalFormatter(BaseFormatter):
         # object built without a deprecation reading crashed the whole report.
         if dep.deprecation_score is not None and dep.deprecation_score > 0:
             signals.append("deprecated")
-
-        if dep.license_score is not None and dep.license_score > 0.5:
-            license_info = metadata.license_info
-            if license_info is not None:
-                signals.append(f"{license_info.license_id} license flag")
 
         if (
             dep.health_indicators_score is not None
@@ -509,6 +521,30 @@ class TerminalFormatter(BaseFormatter):
         if counted == 0 and filtered == 0:
             return "none"
         return f"{counted} scored · {filtered} filtered"
+
+    def _format_license_summary(self, dep: DependencyRiskScore) -> str:
+        """Format the licence axis in plain language.
+
+        Sibling of :meth:`_format_vulnerability_summary`, and for the same
+        reason: it reports a fact about the package that the risk verdict is
+        not a measure of. The obligation is spelled out only when the licence
+        carries one, so a permissive licence reads as the identifier alone
+        rather than as a reassurance nobody asked for.
+
+        Args:
+            dep: The scored dependency.
+
+        Returns:
+            The identifier, with the obligation beside it when flagged, or
+            ``unknown`` when no licence was read.
+        """
+        license_info = dep.dependency.license_info
+        if license_info is None:
+            return "unknown"
+        if not license_flagged(dep.dependency):
+            return license_info.license_id
+        obligation = license_obligation(dep.dependency)
+        return f"{license_info.license_id} · {obligation}"
 
     def _pluralize(self, count: int, singular: str, plural: str) -> str:
         """Return singular or plural text for a count."""

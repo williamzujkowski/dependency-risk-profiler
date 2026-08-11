@@ -60,6 +60,9 @@ parseable. Migrate.
   "repository_url": "https://github.com/pallets/jinja",
   "is_deprecated": false,
   "known_vulnerable": true,         // scored advisories apply to installed_version
+  "license_flagged": false,         // the licence obliges the consumer (#340);
+                                    // a compliance fact, not a prediction, and
+                                    // weighed into risk_level by nothing
   "maintainer_count": 2,
   "risk_level": "MEDIUM",           // CRITICAL | HIGH | MEDIUM | LOW | UNKNOWN
   "verdict_floor": {                // why risk_level is where it is (#242)
@@ -114,7 +117,7 @@ parseable. Migrate.
 
 ### `verdict_floor` — whether a fact or a forecast set `risk_level`
 
-`risk_score` is a weighted mean over sixteen signals, most of them leading
+`risk_score` is a weighted mean over fifteen signals, most of them leading
 indicators about how a package is being maintained. A live advisory against the
 **installed** version is not that kind of evidence, and averaging it against
 forecasts used to bury it: `exploit` could contribute at most `0.5 / 3.5 =
@@ -190,6 +193,30 @@ risk level at all, and `risk_level` is `UNKNOWN`.
 The signal names are ours and they are stable. `docs/signals.md` publishes the
 correspondence to OpenSSF Scorecard's checks, pinned to a Scorecard version,
 with every approximate row marked approximate.
+
+**One signal in `signals` is not in `risk_score`.** `license` is measured,
+published here with the same two states as everything else, and weighed into
+the composite by nothing — so it is in neither `unknown_signals` nor
+`measured_signal_count` / `total_signal_count`, which describe the weighted set.
+`docs/signals.md` marks it in an "in the composite" column.
+
+### `license_flagged` — the compliance axis
+
+`known_vulnerable` says the shipped version has advisories against it.
+`license_flagged` says the declared licence obliges the consumer to do
+something: network copyleft, copyleft, commercial, or a licence nobody
+recognized. Read the `license` block beside it for which and why.
+
+Both sit beside `risk_level` rather than inside it, and for the same reason: a
+fact about the package is not a forecast about the package, and averaging the
+two makes the forecast worse. Measurably so, in this case — removing `license`
+from the composite raised its discrimination in every one of seven abandonment
+runs (#340).
+
+**No claim is made that `license_flagged` predicts anything.** It is a
+categorization of what the registry declared, reported as a fact. A gate that
+wants to act on licences should read this field; a gate that wants to act on
+maintenance risk should read `risk_level` and ignore it.
 
 ### `field_sources` — how much a value that *is* there is worth
 

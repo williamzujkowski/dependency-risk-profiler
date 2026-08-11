@@ -230,7 +230,6 @@ def test_total_score_calculation_with_all_metrics() -> None:
         exploit_weight=weight,
         version_difference_weight=weight,
         health_indicators_weight=weight,
-        license_weight=weight,
         community_weight=weight,
         transitive_weight=weight,
         security_policy_weight=weight,
@@ -323,7 +322,7 @@ def test_total_score_calculation_with_partial_metrics() -> None:
     # unresolved transitive tree read as "resolved, and empty" (#199), an
     # unrecorded advisory lookup read as "asked, and clean" (#321), and a
     # `bool` deprecation flag read as "asked, and live" (#320).
-    assert score.unknown_signal_count == 15
+    assert score.unknown_signal_count == 14
     assert score.measured_signal_count == 0
     for silent in ("transitive", "exploit", "deprecation"):
         assert silent in score.unknown_signals
@@ -1066,7 +1065,6 @@ def test_risk_factor_determination_performance_sla() -> None:
         health_score = scorer._calculate_health_indicators_score(
             dep.has_tests, dep.has_ci, dep.has_contribution_guidelines
         )
-        license_score = scorer._calculate_license_score(dep.license_info)
         popularity_score = scorer._calculate_popularity_score(dep.community_metrics)
         development_activity_score = scorer._calculate_development_activity_score(
             dep.community_metrics
@@ -1100,7 +1098,6 @@ def test_risk_factor_determination_performance_sla() -> None:
             exploit_score,
             version_score,
             health_score,
-            license_score,
             popularity_score,
             development_activity_score,
             transitive_score,

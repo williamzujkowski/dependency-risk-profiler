@@ -21,7 +21,7 @@ from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
 from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.scoring.risk_scorer import RiskScorer
-from dependency_risk_profiler.signals import MeasurementState
+from dependency_risk_profiler.signals import SCORED_SIGNALS, MeasurementState
 
 from .cohort import (
     CANDIDATE_T,
@@ -158,8 +158,13 @@ def score_cohort(
     insufficient: Dict[str, int] = {}
     measured: Dict[str, Dict[str, int]] = {}
 
+    # Every arm supplies the full reconstructible input set; only the ablation
+    # arms vary, and only over signals the composite actually weighs. Ablating
+    # an unscored signal withholds an input the score never reads, so the arm
+    # reproduces the model exactly and reports a null effect that measured
+    # nothing — the licence is in exactly that position (#340).
     configurations: List[Tuple[str, FrozenSet[str]]] = [("model", PILOT_SIGNALS)]
-    for signal in sorted(PILOT_SIGNALS):
+    for signal in sorted(PILOT_SIGNALS & SCORED_SIGNALS):
         configurations.append((f"ablate:{signal}", PILOT_SIGNALS - {signal}))
 
     for name, enabled in configurations:

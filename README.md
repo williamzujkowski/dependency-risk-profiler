@@ -13,7 +13,7 @@ It works on a single manifest (`analyze`) or across every repository in a GitHub
 
 This README used to argue that leading indicators beat lagging ones. **That claim was tested against a pre-registered protocol and it lost**, so it has been withdrawn rather than left standing.
 
-On 2,906 npm packages predicting two-year abandonment, **download count alone separated the classes better than the full sixteen-signal score: AUC 0.696 against 0.577** (maintainer-clustered 95% CI on the gap [−0.155, −0.085]). Two of the protocol's own falsification lines fired. Re-run at three dates the score never exceeded 0.605, and the published figure was its best year, not its typical one. Ablations put `license` in negative territory — removing it *improved* discrimination.
+On 2,906 npm packages predicting two-year abandonment, **download count alone separated the classes better than the then-sixteen-signal score: AUC 0.696 against 0.577** (maintainer-clustered 95% CI on the gap [−0.155, −0.085]). Two of the protocol's own falsification lines fired. Re-run at three dates the score never exceeded 0.605, and the published figure was its best year, not its typical one. Ablations put `license` in negative territory — removing it *improved* discrimination, so it is out of the composite and reported on its own axis (#340). The composite is fifteen signals now, and no better validated for it: taking out a signal measured to be harmful is not evidence that what remains works.
 
 So the honest summary is: **no evidence yet supports ranking dependencies by this score in preference to a popularity or advisory baseline.** What the tool does do, and what the same runs support:
 
@@ -21,7 +21,7 @@ So the honest summary is: **no evidence yet supports ranking dependencies by thi
 - It floors a verdict under a live advisory affecting the installed version, so leading signals can raise a verdict but never lower it below a known fact. That is a policy, not a forecast.
 - It filters advisories that do not affect the installed version, which is arithmetic and checkable against OSV.
 
-### How much of the score has been tested: three signals of sixteen
+### How much of the score has been tested: two signals of fifteen
 
 Worth knowing before reading anything else here. The pilot measured `maintainer`, `license` and `source_repository`. Across seven runs — two definitions of abandonment at four dates — one carries information, one is actively harmful, and one does nothing:
 
@@ -31,7 +31,9 @@ Worth knowing before reading anything else here. The pilot measured `maintainer`
 | `license` | **+0.016 to +0.044** — the score is *better* without it | 7 of 7, every interval excluding zero |
 | `source_repository` | nothing, −0.015 to +0.013 | 7 of 7, every interval spanning zero |
 
-The other thirteen have never been in any arm. Eight are repository-derived and untested (#339); two of those — `signed_commits` and `branch_protection` — cannot be reconstructed at a past date at all, so they may never be testable this way. `staleness` and `version` were deliberately excluded from the abandonment study as circular: low release cadence predicting the future absence of releases predicts a variable from itself.
+`license` is no longer in the composite. It is reported on its own axis instead, as a compliance fact, and nothing has measured what it predicts (#340). So of the fifteen signals the score now weighs, two have ever been tested and one of those does nothing.
+
+The other twelve have never been in any arm. Eight are repository-derived and untested (#339); two of those — `signed_commits` and `branch_protection` — cannot be reconstructed at a past date at all, so they may never be testable this way. `staleness` and `version` were deliberately excluded from the abandonment study as circular: low release cadence predicting the future absence of releases predicts a variable from itself.
 
 So the composite's behaviour is unmeasured for most of what it computes. That is a statement about the evidence, not a defect report — but it is the context for every number above.
 
@@ -54,13 +56,14 @@ $ dependency-risk-profiler analyze requirements.txt
 Dependency Risk · requirements.txt (python)
 3 dependencies · overall 1.8 / 5.0 · 2 signals could not be measured
 
-RISK    DEPENDENCY  VERSION          LEADING SIGNALS                                   ADVISORIES
-──────────────────────────────────────────────────────────────────────────────────────────────────
-MEDIUM  flask       3.0.0 → 3.1.3    1 minor version behind · missing security policy  5 scored · 5 filtered
-MEDIUM  urllib3     2.0.0 → 2.7.0    7 minor versions behind · unsigned commits        19 scored · 19 filtered
-MEDIUM  requests    2.31.0 → 2.34.2  3 minor versions behind · unsigned commits        8 scored · 8 filtered
+RISK    DEPENDENCY  VERSION          LEADING SIGNALS                                   ADVISORIES              LICENSE
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+MEDIUM  flask       3.0.0 → 3.1.3    1 minor version behind · missing security policy  5 scored · 5 filtered   BSD-3-Clause
+MEDIUM  urllib3     2.0.0 → 2.7.0    7 minor versions behind · unsigned commits        19 scored · 19 filtered MIT
+MEDIUM  requests    2.31.0 → 2.34.2  3 minor versions behind · unsigned commits        8 scored · 8 filtered   Apache-2.0
 
 Worst first. "filtered" = informational / withdrawn / low-confidence advisories excluded from the score.
+ADVISORIES and LICENSE are reported beside the verdict, not inside it.
 ```
 
 The maintainer-concentration signal reads the true contributor count from the GitHub API — supply a token via `--github-token`, the `GITHUB_TOKEN` / `GH_TOKEN` environment variables, or just an authenticated `gh` CLI (`gh auth login`). Without one it reports the count as unknown rather than guessing.
@@ -103,13 +106,13 @@ Useful flags: `--max-repos N`, `--include-archived`, `--include-collaborations` 
 - **Release cadence** — whether the package still receives updates.
 - **Maintainer concentration** — single-maintainer and low-maintainer packages carry more continuity risk.
 - **Provenance and repository health** — source location, project metadata, tests, CI, contribution signals, and related supply-chain health checks.
-- **License risk** — permissive, copyleft, missing, or unusual license signals.
+- **License obligation** — permissive, copyleft, network copyleft, commercial, or unrecognized. Reported beside the risk level and **not scored into it**: what a licence obliges a consumer to do is a compliance fact, and folding it into a maintenance forecast measured worse in every run that tested it (#340).
 - **Vulnerabilities** — advisories are considered, but withdrawn, informational, low-confidence, and below-threshold findings are filtered out of scoring (raise the bar with `--minimum-vulnerability-severity MEDIUM`). An advisory that applies to the installed version and states **no** severity is counted at every threshold, not filtered: whole databases publish none (`GO-*`, `RUSTSEC-*`, and every malicious-package `MAL-*` record), and silence about how bad something is is not a reason to say it is not there. Records that alias each other are one vulnerability and count once.
 
 Two behaviors are intentionally conservative:
 
 - **Unknown signals stay unknown.** The tool does not fill missing data with a confident medium score.
-- **Advisory noise is separated from scored risk**, and known-vulnerability is surfaced as its own axis rather than folded into the risk level.
+- **Advisory noise is separated from scored risk.** Known-vulnerability and licence obligation are each surfaced as their own axis rather than folded into the risk level. A fact about a package is not a forecast about it, and the tool refuses to average the two on your behalf.
 
 ## Commands
 

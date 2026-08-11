@@ -506,6 +506,14 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     assert "2 scored · 1 filtered" in html
     assert "advisories: unknown" in html
     assert "Why it&#x27;s flagged" in html
+    # The licence is a group of its own beside Advisories, and it stays out of
+    # the risk-driver list because it drives no risk (#340).
+    assert "<h3>License</h3>" in html
+    assert "<b>AGPL-3.0-only</b> — network copyleft." in html
+    assert "does not raise the risk level" in html
+    assert "MIT — permissive." in html
+    assert "No license was read for this dependency." in html
+    assert "License: AGPL" not in html
     assert "Bus factor: 1 primary maintainer" in html
     assert "Version drift: 1.0 → 2.3.0 (1 major behind)" in html
     assert (
@@ -552,6 +560,7 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
         "contributors",
         "last_updated",
         "license",
+        "license_flagged",
         "deprecated",
         "known_vulnerable",
         "remediation",
@@ -570,6 +579,12 @@ def test_org_scan_html_json_and_terminal_outputs(tmp_path: Path) -> None:
     # A known-vulnerable dependency carries a ready-to-use remediation string.
     vuln_row = next(r for r in csv_rows if r["known_vulnerable"] == "yes")
     assert "advisories" in vuln_row["remediation"]
+
+    # The licence axis is a column of its own, the same shape the advisory axis
+    # takes: the identifier, plus a flag a triager can filter on (#340).
+    flagged_row = next(r for r in csv_rows if r["license_flagged"] == "yes")
+    assert flagged_row["license"] == "AGPL-3.0-only"
+    assert next(r for r in csv_rows if r["license"] == "MIT")["license_flagged"] == "no"
 
     model = report_to_dict(report)
     assert model["unique_dependency_count"] == 4
@@ -1164,9 +1179,10 @@ def _score_for_key(
         dependency.has_ci = False
         dependency.has_contribution_guidelines = True
         dependency.license_info = LicenseInfo(
-            license_id="GPL-3.0",
-            category=LicenseCategory.COPYLEFT,
+            license_id="AGPL-3.0-only",
+            category=LicenseCategory.NETWORK_COPYLEFT,
             is_approved=False,
+            risk_level=RiskLevel.HIGH,
         )
         dependency.security_metrics = SecurityMetrics(
             vulnerability_count=3,
@@ -1210,6 +1226,12 @@ def _score_for_key(
             factors=["single maintainer", "scored advisories"],
         )
     if key.name == "medium":
+        dependency.license_info = LicenseInfo(
+            license_id="MIT",
+            category=LicenseCategory.PERMISSIVE,
+            is_approved=True,
+            risk_level=RiskLevel.LOW,
+        )
         dependency.security_metrics = SecurityMetrics(
             vulnerability_count=1,
             counted_vulnerability_count=1,

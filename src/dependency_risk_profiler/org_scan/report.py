@@ -11,7 +11,14 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote, urlparse
 
-from ..contract import SCHEMA_VERSION, Remediation, remediation, scored_dependency
+from ..contract import (
+    SCHEMA_VERSION,
+    Remediation,
+    license_flagged,
+    license_obligation,
+    remediation,
+    scored_dependency,
+)
 from ..models import DependencyMetadata, DependencyRiskScore, RiskLevel, SecurityMetrics
 from ..versioning import (
     calendar_drift_days,
@@ -228,6 +235,7 @@ CSV_COLUMNS: Tuple[str, ...] = (
     "contributors",
     "last_updated",
     "license",
+    "license_flagged",
     "deprecated",
     "known_vulnerable",
     "remediation",
@@ -282,6 +290,7 @@ def _dependency_to_csv_row(
             metadata.last_updated.date().isoformat() if metadata.last_updated else ""
         ),
         "license": license_info.license_id if license_info is not None else "",
+        "license_flagged": "yes" if license_flagged(metadata) else "no",
         "deprecated": "yes" if metadata.is_deprecated else "no",
         "known_vulnerable": "yes" if dependency.is_known_vulnerable else "no",
         "remediation": _remediation_for(dependency).sentence(),
@@ -1000,6 +1009,7 @@ def _dependency_panel(dependency: AggregatedDependency) -> str:
       <div class="triage-panel">
         {_triage_group("Why it's flagged", _why_flagged(dependency))}
         {_triage_group("Advisories", _advisories_panel(dependency))}
+        {_triage_group("License", _license_panel(dependency))}
         {_triage_group("Where it's used", _usage_panel(dependency))}
         {_triage_group("Investigate upstream", _upstream_panel(dependency))}
         {_triage_group("Metadata", _metadata_panel(dependency))}
@@ -1078,9 +1088,6 @@ def _why_lines(dependency: AggregatedDependency) -> List[str]:
 
     if _score_fired(score.version_score):
         lines.append(_version_drift_line(metadata))
-
-    if _score_fired(score.license_score):
-        lines.append(_license_risk_line(score))
 
     if metadata.is_deprecated or _score_fired(score.deprecation_score):
         lines.append("Deprecation: upstream marks this dependency as deprecated")
@@ -1177,17 +1184,31 @@ def _major_minor_version(version: str) -> Optional[Tuple[int, int]]:
     return major, minor
 
 
-def _license_risk_line(score: DependencyRiskScore) -> str:
-    """Return a license risk explanation."""
-    license_info = score.dependency.license_info
+def _license_panel(dependency: AggregatedDependency) -> str:
+    """Render the licence axis for one dependency.
+
+    Its own group, beside Advisories rather than inside "Why it's flagged",
+    because a licence obligation is a compliance fact and that list names what
+    moved the risk verdict. Nothing here feeds the verdict (#340).
+
+    Args:
+        dependency: The aggregated dependency.
+
+    Returns:
+        The licence block, or a note that no licence was read.
+    """
+    metadata = dependency.risk_score.dependency
+    license_info = metadata.license_info
     if license_info is None:
-        return "License: missing or unknown license"
-    if license_info.is_approved is False:
-        return f"License: {license_info.license_id} is not approved"
-    if license_info.license_id.lower() in {"", "unknown", "none"}:
-        return "License: missing or unknown license"
+        return '<p class="muted">No license was read for this dependency.</p>'
+
+    obligation = escape(license_obligation(metadata))
+    identifier = escape(license_info.license_id or "unstated")
+    if not license_flagged(metadata):
+        return f'<p class="muted">{identifier} — {obligation}.</p>'
     return (
-        f"License: {license_info.license_id} flagged as {license_info.category.value}"
+        f"<p><b>{identifier}</b> — {obligation}. Reported as a compliance "
+        "fact; it does not raise the risk level.</p>"
     )
 
 

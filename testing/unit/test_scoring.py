@@ -1,14 +1,16 @@
 """Tests for the risk scoring system."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Dict, List, Tuple, TypedDict
+from typing import Callable, Dict, List, Optional, Tuple, TypedDict, cast
 
 from dependency_risk_profiler.cli.formatter import JsonFormatter, TerminalFormatter
+from dependency_risk_profiler.contract import scored_dependency
 from dependency_risk_profiler.models import (
     CommunityMetrics,
     DependencyMetadata,
     LicenseCategory,
     LicenseInfo,
+    ProjectRiskProfile,
     RiskLevel,
     SecurityMetrics,
 )
@@ -92,7 +94,7 @@ def test_scoring_system() -> None:
     medium_risk_score = scorer.score_dependency(medium_risk)
     # Missing enhanced metadata is excluded instead of scored as moderate risk.
     assert medium_risk_score.risk_level == RiskLevel.LOW
-    assert medium_risk_score.unknown_signal_count == 8
+    assert medium_risk_score.unknown_signal_count == 7
     assert medium_risk_score.total_score < 3.5
 
     # Test a high-risk dependency
@@ -194,7 +196,7 @@ def test_partial_data() -> None:
     # Every weighed signal, because a bare manifest entry establishes nothing:
     # nothing resolved the tree (#199), nobody asked an advisory source (#321),
     # and no registry answered the deprecation question (#320).
-    assert score.unknown_signal_count == 15
+    assert score.unknown_signal_count == 14
     for silent in ("staleness", "transitive", "maintainer", "version"):
         assert silent in score.unknown_signals
 
@@ -221,7 +223,8 @@ def test_all_missing_data_is_unknown_not_medium() -> None:
         "exploit",
         "version",
         "health_indicators",
-        "license",
+        # ``license`` is absent: it is measured and published on its own axis,
+        # so it is in neither the weighted set nor the gaps in it (#340).
         "community_popularity",
         "community_activity",
         # Nothing resolved this dependency's tree, and since #199 saying
@@ -353,7 +356,6 @@ def test_high_star_stale_dependency_scores_lower_than_obscure_stale_peer() -> No
         exploit_weight=0.0,
         version_difference_weight=0.0,
         health_indicators_weight=0.0,
-        license_weight=0.0,
         community_weight=0.0,
         transitive_weight=0.0,
         security_policy_weight=0.0,
@@ -528,7 +530,6 @@ def test_aggregate_ignores_unknown_signals() -> None:
         exploit_weight=1.0,
         version_difference_weight=1.0,
         health_indicators_weight=1.0,
-        license_weight=1.0,
         community_weight=1.0,
         transitive_weight=1.0,
         security_policy_weight=1.0,
@@ -553,7 +554,7 @@ def test_aggregate_ignores_unknown_signals() -> None:
     # *raises* the reported risk from 2.0 to 5.0 — the same two risky signals,
     # now over an honest denominator, which is the direction this rule always
     # moves a score and the reason it has to be argued rather than assumed.
-    assert score.unknown_signal_count == 13
+    assert score.unknown_signal_count == 12
     assert score.measured_signal_count == 2
     assert score.insufficient_data is True
     assert score.total_score == 5.0 * (1.0 + 1.0) / 2.0
@@ -616,7 +617,6 @@ def _zero_weight_scorer(**overrides: float) -> RiskScorer:
         "exploit_weight": 0.0,
         "version_difference_weight": 0.0,
         "health_indicators_weight": 0.0,
-        "license_weight": 0.0,
         "community_weight": 0.0,
         "transitive_weight": 0.0,
         "security_policy_weight": 0.0,
@@ -961,3 +961,128 @@ def test_vulnerability_counts_are_reported_in_terminal_and_json() -> None:
     assert '"counted_in_score": 1' in json_output
     assert '"filtered": 1' in json_output
     assert '"filtered": true' in json_output
+
+
+def _dependency_with_license(license_info: Optional[LicenseInfo]) -> DependencyMetadata:
+    """Return one identical dependency, differing only in its declared licence.
+
+    Args:
+        license_info: The licence to attach, or None for a package whose
+            licence was never read.
+
+    Returns:
+        Metadata with every other input held fixed.
+    """
+    dependency = _lookup_completed(
+        DependencyMetadata(
+            name="license-varied",
+            installed_version="1.0.0",
+            latest_version="1.2.0",
+            last_updated=datetime.now(timezone.utc) - timedelta(days=200),
+            maintainer_count=2,
+            is_deprecated=False,
+            has_known_exploits=False,
+            has_tests=True,
+            has_ci=True,
+            has_contribution_guidelines=False,
+            transitive_source="manifest",
+        )
+    )
+    dependency.license_info = license_info
+    return dependency
+
+
+#: Every licence the analyzer can produce, worst to best, plus the unread case.
+#: Spanning the whole range matters: a weight reintroduced at any size separates
+#: at least one of these pairs.
+_LICENSE_VARIANTS: List[Optional[LicenseInfo]] = [
+    None,
+    LicenseInfo(
+        license_id="MIT",
+        category=LicenseCategory.PERMISSIVE,
+        is_approved=True,
+        risk_level=RiskLevel.LOW,
+    ),
+    LicenseInfo(
+        license_id="GPL-3.0-only",
+        category=LicenseCategory.COPYLEFT,
+        is_approved=False,
+        risk_level=RiskLevel.HIGH,
+    ),
+    LicenseInfo(
+        license_id="AGPL-3.0-only",
+        category=LicenseCategory.NETWORK_COPYLEFT,
+        is_approved=False,
+        risk_level=RiskLevel.CRITICAL,
+    ),
+    LicenseInfo(
+        license_id="LicenseRef-Proprietary",
+        category=LicenseCategory.COMMERCIAL,
+        is_approved=False,
+        risk_level=RiskLevel.CRITICAL,
+    ),
+]
+
+
+def test_the_licence_contributes_nothing_to_the_composite() -> None:
+    """REGRESSION #340: the licence axis is reported, never weighed.
+
+    A licence states an obligation a consumer takes on. It is not a forecast of
+    how a package will be maintained, and the one outcome it has been measured
+    against it predicted backwards — removing it raised the composite's
+    discrimination in all seven abandonment ablations, every clustered interval
+    excluding zero.
+
+    Only the licence varies here, across the whole range the analyzer can
+    produce. Every derived number must be bit-identical: the weighted mean, the
+    verdict, the measured count and the set of gaps. A weight reintroduced at
+    any size separates at least one of these pairs.
+    """
+    scores = [
+        RiskScorer().score_dependency(_dependency_with_license(variant))
+        for variant in _LICENSE_VARIANTS
+    ]
+    baseline = scores[0]
+
+    assert {score.license_score for score in scores} != {None}, (
+        "the licence must still be measured, or this test would pass on a "
+        "scorer that had simply stopped reading it"
+    )
+    for score in scores[1:]:
+        assert score.total_score == baseline.total_score
+        assert score.risk_level is baseline.risk_level
+        assert score.measured_signal_count == baseline.measured_signal_count
+        assert score.total_signal_count == baseline.total_signal_count
+        assert score.unknown_signals == baseline.unknown_signals
+        assert score.factors == baseline.factors
+
+
+def test_the_licence_is_still_reported_when_it_is_not_scored() -> None:
+    """Unscored is not unpublished. The finding has to survive the change.
+
+    Its own key beside ``risk_level`` in the contract, its own measurement in
+    ``signals``, and the identifier in the terminal table's LICENSE column.
+    Without this the test above is satisfied by deleting the licence.
+    """
+    flagged = _dependency_with_license(_LICENSE_VARIANTS[3])
+    score = RiskScorer().score_dependency(flagged)
+
+    entry = scored_dependency(score, ecosystem="python")
+    assert entry["license_flagged"] is True
+    assert cast(Dict[str, object], entry["license"])["id"] == "AGPL-3.0-only"
+    signals = cast(Dict[str, object], entry["signals"])
+    assert cast(Dict[str, object], signals["license"])["state"] == "measured"
+
+    permissive = RiskScorer().score_dependency(
+        _dependency_with_license(_LICENSE_VARIANTS[1])
+    )
+    assert scored_dependency(permissive, ecosystem="python")["license_flagged"] is False
+
+    profile = ProjectRiskProfile(
+        manifest_path="requirements.txt",
+        ecosystem="python",
+        dependencies=[score],
+    )
+    rendered = TerminalFormatter(color=False).format_profile(profile)
+    assert "LICENSE" in rendered
+    assert "AGPL-3.0-only · network copyleft" in rendered
