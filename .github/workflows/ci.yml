@@ -32,7 +32,7 @@ jobs:
       run: flake8 --config=.flake8
 
     - name: Type check with mypy
-      run: mypy src
+      run: mypy src research
 
     - name: Test with pytest
       run: pytest testing/unit testing/integration --cov=src --cov-report=xml

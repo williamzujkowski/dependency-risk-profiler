@@ -118,6 +118,12 @@ multi_line_output = 3
 
 [tool.mypy]
 python_version = "3.10"
+# `research/` is not installed, so mypy cannot resolve `abandonment_pilot` from
+# site-packages the way it resolves the package under test. Without this the
+# validation harness's own tests report import-not-found and count against the
+# `testing/` ratchet, which would make an unresolvable import look like a type
+# error in the tests that found it.
+mypy_path = "research"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -186,6 +192,11 @@ follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["testing/unit", "testing/integration"]
+# `research/` is not installed and is not part of the wheel: it holds the
+# validation harness, which drives the shipped scorer from pinned snapshots.
+# Putting it on the path here is what lets its negative control run as a CI
+# test rather than as something someone remembers to invoke.
+pythonpath = ["research"]
 python_files = "test_*.py"
 python_functions = "test_*"
 markers = [
