@@ -205,6 +205,20 @@ the protocol fixed before the data is touched.
 | `version` signal, any single-T design | 1 | at T the release in force *is* the latest; the scorer's equality branch returns 0.0 for every package |
 | PyPI anything, as-of-date | 1 | `ownership.roles` is current state even on historical documents |
 | PyPI compromise | 1 | 1 of 60 MAL packages still resolvable; PyPI hard-deletes |
+| **GitHub ownership transfer** | **a fourth requirement** | cleared all three, then failed on **label observability**: 41.3% of owner changes cannot be told apart from an account rename, because GitHub frees a renamed login and keeps no owner history. Measured, not argued — §16 of the protocol |
+
+**That last row adds a requirement the first three did not name.** An outcome
+must also be *observable to a usable precision at the date it is claimed for* —
+which is not the same as reconstructable. A transfer is perfectly
+reconstructable in principle: it happened, GitHub served the answer, the
+registry froze the declaration. What is missing is the **identity** on one side
+of the comparison. Requirement 1 asks whether a value can be recovered at a
+past date; this asks whether the *entity that value refers to* still exists to
+be compared against.
+
+Nothing in the first three requirements would have caught it. It was found by a
+1,900-call pilot that cost 11% of the harvest it prevented — and only because
+the pilot's decision rule was fixed before the number existed.
 
 ---
 
@@ -253,11 +267,29 @@ essentially independent events. Its weakness is requirement 1 and its size, not
 its structure — which makes it the first outcome here whose binding constraint
 is fixable.
 
-It is pre-registered in `transfer-outcome-protocol.md`, reviewed 7-0 with
-conditions, and frozen. It is also the **capstone**: either branch of it
-completes this table, and a null there does not license a sixth attempt. The
-honest reading of five attempts is not "keep looking for an outcome that
-works" — it is that the search itself is the result.
+It was pre-registered in `transfer-outcome-protocol.md`, reviewed twice, and
+frozen. **It halted before the harvest**, at a channel pilot that measured
+whether its labels are obtainable at all.
+
+They are not. Of 104 owner changes observed across the 1,784 repositories the
+burned cohort declares, **43 could not be told apart from an account rename** —
+an ambiguity share of 0.413 against a pre-registered ceiling of 0.20, 95% CI
+[0.324, 0.510]. GitHub frees a renamed login, so 31 of the T-era logins simply
+no longer exist and **not one of the 104 could be positively identified as a
+rename**. Twelve more resolved to accounts *created after T*: logins
+re-registered by strangers, which an earlier version of the procedure would
+have counted as handovers.
+
+So the fifth attempt fails on a requirement the other four never reached: not
+independence, not power, not reconstructability of the *signals*, but whether
+the **outcome itself is observable to a usable precision**. Requirement 1 was
+about reconstructing a value at a past date; this is about reconstructing an
+*identity* at a past date, and GitHub does not keep one.
+
+That closes the table. The honest reading of five attempts is not "keep looking
+for an outcome that works" — it is that the search itself is the result. Four
+outcomes were coupled to the signals; the one that was not cannot be measured.
+A sixth attempt would need a forge that records who owned what, when.
 
 That is a statement about what is knowable here, and it should temper how much
 weight any future single study is expected to carry.

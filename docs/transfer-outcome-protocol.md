@@ -1,9 +1,9 @@
 # Repository ownership transfer — pre-registration
 
-**Status:** pre-registered and revised twice, before any package outside the
-existing snapshot has been fetched. Design review (7-0 approve with conditions)
-in §11; detection-procedure review (**7-0 reject**, with the defect and its fix)
-in §14; the pilot that must clear before any harvest in §15.
+**Status:** **HALTED at the §15 channel pilot.** No package outside the
+existing snapshot was ever fetched. Design review (7-0 approve with conditions)
+in §11; detection-procedure review (7-0 reject, with the defect and its fix) in
+§14; the pilot rule fixed in §15; **the pilot result and the halt in §16**.
 **Registers:** #368. Fifth protocol, after abandonment (ran), compromise
 (halted stage 1), handover (halted stage 3) and the repository arm (ran, no
 claim licensed).
@@ -414,3 +414,82 @@ Case 3 is the one worth naming out loud: it ends five attempts with the
 instrument, not the hypothesis, as the thing that failed. That is a publishable
 result and it is written down here **before** the number exists, which is the
 only time such a sentence is worth anything.
+
+---
+
+## 16. The pilot ran. The channel is inadequate, and the study halts.
+
+Executed 2026-08-11 over **all 1,784 distinct repositories** declared at T in
+the burned 2026-08-06 cohort — the full supply, not the 300-package minimum, so
+§15's "enlarge" branch is already exhausted. Result in
+`research/results/transfer-pilot.json`.
+
+| bucket | n |
+|---|---:|
+| unchanged | 1,514 |
+| **transferred** | **61** |
+| **ambiguous** | **43** |
+| owner renamed | **0** |
+| unresolvable (404) | 166 |
+| unparseable | 0 |
+
+**Ambiguity share 0.413, 95% Wilson CI [0.324, 0.510].** The ceiling is 0.20
+and the entire interval sits above it. §15's branch 3 fires: *the channel
+cannot support the outcome, and the gate does not move.*
+
+### What the numbers say about the mechanism
+
+**OWNER_RENAMED is empty. Zero of 104 owner changes.** The review predicted
+this in the abstract — "under real conditions OWNER_RENAMED is likely
+near-unreachable" — and the measurement is starker than the prediction. Of 104
+T-era logins looked up, **31 returned 404** and none of the 73 that resolved
+matched the current owner's id. Renames do not present as renames; the old
+login is simply gone, and every one of them lands in the residue.
+
+**The squatting false positive is real and was measured.** Twelve of the 73
+resolutions returned an account **created after T** — `deepkit` resolves today
+to an account registered 2025-01-21, eleven months after the T it is being
+asked about. Version one of this procedure would have counted all twelve as
+transfers. That is a 16% contamination of a 73-strong positive class, sitting
+where the ambiguity gate could not see it, and it is exactly the defect the
+7-0 review rejected the procedure for.
+
+So the fix worked, in the sense that it caught what it was built to catch. The
+pilot's finding is that catching it is not enough: what remains after the
+exclusions is a positive class of 61 against a residue of 43.
+
+### The as-of-T escape hatch does not work either
+
+§15 permits proceeding with ids known as of T. The only source for those is an
+event archive, which records actor id beside login at event time — and **an
+event archive only knows accounts that emitted events.** Coverage of id-at-T
+would therefore be a function of how active a project was around T.
+
+That is the same defect one level down. The whole reason this outcome was
+chosen over the four before it is that release cadence scores 0.5104 against
+it; resolving its labels through a channel whose coverage is activity-shaped
+would put the coupling back through the measurement, which is what §11's
+condition 3 exists to prevent. The escape hatch is closed by the protocol's
+own reasoning rather than by preference.
+
+### Two other numbers, reported because they were pre-committed
+
+**Attrition 11.7%** — 166 of 1,784 repositories 404 today. Deleted and private
+are indistinguishable, and deletion is not random with respect to abandonment,
+so this is disclosed selection rather than tidy exclusion.
+
+**Thirty owner-type changes** among the UNCHANGED. A user account converting to
+an organisation keeps its numeric id, so the outcome cannot see it. Thirty of
+1,514 apparent non-events are governance changes of a kind, invisible by
+construction.
+
+### The verdict
+
+**The outcome is unmeasurable at this precision, and the confirmatory harvest
+does not run.** Not because the hypothesis failed — it was never tested — but
+because the instrument cannot separate a handover from an account rename at a
+rate that would let a 5.6%-base-rate study mean anything.
+
+§15 named this branch before the number existed: *"it ends five attempts with
+the instrument, not the hypothesis, as the thing that failed."* That is the
+result, and it cost 1,900 API calls instead of 17,000.
