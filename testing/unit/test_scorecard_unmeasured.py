@@ -81,7 +81,16 @@ def git_repo(tmp_path: Path) -> Path:
     subprocess.run(["git", "-C", str(repo), "config", "user.name", "probe"], check=True)
     (repo / "README.md").write_text("probe\n")
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "initial"], check=True)
+    # `--no-gpg-sign` is load-bearing, not decoration: a developer with
+    # `commit.gpgsign=true` in their global config gets a SIGNED commit here,
+    # git reports `%G?` as U rather than N, and the "no evidence" fixture
+    # quietly stops being evidence-free. It passed in CI and failed locally
+    # for exactly that reason -- a fixture that depends on the machine's git
+    # configuration is testing the machine.
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "--no-gpg-sign", "-qm", "initial"],
+        check=True,
+    )
     return repo
 
 

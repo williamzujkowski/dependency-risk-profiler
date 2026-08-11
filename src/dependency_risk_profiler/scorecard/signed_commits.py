@@ -22,24 +22,38 @@ logger = logging.getLogger(__name__)
 # unmistakably "a code none of these tables contains" rather than a catch-all
 # that quietly answers the question (#236).
 #
-# G: valid signature with the same key as in the commit author
-# B: valid signature but with expired key
-# R: valid signature, key expired
-# U: valid signature with untrusted key
-# X: invalid signature
-# Y: invalid signature, key missing
-# E: signature can't be checked (e.g., missing key)
+# Descriptions are git's own, from `git log --help`. The previous block
+# misdescribed five of the eight codes -- B was written down as "valid
+# signature but with expired key" when git says it is a BAD signature, and R
+# as "valid signature, key expired" when git says it is a good signature made
+# by a REVOKED key. Both were bucketed as verified as a result, so a bad
+# signature and a revoked key each counted as evidence of signing (#389).
+#
+# G: good (valid) signature
+# B: BAD signature
+# U: good signature with unknown validity
+# X: good signature that has expired
+# Y: good signature made by an expired key
+# R: good signature made by a REVOKED key
+# E: signature cannot be checked (e.g. missing key)
 # N: no signature
+#
+# Only G establishes a verified signature. Everything from B to E means a
+# signature object exists and its validity was NOT established -- which is a
+# different fact from "unsigned" and must not be collapsed into it. Whether a
+# BAD signature should actively raise risk rather than abstain is a scoring
+# policy question, tracked separately rather than decided here.
 _COMMIT_STATUS_BUCKETS: Dict[str, str] = {
     "G": "verified_commits",
-    "B": "verified_commits",
-    "R": "verified_commits",
+    "B": "unverified_commits",
+    "R": "unverified_commits",
     "U": "unverified_commits",
     "X": "unverified_commits",
     "Y": "unverified_commits",
     "E": "unverified_commits",
     "N": "no_signature_commits",
 }
+
 
 # ``git tag -v`` output fragments that establish a verdict, in priority order.
 # Every one of these was observed from real git rather than assumed:
@@ -65,6 +79,22 @@ _TAG_VERDICTS: Tuple[Tuple[str, str], ...] = (
     ("BAD signature", "unverified_tags"),
     ("error: no signature found", "no_signature_tags"),
     ("cannot verify a non-tag object", "no_signature_tags"),
+    # A signature gpg cannot check for want of the signer's key. This is not
+    # an unsigned tag -- it is the opposite, a tag that demonstrably carries a
+    # signature -- and it is the *normal* state of any fresh clone, since a
+    # clone imports no public keys. Leaving it out meant every sampled tag on
+    # a signed repository came back uninterpretable, the "no verdict for any
+    # tag" guard fired, and the whole signal raised instead of answering.
+    # Measured on pallets/flask and sigstore/cosign, both of which sign every
+    # release tag (#389).
+    ("Can't check signature: No public key", "unverified_tags"),
+    ("Can't check signature", "unverified_tags"),
+    # SSH signing (git 2.34+, and what sigstore/cosign uses). Without an
+    # allowed-signers file git refuses to evaluate the signature -- which is,
+    # again, a signature that exists and could not be checked, not an absent
+    # one. Omitting it meant a repository that signs every tag with SSH was
+    # indistinguishable from a parser failure.
+    ("allowedSignersFile needs to be configured", "unverified_tags"),
 )
 
 
@@ -499,15 +529,48 @@ def check_signed_commits(
                 dependency.security_metrics = SecurityMetrics()
 
             # Determine if the project uses signed commits
-            has_signed_commits = (
+            # Three-way, because "I could not check" is not "there is
+            # nothing to check" (#218, #389). Previously this read only
+            # `verified_commits`, and since verification runs against a local
+            # keyring that a fresh clone never has, it returned a definite
+            # False for every repository on earth -- including ones where
+            # every commit carries a signature. A read finding that is false
+            # for all inputs is worse than an abstention.
+            verified = (
                 commit_signature_data["verified_commits"] > 0
                 or tag_signature_data["verified_tags"] > 0
                 or commit_signing_requirement["requires_commit_signing"]
             )
+            present_but_unverifiable = (
+                commit_signature_data["unverified_commits"] > 0
+                or tag_signature_data.get("unverified_tags", 0) > 0
+            )
+            read_and_unsigned = commit_signature_data["no_signature_commits"] > 0
+
+            if verified:
+                has_signed_commits = True
+            elif present_but_unverifiable:
+                # Signature objects exist and their validity was not
+                # established. Asserting either answer would be a claim the
+                # observation does not support.
+                has_signed_commits = None
+            elif read_and_unsigned:
+                has_signed_commits = False
+            else:
+                has_signed_commits = None
 
             # Calculate score based on signature status
-            signed_commits_score = calculate_signed_commits_score(
-                commit_signature_data, tag_signature_data, commit_signing_requirement
+            # A score alongside an abstention would be a number nobody can
+            # act on: the scorer excludes unmeasured signals from both the
+            # numerator and the denominator, so the score must be absent too.
+            signed_commits_score = (
+                calculate_signed_commits_score(
+                    commit_signature_data,
+                    tag_signature_data,
+                    commit_signing_requirement,
+                )
+                if has_signed_commits is not None
+                else None
             )
 
             # Identify any issues
@@ -549,9 +612,16 @@ def check_signed_commits(
                     f"Tags: {tag_signature_data['verified_tags']}/"
                     f"{tag_signature_data['total_tags']}"
                 )
+            # The score is None whenever the signal abstains, so it cannot be
+            # formatted as a float. Logging "unmeasured" is the honest line;
+            # formatting a missing value is how a crash gets introduced by a
+            # correctness fix.
             logger.info(
-                "Signed commits score for "
-                f"{dependency.name}: {signed_commits_score:.2f}"
+                "Signed commits score for %s: %s",
+                dependency.name,
+                "unmeasured"
+                if signed_commits_score is None
+                else f"{signed_commits_score:.2f}",
             )
             for issue in issues:
                 logger.info(f"Signed commits issue for {dependency.name}: {issue}")
