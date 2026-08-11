@@ -522,6 +522,21 @@ class ForgeRegistry:
     def hosts_for(cls, software: ForgeSoftware) -> List[str]:
         """Return the host patterns routing to one forge.
 
+        Production never needs this direction. Every production path goes
+        host -> forge through :meth:`match_forge_by_host`; this is the inverse,
+        and it exists so the mapping can be shown **total** rather than merely
+        working on the hosts anyone happened to try. The round-trip assertion
+        in ``test_forge_contract.py`` walks every registered forge, asks for its
+        patterns, and checks each one routes back — which catches a forge
+        registered with no route, and a pattern that routes to a different
+        adapter than the one that declared it. Neither is reachable by testing
+        the forward direction alone.
+
+        So its only caller being a test is the design, not neglect. Recorded
+        here because a dead-code sweep flagged it (#343), and a reason living
+        only in a reviewer's head is the shape of defect this repository keeps
+        removing.
+
         Args:
             software: Which forge.
 
