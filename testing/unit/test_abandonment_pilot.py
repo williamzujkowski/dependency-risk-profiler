@@ -275,6 +275,40 @@ def test_a_label_window_that_has_not_closed_is_refused() -> None:
         build_cohort([record], T, 3, T + timedelta(days=200))
 
 
+def test_an_overridden_n_keeps_the_registered_one_beside_it() -> None:
+    """A sensitivity run must not be readable as the registered one.
+
+    N is pre-registered: it comes from the release-silence life table before
+    any cohort exists, which is what stops it being picked because it
+    flattered a number. ``--years`` sets it aside, and a results document that
+    simply reported the overridden value would be indistinguishable from a
+    registered run at that N -- the same file, the same fields, a different
+    meaning.
+
+    So the override carries the registered value with it. Someone reading the
+    document a year from now can tell which question it answers.
+    """
+    snapshot = Path(__file__).resolve().parents[2] / "research/data/npm-2026-08-06"
+    if not snapshot.exists():  # pragma: no cover - data is committed
+        pytest.skip("pinned snapshot not present")
+    results = experiment.run(
+        snapshot_dir=snapshot,
+        replicates=1,
+        control_rounds=1,
+        moment=datetime(2024, 8, 1, tzinfo=timezone.utc),
+        override_years=1,
+    )
+    selection = results["n_selection"]
+    assert isinstance(selection, dict)
+    assert results["N_years"] == 1
+    assert selection["N_years_preregistered"] == 2, (
+        "An overridden N must keep the pre-registered value beside it. "
+        "Without it a sensitivity run and a registered run produce the same "
+        "document, and the difference between them is the whole point."
+    )
+    assert "override_reason" in selection
+
+
 def test_a_chosen_t_too_close_to_the_harvest_is_refused() -> None:
     """A T passed by hand must still leave the label window closed.
 
