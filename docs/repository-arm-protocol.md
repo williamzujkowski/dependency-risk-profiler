@@ -437,3 +437,98 @@ information rather than an inconvenience.
 This was found by consensus review asking what else moves when the support
 shrinks. It is the third time in this project that a question about *counts*
 turned out to be a question about *which population the counts describe*.
+
+---
+
+## 13. Erratum — §10's autocorrelation mitigation was false
+
+**Dated 2026-08-11, after stages 5–7 reported. §10 is left exactly as written.**
+7-0 consensus: record it as wrong rather than amend it. The two earlier
+amendments to this protocol were adjudicated *before* any result bound them;
+editing a mitigation after the arm it guarded has reported can only launder the
+result it was supposed to guard, and the audit trail is what makes this
+project's withdrawals worth anything.
+
+### What was false
+
+§10 disarmed the autocorrelation hazard with:
+
+> "the paired registry baseline already contains release recency, so an
+> improvement over it is improvement beyond cadence"
+
+**It does not contain release recency.** `staleness` and `version` are ablated
+by the abandonment protocol as circular, so the registry baseline holds only
+`maintainer` and `source_repository` — five distinct score values across 1,869
+packages.
+
+So the shield was absent, and the signal carrying the entire effect is commit
+cadence. **Falsification line 1's non-firing certifies a number, not the
+claim.** The claim registered beside it — improvement *beyond cadence* — was
+conditioned on a premise that is factually wrong, and a pre-registered
+interpretation resting on a false premise is void rather than binding.
+
+### What may be said
+
+Only this: **within a download-reported popularity stratum, adding
+repository-derived signals improved discrimination of abandonment by +0.0594
+[+0.0014, +0.1138]**, with every qualification below attached.
+
+Not "leading indicators beat popularity." Not "the repository signals work."
+Not "improvement beyond cadence."
+
+### Everything that qualifies it
+
+- **The interval grazes zero.** 45 of 2,000 clustered resamples at or below it.
+- **Realised parameters were worse than published.** ρ = 0.186 against a
+  predicted high value; SE 0.0273 against 0.0157. The MDE at realised
+  parameters is 0.0976, above the observed 0.0594 — so **Type-M inflation is
+  likely**: conditional on significance at this precision, the point estimate
+  is probably overstated.
+- **It is not a null.** Calling it one would be the post-hoc power fallacy, and
+  that framing was proposed and rejected. The estimate and its interval stand;
+  it is their *precision* that is poor.
+- **One signal carries it.** `community_activity` supplies 111% of the
+  five-signal block; `maintained` partially substitutes (both read commit
+  activity); the other three are zero or negative.
+- **The effect changes sign by population.** −0.063 on the 890 packages npm
+  reports no downloads for, almost entirely scoped. The arm-wide +0.008 is the
+  average of two opposite things, and **falsification line 4 was written for
+  popularity when the operative confound is population.**
+
+### The circularity question, measured after the vote
+
+Is commit cadence the ablated construct re-entering through git? Measured
+rather than argued:
+
+| predictor, 1,869 packages | AUC |
+|---|---:|
+| **release cadence at T — ABLATED as circular** | **0.7340** |
+| commit cadence at T | 0.6479 |
+| commit cadence within release-cadence quartiles | **0.5842** |
+
+**The best predictor of "published no releases in two years" is "how often did
+you release last year."** That is circular by construction and is why it was
+ablated — but it means every figure this arm produced sits below a tautology.
+
+Conditioning on release cadence costs commit cadence **43% of its
+excess-over-chance** (0.148 → 0.084), and one quartile falls *below* chance at
+0.4807. So the answer is **partially circular, and not resolvable here**: there
+is residual information, it is unstable across the range, and this design has
+no dissociation test — no pre-registered analysis of packages where commit and
+release activity disagree at T.
+
+### What this arm actually established
+
+Eight signals had never been tested. Now six have, two remain untestable at any
+past date, and the result is: **one of them carries whatever effect exists, it
+is substantially the construct the outcome was built to exclude, and it
+reverses sign on the half of the cohort npm will not report downloads for.**
+
+No claim is advanced. The withdrawn README claim (#330) stays withdrawn.
+
+**And the outcome is implicated, not just the signals.** `outcome-landscape.md`
+records abandonment as the only outcome clearing all three requirements. A
+release-defined outcome against which release cadence scores 0.734 clears
+requirement 3 — *not mechanically coupled to the signals* — less cleanly than
+ablating `staleness` was meant to guarantee. That is the finding worth carrying
+forward.
