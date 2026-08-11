@@ -1,0 +1,95 @@
+{
+  "protocol": "docs/granularity-protocol.md (amended, \u00a76)",
+  "t": "2024-08-01",
+  "subset": "quiet packages (no publish after T)",
+  "primary_contrast": "marginal events -- what the finer arm sees and shipped does not",
+  "arms": {
+    "shipped": {
+      "packages": 1174,
+      "moved": 86,
+      "movement_rate": 0.07325383304940375,
+      "movements_per_package_year": 0.028475672721051892,
+      "risk_increasing": 38,
+      "risk_decreasing": 48,
+      "risk_increasing_share": 0.4418604651162791,
+      "risk_increasing_ci95": [
+        0.3416256631747516,
+        0.547067325373983
+      ]
+    },
+    "fine": {
+      "packages": 1174,
+      "moved": 117,
+      "movement_rate": 0.09965928449744463,
+      "movements_per_package_year": 0.038740159399570595,
+      "risk_increasing": 55,
+      "risk_decreasing": 62,
+      "risk_increasing_share": 0.4700854700854701,
+      "risk_increasing_ci95": [
+        0.3820418012099604,
+        0.5600311273179637
+      ]
+    },
+    "continuous": {
+      "packages": 1174,
+      "moved": 136,
+      "movement_rate": 0.11584327086882454,
+      "movements_per_package_year": 0.04503129639608206,
+      "risk_increasing": 66,
+      "risk_decreasing": 70,
+      "risk_increasing_share": 0.4852941176470588,
+      "risk_increasing_ci95": [
+        0.40286095897691965,
+        0.56853524930445
+      ]
+    }
+  },
+  "marginal": {
+    "fine": {
+      "events": 31,
+      "risk_increasing": 17,
+      "risk_decreasing": 14,
+      "risk_increasing_share": 0.5483870967741935,
+      "risk_increasing_ci95": [
+        0.37771879603669134,
+        0.7083851716341388
+      ],
+      "vs_shipped": {
+        "verdict": "underpowered",
+        "difference": 0.10652663165791443,
+        "ci95": [
+          -0.09769616998181488,
+          0.3107494332976437
+        ],
+        "margin": 0.1,
+        "reason": "difference +0.1065, 95% CI [-0.0977, +0.3107] against a 0.10 margin"
+      }
+    },
+    "continuous": {
+      "events": 50,
+      "risk_increasing": 28,
+      "risk_decreasing": 22,
+      "risk_increasing_share": 0.56,
+      "risk_increasing_ci95": [
+        0.4230578680014353,
+        0.6883801278976466
+      ],
+      "vs_shipped": {
+        "verdict": "underpowered",
+        "difference": 0.11813953488372098,
+        "ci95": [
+          -0.05491494690203794,
+          0.29119401666947986
+        ],
+        "margin": 0.1,
+        "reason": "difference +0.1181, 95% CI [-0.0549, +0.2912] against a 0.10 margin"
+      }
+    }
+  },
+  "swaps": {
+    "set_changes": 165,
+    "swaps": 29,
+    "swap_share_of_set_changes": 0.17575757575757575
+  },
+  "note": "This study can rule the granularity fix IN. It cannot rule it out: a per-package-correct signal is aggregate-balanced by nature, so a balanced split is not evidence of uninformativeness."
+}
