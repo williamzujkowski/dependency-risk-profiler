@@ -36,10 +36,24 @@ which is what line 2 asked about, and that is worse than if it had been:
 > **For a package that has gone quiet, a maintainer change is about as likely to
 > lower its risk score as raise it.**
 
-A signal that moves is necessary for early warning. A signal whose movements are
-directionally a coin flip is not a warning at all, however often it moves. Line
-2 was written to catch a systematic wrong direction; what it found is no
+Line 2 was written to catch a systematic wrong direction; what it found is no
 direction.
+
+**Correction, 2026-08-11.** This section originally continued: *"A signal whose
+movements are directionally a coin flip is not a warning at all, however often
+it moves."* **That is wrong, and it is wrong in a way that changes how the
+result should be read.**
+
+A balanced split is entirely consistent with a *perfectly informative* signal.
+Some quiet packages genuinely get rescued — a maintainer joins, and the risk
+really is lower. Others genuinely decay. A signal that is correct package by
+package produces an aggregate split near even *by construction*, so aggregate
+balance is not evidence of uninformativeness.
+
+What the split licenses is narrower: **the signal carries no aggregate
+directional drift.** Whether each movement is *correct* is an outcome question,
+and the outcome programme is closed, so this study cannot answer it either way.
+The finding stands; the inference drawn from it did not.
 
 **Line 3 does not fire, and the ratio is reported anyway.** Set changes exceed
 band crossings by **2.12×** — under the 3× line, but the collapse is real:

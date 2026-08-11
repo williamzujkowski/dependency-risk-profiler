@@ -91,3 +91,69 @@ in a more consistent direction is still unvalidated against anything.
   favourable result does not get read as costless.
 - **Cause remains unidentified.** An owner add, a transfer, a bot account and an
   npm support action are indistinguishable in this data, in every arm.
+
+---
+
+## 6. Amendment: nested arms, an unpowered bar, and a criterion that overreached
+
+Reviewed **4-3, below supermajority — rejected**. Four defects, all adopted, and
+the first two change what gets measured.
+
+### The arms are nested, and the pooled comparison is rigged toward my prior
+
+Every band crossing **is** a set change, so shipped ⊂ fine ⊂ continuous.
+Comparing the continuous arm's pooled direction split against the shipped arm's
+compares two overlapping samples, and the pooled statistic is dragged toward the
+shipped one by construction — biased toward "granularity is not the fix", which
+is the answer I said in advance that I expected.
+
+**The primary Q2 contrast is now the marginal events**: set changes visible at a
+finer resolution and invisible at the shipped one. That asks the question
+directly — *does the movement granularity adds carry direction?* — without each
+arm contaminating the other.
+
+### The 10-point bar cannot distinguish "no effect" from "no power"
+
+At n = 86 shipped crossings the risk-increasing share carries a 95% interval of
+roughly ±10 points. The bar sits inside the noise of the reference arm alone,
+and power to detect a true 10-point shift is around 45%: the criterion would
+announce "not the fix" about half the time when granularity *is* the fix by its
+own definition.
+
+**The outcome is now tri-state** — supported, refuted, or **underpowered at this
+harvest** — decided by whether the interval on the difference excludes the
+margin. Pre-registering the third state is the point: without it an inconclusive
+result gets narrated as a negative one.
+
+### Criterion 2 was nearly pre-answered, and criterion 4 back-doored a closed question
+
+The 2× movement-rate bar sits just under the **2.12× collapse already published
+from the same harvest**. It is downgraded from live falsification to a
+conditional check on the quiet subgroup, where the ratio genuinely is unknown.
+
+Criterion 4 promoted a one-sided split to a *product recommendation*. That
+converts aggregate one-sidedness into a claim about signal quality, which is
+exactly the inference §4 forbids — aggregate drift (maintainers drifting off
+quiet packages) would produce one-sidedness with no per-package information.
+**Downgraded to: motivates a correctness question this study cannot answer.**
+
+### Swaps bound what any count-based fix can recover
+
+Unflagged by me and caught in review: the 2.12× collapse was measured on
+**sets**, and every arm here buckets a **count**. A swap — one maintainer out,
+one in — changes the set and leaves the count identical, so it is invisible at
+*every* resolution including continuous.
+
+The swap fraction is now reported, because it is the ceiling on what any
+granularity change could ever recover.
+
+### And criterion 1's conclusion was the same category error, twice
+
+The wording "movement of no informational value" asserts precisely what §4's
+scope forbids and what `band-crossing-result.md` has now been corrected for: a
+per-package-correct signal is aggregate-balanced by nature. The conclusion is
+narrowed to **"finer resolution does not change the aggregate direction
+profile"**, which is what an instrument study can say.
+
+**This study can rule the fix in. It cannot rule it out.** Recorded before the
+numbers exist.
