@@ -945,10 +945,33 @@ def test_project_profile_performance_sla() -> None:
         timings.append((time.perf_counter() - start_time) * 1000)  # Convert to ms
     elapsed_time = sorted(timings)[1]
 
-    # Assert
-    assert elapsed_time < 50.0, (
-        f"Project profile creation took {elapsed_time}ms, exceeding SLA of "
-        "50ms for 100 dependencies"
+    # The bar is scaled by how fast THIS machine is, not fixed in absolute
+    # milliseconds (#308). An absolute 50ms threshold measures the runner as
+    # much as the code: it fired twice on CI's 3.12 image at 54-58ms on a pull
+    # request containing no `src/` changes at all, while 3.10 and 3.11 passed
+    # and local runs were nowhere near it. A test that fails on a slow machine
+    # regardless of the code under test is reporting the weather.
+    #
+    # So: time a fixed synthetic workload in the same process and scale. The
+    # calibration loop is arithmetic only -- no allocation-heavy work whose
+    # cost would drift with the interpreter version being calibrated for.
+    calibration_start = time.perf_counter()
+    total = 0.0
+    for value in range(400_000):
+        total += value * 0.5
+    calibration_ms = (time.perf_counter() - calibration_start) * 1000
+    assert total > 0  # keep the loop from being optimised away
+
+    # 50ms on a machine that runs the calibration in 20ms, scaled from there.
+    reference_calibration_ms = 20.0
+    budget_ms = 50.0 * max(1.0, calibration_ms / reference_calibration_ms)
+
+    assert elapsed_time < budget_ms, (
+        f"Project profile creation took {elapsed_time:.1f}ms against a budget "
+        f"of {budget_ms:.1f}ms for 100 dependencies "
+        f"(calibration {calibration_ms:.1f}ms vs {reference_calibration_ms}ms "
+        "reference). The budget already scales for a slow machine, so this is "
+        "a real regression rather than a slow runner."
     )
     assert (
         len(profile.dependencies) == num_dependencies
