@@ -1,0 +1,7138 @@
+{
+ "30nama-sdk": [
+  "EternalC0der",
+  "30nama-sdk"
+ ],
+ "@0x2e757/wrappers": [
+  "0x2E757",
+  "Wrappers"
+ ],
+ "@0y0/webpack-config-vanilla": [
+  "o0y0o",
+  "f2e-dev-toolkit"
+ ],
+ "@20minutes/hela": [
+  "20minutes",
+  "hela"
+ ],
+ "@3mo/no-intrinsic-dimensions-controller": [
+  "3mo-esolutions",
+  "web-components"
+ ],
+ "@abp/core": [
+  "abpframework",
+  "abp"
+ ],
+ "@accounts/redis": [
+  "accounts-js",
+  "accounts"
+ ],
+ "@ace-fetch/core": [
+  "aceHubert",
+  "ace-fetch"
+ ],
+ "@acq/environ": [
+  "hoyeungw",
+  "repsi"
+ ],
+ "@addresszen/address-lookup": [
+  "addresszen",
+  "address-lookup"
+ ],
+ "@adminjs/leaflet": [
+  "SoftwareBrothers",
+  "adminjs-leaflet"
+ ],
+ "@adminjs/prisma": [
+  "SoftwareBrothers",
+  "adminjs-prisma"
+ ],
+ "@admmello/eslint-config": [
+  "admmello",
+  "admmello-eslint"
+ ],
+ "@adobe/aio-cli-plugin-certificate": [
+  "adobe",
+  "aio-cli-plugin-certificate"
+ ],
+ "@adobe/aio-lib-state": [
+  "adobe",
+  "aio-lib-state"
+ ],
+ "@adobe/generator-add-action-asset-compute": [
+  "adobe",
+  "generator-add-action-asset-compute"
+ ],
+ "@adobe/spectrum-tokens": [
+  "adobe",
+  "spectrum-tokens"
+ ],
+ "@adopted-ember-addons/ember-stripe-elements": [
+  "adopted-ember-addons",
+  "ember-stripe-elements"
+ ],
+ "@adrien-may/factory": [
+  "teamMay",
+  "factory"
+ ],
+ "@agendize/vue-agendize": [
+  "agendize",
+  "vue-agendize"
+ ],
+ "@agoric/casting": [
+  "Agoric",
+  "agoric-sdk"
+ ],
+ "@agravity/private": [
+  "agravityio",
+  "agravity-sdk-typescript"
+ ],
+ "@ahovakimyan/cordova-plugin-wkwebviewxhrfix": [
+  "arahovakimyan",
+  "cordova-plugin-wkwebviewxhrfix"
+ ],
+ "@airgap/cosmos": [
+  "airgap-it",
+  "airgap-coin-lib"
+ ],
+ "@aislamov/onnxruntime-web64": [
+  "dakenf",
+  "onnxruntime"
+ ],
+ "@akemona-org/strapi-plugin-email": [
+  "akemona",
+  "strapi"
+ ],
+ "@alephium/wormhole-sdk": [
+  "alephium",
+  "wormhole-fork"
+ ],
+ "@alex.dunn.adalyser/element-plus": [
+  "element-plus",
+  "element-plus"
+ ],
+ "@alexaegis/eslint-config-core": [
+  "AlexAegis",
+  "js-tooling"
+ ],
+ "@algolia/client-query-suggestions": [
+  "algolia",
+  "algoliasearch-client-javascript"
+ ],
+ "@algorithm.ts/roman": [
+  "guanghechen",
+  "algorithm.ts"
+ ],
+ "@alicloud/ros-cdk-eci": [
+  "aliyun",
+  "Resource-Orchestration-Service-Cloud-Development-Kit"
+ ],
+ "@aliexme/eslint-config": [
+  "aliexme",
+  "web-shared"
+ ],
+ "@alifd/sassdoc-parser": [
+  "alibaba-fusion",
+  "sassdoc-parser"
+ ],
+ "@alilc/lowcode-engine-docs": [
+  "alibaba",
+  "lowcode-engine"
+ ],
+ "@allbin/icons": [
+  "allbin",
+  "icons"
+ ],
+ "@allenai/eslint-config-varnish": [
+  "allenai",
+  "varnish-mui"
+ ],
+ "@alleyinteractive/create-block": [
+  "alleyinteractive",
+  "alley-scripts"
+ ],
+ "@alova/adapter-taro": [
+  "alovajs",
+  "alova"
+ ],
+ "@alpin11/eslint-config": [
+  "alpin11",
+  "alpin11-lint"
+ ],
+ "@altafonte/eslint-config": [
+  "Altafonte",
+  "eslint-config"
+ ],
+ "@alterior/cli": [
+  "alterior-mvc",
+  "alterior"
+ ],
+ "@amalto/menu": [
+  "amalto",
+  "platform6-ui-components"
+ ],
+ "@amedia/eslint-config-base": [
+  "amedia",
+  "eslint-config-amedia"
+ ],
+ "@amida-tech/blue-button-meta": [
+  "amida-tech",
+  "blue-button-meta"
+ ],
+ "@anchan828/nest-storage-gcs": [
+  "anchan828",
+  "nest-storage"
+ ],
+ "@angular/cdk": [
+  "angular",
+  "components"
+ ],
+ "@animoca/ethereum-contracts": [
+  "animoca",
+  "ethereum-contracts"
+ ],
+ "@ansible/ansible-ui-framework": [
+  "ansible",
+  "ansible-ui"
+ ],
+ "@ant-design/pro-field": [
+  "ant-design",
+  "pro-components"
+ ],
+ "@ant-design/pro-flow-editor": [
+  "ant-design",
+  "pro-flow-editor"
+ ],
+ "@antonz/sqlean": [
+  "nalgeon",
+  "sqlean.js"
+ ],
+ "@antv/gi-sdk": [
+  "antvis",
+  "G6VP"
+ ],
+ "@apex-pub/fabric-chaincode-utils": [
+  "wearetheledger",
+  "fabric-chaincode-utils"
+ ],
+ "@apiida/vue-components": [
+  "apiida",
+  "vue-components"
+ ],
+ "@apollo/utils.keyvaluecache": [
+  "apollographql",
+  "apollo-utils"
+ ],
+ "@applique-ui/svg": [
+  "myntra",
+  "uikit"
+ ],
+ "@applitools/spec-driver-webdriver": [
+  "applitools",
+  "eyes.sdk.javascript1"
+ ],
+ "@appshell/manifest-webpack-plugin": [
+  "navaris",
+  "appshell"
+ ],
+ "@aptoma/aoi-smart-crop": [
+  "aptoma",
+  "aoi-smart-crop"
+ ],
+ "@arche-polkadot/react-core": [
+  "zzcwoshizz",
+  "arche"
+ ],
+ "@as-code/eslint-config": [
+  "AvilyRs",
+  "as-code-eslint-config"
+ ],
+ "@asciidoctor/reveal.js": [
+  "asciidoctor",
+  "asciidoctor-reveal.js"
+ ],
+ "@ascua/calendar": [
+  "abcum",
+  "ascua"
+ ],
+ "@aspecto/opentelemetry": [
+  "aspecto-io",
+  "aspecto-opentelemetry-js"
+ ],
+ "@assaabloy/amarr-wc-accordian": [
+  "ASSAABLOY",
+  "amarr-frontend-components"
+ ],
+ "@assecosolutions/fox-indicator": [
+  "assecosolutions",
+  "fox"
+ ],
+ "@astrojs/cloudflare": [
+  "withastro",
+  "adapters"
+ ],
+ "@aurora-launcher/core": [
+  "AuroraTeam",
+  "AuroraLauncher"
+ ],
+ "@autofleet/cli": [
+  "Autofleet",
+  "scripts"
+ ],
+ "@autofleet/events": [
+  "Autofleet",
+  "events"
+ ],
+ "@availity/form-upload": [
+  "Availity",
+  "availity-react"
+ ],
+ "@availity/mui-menu": [
+  "Availity",
+  "element"
+ ],
+ "@avanio/expire-cache": [
+  "AvanioOy",
+  "expire-cache"
+ ],
+ "@awesome-cordova-plugins/app-center-push": [
+  "danielsogl",
+  "awesome-cordova-plugins"
+ ],
+ "@aws-amplify/ui": [
+  "aws-amplify",
+  "amplify-ui"
+ ],
+ "@aws-cdk/aws-scheduler-alpha": [
+  "aws",
+  "aws-cdk"
+ ],
+ "@aws-crypto/crc32": [
+  "aws",
+  "aws-sdk-js-crypto-helpers"
+ ],
+ "@aws-sdk/body-checksum-node": [
+  "aws",
+  "aws-sdk-js-v3"
+ ],
+ "@aws-solutions-constructs/aws-dynamodbstreams-lambda": [
+  "awslabs",
+  "aws-solutions-constructs"
+ ],
+ "@awsless/validate": [
+  "awsless",
+  "awsless"
+ ],
+ "@aztlan/swatch": [
+  "AztlanEngineering",
+  "swatch"
+ ],
+ "@azure/static-web-apps-cli": [
+  "azure",
+  "static-web-apps-cli"
+ ],
+ "@babel/helper-wrap-function": [
+  "babel",
+  "babel"
+ ],
+ "@backstage/plugin-azure-sites": [
+  "backstage",
+  "backstage"
+ ],
+ "@bahmutov/cypress-esbuild-preprocessor": [
+  "bahmutov",
+  "cypress-esbuild-preprocessor"
+ ],
+ "@balena/abstract-sql-compiler": [
+  "balena-io-modules",
+  "abstract-sql-compiler"
+ ],
+ "@baloise/web-app-form-vue": [
+  "baloise",
+  "web-app-utils"
+ ],
+ "@basaldev/blocks-order-service": [
+  "basaldev",
+  "blocks-order-service"
+ ],
+ "@basemaps/sprites": [
+  "linz",
+  "basemaps"
+ ],
+ "@bassem97/upup": [
+  "uNotesOfficial",
+  "upup"
+ ],
+ "@bcc-code/db_masker": [
+  "bcc-code",
+  "db_masker"
+ ],
+ "@bcwdev/auth0provider": [
+  "jakeoverall",
+  "express-auth0provider"
+ ],
+ "@bedrock/did-context": [
+  "digitalbazaar",
+  "bedrock-did-context"
+ ],
+ "@belloai/transform": [
+  "threfo",
+  "bello_frontend"
+ ],
+ "@bemedev/decompose": [
+  "chlbri",
+  "decompose"
+ ],
+ "@bennetgallein/mande": [
+  "posva",
+  "mande"
+ ],
+ "@bentley/bis-rules": [
+  "iTwin",
+  "bis-schema-validation"
+ ],
+ "@bento-core/about": [
+  "CBIIT",
+  "bento-frontend"
+ ],
+ "@bento-editor/core": [
+  "cam-inc",
+  "bento"
+ ],
+ "@best-apps/gfx-editor": [
+  "agencyenterprise",
+  "gfx-sandbox"
+ ],
+ "@bicou/countries-server": [
+  "gbicou",
+  "countries-server"
+ ],
+ "@biopassid/face-sdk-react-native": [
+  "vsofttecnologia",
+  "face-sdk-react-native"
+ ],
+ "@bird-studio/use-map": [
+  "bird-studio",
+  "use-map"
+ ],
+ "@bitgo/abstract-utxo": [
+  "BitGo",
+  "BitGoJS"
+ ],
+ "@blackprint/sketch": [
+  "Blackprint",
+  "Blackprint"
+ ],
+ "@blastz/nest-common-helper": [
+  "blastZ",
+  "pkg-universe"
+ ],
+ "@bleskomat/form": [
+  "bleskomat",
+  "form-node"
+ ],
+ "@blinkk/root-cms": [
+  "blinkk",
+  "rootjs"
+ ],
+ "@blockshift/common": [
+  "blockshift-hq",
+  "blockshift-js"
+ ],
+ "@blocksuite/lit": [
+  "toeverything",
+  "blocksuite"
+ ],
+ "@bluebase/plugin-rn-placeholder": [
+  "BlueBaseJS",
+  "plugin-rn-placeholder"
+ ],
+ "@bluelovers/ipfs-http-client": [
+  "bluelovers",
+  "ws-ipfs"
+ ],
+ "@bluryar/naive-ui-themes": [
+  "bluryar",
+  "libsany"
+ ],
+ "@bmg.studio/form": [
+  "BarthMedia",
+  "studioForm"
+ ],
+ "@boost/log": [
+  "milesj",
+  "boost"
+ ],
+ "@boostercloud/rocket-webhook-core": [
+  "boostercloud",
+  "rocket-webhook"
+ ],
+ "@botonic/plugin-hubtype-babel": [
+  "hubtype",
+  "botonic"
+ ],
+ "@braze/web-sdk": [
+  "braze-inc",
+  "braze-web-sdk"
+ ],
+ "@breejs/later": [
+  "breejs",
+  "later"
+ ],
+ "@brightlayer-ui/colors": [
+  "etn-ccis",
+  "blui-colors"
+ ],
+ "@bring-it/npm": [
+  "airkro",
+  "bring-it"
+ ],
+ "@brownsugar/eslint-config-nuxt": [
+  "brownsugar",
+  "eslint-config"
+ ],
+ "@brunoc/ngx-viacep": [
+  "brunoc107",
+  "ngx-viacep"
+ ],
+ "@bugsplat/ngx-file-drop": [
+  "BugSplat-Git",
+  "ngx-file-drop"
+ ],
+ "@bunland/moeban": [
+  "Bunland",
+  "moeban"
+ ],
+ "@by-association-only/eslint-config-unisian": [
+  "baoagency",
+  "eslint-config-unisian"
+ ],
+ "@byndyusoft/stylelint-config": [
+  "Byndyusoft",
+  "stylelint-config"
+ ],
+ "@byteark/byteark-player-vue": [
+  "byteark",
+  "byteark-player-vue"
+ ],
+ "@capacitor/keyboard": [
+  "ionic-team",
+  "capacitor-plugins"
+ ],
+ "@capgo/find-package-manager": [
+  "Cap-go",
+  "find-package-manager"
+ ],
+ "@cardscan.ai/insurance-cardscan-react": [
+  "CardScan-ai",
+  "insurance-cardscan-react"
+ ],
+ "@carthus/cli": [
+  "alexandrmaliovaniy",
+  "carthus-cli"
+ ],
+ "@castiron/components": [
+  "castiron",
+  "common-js"
+ ],
+ "@cbor-extract/cbor-extract-linux-arm": [
+  "kriszyp",
+  "cbor-extract"
+ ],
+ "@cdktf/provider-hcp": [
+  "cdktf",
+  "cdktf-provider-hcp"
+ ],
+ "@cdktf/provider-waypoint": [
+  "cdktf",
+  "cdktf-provider-waypoint"
+ ],
+ "@cdm-logger/client": [
+  "cdmbase",
+  "cdm-logger"
+ ],
+ "@cere-ddc-sdk/smart-contract": [
+  "Cerebellum-Network",
+  "cere-ddc-sdk-js"
+ ],
+ "@cerner/terra-docs": [
+  "cerner",
+  "terra-core"
+ ],
+ "@cfware/add-event-listener": [
+  "cfware",
+  "add-event-listener"
+ ],
+ "@chakra-icons/cli": [
+  "kodingdotninja",
+  "chakra-icons"
+ ],
+ "@chakra-ui/accordion": [
+  "chakra-ui",
+  "chakra-ui"
+ ],
+ "@changesets/get-version-range-type": [
+  "changesets",
+  "changesets"
+ ],
+ "@charcoal-ui/theme": [
+  "pixiv",
+  "charcoal"
+ ],
+ "@chasky/middlewares": [
+  "dotribe",
+  "middlewares"
+ ],
+ "@checkout.com/checkout-spartacus-translations": [
+  "checkout",
+  "Checkout-SAP-Cloud-Commerce-2211"
+ ],
+ "@chenyueban/tsconfig": [
+  "chenyueban",
+  "utils"
+ ],
+ "@chi_eee/gif-decoder": [
+  "Chi-EEE",
+  "Gif-Decoder"
+ ],
+ "@chialab/estransform": [
+  "chialab",
+  "rna"
+ ],
+ "@chili-publish/studio-sdk": [
+  "chili-publish",
+  "studio-sdk"
+ ],
+ "@chrisburnell/spark-line": [
+  "chrisburnell",
+  "spark-line"
+ ],
+ "@cinna-dev/eslint-config-style": [
+  "cinna-dev",
+  "eslint-config-style"
+ ],
+ "@citation-js/plugin-quickstatements": [
+  "citation-js",
+  "plugin-quickstatements"
+ ],
+ "@cityssm/text-to-search-terms": [
+  "cityssm",
+  "text-to-search-terms"
+ ],
+ "@ckeditor/ckeditor5-alignment": [
+  "ckeditor",
+  "ckeditor5"
+ ],
+ "@clappr/clappr-html5-tvs-playback": [
+  "clappr",
+  "clappr-html5-tvs-playback"
+ ],
+ "@clds/menu": [
+  "cloudinary",
+  "design-system"
+ ],
+ "@cloudcommerce/app-mercadopago": [
+  "ecomplus",
+  "cloud-commerce"
+ ],
+ "@cloudcomponents/cdk-github-webhook": [
+  "cloudcomponents",
+  "cdk-constructs"
+ ],
+ "@clutchd/link": [
+  "clutchd",
+  "clutchd"
+ ],
+ "@cmdcode/use-store": [
+  "cmdruid",
+  "use-store"
+ ],
+ "@coconut-xr/koestlich": [
+  "coconut-xr",
+  "koestlich"
+ ],
+ "@cocreate/random-color": [
+  "CoCreate-app",
+  "CoCreate-random-color"
+ ],
+ "@codefresh-io/cf-monitor": [
+  "codefresh-io",
+  "cf-monitor"
+ ],
+ "@codegateinc/react-form-builder-v2": [
+  "codegateinc",
+  "react-form-builder-v2"
+ ],
+ "@coder/logger": [
+  "cdr",
+  "ts-logger"
+ ],
+ "@codification/cutwater-build-openapi": [
+  "CodificationOrg",
+  "cutwater"
+ ],
+ "@cognizone/material-icons": [
+  "cognizone",
+  "ng-cognizone"
+ ],
+ "@coinranking/supplies": [
+  "coinranking",
+  "supplies"
+ ],
+ "@colijnit/sharedapi": [
+  "npm",
+  "npm"
+ ],
+ "@comet/blocks-admin": [
+  "vivid-planet",
+  "comet"
+ ],
+ "@commercetools-test-data/order": [
+  "commercetools",
+  "test-data"
+ ],
+ "@commercetools-uikit/search-select-field": [
+  "commercetools",
+  "ui-kit"
+ ],
+ "@common-stack/server-core": [
+  "cdmbase",
+  "fullstack-pro"
+ ],
+ "@comunica/actor-extract-links-tree": [
+  "comunica",
+  "comunica"
+ ],
+ "@concord-consortium/slate-editor": [
+  "concord-consortium",
+  "slate-editor"
+ ],
+ "@condorhero/vuepress-plugin-export-pdf-v2": [
+  "condorheroblog",
+  "vuepress-plugin-export-pdf"
+ ],
+ "@conectate/ct-checkbox": [
+  "conectate",
+  "ct-elements"
+ ],
+ "@configdn/configdn-js": [
+  "dBuidl",
+  "ConfigDN-client-js"
+ ],
+ "@confio/relayer": [
+  "confio",
+  "ts-relayer"
+ ],
+ "@contentstack/cli-dev-dependencies": [
+  "contentstack",
+  "cli"
+ ],
+ "@cosmos-client/cosmwasm": [
+  "cosmos-client",
+  "cosmwasm-ts"
+ ],
+ "@coveord/plasma-react-icons": [
+  "coveo",
+  "plasma"
+ ],
+ "@cropper/element-viewer": [
+  "fengyuanchen",
+  "cropperjs-next"
+ ],
+ "@cspell/dict-en-ca": [
+  "streetsidesoftware",
+  "cspell-dict"
+ ],
+ "@csvbox/react": [
+  "csvbox-io",
+  "react"
+ ],
+ "@ctx-core/cognito": [
+  "ctx-core",
+  "cognito"
+ ],
+ "@cumulus/cmr-client": [
+  "nasa",
+  "cumulus"
+ ],
+ "@cumulus/cumulus-message-adapter-js": [
+  "nasa",
+  "cumulus-message-adapter-js"
+ ],
+ "@cungminh2710/pseudolocalize": [
+  "cungminh2710",
+  "pseudolocalize"
+ ],
+ "@curveball/kernel": [
+  "curveball",
+  "kernel"
+ ],
+ "@cycjimmy/hello-github-package-npm": [
+  "cycjimmy",
+  "hello-github-package-npm"
+ ],
+ "@cyphercider/e2ee-appkit-browser": [
+  "cyphercider",
+  "e2ee-appkit"
+ ],
+ "@cypress/webpack-dev-server": [
+  "cypress-io",
+  "cypress"
+ ],
+ "@d-zero/eslint-config": [
+  "d-zero-dev",
+  "linters"
+ ],
+ "@daffodil/design": [
+  "graycoreio",
+  "daffodil"
+ ],
+ "@damienmortini/gestureobserver": [
+  "damienmortini",
+  "lib"
+ ],
+ "@dankreiger/groop": [
+  "dankreiger",
+  "groop"
+ ],
+ "@dappnode/schemas": [
+  "dappnode",
+  "schemas"
+ ],
+ "@dasmeta/event-manager-cli": [
+  "dasmeta",
+  "event-manager-cli"
+ ],
+ "@databyss-org/slate-react": [
+  "ianstormtaylor",
+  "slate"
+ ],
+ "@datahex/models": [
+  "datahex",
+  "models"
+ ],
+ "@datalink/provider-postgresql": [
+  "Akryum",
+  "datalink"
+ ],
+ "@datawheel/canon-next": [
+  "Datawheel",
+  "canon"
+ ],
+ "@date-fns/utc": [
+  "date-fns",
+  "utc"
+ ],
+ "@dcl/sdk": [
+  "decentraland",
+  "js-sdk-toolchain"
+ ],
+ "@dcloudio/uni-push": [
+  "dcloudio",
+  "uni-app"
+ ],
+ "@ddd-qc/cell-proxy": [
+  "ddd-mtl",
+  "lit-happ"
+ ],
+ "@ddtmm/angular-signal-generators": [
+  "DDtMM",
+  "angular-signal-generators"
+ ],
+ "@decidables/detectable-elements": [
+  "decidables",
+  "decidables"
+ ],
+ "@deegital/trustup-spa-js-assets": [
+  "deegitalbe",
+  "trustup-spa-js-assets"
+ ],
+ "@deep-foundation/browser-extension": [
+  "deep-foundation",
+  "browser-extension"
+ ],
+ "@deepkit/angular-universal": [
+  "deepkit",
+  "deepkit-framework"
+ ],
+ "@defichain/jellyfish-transaction": [
+  "BirthdayResearch",
+  "jellyfishsdk"
+ ],
+ "@definitelytyped/dtslint": [
+  "microsoft",
+  "DefinitelyTyped-tools"
+ ],
+ "@delight-rpc/websocket": [
+  "delight-rpc",
+  "websocket"
+ ],
+ "@depay/web3-payments-evm": [
+  "DePayFi",
+  "web3-payments"
+ ],
+ "@descope/react-sdk": [
+  "descope",
+  "descope-js"
+ ],
+ "@design-systems/cli-utils": [
+  "intuit",
+  "design-systems-cli"
+ ],
+ "@dev-build-deploy/version-it": [
+  "dev-build-deploy",
+  "version-it"
+ ],
+ "@devprotocol/util-ts": [
+  "dev-protocol",
+  "util-ts"
+ ],
+ "@dewib/dw-ui": [
+  "gaetansenn",
+  "dw-ui"
+ ],
+ "@dhicn/domain-paas-sdk-ts": [
+  "DHICN",
+  "Domian-PaaS-SDK-TS"
+ ],
+ "@didley/decimal-input": [
+  "didley",
+  "decimal-input"
+ ],
+ "@didtools/pkh-ethereum": [
+  "ceramicnetwork",
+  "js-did"
+ ],
+ "@digital-gigafactory/nuxt-auth": [
+  "digital-gigafactory",
+  "nuxt-auth"
+ ],
+ "@diogovcs/graphql-mesh": [
+  "DiogoVCS",
+  "nx-workspace-plugins"
+ ],
+ "@docbrasil/api-systemmanager": [
+  "cloudbrasil",
+  "api-systemmanager"
+ ],
+ "@docusaurus/core": [
+  "facebook",
+  "docusaurus"
+ ],
+ "@donmahallem/rxjs-zone": [
+  "donmahallem",
+  "js-libs"
+ ],
+ "@dot/env": [
+  "shellscape",
+  "dot"
+ ],
+ "@dotcom-reliability-kit/app-info": [
+  "Financial-Times",
+  "dotcom-reliability-kit"
+ ],
+ "@dotcom-tool-kit/heroku": [
+  "financial-times",
+  "dotcom-tool-kit"
+ ],
+ "@dozerg/condition": [
+  "daidodo",
+  "condition"
+ ],
+ "@dprint/typescript": [
+  "dprint",
+  "dprint-plugin-typescript"
+ ],
+ "@draconides/math": [
+  "AlasDiablo",
+  "draconides"
+ ],
+ "@duosecurity/duo_api": [
+  "duosecurity",
+  "duo_api_nodejs"
+ ],
+ "@easyeat-ai/react-native-pos-printing": [
+  "easyeat-ai",
+  "react-native-pos-printing"
+ ],
+ "@ecl/ecl-webcomponents-react": [
+  "ec-europa",
+  "ecl-webcomponents"
+ ],
+ "@ecl/specs-component-inpage-navigation": [
+  "ec-europa",
+  "europa-component-library"
+ ],
+ "@eeacms/volto-citation": [
+  "eea",
+  "volto-citation"
+ ],
+ "@effection/mocha": [
+  "thefrontside",
+  "effection"
+ ],
+ "@egglib/statics-vite": [
+  "fyl080801",
+  "eggjs-library-solution"
+ ],
+ "@egose/react-pagination-hook": [
+  "egose",
+  "egose"
+ ],
+ "@ekz/formix": [
+  "erkez",
+  "formix"
+ ],
+ "@ekzo-dev/toolkit": [
+  "ekzo-dev",
+  "aurelia-components"
+ ],
+ "@electron-fonts/allura": [
+  "ArthurLobopro",
+  "electron-fonts"
+ ],
+ "@electron-forge/plugin-fuses": [
+  "electron",
+  "forge"
+ ],
+ "@elemental-concept/dynamic-form-material": [
+  "elementalconcept",
+  "dynamic-form-material"
+ ],
+ "@elemental-concept/random-id": [
+  "elementalconcept",
+  "random-id"
+ ],
+ "@elunic/logger-nestjs": [
+  "elunic",
+  "node-logger-nestjs"
+ ],
+ "@ember-eui/changeset-form": [
+  "prysmex",
+  "ember-eui"
+ ],
+ "@enhanced-dom/scrollable": [
+  "enhanced-dom",
+  "scrollable"
+ ],
+ "@enso-ui/charts": [
+  "enso-ui",
+  "charts"
+ ],
+ "@enso-ui/filters": [
+  "enso-ui",
+  "filters"
+ ],
+ "@envelop/apollo-federation": [
+  "n1ru4l",
+  "envelop"
+ ],
+ "@envoy/hotel": [
+  "envoy",
+  "hotel"
+ ],
+ "@epiijs/server": [
+  "epiijs",
+  "server"
+ ],
+ "@equans/smart-buildings-heating-boost": [
+  "smart-buildings",
+  "strategies"
+ ],
+ "@escapace/typescript-library-starter": [
+  "escapace",
+  "typescript-library-starter"
+ ],
+ "@evan361425/version-bumper": [
+  "evan361425",
+  "version-bumper"
+ ],
+ "@eventstore/db-client": [
+  "EventStore",
+  "EventStore-Client-NodeJS"
+ ],
+ "@exmg/exmg-snackbar": [
+  "exmg",
+  "exmg-web-components"
+ ],
+ "@exodus/eslint-plugin-restricted-imports": [
+  "ExodusMovement",
+  "exodus-hydra"
+ ],
+ "@exolnet/eslint-config-vue": [
+  "eXolnet",
+  "code-quality-tools"
+ ],
+ "@extreal-dev/extreal.integration.web.common": [
+  "extreal-dev",
+  "Extreal.Integration.Web.Common"
+ ],
+ "@eyevinn/hls-truncate": [
+  "Eyevinn",
+  "hls-truncate"
+ ],
+ "@faasjs/func": [
+  "faasjs",
+  "faasjs"
+ ],
+ "@fabernovel/heart-cli": [
+  "faberNovel",
+  "heart"
+ ],
+ "@factly/scooter-tagore": [
+  "factly",
+  "scooter"
+ ],
+ "@factset/sdk-standarddatafeed": [
+  "factset",
+  "enterprise-sdk"
+ ],
+ "@farmfe/js-plugin-postcss": [
+  "farm-fe",
+  "farm"
+ ],
+ "@favware/graphql-pokemon": [
+  "favware",
+  "graphql-pokemon"
+ ],
+ "@fcanvas/worker": [
+  "fcanvas",
+  "fcanvas"
+ ],
+ "@fellesdatakatalog/icons": [
+  "fellesdatakatalog",
+  "fdk-kit"
+ ],
+ "@fern-typescript/resolvers": [
+  "fern-api",
+  "fern-typescript"
+ ],
+ "@ffprobe-installer/ffprobe": [
+  "SavageCore",
+  "node-ffprobe-installer"
+ ],
+ "@fie-cli/package": [
+  "Deviltear",
+  "fie-cli"
+ ],
+ "@file-services/test-kit": [
+  "wixplosives",
+  "file-services"
+ ],
+ "@fils/ui": [
+  "fil-studio",
+  "fils"
+ ],
+ "@financial-times/n-myft-subnavigation": [
+  "Financial-Times",
+  "n-myft-subnavigation"
+ ],
+ "@findify/analytics": [
+  "findify",
+  "findify-js"
+ ],
+ "@fine-legal/button": [
+  "fine-legal",
+  "fine-ui-library"
+ ],
+ "@finos/legend-extension-store-relational": [
+  "finos",
+  "legend-studio"
+ ],
+ "@fireactjs/saas": [
+  "fireactjs",
+  "saas"
+ ],
+ "@firestitch/clipboard": [
+  "Firestitch",
+  "ngx-clipboard"
+ ],
+ "@fireworkhq/proto-contract": [
+  "loopsocial",
+  "proto-contract"
+ ],
+ "@flareapp/ignition-ui": [
+  "spatie",
+  "ignition-ui"
+ ],
+ "@flourish/slider": [
+  "kiln",
+  "flourish-slider"
+ ],
+ "@fluentui-react-native/theme-tokens": [
+  "microsoft",
+  "fluentui-react-native"
+ ],
+ "@fluentui/react-button": [
+  "microsoft",
+  "fluentui"
+ ],
+ "@fluidframework/agent-scheduler": [
+  "microsoft",
+  "FluidFramework"
+ ],
+ "@folkehelseinstituttet/angular-highcharts": [
+  "folkehelseinstituttet",
+  "Fhi.Frontend.Demo"
+ ],
+ "@fontsource-variable/cuprum": [
+  "fontsource",
+  "font-files"
+ ],
+ "@formant/ui-sdk": [
+  "formantio",
+  "toolkit"
+ ],
+ "@forrestjs/service-hasura-client": [
+  "forrestjs",
+  "forrestjs"
+ ],
+ "@forter/form-field": [
+  "forter",
+  "web-components"
+ ],
+ "@fourze/middlewares": [
+  "chizukicn",
+  "fourze"
+ ],
+ "@fp4ts/schema-kernel": [
+  "fp4ts",
+  "fp4ts"
+ ],
+ "@frade-sam/samtools": [
+  "soratani",
+  "samtools"
+ ],
+ "@framelabs/pylon-client": [
+  "frame-labs",
+  "pylon-client"
+ ],
+ "@freesewing/sandy": [
+  "freesewing",
+  "freesewing"
+ ],
+ "@frenchpastries/bakery": [
+  "FrenchPastries",
+  "bakery"
+ ],
+ "@freshworks/datepicker": [
+  "freshdesk",
+  "nucleus"
+ ],
+ "@frui.ts/generator": [
+  "eManPrague",
+  "frui.ts"
+ ],
+ "@funboxteam/webpack-dev-server-firewall": [
+  "funbox",
+  "webpack-dev-server-firewall"
+ ],
+ "@gadgetinc/ggt": [
+  "gadget-inc",
+  "ggt"
+ ],
+ "@galacticcouncil/math-liquidity-mining": [
+  "galacticcouncil",
+  "sdk"
+ ],
+ "@gamariverib/mercados-pecuarios-libs-etl-dataflow-function-base": [
+  "GamaRiverib",
+  "mercados-pecuarios-libs-etl-dataflow-function-base"
+ ],
+ "@gampang-pkg/baileys-edge": [
+  "WhiskeySockets",
+  "Baileys"
+ ],
+ "@gasket/plugin-analyze": [
+  "godaddy",
+  "gasket"
+ ],
+ "@geektech/svg2icon": [
+  "geektech-team",
+  "svg2icon"
+ ],
+ "@gemeente-denhaag/textfield": [
+  "nl-design-system",
+  "denhaag"
+ ],
+ "@geneontology/wc-gocam-viz": [
+  "geneontology",
+  "wc-gocam-viz"
+ ],
+ "@genesislcap/foundation-zero-grid-pro": [
+  "genesislcap",
+  "foundation-ui"
+ ],
+ "@geoblocks/mapfishprint": [
+  "geoblocks",
+  "mapfishprint"
+ ],
+ "@georapbox/web-share-element": [
+  "georapbox",
+  "web-share-element"
+ ],
+ "@getflip/swirl-tokens": [
+  "getflip",
+  "swirl"
+ ],
+ "@getsafle/vault-avalanche-controller": [
+  "getsafle",
+  "vault-avalanche-controller"
+ ],
+ "@gio-design/icons": [
+  "growingio",
+  "gio-design-icons"
+ ],
+ "@giomamaladze/ng2-semantic-ui": [
+  "Belouccio",
+  "ng2-semantic-ui"
+ ],
+ "@girs/gnomerr-4.0": [
+  "gjsify",
+  "ts-for-gir"
+ ],
+ "@github/auto-complete-element": [
+  "github",
+  "auto-complete-element"
+ ],
+ "@github/mini-throttle": [
+  "github",
+  "mini-throttle"
+ ],
+ "@gitmars/server": [
+  "saqqdy",
+  "gitmars"
+ ],
+ "@glidejs/glide": [
+  "glidejs",
+  "glide"
+ ],
+ "@gluestack-ui/form-control": [
+  "gluestack",
+  "gluestack-ui"
+ ],
+ "@gluestack/glue-plugin-web": [
+  "gluestack",
+  "glue-plugin-web"
+ ],
+ "@gmfe/business": [
+  "gmfe",
+  "gmfe"
+ ],
+ "@goldstack/template-lambda-api-cli": [
+  "goldstack",
+  "goldstack"
+ ],
+ "@google-cloud/common": [
+  "googleapis",
+  "nodejs-common"
+ ],
+ "@google-cloud/domains": [
+  "googleapis",
+  "google-cloud-node"
+ ],
+ "@googleapis/adexchangebuyer2": [
+  "googleapis",
+  "google-api-nodejs-client"
+ ],
+ "@gossi/config-prettier": [
+  "gossi",
+  "frontend-configs"
+ ],
+ "@gothassos/easepick-preset-plugin": [
+  "easepick",
+  "easepick"
+ ],
+ "@grafana/aws-sdk": [
+  "grafana",
+  "grafana-aws-sdk-react"
+ ],
+ "@graffy/stream": [
+  "usegraffy",
+  "graffy"
+ ],
+ "@graphcommerce/magento-cart-shipping-method": [
+  "graphcommerce-org",
+  "graphcommerce"
+ ],
+ "@graphitation/graphql-js-operation-payload-generator": [
+  "microsoft",
+  "graphitation"
+ ],
+ "@graphql-tools/delegate": [
+  "ardatan",
+  "graphql-tools"
+ ],
+ "@growthops/ext-nextjs": [
+  "growthops-digital",
+  "ext-nextjs"
+ ],
+ "@gtmhub/sdk": [
+  "gtmhub",
+  "extensibility-sdk"
+ ],
+ "@hakla/ngx-slider": [
+  "danisss9",
+  "ngx-slider"
+ ],
+ "@haldi/style-guide": [
+  "haldiskin",
+  "monorepo"
+ ],
+ "@harry-vin/js-lib": [
+  "Harry-Wen",
+  "js-lib"
+ ],
+ "@hattip/bundler-cloudflare-workers": [
+  "hattipjs",
+  "hattip"
+ ],
+ "@hckrnews/ppt2pdf": [
+  "hckrnews",
+  "ppt2pdf"
+ ],
+ "@headwindsimulations/api-client": [
+  "headwindsim",
+  "api-client"
+ ],
+ "@henderea/simple-colors": [
+  "henderea",
+  "simple-colors"
+ ],
+ "@here/olp-sdk-core": [
+  "heremaps",
+  "here-data-sdk-typescript"
+ ],
+ "@heyooo-inc/reserved-subdomains": [
+  "Heyooo-Inc",
+  "reserved-subdomains"
+ ],
+ "@hi-ui/popper": [
+  "XiaoMi",
+  "hiui"
+ ],
+ "@hint/hint-typescript-config": [
+  "webhintio",
+  "hint"
+ ],
+ "@hltcoe/concrete": [
+  "hltcoe",
+  "concrete-js"
+ ],
+ "@hmscore/cordova-plugin-hms-ads": [
+  "HMS-Core",
+  "hms-cordova-plugin"
+ ],
+ "@hocgin/hkit": [
+  "hocgin",
+  "node-package"
+ ],
+ "@holidayextras/brand-chessington": [
+  "holidayextras",
+  "brands"
+ ],
+ "@holo-host/comb": [
+  "Holo-Host",
+  "chaperone"
+ ],
+ "@holz/pattern-filter": [
+  "PsychoLlama",
+  "holz"
+ ],
+ "@homebridge/dbus-native": [
+  "homebridge",
+  "dbus-native"
+ ],
+ "@hornbeck/validators": [
+  "MadsHornbeck",
+  "validators"
+ ],
+ "@howbizarre/vue-month-calendar": [
+  "howbizarre",
+  "vue-month-calendar"
+ ],
+ "@hpcreery/tracespace-renderer": [
+  "tracespace",
+  "tracespace"
+ ],
+ "@hpke/core": [
+  "dajiaji",
+  "hpke-js"
+ ],
+ "@httptoolkit/auth0-lock": [
+  "httptoolkit",
+  "lock"
+ ],
+ "@httpx/dsn-parser": [
+  "belgattitude",
+  "httpx"
+ ],
+ "@hubspot/local-dev-lib": [
+  "HubSpot",
+  "hubspot-local-dev-lib"
+ ],
+ "@huolala-tech/page-spy-api-linux-s390x": [
+  "HuolalaTech",
+  "page-spy-web"
+ ],
+ "@huxy/components": [
+  "ahyiru",
+  "components"
+ ],
+ "@hyper-fetch/sockets": [
+  "BetterTyped",
+  "hyper-fetch"
+ ],
+ "@hyperbitjs/mnemonic": [
+  "hyperbit-dev",
+  "mnemonic"
+ ],
+ "@hyperjumptech/ztorage": [
+  "hyperjumptech",
+  "ztorage"
+ ],
+ "@hyperledger/cactus-plugin-keychain-vault": [
+  "hyperledger",
+  "cacti"
+ ],
+ "@hyperledger/caliper-ethereum": [
+  "hyperledger",
+  "caliper"
+ ],
+ "@hyperobjekt/spi-auth": [
+  "Hyperobjekt",
+  "spi-auth"
+ ],
+ "@icanbwell/terms-of-service": [
+  "icanbwell",
+  "embeddables"
+ ],
+ "@ice/app": [
+  "alibaba",
+  "ice"
+ ],
+ "@iconify-prerendered/vue-ls": [
+  "cawa-93",
+  "iconify-prerendered"
+ ],
+ "@idelic/safety-suite-api": [
+  "idelic-inc",
+  "safety-suite-api"
+ ],
+ "@iden3/js-merkletree": [
+  "iden3",
+  "js-merkletree"
+ ],
+ "@identity.com/solana-gateway-ts": [
+  "identity-com",
+  "on-chain-identity-gateway"
+ ],
+ "@idux/archive": [
+  "IDuxFE",
+  "archive"
+ ],
+ "@idux/components": [
+  "IDuxFE",
+  "idux"
+ ],
+ "@iguhealth/operation-execution": [
+  "IGUHealth",
+  "IGUHealth"
+ ],
+ "@ikscodes/prettier-config": [
+  "smithki",
+  "prettier-config"
+ ],
+ "@imgix/contentful": [
+  "imgix",
+  "contentful"
+ ],
+ "@imnotjames/typeorm": [
+  "imnotjames",
+  "typeorm"
+ ],
+ "@inagora/wd-view": [
+  "inagora",
+  "wd-view"
+ ],
+ "@indiekit/store-gitlab": [
+  "getindiekit",
+  "indiekit"
+ ],
+ "@indoqa/ui-explorer": [
+  "Indoqa",
+  "indoqa-react"
+ ],
+ "@instructure/cz-lerna-changelog": [
+  "instructure",
+  "instructure-ui"
+ ],
+ "@interlay/bridge": [
+  "interlay",
+  "bridge"
+ ],
+ "@internationalized/number": [
+  "adobe",
+  "react-spectrum"
+ ],
+ "@intervolga/bembh-loader": [
+  "intervolga",
+  "bembh-loader"
+ ],
+ "@intlify/vue-i18n-core-edge": [
+  "intlify",
+  "vue-i18n-next"
+ ],
+ "@ionic/react": [
+  "ionic-team",
+  "ionic-framework"
+ ],
+ "@iress/middy-http-path-router": [
+  "iress",
+  "iress-middy-http-path-router"
+ ],
+ "@itkyk/preload": [
+  "itkyk",
+  "preload"
+ ],
+ "@itwin/backend-webpack-tools": [
+  "iTwin",
+  "itwinjs-core"
+ ],
+ "@ja-ja/json-stream": [
+  "arthur-jaouen",
+  "json-stream"
+ ],
+ "@jayree/sfdx-plugin-org": [
+  "jayree",
+  "sfdx-plugin-org"
+ ],
+ "@jbrowse/plugin-variants": [
+  "GMOD",
+  "jbrowse-components"
+ ],
+ "@jdp-dev/commitlint-config": [
+  "john-d-pelingo",
+  "jdp-scripts"
+ ],
+ "@jeantessier/book_reviews.node_graphql_federation.reviews": [
+  "jeantessier",
+  "book-reviews"
+ ],
+ "@jessie.js/parse": [
+  "endojs",
+  "Jessie"
+ ],
+ "@jihyunlab/web-secure-storage": [
+  "jihyunlab",
+  "web-secure-storage"
+ ],
+ "@jobscale/logger": [
+  "jobscale",
+  "logger"
+ ],
+ "@josipp/react-form": [
+  "JP876",
+  "react-form"
+ ],
+ "@jsheaven/perf": [
+  "jsheaven",
+  "perf"
+ ],
+ "@jsonforms/material-renderers": [
+  "eclipsesource",
+  "jsonforms"
+ ],
+ "@jspsych/plugin-browser-check": [
+  "jspsych",
+  "jsPsych"
+ ],
+ "@jsreport/jsreport-mssql-store": [
+  "jsreport",
+  "jsreport"
+ ],
+ "@julo-ui/form-control": [
+  "julofinance",
+  "julo-ui"
+ ],
+ "@jupiterone/integration-sdk-core": [
+  "JupiterOne",
+  "sdk"
+ ],
+ "@jupyterlab/extensionmanager": [
+  "jupyterlab",
+  "jupyterlab"
+ ],
+ "@justeat/f-navigation-links": [
+  "justeat",
+  "fozzie-components"
+ ],
+ "@jx3box/jx3box-editor": [
+  "JX3BOX",
+  "jx3box-editor"
+ ],
+ "@kanbang/plugin-renderer-vue3": [
+  "kanbang",
+  "baklavajs"
+ ],
+ "@kenyaemr/esm-care-panel-app": [
+  "palladiumkenya",
+  "kenyaemr-esm-core"
+ ],
+ "@kepler.gl/reducers": [
+  "keplergl",
+  "kepler.gl"
+ ],
+ "@keyv/tiered": [
+  "jaredwray",
+  "keyv"
+ ],
+ "@kiltprotocol/type-definitions": [
+  "kiltprotocol",
+  "sdk-js"
+ ],
+ "@kiwilan/fastify-utils": [
+  "kiwilan",
+  "fastify-utils"
+ ],
+ "@klever/sdk-web": [
+  "klever-io",
+  "kleverchain-sdk-web"
+ ],
+ "@klnjs/eslint-config": [
+  "klnjs",
+  "configs"
+ ],
+ "@koishijs/plugin-hmr": [
+  "koishijs",
+  "koishi"
+ ],
+ "@kokosro/kraken-api": [
+  "kokosro",
+  "kraken-api"
+ ],
+ "@kshramt/sequence-comparisons": [
+  "kshramt",
+  "sequence-comparisons"
+ ],
+ "@kuindji/observable": [
+  "kuindji",
+  "observable"
+ ],
+ "@labforward/config": [
+  "labforward",
+  "config"
+ ],
+ "@lando/pantheon": [
+  "lando",
+  "pantheon"
+ ],
+ "@laoban/generations": [
+  "phil-rice",
+  "laoban"
+ ],
+ "@laruiss/vue-dsfr": [
+  "dnum-mi",
+  "vue-dsfr"
+ ],
+ "@laserfiche/lf-api-client-core": [
+  "Laserfiche",
+  "lf-api-client-core-js"
+ ],
+ "@launchpad-ui/filter": [
+  "launchdarkly",
+  "launchpad-ui"
+ ],
+ "@lazy-node/semver-part": [
+  "bluelovers",
+  "ws-yarn-workspaces"
+ ],
+ "@lazy-random/generators-sfc32": [
+  "bluelovers",
+  "ws-random"
+ ],
+ "@lbergeron/uuid-cli": [
+  "bergeronl",
+  "uuid-cli"
+ ],
+ "@lbrlabs/pulumi-awscontroltower": [
+  "lbrlabs",
+  "pulumi-awscontroltower"
+ ],
+ "@ldapjs/controls": [
+  "ldapjs",
+  "controls"
+ ],
+ "@leafygreen-ui/typography": [
+  "mongodb",
+  "leafygreen-ui"
+ ],
+ "@ledgerhq/hw-transport-node-hid-noevents": [
+  "LedgerHQ",
+  "ledger-live"
+ ],
+ "@leewinter/auto-table": [
+  "leewinter",
+  "auto-table"
+ ],
+ "@leftshiftone/convey": [
+  "leftshiftone",
+  "conveyjs"
+ ],
+ "@leichtgewicht/ip-codec": [
+  "martinheidegger",
+  "ip-codec"
+ ],
+ "@lens-protocol/storage": [
+  "lens-protocol",
+  "lens-sdk"
+ ],
+ "@leofcoin/endpoints": [
+  "leofcoin",
+  "endpoints"
+ ],
+ "@lerkel/ngx-ui-loader": [
+  "t-ho",
+  "ngx-ui-loader"
+ ],
+ "@libp2p/bootstrap": [
+  "libp2p",
+  "js-libp2p"
+ ],
+ "@linaria/babel-plugin-interop": [
+  "callstack",
+  "linaria"
+ ],
+ "@liripeng/vue-audio-player": [
+  "1014156094",
+  "vue-audio-player"
+ ],
+ "@liskhq/lisk-bft": [
+  "LiskHQ",
+  "lisk-sdk"
+ ],
+ "@liveblocks/redux": [
+  "liveblocks",
+  "liveblocks"
+ ],
+ "@logicflow/extension": [
+  "didi",
+  "LogicFlow"
+ ],
+ "@logux/actions": [
+  "logux",
+  "actions"
+ ],
+ "@lokalise/node-api": [
+  "lokalise",
+  "node-lokalise-api"
+ ],
+ "@lolocompany/react-admin-lolo": [
+  "lolocompany",
+  "react-admin-lolo"
+ ],
+ "@lomray/eslint-config-react": [
+  "Lomray-Software",
+  "eslint-config-react"
+ ],
+ "@loopback/authentication-passport": [
+  "loopbackio",
+  "loopback-next"
+ ],
+ "@lottiefiles/react-lottie-player": [
+  "LottieFiles",
+  "lottie-react"
+ ],
+ "@lowdefy/layout": [
+  "lowdefy",
+  "lowdefy"
+ ],
+ "@loxjs/validator": [
+  "loxjs",
+  "mono"
+ ],
+ "@lrnwebcomponents/app-editor-hax": [
+  "elmsln",
+  "lrnwebcomponents"
+ ],
+ "@lskjs/telegraf": [
+  "lskjs",
+  "lskjs"
+ ],
+ "@lskjs/typo": [
+  "lskjs",
+  "ux"
+ ],
+ "@lucasmogari/react-pagination": [
+  "lucasmogari",
+  "react-pagination"
+ ],
+ "@lui-ui/lui-vue": [
+  "LUI-UI",
+  "lui-vue"
+ ],
+ "@lum-network/sdk-javascript": [
+  "lum-network",
+  "lumjs"
+ ],
+ "@lumiastream/razer-cove": [
+  "lumiastream",
+  "razer-cove"
+ ],
+ "@lumigo/cdk-constructs-v2": [
+  "lumigo-io",
+  "lumigo-cdk-constructs"
+ ],
+ "@lumigo/node-core": [
+  "lumigo-io",
+  "node-core"
+ ],
+ "@lumino/dragdrop": [
+  "jupyterlab",
+  "lumino"
+ ],
+ "@luvio/tools": [
+  "salesforce-experience-platform-emu",
+  "luvio-next"
+ ],
+ "@m52-a/datetimepicker": [
+  "M52-A",
+  "DateTimePicker"
+ ],
+ "@m9ch/vhooks-types": [
+  "Mitscherlich",
+  "vhooks"
+ ],
+ "@madgex/design-system-ce": [
+  "madgex",
+  "madgex-design-system"
+ ],
+ "@mapbox/geojsonhint": [
+  "mapbox",
+  "geojsonhint"
+ ],
+ "@mapbox/hast-util-to-jsx": [
+  "mapbox",
+  "jsxtreme-markdown"
+ ],
+ "@marko/run-adapter-netlify": [
+  "marko-js",
+  "run"
+ ],
+ "@marp-team/marpit": [
+  "marp-team",
+  "marpit"
+ ],
+ "@mashroom/mashroom-storage-provider-mongodb": [
+  "nonblocking",
+  "mashroom"
+ ],
+ "@massimo-cassandro/auto-datatables-bs5": [
+  "massimo-cassandro",
+  "auto-datatables-bs5"
+ ],
+ "@material-toys/icons": [
+  "koffilabs",
+  "material-toys"
+ ],
+ "@material/checkbox": [
+  "material-components",
+  "material-components-web"
+ ],
+ "@math.gl/geoid": [
+  "uber-web",
+  "math.gl"
+ ],
+ "@maticnetwork/maticjs": [
+  "maticnetwork",
+  "matic.js"
+ ],
+ "@maxim_mazurok/gapi.client.batch-v1": [
+  "Maxim-Mazurok",
+  "google-api-typings-generator"
+ ],
+ "@maximeij/css-brickout": [
+  "MaximeIJ",
+  "css-brickout"
+ ],
+ "@mborne/dl": [
+  "mborne",
+  "node-dl"
+ ],
+ "@mcclatchy/next-custom": [
+  "mcclatchy-next",
+  "next-custom"
+ ],
+ "@mcma/azure-queue-worker-invoker": [
+  "ebu",
+  "mcma-libraries"
+ ],
+ "@mcschema/java-1.18.2": [
+  "misode",
+  "minecraft-schemas"
+ ],
+ "@medplum/eslint-config": [
+  "medplum",
+  "medplum"
+ ],
+ "@medusajs/inventory": [
+  "medusajs",
+  "medusa"
+ ],
+ "@memlab/core": [
+  "facebook",
+  "memlab"
+ ],
+ "@mep-agency/local-dev-db": [
+  "mep-agency",
+  "local-dev-db"
+ ],
+ "@merkur/tool-webpack": [
+  "mjancarik",
+  "merkur"
+ ],
+ "@metalblockchain/metaljs": [
+  "MetalBlockchain",
+  "metaljs"
+ ],
+ "@metamask/ens-controller": [
+  "MetaMask",
+  "core"
+ ],
+ "@metamask/lifecycle-hooks-example-snap": [
+  "MetaMask",
+  "snaps"
+ ],
+ "@metamask/swappable-obj-proxy": [
+  "MetaMask",
+  "swappable-obj-proxy"
+ ],
+ "@metaswap/uikit": [
+  "babyswap",
+  "baby-uikit"
+ ],
+ "@meteor-community/meteor-desktop": [
+  "Meteor-Community-Packages",
+  "meteor-desktop"
+ ],
+ "@mharj/openweathermap": [
+  "mharj",
+  "ts-openweather"
+ ],
+ "@michijs/dev-server": [
+  "michijs",
+  "dev-server"
+ ],
+ "@micro-sentry/core": [
+  "taiga-family",
+  "micro-sentry"
+ ],
+ "@microfleet/plugin-router-socketio": [
+  "microfleet",
+  "core"
+ ],
+ "@microlambda/aws": [
+  "microlambda",
+  "microlambda"
+ ],
+ "@micromag/screen-urbania-recommendation": [
+  "urbania-media",
+  "micromag-js"
+ ],
+ "@microsoft/mgt-element": [
+  "microsoftgraph",
+  "microsoft-graph-toolkit"
+ ],
+ "@middy/event-normalizer": [
+  "middyjs",
+  "middy"
+ ],
+ "@midwayjs/serverless-yaml-generator": [
+  "midwayjs",
+  "serverless-devs-generator"
+ ],
+ "@miemiemie/koishi-plugin-gpt-api": [
+  "MieMieMieeeee",
+  "gpt-api"
+ ],
+ "@mihoyo-kit/api": [
+  "leonismoe",
+  "genshin-stats"
+ ],
+ "@mikugg/ui-kit": [
+  "miku-gg",
+  "miku"
+ ],
+ "@milestone-sys/web-design-system": [
+  "milestone-sys",
+  "web-design-system"
+ ],
+ "@minar-kotonoha/vite-ssg": [
+  "antfu",
+  "vite-ssg"
+ ],
+ "@mintplayer/ng-pwa-helper": [
+  "MintPlayer",
+  "mintplayer-ng-seo"
+ ],
+ "@minutemailer/select": [
+  "minutemailer",
+  "select"
+ ],
+ "@modern-js/generator-common": [
+  "web-infra-dev",
+  "modern.js"
+ ],
+ "@mojito-inc/core-ui": [
+  "mojitoinc",
+  "mojito-core-ui"
+ ],
+ "@mojito-inc/secondary-market": [
+  "mojitoinc",
+  "sdk-secondary-market"
+ ],
+ "@moneyonchain/oracles": [
+  "money-on-chain",
+  "OMoC-Decentralized-Oracle"
+ ],
+ "@monkvision/inspection-report": [
+  "monkvision",
+  "monkjs"
+ ],
+ "@morfeo/core": [
+  "morfeojs",
+  "morfeo"
+ ],
+ "@morjs/plugin-compiler-alipay": [
+  "eleme",
+  "morjs"
+ ],
+ "@mornya/network-libs": [
+  "mornya-libs",
+  "mornya-network-libs"
+ ],
+ "@mornya/react-social-libs": [
+  "mornya-libs",
+  "mornya-react-social-libs"
+ ],
+ "@motrixglobal/h5p-express": [
+  "Lumieducation",
+  "H5P-Nodejs-library"
+ ],
+ "@mrbatista/ngx-tui-image-editor": [
+  "jwashke",
+  "toast-ui-image-editor-angular-wrapper"
+ ],
+ "@mrodrig/json-2-csv-cli": [
+  "mrodrig",
+  "json-2-csv-cli"
+ ],
+ "@msagl/core": [
+  "microsoft",
+  "msagljs"
+ ],
+ "@mui/envinfo": [
+  "mui",
+  "material-ui"
+ ],
+ "@multiplechain/bitcoin": [
+  "MultipleChain",
+  "js"
+ ],
+ "@mutinywallet/waila-wasm": [
+  "MutinyWallet",
+  "bitcoin-waila"
+ ],
+ "@mutoe/koam": [
+  "mutoe",
+  "koam"
+ ],
+ "@mxfriend/oscom": [
+  "mxfriend",
+  "oscom"
+ ],
+ "@mybricks/color-picker": [
+  "mybricks",
+  "color-picker"
+ ],
+ "@nadlowebagentur/capacitor-user-default": [
+  "nadlowebagentur",
+  "capacitor-user-default"
+ ],
+ "@napi-rs/blake-hash-win32-x64-msvc": [
+  "Brooooooklyn",
+  "blake-hash"
+ ],
+ "@napi-rs/simple-git-linux-arm64-gnu": [
+  "Brooooooklyn",
+  "simple-git"
+ ],
+ "@napi-rs/woff-build-android-arm64": [
+  "Brooooooklyn",
+  "woff-build"
+ ],
+ "@nasa-jpl/aerie-ampcs": [
+  "NASA-AMMOS",
+  "aerie-ampcs"
+ ],
+ "@nativescript-community/ui-collectionview-waterfall": [
+  "nativescript-community",
+  "ui-collectionview"
+ ],
+ "@nativescript/capacitor": [
+  "NativeScript",
+  "capacitor"
+ ],
+ "@natlibfi/melinda-rest-api-commons": [
+  "natlibfi",
+  "melinda-rest-api-commons"
+ ],
+ "@ndujalabs/erc721lockable": [
+  "ndujalabs",
+  "erc721lockable"
+ ],
+ "@near-finance-near-wallet-selector/math-wallet": [
+  "near",
+  "wallet-selector"
+ ],
+ "@neogrup/nc-doc": [
+  "NEOGRUP",
+  "nc-doc"
+ ],
+ "@neoskop/hrbac": [
+  "neoskop",
+  "hrbac"
+ ],
+ "@nest-middlewares/helmet": [
+  "wbhob",
+  "nest-middlewares"
+ ],
+ "@netlify/esbuild-windows-arm64": [
+  "evanw",
+  "esbuild"
+ ],
+ "@neuekit/utils": [
+  "neuekit",
+  "utilities"
+ ],
+ "@neuroglia/common": [
+  "neuroglia-io",
+  "js-framework"
+ ],
+ "@neutron-org/tge-client": [
+  "neutron-org",
+  "neutron-tge-ts-client"
+ ],
+ "@new-mv-datacore/extensions-sdk": [
+  "machine-vision-indonesia",
+  "datacore-core"
+ ],
+ "@newhighsco/chipset": [
+  "newhighsco",
+  "chipset"
+ ],
+ "@nexajs/utils": [
+  "avasdao",
+  "nexajs"
+ ],
+ "@next-core/yo": [
+  "easyops-cn",
+  "next-core"
+ ],
+ "@nextui-org/system": [
+  "nextui-org",
+  "nextui"
+ ],
+ "@ngify/at": [
+  "ngify",
+  "ngify"
+ ],
+ "@ngstack/translate": [
+  "ngstack",
+  "translate"
+ ],
+ "@ngxuniversaltools/transfer-state": [
+  "webberig",
+  "ngxuniversaltools"
+ ],
+ "@nhm-data/zoa": [
+  "NaturalHistoryMuseum",
+  "zoa"
+ ],
+ "@nicolabello/express-helpers": [
+  "nicolabello",
+  "javascript-libraries"
+ ],
+ "@nijor/cli": [
+  "nijorjs",
+  "nijor-cli"
+ ],
+ "@nimble-ts/core": [
+  "ericferreira1992",
+  "nimble"
+ ],
+ "@nimbus-ds/icons": [
+  "TiendaNube",
+  "nimbus-design-system"
+ ],
+ "@nmshd/crypto": [
+  "nmshd",
+  "ts-crypto"
+ ],
+ "@node-kit/extra.fs": [
+  "saqqdy",
+  "node-kit"
+ ],
+ "@node-projects/base-custom-webcomponent": [
+  "node-projects",
+  "base-custom-webcomponent"
+ ],
+ "@node-rs/crc32-darwin-arm64": [
+  "napi-rs",
+  "node-rs"
+ ],
+ "@noeldemartin/eslint-config-vue": [
+  "noeldemartin",
+  "eslint-config"
+ ],
+ "@norges-domstoler/dds-components": [
+  "domstolene",
+  "designsystem"
+ ],
+ "@nortech/multi-aws-credentials": [
+  "Nortech-ai",
+  "multi-aws-credentials"
+ ],
+ "@novely/solid-renderer": [
+  "yhdgms1",
+  "novely"
+ ],
+ "@novu/nodemailer": [
+  "novuhq",
+  "nodemailer"
+ ],
+ "@ntlab/gsm-at": [
+  "tohenk",
+  "node-gsm-at"
+ ],
+ "@ntnyq/eslint-config-react": [
+  "ntnyq",
+  "configs"
+ ],
+ "@nu-art/live-docs": [
+  "nu-art-js",
+  "live-docs"
+ ],
+ "@nu-art/push-pub-sub": [
+  "nu-art-js",
+  "push-pub-sub"
+ ],
+ "@nutui/nutui": [
+  "jdf2e",
+  "nutui"
+ ],
+ "@nuxtjs/apollo": [
+  "nuxt-modules",
+  "apollo-module"
+ ],
+ "@o3r/create": [
+  "AmadeusITGroup",
+  "otter"
+ ],
+ "@octanuary/httpz": [
+  "octanuary",
+  "httpz"
+ ],
+ "@octokit-next/types-rest-api-github.ae-compatible": [
+  "octokit",
+  "octokit-next.js"
+ ],
+ "@oddshawk/oddshawk-sdk": [
+  "oddshawk",
+  "node-js-sdk"
+ ],
+ "@onekeyfe/onekey-polkadot-provider": [
+  "OneKeyHQ",
+  "cross-inpage-provider"
+ ],
+ "@onflow/six-stake-new-locked-flow": [
+  "onflow",
+  "fcl-six"
+ ],
+ "@openaddresses/cfn-config": [
+  "openaddresses",
+  "cfn-config"
+ ],
+ "@openapi-generator-plus/java-like-generator-helper": [
+  "karlvr",
+  "openapi-generator-plus-generators"
+ ],
+ "@openenergytools/scl-lib": [
+  "OpenEnergyTools",
+  "scl-lib"
+ ],
+ "@openeuropa/bcl-featured-media": [
+  "openeuropa",
+  "bootstrap-component-library"
+ ],
+ "@openneuro/cli": [
+  "OpenNeuroOrg",
+  "openneuro"
+ ],
+ "@opentf/react-form": [
+  "Open-Tech-Foundation",
+  "react-form"
+ ],
+ "@opentiny/vue-theme-saas": [
+  "opentiny",
+  "tiny-vue"
+ ],
+ "@operato/board": [
+  "hatiolab",
+  "operato"
+ ],
+ "@or-tab/my-server": [
+  "OrTab",
+  "my-server"
+ ],
+ "@orbs-network/twap-ui-sushiswap": [
+  "orbs-network",
+  "twap-ui"
+ ],
+ "@orca-fe/painter": [
+  "orca-team",
+  "pocket"
+ ],
+ "@orchestrator/ui-web": [
+  "orchestratora",
+  "orchestrator"
+ ],
+ "@orderingstack/pos-integrator-core": [
+  "orderingstack",
+  "pos-integrator-core"
+ ],
+ "@originjs/vite-plugin-federation": [
+  "originjs",
+  "vite-plugin-federation"
+ ],
+ "@ovh-api-ca/license-worklight": [
+  "UrielCh",
+  "api-ovh-node"
+ ],
+ "@ovotech/laminar-fixtures": [
+  "ovotech",
+  "laminar"
+ ],
+ "@oxlint/darwin-arm64": [
+  "oxc-project",
+  "oxc"
+ ],
+ "@pabra/logger": [
+  "pabra",
+  "logger"
+ ],
+ "@paleite/eslint-config": [
+  "paleite",
+  "configs-monorepo"
+ ],
+ "@pandacss/error": [
+  "chakra-ui",
+  "panda"
+ ],
+ "@parameter1/base-cms-marko-web-p1-fii": [
+  "parameter1",
+  "base-cms"
+ ],
+ "@pascalhonegger/ng-datatable": [
+  "PascalHonegger",
+  "ng-datatable"
+ ],
+ "@pascholda1/vue-runtime-config-plugin": [
+  "pascholda1",
+  "vue-runtime-config-plugin"
+ ],
+ "@paulrobertlloyd/mf2tojf2": [
+  "paulrobertlloyd",
+  "mf2tojf2"
+ ],
+ "@peculiar/fortify-webcomponents": [
+  "PeculiarVentures",
+  "fortify-webcomponents"
+ ],
+ "@peertube/embed-api": [
+  "Chocobozzz",
+  "PeerTube"
+ ],
+ "@pega/cosmos-react-work": [
+  "pegasystems",
+  "cosmos-react"
+ ],
+ "@pentible/shellcheck-all": [
+  "pentible",
+  "typescript-standards"
+ ],
+ "@percy/cli-exec": [
+  "percy",
+  "cli"
+ ],
+ "@perfsee/chrome-finder": [
+  "perfsee",
+  "perfsee"
+ ],
+ "@persevie/statemanjs": [
+  "persevie",
+  "statemanjs"
+ ],
+ "@pgtyped/runtime": [
+  "adelsz",
+  "pgtyped"
+ ],
+ "@phase2/outline-heading": [
+  "phase2",
+  "outline"
+ ],
+ "@phcode/fs": [
+  "phcode-dev",
+  "phoenix-fs"
+ ],
+ "@piggytechng/component-library": [
+  "PiggyTech",
+  "piggytech-ui-component-library"
+ ],
+ "@pikalytics/calc": [
+  "smogon",
+  "damage-calc"
+ ],
+ "@pikas-ui/drawer": [
+  "Achaak",
+  "pikas"
+ ],
+ "@pineapplelab/paging": [
+  "pineapple-lab",
+  "pineapplelab-packages"
+ ],
+ "@pirxpilot/dialog": [
+  "pirxpilot",
+  "dialog"
+ ],
+ "@pixdif/core": [
+  "pixdif",
+  "pixdif"
+ ],
+ "@pixi/canvas-extract": [
+  "pixijs",
+  "pixijs"
+ ],
+ "@pixiv/types-vrm-0.0": [
+  "pixiv",
+  "three-vrm"
+ ],
+ "@plaoc/plugins": [
+  "BioforestChain",
+  "dweb_browser"
+ ],
+ "@plasmohq/parcel-core": [
+  "PlasmoHQ",
+  "plasmo"
+ ],
+ "@player-ui/auto-scroll-manager-plugin-react": [
+  "player-ui",
+  "player-ui"
+ ],
+ "@playkit-js/playkit-js-bumper": [
+  "kaltura",
+  "playkit-js-bumper"
+ ],
+ "@playwright/experimental-ct-vue2": [
+  "microsoft",
+  "playwright"
+ ],
+ "@plusauth/plusauth-widget": [
+  "PlusAuth",
+  "plusauth-widget"
+ ],
+ "@po-ui/ng-sync": [
+  "po-ui",
+  "po-angular"
+ ],
+ "@polyscale/serverless-js": [
+  "polyscale",
+  "serverless-js"
+ ],
+ "@polysensus/diamond-deploy": [
+  "polysensus",
+  "diamond-deploy"
+ ],
+ "@polywrap/core-js": [
+  "polywrap",
+  "javascript-client"
+ ],
+ "@popovmp/read-json": [
+  "PopovMP",
+  "read-json"
+ ],
+ "@preline/dropdown": [
+  "htmlstreamofficial",
+  "preline"
+ ],
+ "@preset-sdk/embedded": [
+  "preset-io",
+  "frontend-sdk"
+ ],
+ "@previewjs/app": [
+  "fwouts",
+  "previewjs"
+ ],
+ "@primate/session": [
+  "primatejs",
+  "primate"
+ ],
+ "@printerframework/cli": [
+  "PrinterFramework",
+  "CLI"
+ ],
+ "@progress/kendo-pivotgrid-vue-wrapper": [
+  "telerik",
+  "kendo-vue-wrappers"
+ ],
+ "@progress/kendo-react-conversational-ui": [
+  "telerik",
+  "kendo-react"
+ ],
+ "@project44-manifest/react-types": [
+  "project-44",
+  "manifest"
+ ],
+ "@proofofplay/erc721-extensions": [
+  "proofofplay",
+  "erc721-extensions"
+ ],
+ "@prosekit/preact": [
+  "ocavue",
+  "prosekit"
+ ],
+ "@psoares/eslint-config": [
+  "psoaresbj",
+  "eslint-config"
+ ],
+ "@ptc-org/nestjs-query-mongoose": [
+  "tripss",
+  "nestjs-query"
+ ],
+ "@pulumi/kafka": [
+  "pulumi",
+  "pulumi-kafka"
+ ],
+ "@pulumi/kubernetes-cert-manager": [
+  "pulumi",
+  "pulumi-kubernetes-cert-manager"
+ ],
+ "@pulumiverse/zitadel": [
+  "pulumiverse",
+  "pulumi-zitadel"
+ ],
+ "@putout/plugin-convert-quotes-to-backticks": [
+  "coderaiser",
+  "putout"
+ ],
+ "@px-do/next-contentful-picture": [
+  "px-do",
+  "next-contentful-picture"
+ ],
+ "@qingleili/react-sortable-tree": [
+  "nosferatu500",
+  "react-sortable-tree"
+ ],
+ "@qitt/spin": [
+  "ichiql",
+  "qitt"
+ ],
+ "@qiuxc/eslint-config": [
+  "qiuxchao",
+  "qiuxc"
+ ],
+ "@qiwi/mware-cors": [
+  "qiwi",
+  "mware"
+ ],
+ "@qomet/skeptic-connect": [
+  "qomet-tech",
+  "skeptic-connect"
+ ],
+ "@qp-mongosh/editor": [
+  "mongodb-js",
+  "mongosh"
+ ],
+ "@qrsln/mapper": [
+  "krsln",
+  "Showcase"
+ ],
+ "@quarto/jupyterlab-quarto": [
+  "quarto-dev",
+  "jupyterlab-quarto"
+ ],
+ "@quatico/magellan-shared": [
+  "quatico-solutions",
+  "magellan"
+ ],
+ "@quenty/draw": [
+  "Quenty",
+  "NevermoreEngine"
+ ],
+ "@quetz-frontend/home-extension": [
+  "mamba-org",
+  "quetz-frontend"
+ ],
+ "@quri/prettier-plugin-squiggle": [
+  "quantified-uncertainty",
+  "squiggle"
+ ],
+ "@radix-ui/react-separator": [
+  "radix-ui",
+  "primitives"
+ ],
+ "@rafty/plugin": [
+  "rhinobase",
+  "raftyui"
+ ],
+ "@railgun-community/engine": [
+  "Railgun-Community",
+  "engine"
+ ],
+ "@rails/activestorage": [
+  "rails",
+  "rails"
+ ],
+ "@rainbow_ljy/jsapi": [
+  "lijunyi-library",
+  "jsApi"
+ ],
+ "@rainprotocol/rainlang": [
+  "rainprotocol",
+  "rainlang"
+ ],
+ "@raviqqe/prompt-engine": [
+  "raviqqe",
+  "prompt-engine"
+ ],
+ "@rdfjs/sink-map": [
+  "rdfjs-base",
+  "sink-map"
+ ],
+ "@rea-scripts/container": [
+  "xzd-cli",
+  "pf-cli"
+ ],
+ "@react-dev-inspector/umi3-plugin": [
+  "zthxxx",
+  "react-dev-inspector"
+ ],
+ "@react-login-page/page11": [
+  "uiwjs",
+  "react-login-page"
+ ],
+ "@react-native-firebase/dynamic-links": [
+  "invertase",
+  "react-native-firebase"
+ ],
+ "@react-native/babel-plugin-codegen": [
+  "facebook",
+  "react-native"
+ ],
+ "@react-navigation/stack": [
+  "react-navigation",
+  "react-navigation"
+ ],
+ "@react-pdf/png-js": [
+  "diegomura",
+  "react-pdf"
+ ],
+ "@reactleaf/input": [
+  "reactleaf",
+  "input"
+ ],
+ "@readme/json-schema-ref-parser": [
+  "readmeio",
+  "json-schema-ref-parser"
+ ],
+ "@readme/oas-extensions": [
+  "readmeio",
+  "oas"
+ ],
+ "@readr-media/react-dual-slides": [
+  "readr-media",
+  "react"
+ ],
+ "@real-system/animation-library": [
+  "bigwoof91",
+  "real-system"
+ ],
+ "@real-wagmi/sdk": [
+  "RealWagmi",
+  "sdk"
+ ],
+ "@recalibratedsystems/common": [
+  "overphoenix",
+  "common"
+ ],
+ "@recognizebv/capacitor-plugin-msauth": [
+  "recognizegroup",
+  "capacitor-plugin-msauth"
+ ],
+ "@regexp-cjk/clone-regexp": [
+  "bluelovers",
+  "ws-regexp"
+ ],
+ "@regions-of-indonesia/client": [
+  "regions-of-indonesia",
+  "client"
+ ],
+ "@renderlayer/renderlayer": [
+  "epreston",
+  "renderlayer"
+ ],
+ "@renet-consulting/ngx-http-params": [
+  "RenetConsulting",
+  "angularcore.net"
+ ],
+ "@restroom-mw/influxdb": [
+  "dyne",
+  "restroom-mw"
+ ],
+ "@reusable-ui/accordion": [
+  "reusable-ui",
+  "reusable-ui-monorepo"
+ ],
+ "@rhtml/experiments": [
+  "rhtml",
+  "rhtml"
+ ],
+ "@ribajs/bs5": [
+  "ribajs",
+  "riba"
+ ],
+ "@rimbu/channel": [
+  "rimbu-org",
+  "rimbu"
+ ],
+ "@rmwc/provider": [
+  "rmwc",
+  "rmwc"
+ ],
+ "@rolldown/node-binding-linux-arm64-musl": [
+  "rolldown-rs",
+  "rolldown"
+ ],
+ "@rollup/plugin-node-resolve": [
+  "rollup",
+  "plugins"
+ ],
+ "@romcal/calendar.uruguay": [
+  "romcal",
+  "romcal"
+ ],
+ "@rosen-bridge/extended-typeorm": [
+  "rosen-bridge",
+  "utils"
+ ],
+ "@rosen-clients/ergo-node": [
+  "rosen-bridge",
+  "network-client"
+ ],
+ "@route-builders/oud-operator": [
+  "route-builders",
+  "OudOperator"
+ ],
+ "@routup/query": [
+  "routup",
+  "plugins"
+ ],
+ "@rowanmanning/fastify-htm-preact-views": [
+  "rowanmanning",
+  "fastify-htm-preact-views"
+ ],
+ "@rpldy/tus-uploady": [
+  "yoavniran",
+  "react-uploady"
+ ],
+ "@rspack/core": [
+  "web-infra-dev",
+  "rspack"
+ ],
+ "@rtarojs/plugin-framework-vue2": [
+  "NervJS",
+  "taro"
+ ],
+ "@runbook/optics": [
+  "run-book",
+  "runbook"
+ ],
+ "@runnerty/executor-mail": [
+  "runnerty",
+  "executor-mail"
+ ],
+ "@s-ui/theme": [
+  "SUI-Components",
+  "sui-theme"
+ ],
+ "@saasquatch/integration-boilerplate-node": [
+  "saasquatch",
+  "program-tools"
+ ],
+ "@sabertazimi/cra-template-typescript": [
+  "sabertazimi",
+  "bod"
+ ],
+ "@safelytyped/mediatype": [
+  "SafelyTyped",
+  "ts-mediatype"
+ ],
+ "@salesflare/unical": [
+  "Salesflare",
+  "unical"
+ ],
+ "@samsveltecomponents/core": [
+  "sg60",
+  "sam-svelte-components"
+ ],
+ "@sanity/document-internationalization": [
+  "sanity-io",
+  "document-internationalization"
+ ],
+ "@sanity/preview-kit": [
+  "sanity-io",
+  "preview-kit"
+ ],
+ "@sanity/ui-workshop": [
+  "sanity-io",
+  "ui-workshop"
+ ],
+ "@saplingai/sapling-js": [
+  "saplingai",
+  "sapling-samples"
+ ],
+ "@sapphire/shapeshift": [
+  "sapphiredev",
+  "shapeshift"
+ ],
+ "@sasjs/core": [
+  "sasjs",
+  "core"
+ ],
+ "@scoped-vaadin/vaadin-themable-mixin": [
+  "robrez",
+  "scoped-vaadin"
+ ],
+ "@sealsystems/eslint-config-es": [
+  "sealsystems",
+  "node-eslint-config-es"
+ ],
+ "@sei-js/core": [
+  "sei-protocol",
+  "sei-js"
+ ],
+ "@sequencemedia/verify-url": [
+  "sequencemedia",
+  "verify-url"
+ ],
+ "@shijiu/jsview-react": [
+  "system",
+  "jsview-framework"
+ ],
+ "@shogobg/react-native-pdf": [
+  "Shogobg",
+  "rn-pdf-lib"
+ ],
+ "@shopgate/pwa-core": [
+  "shopgate",
+  "pwa"
+ ],
+ "@shopify/react-intersection-observer": [
+  "Shopify",
+  "quilt"
+ ],
+ "@signetic/tenant-config": [
+  "signetic-mvs",
+  "multitenant-auth"
+ ],
+ "@silvermine/chai-strictly-equal": [
+  "silvermine",
+  "chai-strictly-equal"
+ ],
+ "@sindresorhus/tsconfig": [
+  "sindresorhus",
+  "tsconfig"
+ ],
+ "@sitelintcode/optimize-image-on-the-client-side": [
+  "sitelint",
+  "optimize-image-on-the-client-side"
+ ],
+ "@sjaakp/leaflet-search": [
+  "sjaakp",
+  "leaflet-search"
+ ],
+ "@skilld/kaizer-theme-generator": [
+  "skilld-labs",
+  "kaizer"
+ ],
+ "@skyleague/esbuild-lambda": [
+  "skyleague",
+  "esbuild-lambda"
+ ],
+ "@slickgrid-universal/common": [
+  "ghiscoding",
+  "slickgrid-universal"
+ ],
+ "@sliit-foss/service-connector": [
+  "sliit-foss",
+  "npm-catalogue"
+ ],
+ "@slimr/router": [
+  "bdombro",
+  "slimr"
+ ],
+ "@smithy/middleware-stack": [
+  "awslabs",
+  "smithy-typescript"
+ ],
+ "@smui/checkbox": [
+  "hperrin",
+  "svelte-material-ui"
+ ],
+ "@sngn/js-helpers": [
+  "sngn",
+  "sngn"
+ ],
+ "@snuggery/build-lit": [
+  "snuggery",
+  "lit-packages"
+ ],
+ "@so1ve/prettier-config": [
+  "so1ve",
+  "codestyle-config"
+ ],
+ "@sociably/postgres-state": [
+  "machinat",
+  "sociably"
+ ],
+ "@socialgouv/kali-data-types": [
+  "SocialGouv",
+  "kali-data"
+ ],
+ "@socket-mesh/auth": [
+  "socket-mesh",
+  "auth"
+ ],
+ "@solana/wallet-adapter-krystal": [
+  "solana-labs",
+  "wallet-adapter"
+ ],
+ "@sonicgarden/stylelint-config": [
+  "SonicGarden",
+  "stylelint-config"
+ ],
+ "@soundworks/create": [
+  "collective-soundworks",
+  "soundworks-create"
+ ],
+ "@south-paw/react-obfuscate-ts": [
+  "South-Paw",
+  "react-obfuscate-ts"
+ ],
+ "@spectrum-css/calendar": [
+  "adobe",
+  "spectrum-css"
+ ],
+ "@spectrum-web-components/banner": [
+  "adobe",
+  "spectrum-web-components"
+ ],
+ "@spencejs/spence-mongo-repos": [
+  "sloops77",
+  "spencer"
+ ],
+ "@sphereon/ssi-sdk.siopv2-oid4vp-rp-rest-api": [
+  "Sphereon-Opensource",
+  "SSI-SDK"
+ ],
+ "@spoonjoy/redwoodjs-dbauth-oauth-api": [
+  "spoonjoy",
+  "redwoodjs-dbauth-oauth"
+ ],
+ "@sps-woodland/column-manager": [
+  "SPSCommerce",
+  "woodland"
+ ],
+ "@sqb/migrator": [
+  "sqbjs",
+  "sqb"
+ ],
+ "@st-css/gatsby-plugin-st-css": [
+  "st-css",
+  "st-css"
+ ],
+ "@stablelib/aead": [
+  "StableLib",
+  "stablelib"
+ ],
+ "@stackflow/plugin-renderer-web": [
+  "daangn",
+  "stackflow"
+ ],
+ "@stacksjs/collections": [
+  "stacksjs",
+  "stacks"
+ ],
+ "@stagtion/actions": [
+  "privacy-scaling-explorations",
+  "p0tion"
+ ],
+ "@standardnotes/home-server": [
+  "standardnotes",
+  "server"
+ ],
+ "@state-adapt/core": [
+  "state-adapt",
+  "state-adapt"
+ ],
+ "@statoscope/extensions": [
+  "statoscope",
+  "statoscope"
+ ],
+ "@stdlib/array-base-zeros": [
+  "stdlib-js",
+  "array-base-zeros"
+ ],
+ "@stdlib/array-same-kind-casts": [
+  "stdlib-js",
+  "array-same-kind-casts"
+ ],
+ "@stdlib/array-shape": [
+  "stdlib-js",
+  "array-shape"
+ ],
+ "@stdlib/assert-is-centrosymmetric-matrix": [
+  "stdlib-js",
+  "assert-is-centrosymmetric-matrix"
+ ],
+ "@stdlib/blas-ext-base-dnansumkbn2": [
+  "stdlib-js",
+  "blas-ext-base-dnansumkbn2"
+ ],
+ "@stdlib/blas-ext-base-gapxsum": [
+  "stdlib-js",
+  "blas-ext-base-gapxsum"
+ ],
+ "@stdlib/blas-ext-base-gcusumkbn2": [
+  "stdlib-js",
+  "blas-ext-base-gcusumkbn2"
+ ],
+ "@stdlib/buffer-from-arraybuffer": [
+  "stdlib-js",
+  "buffer-from-arraybuffer"
+ ],
+ "@stdlib/constants-float32-min-safe-integer": [
+  "stdlib-js",
+  "constants-float32-min-safe-integer"
+ ],
+ "@stdlib/math-base-special-cidentity": [
+  "stdlib-js",
+  "math-base-special-cidentity"
+ ],
+ "@stdlib/math-base-special-fast-uint32-log2": [
+  "stdlib-js",
+  "math-base-special-fast-uint32-log2"
+ ],
+ "@stdlib/math-base-special-frexp": [
+  "stdlib-js",
+  "math-base-special-frexp"
+ ],
+ "@stdlib/math-base-special-kernel-betaincinv": [
+  "stdlib-js",
+  "math-base-special-kernel-betaincinv"
+ ],
+ "@stdlib/math-iter-ops-multiply": [
+  "stdlib-js",
+  "math-iter-ops-multiply"
+ ],
+ "@stdlib/math-iter-sequences-triangular": [
+  "stdlib-js",
+  "math-iter-sequences-triangular"
+ ],
+ "@stdlib/math-iter-special-cos": [
+  "stdlib-js",
+  "math-iter-special-cos"
+ ],
+ "@stdlib/math-iter-special-haversin": [
+  "stdlib-js",
+  "math-iter-special-haversin"
+ ],
+ "@stdlib/math-iter-special-log1pexp": [
+  "stdlib-js",
+  "math-iter-special-log1pexp"
+ ],
+ "@stdlib/math-strided-special-acot-by": [
+  "stdlib-js",
+  "math-strided-special-acot-by"
+ ],
+ "@stdlib/math-strided-special-dmsktrunc": [
+  "stdlib-js",
+  "math-strided-special-dmsktrunc"
+ ],
+ "@stdlib/net": [
+  "stdlib-js",
+  "net"
+ ],
+ "@stdlib/number-float64-base-from-words": [
+  "stdlib-js",
+  "number-float64-base-from-words"
+ ],
+ "@stdlib/number-float64-base-set-high-word": [
+  "stdlib-js",
+  "number-float64-base-set-high-word"
+ ],
+ "@stdlib/number-int32-base-to-uint32": [
+  "stdlib-js",
+  "number-int32-base-to-uint32"
+ ],
+ "@stdlib/random-base-frechet": [
+  "stdlib-js",
+  "random-base-frechet"
+ ],
+ "@stdlib/random-iter-chisquare": [
+  "stdlib-js",
+  "random-iter-chisquare"
+ ],
+ "@stdlib/regexp-color-hexadecimal": [
+  "stdlib-js",
+  "regexp-color-hexadecimal"
+ ],
+ "@stdlib/regexp-regexp": [
+  "stdlib-js",
+  "regexp-regexp"
+ ],
+ "@stdlib/simulate-iter-hann-pulse": [
+  "stdlib-js",
+  "simulate-iter-hann-pulse"
+ ],
+ "@stdlib/simulate-iter-triangle-wave": [
+  "stdlib-js",
+  "simulate-iter-triangle-wave"
+ ],
+ "@stdlib/stats-base-dists-chisquare-logpdf": [
+  "stdlib-js",
+  "stats-base-dists-chisquare-logpdf"
+ ],
+ "@stdlib/stats-base-dists-cosine-quantile": [
+  "stdlib-js",
+  "stats-base-dists-cosine-quantile"
+ ],
+ "@stdlib/stats-base-dists-poisson-kurtosis": [
+  "stdlib-js",
+  "stats-base-dists-poisson-kurtosis"
+ ],
+ "@stdlib/stats-base-dists-triangular-logcdf": [
+  "stdlib-js",
+  "stats-base-dists-triangular-logcdf"
+ ],
+ "@stdlib/stats-base-smeankbn2": [
+  "stdlib-js",
+  "stats-base-smeankbn2"
+ ],
+ "@stdlib/stats-base-sminsorted": [
+  "stdlib-js",
+  "stats-base-sminsorted"
+ ],
+ "@stdlib/stats-base-snanmeanpn": [
+  "stdlib-js",
+  "stats-base-snanmeanpn"
+ ],
+ "@stdlib/stats-incr-mapcorr": [
+  "stdlib-js",
+  "stats-incr-mapcorr"
+ ],
+ "@stdlib/stats-incr-meanabs2": [
+  "stdlib-js",
+  "stats-incr-meanabs2"
+ ],
+ "@stdlib/stats-incr-mpe": [
+  "stdlib-js",
+  "stats-incr-mpe"
+ ],
+ "@stdlib/string-base-code-point-at": [
+  "stdlib-js",
+  "string-base-code-point-at"
+ ],
+ "@stdlib/symbol": [
+  "stdlib-js",
+  "symbol"
+ ],
+ "@stdlib/utils-async-while": [
+  "stdlib-js",
+  "utils-async-while"
+ ],
+ "@stdlib/utils-bifurcate-in": [
+  "stdlib-js",
+  "utils-bifurcate-in"
+ ],
+ "@stdlib/utils-common-keys": [
+  "stdlib-js",
+  "utils-common-keys"
+ ],
+ "@stdlib/utils-map4d": [
+  "stdlib-js",
+  "utils-map4d"
+ ],
+ "@stdlib/utils-none-by-right": [
+  "stdlib-js",
+  "utils-none-by-right"
+ ],
+ "@steeze-ui/lucide-icons": [
+  "steeze-ui",
+  "icons"
+ ],
+ "@stellar-expert/tx-signers-inspector": [
+  "stellar-expert",
+  "stellar-tx-signers-inspector"
+ ],
+ "@stellarbeat/js-stellarbeat-shared": [
+  "stellarbeat",
+  "js-stellarbeat-shared"
+ ],
+ "@stoddabr/react-tableau-embed-live": [
+  "stoddabr",
+  "react-tableau-embed-live"
+ ],
+ "@stonegray/plugin-detect": [
+  "stonegray",
+  "plugin-detect"
+ ],
+ "@storybook/addon-measure": [
+  "storybookjs",
+  "storybook"
+ ],
+ "@storybook/addon-queryparams": [
+  "storybookjs",
+  "addon-queryparams"
+ ],
+ "@storybook/eslint-config-storybook": [
+  "storybookjs",
+  "eslint-config-storybook"
+ ],
+ "@stripe/stripe-terminal-react-native": [
+  "stripe",
+  "stripe-terminal-react-native"
+ ],
+ "@stylable/module-utils": [
+  "wix",
+  "stylable"
+ ],
+ "@styzy/free-js": [
+  "styzy",
+  "free-js"
+ ],
+ "@sudoo/mocha-config-react-native": [
+  "SudoDotDog",
+  "Sudoo-Mocha-Config-React-Native"
+ ],
+ "@sujaykumarh/docsify-plugin-title": [
+  "sujaykumarh",
+  "docsify-plugin-title"
+ ],
+ "@sunjw8888/adbkit": [
+  "sunjw",
+  "adbkit"
+ ],
+ "@supercharge/inertia": [
+  "supercharge",
+  "inertia"
+ ],
+ "@superjm/base": [
+  "juraganmaterial",
+  "superjm"
+ ],
+ "@suwatte/emulator": [
+  "Suwatte",
+  "Emulator"
+ ],
+ "@svizzle/legend": [
+  "nestauk",
+  "svizzle"
+ ],
+ "@svl-ad/pro-components": [
+  "svl-fe",
+  "pro-components"
+ ],
+ "@swim/ux": [
+  "swimos",
+  "swim-js"
+ ],
+ "@swissquote/crafty-preset-images-simple": [
+  "swissquote",
+  "crafty"
+ ],
+ "@syncfusion/ej2-angular-lists": [
+  "syncfusion",
+  "ej2-angular-ui-components"
+ ],
+ "@syncfusion/ej2-vue-kanban": [
+  "syncfusion",
+  "ej2-vue-ui-components"
+ ],
+ "@tabler/icons": [
+  "tabler",
+  "tabler-icons"
+ ],
+ "@tada5hi/eslint-config-vue": [
+  "tada5hi",
+  "javascript"
+ ],
+ "@talend/scripts-config-stylelint": [
+  "Talend",
+  "ui"
+ ],
+ "@tanglemesh/server-utilities": [
+  "tangleMesh",
+  "server-utilities"
+ ],
+ "@tant/icons": [
+  "td-fe",
+  "tant-icons"
+ ],
+ "@tapis/tapis-typescript": [
+  "tapis-project",
+  "tapis-typescript"
+ ],
+ "@tapni/vcards-js": [
+  "zeka035",
+  "vCards-js"
+ ],
+ "@taqueria/plugin-ligo": [
+  "tezostaqueria",
+  "taqueria"
+ ],
+ "@taureau/ui": [
+  "daisyui",
+  "react-daisyui"
+ ],
+ "@team-devmonster/react-form": [
+  "team-devmonster",
+  "react-modules"
+ ],
+ "@teambit/api-reference.renderers.type-literal": [
+  "teambit",
+  "bit"
+ ],
+ "@teamleader/ui-illustrations": [
+  "teamleadercrm",
+  "ui-illustrations"
+ ],
+ "@techfreaque/json-editor-react": [
+  "techfreaque",
+  "json-editor-react"
+ ],
+ "@telekom/scale-components-react": [
+  "telekom",
+  "scale"
+ ],
+ "@teleporthq/teleport-uidl-builders": [
+  "teleporthq",
+  "teleport-code-generators"
+ ],
+ "@telus-uds/themes-community.theme-public-mobile": [
+  "telus",
+  "universal-design-system"
+ ],
+ "@tencentcloud/call-uikit-vue2": [
+  "tencentyun",
+  "TUICallKit"
+ ],
+ "@tensorflow/tfjs-backend-webgl": [
+  "tensorflow",
+  "tfjs"
+ ],
+ "@testring/plugin-babel": [
+  "ringcentral",
+  "testring"
+ ],
+ "@thi.ng/pixel": [
+  "thi-ng",
+  "umbrella"
+ ],
+ "@things-factory/component-ui": [
+  "hatiolab",
+  "things-factory"
+ ],
+ "@thirdweb-dev/sdk": [
+  "thirdweb-dev",
+  "js"
+ ],
+ "@thoughtbot/eslint-config": [
+  "thoughtbot",
+  "eslint-config"
+ ],
+ "@thoughtbot/stylelint-config": [
+  "thoughtbot",
+  "stylelint-config"
+ ],
+ "@thyrith/momentkh": [
+  "ThyrithSor",
+  "momentkh"
+ ],
+ "@tinyhttp/proxy-addr": [
+  "tinyhttp",
+  "tinyhttp"
+ ],
+ "@tiptap/extension-underline": [
+  "ueberdosis",
+  "tiptap"
+ ],
+ "@tjallingf/react-utils": [
+  "tjallingf",
+  "react-utils"
+ ],
+ "@tmaize/dev-server": [
+  "TMaize",
+  "dev-server"
+ ],
+ "@todesktop/client-selected-text": [
+  "ToDesktop",
+  "todesktop-selected-text"
+ ],
+ "@tofu-apis/common-types": [
+  "tofu-apis",
+  "node-lib_template"
+ ],
+ "@toolsplus/forge-trpc-protocol": [
+  "toolsplus",
+  "forge-trpc"
+ ],
+ "@traderjoe-xyz/sdk-core": [
+  "traderjoe-xyz",
+  "joe-sdks"
+ ],
+ "@tramvai/module-server": [
+  "tramvaijs",
+  "tramvai"
+ ],
+ "@transifex/vue3": [
+  "transifex",
+  "transifex-javascript"
+ ],
+ "@travelport-czech/ss-translations": [
+  "Travelport-Czech",
+  "ss-translations"
+ ],
+ "@trenskow/from": [
+  "trenskow",
+  "from"
+ ],
+ "@tresdoce-nestjs-toolkit/elk": [
+  "tresdoce",
+  "tresdoce-nestjs-toolkit"
+ ],
+ "@trucdev/node-html-to-image": [
+  "comartek",
+  "node-html-to-image"
+ ],
+ "@trycourier/react-toast": [
+  "trycourier",
+  "courier-react"
+ ],
+ "@tryghost/bookshelf-eager-load": [
+  "TryGhost",
+  "framework"
+ ],
+ "@ts-core/socket-client": [
+  "ManhattanDoctor",
+  "ts-core-socket-client"
+ ],
+ "@ts-tools/transpile": [
+  "AviVahl",
+  "ts-tools"
+ ],
+ "@tsed/objection": [
+  "tsedio",
+  "tsed"
+ ],
+ "@tsparticles/plugin-absorbers": [
+  "tsparticles",
+  "tsparticles"
+ ],
+ "@tsparticles/preset-bubbles": [
+  "tsparticles",
+  "presets"
+ ],
+ "@ttionya/prettier-config": [
+  "ttionya",
+  "Linter"
+ ],
+ "@tupilabs/vue-lumino": [
+  "tupilabs",
+  "vue-lumino"
+ ],
+ "@turbox3d/turbox": [
+  "turbox3d",
+  "turbox"
+ ],
+ "@twada/benchmark-commits": [
+  "twada",
+  "benchmark-commits"
+ ],
+ "@twocatmoon/react-actions": [
+  "twocatmoon",
+  "react-actions"
+ ],
+ "@txo-peer-dep/service-error-handler-react": [
+  "technology-studio",
+  "service-error-handler-react-peer"
+ ],
+ "@typechain/ethers-v5": [
+  "ethereum-ts",
+  "Typechain"
+ ],
+ "@types/amap-js-api-driving": [
+  "DefinitelyTyped",
+  "DefinitelyTyped"
+ ],
+ "@types/web": [
+  "microsoft",
+  "TypeScript-DOM-Lib-Generator"
+ ],
+ "@ui-grid/pinning": [
+  "angular-ui",
+  "ui-grid"
+ ],
+ "@uidu/field-password": [
+  "uidu-org",
+  "guidu"
+ ],
+ "@uiw/react-color-name": [
+  "uiwjs",
+  "react-color"
+ ],
+ "@uiw/react-grid": [
+  "uiwjs",
+  "uiw"
+ ],
+ "@uizard/nx-fast-s3-cache": [
+  "uizard-technologies",
+  "nx-fast-s3-cache"
+ ],
+ "@ultraq/promise-utils": [
+  "ultraq",
+  "promise-utils"
+ ],
+ "@umbraco-ui/uui-loader-bar": [
+  "umbraco",
+  "Umbraco.UI"
+ ],
+ "@umbrajs/core": [
+  "UmbraJS",
+  "core"
+ ],
+ "@umijs/preset-umi": [
+  "umijs",
+  "umi"
+ ],
+ "@unified-latex/unified-latex-builder": [
+  "siefkenj",
+  "unified-latex"
+ ],
+ "@universal-packages/express-controllers-fileupload": [
+  "universal-packages",
+  "universal-express-controllers-fileupload"
+ ],
+ "@universal-packages/mailing-nodemailer": [
+  "universal-packages",
+  "universal-mailing-nodemailer"
+ ],
+ "@universe/models": [
+  "universe",
+  "big-blue"
+ ],
+ "@untidy/thetvdb": [
+  "falsepopsky",
+  "thetvdb"
+ ],
+ "@uplo/adapter-prisma": [
+  "jpalumickas",
+  "uplo"
+ ],
+ "@uppy/status-bar": [
+  "transloadit",
+  "uppy"
+ ],
+ "@urban-bot/slack": [
+  "urban-bot",
+  "urban-bot"
+ ],
+ "@urlint/core": [
+  "urlint",
+  "urlint"
+ ],
+ "@utilitycss/utility": [
+  "utilitycss",
+  "utility"
+ ],
+ "@utilz/file": [
+  "devdigital",
+  "utilz"
+ ],
+ "@vaadin-component-factory/vcf-date-range-picker": [
+  "vaadin-component-factory",
+  "vcf-date-range-picker"
+ ],
+ "@vaadin/common-frontend": [
+  "vaadin",
+  "flow-hilla-common"
+ ],
+ "@vaadin/overlay": [
+  "vaadin",
+  "web-components"
+ ],
+ "@validest/remix-node": [
+  "simonboisset",
+  "validest"
+ ],
+ "@vanderbilt/yes-api": [
+  "jovialis",
+  "vanderbilt-yes-api"
+ ],
+ "@vechain/devpal": [
+  "libotony",
+  "devpal"
+ ],
+ "@vemlavaraloucagamers/vg-text": [
+  "VemLavarALoucaGamers",
+  "vlalg-frontend-components"
+ ],
+ "@veramo/did-provider-ion": [
+  "decentralized-identity",
+  "veramo"
+ ],
+ "@vercel/postgres-kysely": [
+  "vercel",
+  "storage"
+ ],
+ "@vertx/auth-jdbc": [
+  "reactiverse",
+  "es4x"
+ ],
+ "@veterancrowd/aws-service-search": [
+  "veterancrowd",
+  "aws-service-search"
+ ],
+ "@vgip/vonage-dialer-sdk": [
+  "Vonage",
+  "vgip-dialer-sdk"
+ ],
+ "@viarotel-org/utils": [
+  "viarotel-org",
+  "packages"
+ ],
+ "@videsk/window-node-polyfill": [
+  "videsk",
+  "window-node-polyfill"
+ ],
+ "@vidispine/vdt-materialui": [
+  "vidispine",
+  "vdt"
+ ],
+ "@vill-v/async": [
+  "vill-v-kit",
+  "vill-v"
+ ],
+ "@visa/visa-charts-utils": [
+  "visa",
+  "visa-chart-components"
+ ],
+ "@vitalsource/vstui": [
+  "vitalsource",
+  "vstui"
+ ],
+ "@vitessce/scatterplot-gating": [
+  "vitessce",
+  "vitessce"
+ ],
+ "@vivocha/extension-sdk": [
+  "vivocha",
+  "extension-sdk"
+ ],
+ "@volo/abp.ng.openiddictpro": [
+  "volosoft",
+  "volo"
+ ],
+ "@volosoft/abp.ng.theme.lepton-x": [
+  "volosoft",
+  "lepton"
+ ],
+ "@voltiso/config.ts": [
+  "voltiso",
+  "mono"
+ ],
+ "@vonage/vbc-web-sdk": [
+  "Vonage",
+  "App-Center-SDKs"
+ ],
+ "@vovikilelik/react-lens": [
+  "vovikilelik",
+  "react-lens"
+ ],
+ "@voxpelli/tsconfig": [
+  "voxpelli",
+  "tsconfig"
+ ],
+ "@vrn-deco/boilerplate-typescript-electron-vue3": [
+  "vrn-deco",
+  "boilerplate"
+ ],
+ "@vtex/shoreline-cli": [
+  "vtex",
+  "shoreline"
+ ],
+ "@vtex/vtexis-compatibility-layer": [
+  "vtex",
+  "vtexis-compatibility-layer"
+ ],
+ "@vtfk/azure-blob-client": [
+  "vtfk",
+  "azure-blob-client"
+ ],
+ "@vtmn/css-divider": [
+  "Decathlon",
+  "vitamin-web"
+ ],
+ "@vue-flow/core": [
+  "bcakmakoglu",
+  "vue-flow"
+ ],
+ "@vue-js-cron/light": [
+  "abichinger",
+  "vue-js-cron"
+ ],
+ "@vue-start/media": [
+  "zxeryu",
+  "vue-start"
+ ],
+ "@vue/runtime-core-canary": [
+  "vuejs",
+  "core"
+ ],
+ "@vuelidate/validators": [
+  "vuelidate",
+  "vuelidate"
+ ],
+ "@vuemap/amap-xyz-layer": [
+  "yangyanggu",
+  "amap-xyz-layer"
+ ],
+ "@vuemap/vue-amap-extra": [
+  "yangyanggu",
+  "vue-amap"
+ ],
+ "@vuepress/theme-vue": [
+  "vuejs",
+  "vuepress"
+ ],
+ "@vuesion/storybook-theme-switcher": [
+  "vuesion",
+  "packages"
+ ],
+ "@vulcan-sql/test-utility": [
+  "Canner",
+  "vulcan-sql"
+ ],
+ "@vve/redux-saga": [
+  "redux-saga",
+  "redux-saga"
+ ],
+ "@vygruppen/spor-react": [
+  "nsbno",
+  "spor"
+ ],
+ "@w0s/eslint-config": [
+  "SaekiTominaga",
+  "config"
+ ],
+ "@w3bstream/w3bstream-http-client-simulator": [
+  "machinefi",
+  "w3bstream-http-client-simulator"
+ ],
+ "@w3ui/solid-keyring": [
+  "web3-storage",
+  "w3ui"
+ ],
+ "@w5s/eslint-config": [
+  "w5s",
+  "project-config"
+ ],
+ "@walts81/generator-node-api-vue": [
+  "walts81",
+  "generator-node-api-vue"
+ ],
+ "@wanews/nx-pulumi": [
+  "sevenwestmedia-labs",
+  "nx-plugins"
+ ],
+ "@washi/bus": [
+  "shibanet0",
+  "washi"
+ ],
+ "@washingtonpost/wpds-divider": [
+  "washingtonpost",
+  "wpds-ui-kit"
+ ],
+ "@web3-onboard/dcent": [
+  "blocknative",
+  "web3-onboard"
+ ],
+ "@web3-react/empty": [
+  "Uniswap",
+  "web3-react"
+ ],
+ "@webassemblyjs/wast-refmt": [
+  "xtuc",
+  "webassemblyjs"
+ ],
+ "@webex/redux-module-media": [
+  "webex",
+  "react-widgets"
+ ],
+ "@webiny/api-cognito-authenticator": [
+  "webiny",
+  "webiny-js"
+ ],
+ "@weltn24/videoplayer": [
+  "spring-media",
+  "rbbt-fnk-VideoPlayer"
+ ],
+ "@wezom/eslint-config-ts-react": [
+  "WezomCompany",
+  "code-style"
+ ],
+ "@widelab-nc/wideweb": [
+  "widelab-nc",
+  "wideweb"
+ ],
+ "@widget-plus/utils": [
+  "Niko030303",
+  "utils"
+ ],
+ "@widgetbot/crate": [
+  "widgetbot-io",
+  "crate"
+ ],
+ "@wildboar/pkcs": [
+  "Wildboar-Software",
+  "asn1-typescript-libraries"
+ ],
+ "@wingsuit-designsystem/preset-storybook": [
+  "wingsuit-designsystem",
+  "wingsuit"
+ ],
+ "@witty-services/ngx-form": [
+  "paddls",
+  "ngx-form"
+ ],
+ "@wixc3/engine-electron-host": [
+  "wixplosives",
+  "engine"
+ ],
+ "@wizzi/factory": [
+  "stfnbssl",
+  "wizzi"
+ ],
+ "@wordpress/create-block": [
+  "WordPress",
+  "gutenberg"
+ ],
+ "@wsvaio/stylelint-config": [
+  "wsvaio",
+  "mylint-config"
+ ],
+ "@wu-component/wu-leaflet-map": [
+  "wu-component",
+  "web-component-plus"
+ ],
+ "@wulperstudio/cms": [
+  "WulperStudio",
+  "wulper-studio-library"
+ ],
+ "@xbdtb/api-gen": [
+  "xbdtb",
+  "api-gen"
+ ],
+ "@xcritical/notification": [
+  "xcritical-software",
+  "xc-front-kit"
+ ],
+ "@xhbmygod/excalidraw": [
+  "excalidraw",
+  "excalidraw"
+ ],
+ "@xip-online-applications/browserslist-config": [
+  "xip-online-applications",
+  "configs"
+ ],
+ "@xlsx/xlsx-populate": [
+  "weirongxu",
+  "xlsx-populate"
+ ],
+ "@xo-union/tk-component-progress-bar": [
+  "tkww",
+  "union"
+ ],
+ "@xylabs/jest-helpers": [
+  "xylabs",
+  "sdk-js"
+ ],
+ "@xylabs/react-experiments": [
+  "xylabs",
+  "sdk-react"
+ ],
+ "@xyo-network/payload-wrapper": [
+  "XYOracleNetwork",
+  "sdk-xyo-client-js"
+ ],
+ "@xyo-network/react-ethereum-gas-price-ethgasstation-plugin": [
+  "XYOracleNetwork",
+  "sdk-xyo-react-js"
+ ],
+ "@y-sweet/sdk": [
+  "drifting-in-space",
+  "y-sweet"
+ ],
+ "@yelon/bis": [
+  "hbyunzai",
+  "yelon"
+ ],
+ "@yozora/core-react-theme": [
+  "yozorajs",
+  "yozora-react"
+ ],
+ "@yozora/tokenizer-autolink": [
+  "yozorajs",
+  "yozora"
+ ],
+ "@yusui/flow-design": [
+  "SoulLyoko",
+  "yusui-tools"
+ ],
+ "@zag-js/numeric-range": [
+  "chakra-ui",
+  "zag"
+ ],
+ "@zarclays/zswap-miso-sdk": [
+  "sushiswap",
+  "sdk"
+ ],
+ "@zendeskgarden/react-grid": [
+  "zendeskgarden",
+  "react-components"
+ ],
+ "@zenweb/upload": [
+  "yefei",
+  "zenweb-upload"
+ ],
+ "@zerodep/is-map": [
+  "cdepage",
+  "zerodep"
+ ],
+ "@zetamarkets/anchor": [
+  "zetamarkets",
+  "anchor"
+ ],
+ "@zmaj-js/storage-s3": [
+  "apstanisic",
+  "zmaj"
+ ],
+ "@zodash/fs": [
+  "zcorky",
+  "zodash"
+ ],
+ "@zombienet/utils": [
+  "paritytech",
+  "zombienet"
+ ],
+ "@zvenigora/jse-eval": [
+  "Zvenigora",
+  "jse-eval"
+ ],
+ "@zwave-js/host": [
+  "zwave-js",
+  "node-zwave-js"
+ ],
+ "accent-cli": [
+  "mirego",
+  "accent"
+ ],
+ "accept": [
+  "hapijs",
+  "accept"
+ ],
+ "accurate-beeswarm-plot": [
+  "jtrim-ons",
+  "accurate-beeswarm-plot"
+ ],
+ "achieve": [
+  "highlevellogic",
+  "achieve"
+ ],
+ "acorn-hammerhead": [
+  "miherlosev",
+  "acorn-hammerhead"
+ ],
+ "acorn-typescript": [
+  "TyrealHu",
+  "acorn-typescript"
+ ],
+ "administratum": [
+  "AndreasArvidsson",
+  "administratum"
+ ],
+ "af-estimate": [
+  "Bazilio-san",
+  "af-estimate"
+ ],
+ "aggregate-async-iterator": [
+  "arlac77",
+  "aggregate-async-iterator"
+ ],
+ "ai-ui-kit": [
+  "ai-chat-uzb",
+  "ai-ui-kit"
+ ],
+ "airbyte-protocol-tmp": [
+  "airbytehq",
+  "airbyte-protocol"
+ ],
+ "ale-url-parser": [
+  "msn0",
+  "ale-url-parser"
+ ],
+ "aliceonboarding-reactnative": [
+  "alice-biometrics",
+  "onboarding-react-native"
+ ],
+ "alks": [
+  "Cox-Automotive",
+  "ALKS-CLI"
+ ],
+ "alp-node-config": [
+  "christophehurpeau",
+  "alp"
+ ],
+ "angular-cesium": [
+  "articodeltd",
+  "angular-cesium"
+ ],
+ "angular-imask": [
+  "uNmAnNeR",
+  "imaskjs"
+ ],
+ "antelope-ecc": [
+  "pur3miish",
+  "Antelope-ECC"
+ ],
+ "apache-dubbo-next": [
+  "apache",
+  "dubbo-js"
+ ],
+ "api-change-run": [
+  "kpanot",
+  "api-change-run"
+ ],
+ "aplayer2": [
+  "code-ba",
+  "APlayer"
+ ],
+ "appbuilder-component-test": [
+  "wortkotze",
+  "appbuilder-component-test"
+ ],
+ "apxor-qe": [
+  "apxor",
+  "apxor-web"
+ ],
+ "argon2": [
+  "ranisalt",
+  "node-argon2"
+ ],
+ "aries-framework-indy-vdr-proxy-server": [
+  "2060-io",
+  "aries-javascript-indy-vdr-proxy"
+ ],
+ "aspie-even-numbers": [
+  "aspiesoft",
+  "aspie-even-numbers"
+ ],
+ "aspnet-client-validation": [
+  "haacked",
+  "aspnet-client-validation"
+ ],
+ "astro-sst": [
+  "sst",
+  "sst"
+ ],
+ "async-css-plugin": [
+  "andreashuber69",
+  "async-css-plugin"
+ ],
+ "at-ngx-datatable": [
+  "swimlane",
+  "ngx-datatable"
+ ],
+ "atomic-url": [
+  "ngshiheng",
+  "atomic-url"
+ ],
+ "att-client": [
+  "mdingena",
+  "att-client"
+ ],
+ "aurelia2-auth": [
+  "Vheissu",
+  "aurelia2-plugins"
+ ],
+ "auth-ui-vue": [
+  "Boluwatife2904",
+  "auth-ui-vue"
+ ],
+ "awai-react": [
+  "yuriyyakym",
+  "awai-react"
+ ],
+ "awayback": [
+  "lucajoos",
+  "awayback"
+ ],
+ "aws-xray-sdk-core": [
+  "aws",
+  "aws-xray-sdk-node"
+ ],
+ "axios-case-converter": [
+  "mpyw",
+  "axios-interceptor-change-case"
+ ],
+ "axios-cordova-adapter": [
+  "customautosys",
+  "axios-cordova-adapter"
+ ],
+ "azde-scripts": [
+  "davidpolaniaac",
+  "azde-scripts"
+ ],
+ "azure-devops-symbols-webpack-plugin": [
+  "microsoft",
+  "azure-devops-symbols"
+ ],
+ "babel-plugin-replace-import-extension": [
+  "silane",
+  "babel-plugin-replace-import-extension"
+ ],
+ "babel-preset-expo": [
+  "expo",
+  "expo"
+ ],
+ "backfill-logger": [
+  "microsoft",
+  "backfill"
+ ],
+ "bare-os": [
+  "holepunchto",
+  "bare-os"
+ ],
+ "binance-historical": [
+  "maxgfr",
+  "binance-historical"
+ ],
+ "bloggify-user-auth": [
+  "Bloggify",
+  "user-auth"
+ ],
+ "bm-datepicker": [
+  "steffodimfelt",
+  "bm-datepicker"
+ ],
+ "bool-is-bool": [
+  "finkinfridom",
+  "bool-is-bool"
+ ],
+ "boomform-builder": [
+  "BoomTech-LLC",
+  "BoomForm-Builder"
+ ],
+ "bridgefy-react-native": [
+  "bridgefy",
+  "bridgefy-react-native"
+ ],
+ "bs32": [
+  "bcoin-org",
+  "bs32"
+ ],
+ "bs58caddr": [
+  "patricklodder",
+  "bs58caddr"
+ ],
+ "bundle-scss": [
+  "vivitali",
+  "bundle-scss"
+ ],
+ "bungle": [
+  "durko",
+  "bungle"
+ ],
+ "cacache": [
+  "npm",
+  "cacache"
+ ],
+ "cache-lru": [
+  "rse",
+  "cache-lru"
+ ],
+ "canvasxpress-react": [
+  "neuhausi",
+  "canvasXpress-react"
+ ],
+ "capacitor-metadata-reader": [
+  "sdirekt-app-developer",
+  "capacitor-metadata-reader"
+ ],
+ "car-names": [
+  "palashmon",
+  "car-names"
+ ],
+ "carallax": [
+  "meteora-digital",
+  "carallax"
+ ],
+ "carbon-components-angular": [
+  "carbon-design-system",
+  "carbon-components-angular"
+ ],
+ "cardano-hw-interop-lib": [
+  "vacuumlabs",
+  "cardano-hw-interop-lib"
+ ],
+ "carstream": [
+  "alanshaw",
+  "carstream"
+ ],
+ "cb-datatable": [
+  "vitalik-ls",
+  "cb-datatable"
+ ],
+ "cbor-web": [
+  "hildjj",
+  "node-cbor"
+ ],
+ "cbst": [
+  "morris",
+  "cbst"
+ ],
+ "cbw": [
+  "Adslot",
+  "node-cbw"
+ ],
+ "ccnetmc-api": [
+  "MegalithOfficial",
+  "ccnetmc-api"
+ ],
+ "cdk-docker-image-deployment": [
+  "cdklabs",
+  "cdk-docker-image-deployment"
+ ],
+ "cdk-image-pipeline": [
+  "aws-samples",
+  "cdk-image-pipeline"
+ ],
+ "cdktf-dynamo-table-viewer": [
+  "aws-rafams",
+  "cdktf-dynamo-table-viewer"
+ ],
+ "cells-sdk": [
+  "pydio",
+  "cells-sdk-js"
+ ],
+ "chartjs-plugin-scroll-bar": [
+  "soloraid",
+  "chartjs-plugin-scroll-bar"
+ ],
+ "chessboard-rn": [
+  "SoberTsar",
+  "chessboard-rn"
+ ],
+ "chinese_regions": [
+  "kamaslau",
+  "chinese_regions"
+ ],
+ "chrome-har-capturer": [
+  "cyrus-and",
+  "chrome-har-capturer"
+ ],
+ "circ-clone": [
+  "maximilianMairinger",
+  "circClone"
+ ],
+ "class-mongo": [
+  "atmajs",
+  "class-mongo"
+ ],
+ "cldr-annotations-full": [
+  "unicode-cldr",
+  "cldr-json"
+ ],
+ "cleaner-config": [
+  "samholmes",
+  "cleaner-config"
+ ],
+ "click-track": [
+  "MxAshUp",
+  "click-track-js"
+ ],
+ "cloudly-hook": [
+  "utily",
+  "cloudly-hook"
+ ],
+ "coa-wxa": [
+  "coajs",
+  "coa-wxa"
+ ],
+ "coc-prisma": [
+  "pantharshit00",
+  "coc-prisma"
+ ],
+ "codew": [
+  "bisquit",
+  "codew"
+ ],
+ "coherent-gameface-interaction-manager": [
+  "CoherentLabs",
+  "GameUIComponents"
+ ],
+ "colombo": [
+  "omrilotan",
+  "colombo"
+ ],
+ "common-mid": [
+  "giseles",
+  "common-mid"
+ ],
+ "complex-utils": [
+  "MarAngle",
+  "complex-utils"
+ ],
+ "conditional-gtag": [
+  "mindiply",
+  "conditional-gtag"
+ ],
+ "connectkit-next-siwe": [
+  "family",
+  "connectkit"
+ ],
+ "connector-api": [
+  "massudy",
+  "connector-api"
+ ],
+ "consistent-hash": [
+  "andrasq",
+  "consistent-hash-js"
+ ],
+ "console-log-button": [
+  "Redstone-1",
+  "console-log-button"
+ ],
+ "construct-hub-webapp": [
+  "cdklabs",
+  "construct-hub-webapp"
+ ],
+ "convert-manifest-format": [
+  "brettz9",
+  "convert-manifest-format"
+ ],
+ "cordova-launch-review": [
+  "dpa99c",
+  "cordova-launch-review"
+ ],
+ "cordova-plugin-crash-reporter": [
+  "axispointe",
+  "CrashReportPlugin"
+ ],
+ "cordova-plugin-notificare-push": [
+  "Notificare",
+  "notificare-sdk-cordova"
+ ],
+ "cordova-plugin-sms-retriever": [
+  "andreszs",
+  "cordova-plugin-sms-retriever"
+ ],
+ "couch-routes": [
+  "darrellncouch",
+  "couch-routes"
+ ],
+ "couponable": [
+  "thoughtindustries",
+  "couponable"
+ ],
+ "cranny": [
+  "wtesler",
+  "cranny"
+ ],
+ "create-hyas": [
+  "gethyas",
+  "create-hyas"
+ ],
+ "create-minze": [
+  "n6ai",
+  "minze"
+ ],
+ "create-resumejs": [
+  "Dunqing",
+  "resume"
+ ],
+ "create-t3nuxt-app": [
+  "gfidder",
+  "create-t3nuxt-app"
+ ],
+ "create-un": [
+  "peterroe",
+  "un"
+ ],
+ "create-video": [
+  "remotion-dev",
+  "remotion"
+ ],
+ "crisp-game-lib": [
+  "abagames",
+  "crisp-game-lib"
+ ],
+ "crux-api": [
+  "treosh",
+  "crux-api"
+ ],
+ "crypto-addr-codec": [
+  "jay-dee7",
+  "crypto-addr-serialize"
+ ],
+ "cspace-ui-plugin-record-material": [
+  "collectionspace",
+  "cspace-ui-plugin-record-material.js"
+ ],
+ "cube-ui": [
+  "didi",
+  "cube-ui"
+ ],
+ "culqi-node": [
+  "giwiro",
+  "culqi-node"
+ ],
+ "custom-url-check": [
+  "tutyamxx",
+  "custom-url-check"
+ ],
+ "cxcss": [
+  "CodenNerd",
+  "GenericCss"
+ ],
+ "cypress-example-kitchensink": [
+  "cypress-io",
+  "cypress-example-kitchensink"
+ ],
+ "d3-scale-chromatic": [
+  "d3",
+  "d3-scale-chromatic"
+ ],
+ "dashup": [
+  "builtbyedgar",
+  "dashup"
+ ],
+ "datagrid-bvue": [
+  "newera-systems",
+  "parse-vue-datagrid-engine"
+ ],
+ "datocms-plugin-visual-select": [
+  "growthops-digital",
+  "datocms-plugin-visual-select"
+ ],
+ "ddd-generate": [
+  "huydq189",
+  "ddd-gen"
+ ],
+ "decentralized-key-management": [
+  "wojake",
+  "DKM"
+ ],
+ "declarativas": [
+  "mrozbarry",
+  "declarativas"
+ ],
+ "deepbase": [
+  "clasen",
+  "DeepBase"
+ ],
+ "defidata": [
+  "ScorpioTM",
+  "DeFiData"
+ ],
+ "denga": [
+  "Xalbi",
+  "denga"
+ ],
+ "device-sizes": [
+  "tobua",
+  "device-sizes"
+ ],
+ "dhanhq": [
+  "dhan-oss",
+  "DhanHQ-js"
+ ],
+ "dictionary-es-ar": [
+  "wooorm",
+  "dictionaries"
+ ],
+ "didyoumean2": [
+  "foray1010",
+  "didyoumean2"
+ ],
+ "digitalbacon": [
+  "kalegd",
+  "DigitalBacon"
+ ],
+ "directus-template-cli": [
+  "directus-community",
+  "directus-template-cli"
+ ],
+ "disci": [
+  "typicalninja",
+  "disci"
+ ],
+ "discord-welcome-card": [
+  "AKORA-Studios",
+  "DiscordWelcomeCard"
+ ],
+ "discounted-cash-flow": [
+  "bertolo1988",
+  "dcf"
+ ],
+ "disposablestack": [
+  "es-shims",
+  "DisposableStack"
+ ],
+ "distribute-group-to-array": [
+  "bluelovers",
+  "ws-array"
+ ],
+ "dler": [
+  "YieldRay",
+  "dler"
+ ],
+ "docs-embeded-react": [
+  "6uimorais",
+  "docs-embeded-react"
+ ],
+ "doz": [
+  "dozjs",
+  "doz"
+ ],
+ "dragnow-react": [
+  "abuzar316",
+  "dragnow-react"
+ ],
+ "dx-react-chart-bootstrap5": [
+  "tol1",
+  "devextreme-reactive"
+ ],
+ "dynastar": [
+  "godaddy",
+  "dynastar"
+ ],
+ "easy-db-browser": [
+  "ingSlonik",
+  "easy-db"
+ ],
+ "echarts": [
+  "apache",
+  "echarts"
+ ],
+ "echarts-designer": [
+  "jingyuLin1999",
+  "echarts-designer"
+ ],
+ "economic-api-client": [
+  "LakkenLak",
+  "economic-api-client"
+ ],
+ "el-select-all": [
+  "fred-hu",
+  "el-select-all"
+ ],
+ "election-helpers": [
+  "ejfox",
+  "election-helpers"
+ ],
+ "electron-packager": [
+  "electron",
+  "electron-packager"
+ ],
+ "electrum-client-sl": [
+  "keep-network",
+  "electrum-client-js"
+ ],
+ "elegant-cli": [
+  "elegantframework",
+  "elegant"
+ ],
+ "element-china-area-data": [
+  "Plortinus",
+  "element-china-area-data"
+ ],
+ "eleventy-plugin-img2picture": [
+  "saneef",
+  "eleventy-plugin-img2picture"
+ ],
+ "email-misspelled": [
+  "julien-amblard",
+  "email-misspelled"
+ ],
+ "ember-animated": [
+  "ember-animation",
+  "ember-animated"
+ ],
+ "ember-cli-rails-addon": [
+  "rondale-sc",
+  "ember-cli-rails-addon"
+ ],
+ "emoji-datasource": [
+  "iamcal",
+  "emoji-data"
+ ],
+ "envio": [
+  "enviodev",
+  "indexer"
+ ],
+ "enzo-codestyle": [
+  "EnzoMartin",
+  "codestyle"
+ ],
+ "ep_dynamic_default_content": [
+  "ether",
+  "ep_dynamic_default_content"
+ ],
+ "epicadidash": [
+  "epicadidash",
+  "businesscard"
+ ],
+ "epoch-seconds": [
+  "jaid",
+  "epoch-seconds"
+ ],
+ "epson-m30-emulator": [
+  "MustafaAlsihati",
+  "EpsonM30Emulator"
+ ],
+ "errlop": [
+  "bevry",
+  "errlop"
+ ],
+ "error-cause-polyfill": [
+  "ehmicky",
+  "error-cause-polyfill"
+ ],
+ "error-stack-parser-es": [
+  "antfu",
+  "error-stack-parser-es"
+ ],
+ "eslint-config-6river": [
+  "6RiverSystems",
+  "eslint-config-6river"
+ ],
+ "eslint-config-cecilia": [
+  "SandroMiguel",
+  "eslint-config-cecilia"
+ ],
+ "eslint-config-mbuchalik": [
+  "MBuchalik",
+  "eslint-config-mbuchalik"
+ ],
+ "eslint-formatter-azure-devops": [
+  "EngageSoftware",
+  "eslint-formatter-azure-devops"
+ ],
+ "eslint-formatter-ratchet": [
+  "ProductPlan",
+  "eslint-formatter-ratchet"
+ ],
+ "eslint-import-resolver-ts-parser": [
+  "PaperStrike",
+  "eslint-import-resolver-ts-parser"
+ ],
+ "eslint-import-resolver-typescript-bun": [
+  "opsbr",
+  "eslint-import-resolver-typescript-bun"
+ ],
+ "eslint-kit": [
+  "eslint-kit",
+  "eslint-kit"
+ ],
+ "eslint-plugin-jsdoc": [
+  "gajus",
+  "eslint-plugin-jsdoc"
+ ],
+ "eslint-plugin-lit-a11y": [
+  "open-wc",
+  "open-wc"
+ ],
+ "eslint-plugin-moment-timezone": [
+  "hollandmatt",
+  "eslint-plugin-moment-timezone"
+ ],
+ "eslint-plugin-team-vals": [
+  "team-vals",
+  "eslint-config-team-vals"
+ ],
+ "esm-loader-svelte": [
+  "brev",
+  "esm-loaders"
+ ],
+ "esnet-networkmap-panel": [
+  "esnet",
+  "grafana-esnet-networkmap-panel"
+ ],
+ "eth-token-recover": [
+  "vittominacori",
+  "eth-token-recover"
+ ],
+ "etherlab-nodejs": [
+  "STECHOQ",
+  "etherlab-nodejs"
+ ],
+ "ethiopian-calendar-date-converter": [
+  "melaku-z",
+  "ethio-european-date-converter"
+ ],
+ "eventgate": [
+  "wikimedia",
+  "eventgate"
+ ],
+ "express-presenter": [
+  "Fcmam5",
+  "express-response-presnter"
+ ],
+ "extra-entries": [
+  "nodef",
+  "extra-entries"
+ ],
+ "extra-request": [
+  "BlackGlory",
+  "extra-request"
+ ],
+ "fakegato-history": [
+  "simont77",
+  "fakegato-history"
+ ],
+ "farmbot": [
+  "FarmBot",
+  "farmbot-js"
+ ],
+ "farrow-next": [
+  "farrow-js",
+  "farrow"
+ ],
+ "fast-folder-size": [
+  "simoneb",
+  "fast-folder-size"
+ ],
+ "fast-max": [
+  "DanielJDufour",
+  "fast-max"
+ ],
+ "faye-app": [
+  "cravler",
+  "faye-app"
+ ],
+ "feather-icons": [
+  "feathericons",
+  "feather"
+ ],
+ "fennec-ui": [
+  "tarasov-in",
+  "fennec-ui"
+ ],
+ "ffxiv-textcommand-data": [
+  "AwesomeHamster",
+  "ffxiv-textcommand-data"
+ ],
+ "file-signature-in-react": [
+  "bad4iz",
+  "file-signature-in-react"
+ ],
+ "find-hearted-contributions": [
+  "gr2m",
+  "find-hearted-contributions"
+ ],
+ "fix-utf8": [
+  "maxlath",
+  "fix-utf8"
+ ],
+ "flagsmith-nodejs": [
+  "Flagsmith",
+  "flagsmith-nodejs-client"
+ ],
+ "fluentreports": [
+  "Nathanaela",
+  "fluentreports"
+ ],
+ "flutterwave-react-native-wrapper": [
+  "Flutterwave",
+  "flutterwave-react-native"
+ ],
+ "fnl": [
+  "metabench",
+  "fnl"
+ ],
+ "fp-ts-indexeddb": [
+  "mblink",
+  "fp-ts-indexeddb"
+ ],
+ "fracturedjsonjs": [
+  "j-brooke",
+  "FracturedJsonJs"
+ ],
+ "frida-uikit": [
+  "nowsecure",
+  "frida-uikit"
+ ],
+ "frog": [
+  "wevm",
+  "frog"
+ ],
+ "frontello-ui-form": [
+  "frontello",
+  "form"
+ ],
+ "funcaptcha": [
+  "noahcoolboy",
+  "funcaptcha"
+ ],
+ "fundering": [
+  "MartinDrost",
+  "fundering"
+ ],
+ "funky-lib": [
+  "stygian91",
+  "funky-lib"
+ ],
+ "fuse-sdk": [
+  "fuse-open",
+  "fuse-sdk"
+ ],
+ "fuse.js": [
+  "krisk",
+  "Fuse"
+ ],
+ "ga4-webpack-plugin": [
+  "jxmked",
+  "ga4-webpack-plugin"
+ ],
+ "gatsby-plugin-nprogress": [
+  "gatsbyjs",
+  "gatsby"
+ ],
+ "geo4326": [
+  "yonda-yonda",
+  "geo4326"
+ ],
+ "geom-split-vertices": [
+  "vorg",
+  "geom-split-vertices"
+ ],
+ "german-verbs-dict": [
+  "RosaeNLG",
+  "rosaenlg"
+ ],
+ "gesture-frame": [
+  "luncheon",
+  "gesture-frame"
+ ],
+ "gh-pages": [
+  "tschaub",
+  "gh-pages"
+ ],
+ "ghostscript-node": [
+  "sigalor",
+  "ghostscript-node"
+ ],
+ "github_action_sound": [
+  "terryyin",
+  "github_action_sound"
+ ],
+ "gitlab-event-types": [
+  "lawvs",
+  "gitlab-event-types"
+ ],
+ "gl-ng-outputs-frontend": [
+  "glaucioleonardo",
+  "gl-ng-frontend"
+ ],
+ "go-mokapi": [
+  "marle3003",
+  "mokapi"
+ ],
+ "good.db": [
+  "good-db",
+  "good.db"
+ ],
+ "google-img.js": [
+  "Mendo6472",
+  "google-img.js"
+ ],
+ "googleapis-common": [
+  "googleapis",
+  "nodejs-googleapis-common"
+ ],
+ "grapesjs-advance-components": [
+  "VaibhavBansal26",
+  "grapesjs-advance-components"
+ ],
+ "graphql-fakester": [
+  "sunesimonsen",
+  "graphql-fakester"
+ ],
+ "graphql-http-transformer": [
+  "aws-amplify",
+  "amplify-category-api"
+ ],
+ "graphql-query-gen": [
+  "maheshchand",
+  "graphql-query-gen"
+ ],
+ "graphql-ready": [
+  "uxnow",
+  "graphql-ready"
+ ],
+ "graphql-ttl-transformer": [
+  "flogy",
+  "graphql-ttl-transformer"
+ ],
+ "gremlin-graph-service": [
+  "changamire",
+  "gremlin-graph-service"
+ ],
+ "gulp-micro": [
+  "sindresorhus",
+  "gulp-micro"
+ ],
+ "hadron-type-checker": [
+  "mongodb-js",
+  "compass"
+ ],
+ "hardhat-scilla-plugin": [
+  "Zilliqa",
+  "hardhat-scilla-plugin"
+ ],
+ "haredo": [
+  "KristjanTammekivi",
+  "Haredo"
+ ],
+ "hast-util-from-text": [
+  "syntax-tree",
+  "hast-util-from-text"
+ ],
+ "hastscript": [
+  "syntax-tree",
+  "hastscript"
+ ],
+ "haystack-core": [
+  "j2inn",
+  "haystack-core"
+ ],
+ "hdb": [
+  "SAP",
+  "node-hdb"
+ ],
+ "hel-micro": [
+  "tnfe",
+  "hel"
+ ],
+ "heli-agri": [
+  "Heliware-SGR",
+  "Heli-Agri-PMB"
+ ],
+ "hexo-butterfly-extjs": [
+  "jerryc127",
+  "butterfly-plugins"
+ ],
+ "hexo-theme-minimalism": [
+  "f-dong",
+  "hexo-theme-minimalism"
+ ],
+ "hk-bus-eta": [
+  "hkbus",
+  "hk-bus-eta"
+ ],
+ "hlgrid": [
+  "svenkuhn",
+  "hlGrid"
+ ],
+ "home-office-kit": [
+  "UKHomeOffice",
+  "home-office-kit"
+ ],
+ "homebridge-carrier-infinity": [
+  "grivkees",
+  "homebridge-carrier-infinity"
+ ],
+ "homebridge-custom-light-strip-plugin": [
+  "harmon25",
+  "homebridge-custom-light-strip-plugin"
+ ],
+ "homebridge-landroid": [
+  "normen",
+  "homebridge-landroid"
+ ],
+ "homebridge-node-alarm-dot-com": [
+  "node-alarm-dot-com",
+  "homebridge-node-alarm-dot-com"
+ ],
+ "homebridge-sensibo-ac": [
+  "nitaybz",
+  "homebridge-sensibo-ac"
+ ],
+ "homey-rfdriver": [
+  "athombv",
+  "node-homey-rfdriver"
+ ],
+ "horizon-handler": [
+  "TFAGaming",
+  "Horizon-Handler"
+ ],
+ "html-url-attributes": [
+  "rehypejs",
+  "rehype-minify"
+ ],
+ "htmx-router": [
+  "AjaniBilby",
+  "htmx-router"
+ ],
+ "http-pro": [
+  "pranshushah",
+  "http-pro"
+ ],
+ "humanize-duration": [
+  "EvanHahn",
+  "HumanizeDuration.js"
+ ],
+ "hydrogen-sanity": [
+  "sanity-io",
+  "hydrogen-sanity"
+ ],
+ "hyh-toolkit": [
+  "coderhyh",
+  "hyh-toolkit"
+ ],
+ "i-level-log": [
+  "Judahh",
+  "back"
+ ],
+ "iares": [
+  "to-codando",
+  "iares-ui"
+ ],
+ "icon-numic-plugin": [
+  "tobua",
+  "icon-numic-plugin"
+ ],
+ "iconoir-react": [
+  "iconoir-icons",
+  "iconoir"
+ ],
+ "image-to-gradient": [
+  "peterekepeter",
+  "image-to-gradient"
+ ],
+ "index-array-by": [
+  "vasturiano",
+  "index-array-by"
+ ],
+ "indicatorts": [
+  "cinar",
+  "indicatorts"
+ ],
+ "inet-core": [
+  "iNetVN",
+  "ui"
+ ],
+ "inversify-socket-utils": [
+  "alxshelepenok",
+  "inversify-socket-utils"
+ ],
+ "iobroker.bosch-ebike": [
+  "TA2k",
+  "ioBroker.bosch-ebike"
+ ],
+ "iobroker.bwt": [
+  "TA2k",
+  "ioBroker.bwt"
+ ],
+ "iobroker.device-watcher": [
+  "iobroker-community-adapters",
+  "ioBroker.device-watcher"
+ ],
+ "iobroker.huum-sauna": [
+  "Chris-656",
+  "ioBroker.huum-sauna"
+ ],
+ "iobroker.porsche": [
+  "TA2k",
+  "ioBroker.porsche"
+ ],
+ "iobroker.smartmeter": [
+  "Apollon77",
+  "ioBroker.smartmeter"
+ ],
+ "iobroker.webui": [
+  "iobroker-community-adapters",
+  "ioBroker.webui"
+ ],
+ "is-binary-path": [
+  "sindresorhus",
+  "is-binary-path"
+ ],
+ "is-type-of": [
+  "node-modules",
+  "is-type-of"
+ ],
+ "iteragain": [
+  "danieloakman",
+  "iteragain"
+ ],
+ "iterpal": [
+  "EvanHahn",
+  "iterpal"
+ ],
+ "ivao.js": [
+  "ivao-js",
+  "ivao.js"
+ ],
+ "jcampconverter": [
+  "cheminfo",
+  "jcampconverter"
+ ],
+ "jest-editor-support": [
+  "jest-community",
+  "jest-editor-support"
+ ],
+ "jest-haste-map": [
+  "jestjs",
+  "jest"
+ ],
+ "jest-pact": [
+  "pact-foundation",
+  "jest-pact"
+ ],
+ "jet-fetch": [
+  "OSCA-Kampala-Chapter",
+  "jet-fetch"
+ ],
+ "jquery-externalize": [
+  "mrcgrtz",
+  "jquery-externalize"
+ ],
+ "jsdom-driver": [
+  "pauldwaite",
+  "jsdom-driver"
+ ],
+ "jseassy": [
+  "bhumit070",
+  "jseassy"
+ ],
+ "jsgui3-server": [
+  "metabench",
+  "jsgui3-server"
+ ],
+ "jsxmath": [
+  "geometryzen",
+  "jsxmath"
+ ],
+ "jupyterlab-celltagsclasses": [
+  "parmentelat",
+  "jupyterlab-celltagsclasses"
+ ],
+ "jupyterlab-ipyflow": [
+  "ipyflow",
+  "ipyflow"
+ ],
+ "just-scripts": [
+  "microsoft",
+  "just"
+ ],
+ "jutest": [
+  "alexeyds",
+  "jutest"
+ ],
+ "juxtapose": [
+  "djalbat",
+  "juxtapose"
+ ],
+ "karabiner.ts": [
+  "evan-liu",
+  "karabiner.ts"
+ ],
+ "karma-firefox-launcher": [
+  "karma-runner",
+  "karma-firefox-launcher"
+ ],
+ "kazagumo-nico": [
+  "RainyXeon",
+  "kazagumo-nico"
+ ],
+ "kdu": [
+  "kdujs",
+  "core"
+ ],
+ "kebab-case": [
+  "joakimbeng",
+  "kebab-case"
+ ],
+ "keiron-react-trello-ts": [
+  "Keiron-HealthTech",
+  "react-trello-ts"
+ ],
+ "keycloak-public-key": [
+  "jorgeju4rez",
+  "get-keycloak-public-key"
+ ],
+ "kleene-ui-core": [
+  "ggenzone",
+  "kleene-ui"
+ ],
+ "kloetzakke-game": [
+  "jrtderonde",
+  "kloetzakke"
+ ],
+ "koa-mock-proxy": [
+  "detmir",
+  "koa-mock-proxy"
+ ],
+ "koishi-plugin-autowithdraw": [
+  "Kabuda-czh",
+  "koishi-plugin-autowithdraw"
+ ],
+ "kosko": [
+  "tommy351",
+  "kosko"
+ ],
+ "krist": [
+  "tmpim",
+  "Krist.js"
+ ],
+ "ku4es-ui-kernel": [
+  "kodmunki",
+  "ku4es-ui-kernel"
+ ],
+ "lambda-voie": [
+  "namesmt",
+  "lambda-voie"
+ ],
+ "langium-arithmetics-dsl": [
+  "eclipse-langium",
+  "langium"
+ ],
+ "laravel-precognition": [
+  "laravel",
+  "precognition"
+ ],
+ "latest-version": [
+  "sindresorhus",
+  "latest-version"
+ ],
+ "laufsteg-react": [
+  "knallbumm",
+  "laufsteg"
+ ],
+ "lday": [
+  "JianKang-Li",
+  "LKDay"
+ ],
+ "leblog": [
+  "nbgoodall",
+  "leblog"
+ ],
+ "lesca-object-tweener": [
+  "jameshsu1125",
+  "lesca-object-tweener"
+ ],
+ "letovo-api": [
+  "Milk-Cool",
+  "node-letovo-api"
+ ],
+ "letterparser": [
+  "mat-sz",
+  "letterparser"
+ ],
+ "liferay-theme-tasks": [
+  "liferay",
+  "liferay-frontend-projects"
+ ],
+ "lightweight-charts-react-wrapper": [
+  "trash-and-fire",
+  "lightweight-charts-react-wrapper"
+ ],
+ "lite-ts-axios": [
+  "ahl5esoft",
+  "lite-ts-axios"
+ ],
+ "live-form-validation": [
+  "contributte",
+  "live-form-validation"
+ ],
+ "lively-cli": [
+  "djalbat",
+  "lively-cli"
+ ],
+ "load-plugin": [
+  "wooorm",
+  "load-plugin"
+ ],
+ "local-ip-url": [
+  "jaywcjlove",
+  "local-ip-url"
+ ],
+ "logitech-g29": [
+  "nightmode",
+  "logitech-g29"
+ ],
+ "longrun": [
+  "coderaiser",
+  "node-longrun"
+ ],
+ "loopback-component-bunyan": [
+  "6RiverSystems",
+  "loopback-component-bunyan"
+ ],
+ "lower-case-first": [
+  "blakeembrey",
+  "change-case"
+ ],
+ "lupdo-mysql": [
+  "Lupennat",
+  "lupdo-mysql"
+ ],
+ "luxio": [
+  "luxio-lighting",
+  "luxio.js"
+ ],
+ "mag-prettier-config": [
+  "AZMAG",
+  "mag-prettier-config"
+ ],
+ "main-function": [
+  "vilic",
+  "main-function"
+ ],
+ "maison-components-core": [
+  "bendigiorgio",
+  "maison-components"
+ ],
+ "make-it-name": [
+  "danielvoweb",
+  "make-it-name"
+ ],
+ "mapbox-gl-draw-waypoint": [
+  "zakjan",
+  "mapbox-gl-draw-waypoint"
+ ],
+ "maplibre-gl-opacity": [
+  "dayjournal",
+  "maplibre-gl-opacity"
+ ],
+ "mark-applier": [
+  "suchipi",
+  "mark-applier"
+ ],
+ "markdown-it-vitepress-demo": [
+  "hairyf",
+  "markdown-it-vitepress-demos"
+ ],
+ "mathoid-texvcjs": [
+  "wikimedia",
+  "texvcjs"
+ ],
+ "maxmind": [
+  "runk",
+  "node-maxmind"
+ ],
+ "meaningful-string": [
+  "mrmalhotra",
+  "meaningful-string"
+ ],
+ "medium-scrape": [
+  "0wx",
+  "medium-scrape"
+ ],
+ "mendel-outlet-server-side-render": [
+  "irae",
+  "mendel"
+ ],
+ "meri-icon": [
+  "wwwwwwwwwy",
+  "juuust-vue-icon"
+ ],
+ "meriyah": [
+  "meriyah",
+  "meriyah"
+ ],
+ "meta-buffer-pack": [
+  "remocons",
+  "meta-buffer-pack"
+ ],
+ "metadata-core": [
+  "oknosoft",
+  "metadata.js"
+ ],
+ "metadata-detector-worker": [
+  "chrisguttandin",
+  "metadata-detector-worker"
+ ],
+ "metascraper-spotify": [
+  "microlinkhq",
+  "metascraper"
+ ],
+ "mikro-orm-soft-delete": [
+  "TheNightmareX",
+  "mikro-orm-soft-delete"
+ ],
+ "minicomp": [
+  "loreanvictor",
+  "minicomp"
+ ],
+ "minify-inline-json": [
+  "haensl",
+  "minify-inline-json"
+ ],
+ "mjsdev": [
+  "finboxio",
+  "mjsdev"
+ ],
+ "ml-savitzky-golay-generalized": [
+  "mljs",
+  "savitzky-golay-generalized"
+ ],
+ "mm_html": [
+  "qiuwenwu",
+  "mm_html"
+ ],
+ "mmm-dynamicweather": [
+  "scottcl88",
+  "MMM-DynamicWeather"
+ ],
+ "mobiletto-orm": [
+  "cobbzilla",
+  "mobiletto-orm"
+ ],
+ "modapp-resource-component": [
+  "jirenius",
+  "modapp-resource-component"
+ ],
+ "modern-palette": [
+  "qq15725",
+  "modern-palette"
+ ],
+ "monaco-editor": [
+  "microsoft",
+  "monaco-editor"
+ ],
+ "monaco-kubernetes": [
+  "kubeshop",
+  "monokle-core"
+ ],
+ "mongo-http": [
+  "patrick-kw-chiu",
+  "mongo-http.js"
+ ],
+ "mongodb-legacy": [
+  "mongodb-js",
+  "nodejs-mongodb-legacy"
+ ],
+ "moo-ignore": [
+  "ULL-ESIT-PL",
+  "moo-ignore"
+ ],
+ "move-unused-path": [
+  "fabiospampinato",
+  "move-unused-path"
+ ],
+ "mpulse-design-system": [
+  "mpulsemobile",
+  "mpulse-design-system"
+ ],
+ "mqfunctions": [
+  "kimulaco",
+  "mqfunctions"
+ ],
+ "mta-local": [
+  "SAP",
+  "cloud-mta"
+ ],
+ "mui-industrial": [
+  "rand0mC0d3r",
+  "mui-industrial"
+ ],
+ "musicard": [
+  "unburn",
+  "musicard"
+ ],
+ "mykademy-learner-dashboard": [
+  "Enfintech",
+  "student-dashboard"
+ ],
+ "n2o-ecp-plugin": [
+  "i-novus-llc",
+  "n2o-framework"
+ ],
+ "nano-uri": [
+  "perishllc",
+  "nano-uri"
+ ],
+ "natural": [
+  "NaturalNode",
+  "natural"
+ ],
+ "ndut-db": [
+  "ardhi",
+  "ndut-db"
+ ],
+ "nebenan-services": [
+  "goodhood-eu",
+  "nebenan-services"
+ ],
+ "nereid-cli": [
+  "Anillc",
+  "nereid-cli"
+ ],
+ "nestjs-business-component": [
+  "rni-l",
+  "nestjs-business-component"
+ ],
+ "nestjs-graphile-worker": [
+  "madeindjs",
+  "nestjs-graphile-worker"
+ ],
+ "nestjs-slack-listener": [
+  "hanchchch",
+  "nestjs-slack-listener"
+ ],
+ "netatmo-wunderground-pws": [
+  "brbeaird",
+  "netatmo-wunderground-pws"
+ ],
+ "newman": [
+  "postmanlabs",
+  "newman"
+ ],
+ "next-recaptcha-v3": [
+  "snelsi",
+  "next-recaptcha-v3"
+ ],
+ "nftx.js": [
+  "NFTX-project",
+  "nftxjs"
+ ],
+ "ng-cache": [
+  "68ociredef",
+  "ng-cache"
+ ],
+ "ngnjs": [
+  "fash-ns",
+  "ngnjs"
+ ],
+ "ngx-codejar": [
+  "julianpoemp",
+  "ngx-codejar"
+ ],
+ "ngx-image-zoom": [
+  "wittlock",
+  "ngx-image-zoom"
+ ],
+ "ngx-mqtt": [
+  "sclausen",
+  "ngx-mqtt"
+ ],
+ "ngx-numeric-range-form-field": [
+  "dineeek",
+  "ngx-numeric-range-form-field"
+ ],
+ "ngx-panzoom": [
+  "timunderhay",
+  "ngx-panzoom"
+ ],
+ "ngx-semantic": [
+  "ngx-semantic",
+  "ngx-semantic"
+ ],
+ "ngx-typeahead": [
+  "orizens",
+  "ngx-typeahead"
+ ],
+ "nhsuk-decorated-components": [
+  "x-govuk",
+  "nhsuk-decorated-components"
+ ],
+ "nightingale-winston-adapter": [
+  "christophehurpeau",
+  "nightingale"
+ ],
+ "nmls": [
+  "cenfun",
+  "nmls"
+ ],
+ "nocopyrightsounds-api": [
+  "KaninchenSpeed",
+  "NoCopyrightSounds-API"
+ ],
+ "node-base64-image": [
+  "riyadhalnur",
+  "node-base64-image"
+ ],
+ "node-opcua-vendor-diagnostic": [
+  "node-opcua",
+  "node-opcua"
+ ],
+ "node-red-contrib-cx-alarm-log": [
+  "controlx-io",
+  "node-red-contrib-cx-alarm-log"
+ ],
+ "node-sass-alias-importer": [
+  "javierbrea",
+  "node-sass-alias-importer"
+ ],
+ "node-shikimori": [
+  "Capster",
+  "node-shikimori"
+ ],
+ "nodebb-plugin-customize": [
+  "NodeBB",
+  "nodebb-plugin-customize"
+ ],
+ "nodebb-plugin-twitter": [
+  "nodebb-community",
+  "nodebb-plugin-twitter"
+ ],
+ "nomadic": [
+  "cellis",
+  "nomadic"
+ ],
+ "normalize-exports": [
+  "sagargurtu",
+  "normalize-exports"
+ ],
+ "novel-segment": [
+  "bluelovers",
+  "ws-segment"
+ ],
+ "npm-home": [
+  "sindresorhus",
+  "npm-home"
+ ],
+ "nsa-server": [
+  "yetzt",
+  "nsa-server"
+ ],
+ "ntp-packet-parser": [
+  "buffcode",
+  "ntp-packet-parser"
+ ],
+ "nucleus-rn": [
+  "nucleus-sh",
+  "nucleus-rn"
+ ],
+ "nukecord": [
+  "DarkGuy10",
+  "Nukecord"
+ ],
+ "num-words-de": [
+  "chooklii",
+  "num-words-de"
+ ],
+ "nuxt-tailwind-ui": [
+  "hxnzyl",
+  "nuxt-tailwind-ui"
+ ],
+ "nvmermind": [
+  "boneskull",
+  "nvmermind"
+ ],
+ "object-state-history": [
+  "sergiofasilva",
+  "object-state-history"
+ ],
+ "objpop": [
+  "mk-pmb",
+  "objpop-js"
+ ],
+ "obs-disp": [
+  "AweSkyBear",
+  "obs-disp"
+ ],
+ "oci-bastion": [
+  "oracle",
+  "oci-typescript-sdk"
+ ],
+ "offline-plugin-patched": [
+  "LeComptoirDesPharmacies",
+  "offline-plugin"
+ ],
+ "okx-api-new": [
+  "simuty",
+  "okx-api-new"
+ ],
+ "omiu": [
+  "Tencent",
+  "omi"
+ ],
+ "on-error-resume-next": [
+  "compulim",
+  "on-error-resume-next"
+ ],
+ "onall": [
+  "mallocator",
+  "onall"
+ ],
+ "onekijs": [
+  "oneki",
+  "onekijs"
+ ],
+ "onno": [
+  "wagerfield",
+  "onno"
+ ],
+ "onspring-api-sdk": [
+  "StevanFreeborn",
+  "onspring-api-sdk-javascript"
+ ],
+ "ontimize-web-ngx-map": [
+  "OntimizeWeb",
+  "ontimize-web-ngx-map"
+ ],
+ "openapi-semantic-validator": [
+  "mhassan1",
+  "openapi-semantic-validator"
+ ],
+ "openapi-toolkit": [
+  "barnuri",
+  "openapi-toolkit"
+ ],
+ "opencv-autocrop-photo-id": [
+  "timio23",
+  "opencv-autocrop-photo-id"
+ ],
+ "oro": [
+  "orogene",
+  "orogene"
+ ],
+ "oro-functions-client": [
+  "oropesa",
+  "oro-functions-client"
+ ],
+ "p5.grain": [
+  "meezwhite",
+  "p5.grain"
+ ],
+ "pa11y": [
+  "pa11y",
+  "pa11y"
+ ],
+ "paintor": [
+  "AseasRoa",
+  "paintor"
+ ],
+ "parcel-namer-hashless": [
+  "gxy5202",
+  "parcel-namer-hashless"
+ ],
+ "parse-imports-ts": [
+  "ncochard",
+  "parse-imports-ts"
+ ],
+ "payload-crowdin-sync": [
+  "thompsonsj",
+  "payload-crowdin-sync"
+ ],
+ "payout_node_sdk": [
+  "payout-one",
+  "payout_nodejs"
+ ],
+ "pdf2thumbnail": [
+  "takuya-motoshima",
+  "pdf2thumbnail"
+ ],
+ "peprn": [
+  "rdroe",
+  "peprn"
+ ],
+ "petalfetch": [
+  "codingfriend1",
+  "petalfetch"
+ ],
+ "pg-components": [
+  "EuropeanAccounting",
+  "pg-components"
+ ],
+ "phantasma-ts": [
+  "phantasma-io",
+  "phantasma-ts"
+ ],
+ "phoenix-event-display": [
+  "HSF",
+  "phoenix"
+ ],
+ "piglet-lang": [
+  "piglet-lang",
+  "piglet"
+ ],
+ "pino-devtools": [
+  "willdurand",
+  "pino-devtools"
+ ],
+ "pino-got": [
+  "LinusU",
+  "pino-got"
+ ],
+ "pino-roll": [
+  "mcollina",
+  "pino-roll"
+ ],
+ "pino-socket": [
+  "pinojs",
+  "pino-socket"
+ ],
+ "pip-services3-sqlserver-nodex": [
+  "pip-services3-nodex",
+  "pip-services3-sqlserver-nodex"
+ ],
+ "piral-feeds": [
+  "smapiot",
+  "piral"
+ ],
+ "pixi-actions": [
+  "srpatel",
+  "pixi-actions"
+ ],
+ "pixi-tagged-text": [
+  "mimshwright",
+  "pixi-tagged-text"
+ ],
+ "pixl-server-unbase": [
+  "jhuckaby",
+  "pixl-server-unbase"
+ ],
+ "platfuse": [
+  "praghus",
+  "platfuse"
+ ],
+ "playcanvas-extended": [
+  "i12345",
+  "playcanvas-extended"
+ ],
+ "plvylist": [
+  "troyvassalotti",
+  "plvylist"
+ ],
+ "pm2-elasticsearch-logger2": [
+  "enda",
+  "pm2-elasticsearch-logger"
+ ],
+ "pmpact": [
+  "ITV",
+  "pmpact"
+ ],
+ "pomelo2-logger": [
+  "Aslijia",
+  "pomelo2-logger"
+ ],
+ "portable-career-portal": [
+  "charlesabarnes",
+  "portable-career-portal"
+ ],
+ "postcss-px-to-viewport-8-plugin": [
+  "lkxian888",
+  "postcss-px-to-viewport-8-plugin"
+ ],
+ "postgresql-service": [
+  "nfroidure",
+  "postgresql-service"
+ ],
+ "posthtml-postcss": [
+  "posthtml",
+  "posthtml-postcss"
+ ],
+ "pouchdb-adapter-http": [
+  "pouchdb",
+  "pouchdb"
+ ],
+ "pp365-portfolioextensions": [
+  "Puzzlepart",
+  "prosjektportalen365"
+ ],
+ "prerenderwebnodeplugin": [
+  "thaibault",
+  "pre-render-web-node-plugin"
+ ],
+ "prettier-plugin-taplo": [
+  "so1ve",
+  "prettier-plugin-taplo"
+ ],
+ "primo-studio-plumx": [
+  "uleodolter",
+  "primo-studio-plumx"
+ ],
+ "pro-template": [
+  "phyntos",
+  "pro-template"
+ ],
+ "prosemirror-paste-rules": [
+  "remirror",
+  "remirror"
+ ],
+ "proskomma-core": [
+  "Proskomma",
+  "proskomma-core"
+ ],
+ "protomux": [
+  "mafintosh",
+  "protomux"
+ ],
+ "pry-ts": [
+  "ryoid",
+  "pry"
+ ],
+ "pull-push-sync": [
+  "cihat",
+  "sync"
+ ],
+ "pvtsutils": [
+  "PeculiarVentures",
+  "pvtsutils"
+ ],
+ "qiao-lerna": [
+  "uikoo9",
+  "qiao-nodejs"
+ ],
+ "qt-build-cli": [
+  "chencaize",
+  "qt-build-cli"
+ ],
+ "quadraticsievefactorization": [
+  "Yaffle",
+  "QuadraticSieveFactorization"
+ ],
+ "quantum-circuit": [
+  "quantastica",
+  "quantum-circuit"
+ ],
+ "query-mvt": [
+  "mmomtchev",
+  "query-mvt"
+ ],
+ "quicksilverjs": [
+  "ingenuity-build",
+  "quicksilverjs"
+ ],
+ "r6-dissect": [
+  "redraskal",
+  "r6-dissect-bun"
+ ],
+ "radar": [
+  "zendesk",
+  "radar"
+ ],
+ "radiohead-serial": [
+  "crycode-de",
+  "node-radiohead-serial"
+ ],
+ "radius-react": [
+  "shaase",
+  "radius-react"
+ ],
+ "rand-picker": [
+  "ByDSA",
+  "rand-picker"
+ ],
+ "random-starred-repository": [
+  "vintagesucks",
+  "random-starred-repository"
+ ],
+ "ranges-invert": [
+  "codsen",
+  "codsen"
+ ],
+ "raspberrypi-rotary-encoder": [
+  "kevincastejon",
+  "js-raspberrypi-rotary-encoder"
+ ],
+ "rawb-middlewares": [
+  "24hr-malmo",
+  "rawb-middleware"
+ ],
+ "rct-router": [
+  "hippopotamus2",
+  "rct-router"
+ ],
+ "react-basic-design": [
+  "mtalebian",
+  "react-basic-design"
+ ],
+ "react-chatbotify": [
+  "tjtanjin",
+  "react-chatbotify"
+ ],
+ "react-confirm-service": [
+  "atheck",
+  "react-confirm-service"
+ ],
+ "react-custom-scroll": [
+  "rommguy",
+  "react-custom-scroll"
+ ],
+ "react-diff-view": [
+  "otakustay",
+  "react-diff-view"
+ ],
+ "react-from-json": [
+  "measuredco",
+  "react-from-json"
+ ],
+ "react-input-material": [
+  "thaibault",
+  "react-input-material"
+ ],
+ "react-instantsearch": [
+  "algolia",
+  "instantsearch"
+ ],
+ "react-invenio-forms": [
+  "inveniosoftware",
+  "react-invenio-forms"
+ ],
+ "react-modern-components": [
+  "miboruch",
+  "react-modern-components"
+ ],
+ "react-native-advance-components": [
+  "at-syntax",
+  "react-native-advance-components"
+ ],
+ "react-native-animated-colors": [
+  "aswincheriyala",
+  "react-native-animated-colors"
+ ],
+ "react-native-avoid-softinput": [
+  "mateusz1913",
+  "react-native-avoid-softinput"
+ ],
+ "react-native-calendario": [
+  "maggialejandro",
+  "react-native-calendario"
+ ],
+ "react-native-callouts": [
+  "RMabroukS",
+  "react-native-callouts"
+ ],
+ "react-native-check-app-installed": [
+  "anggaip",
+  "react-native-check-app-installed"
+ ],
+ "react-native-expo-image-editor": [
+  "1997roylee",
+  "react-native-expo-image-editor"
+ ],
+ "react-native-idle-timer": [
+  "marcshilling",
+  "react-native-idle-timer"
+ ],
+ "react-native-image-marker": [
+  "JimmyDaddy",
+  "react-native-image-marker"
+ ],
+ "react-native-month": [
+  "maggialejandro",
+  "react-native-month"
+ ],
+ "react-native-multi-ble-peripheral": [
+  "mybigday",
+  "react-native-multi-ble-peripheral"
+ ],
+ "react-native-pie-chart": [
+  "aidin36",
+  "react-native-pie-chart"
+ ],
+ "react-native-ping": [
+  "RoJoHub",
+  "react-native-ping"
+ ],
+ "react-native-radial-slider": [
+  "SimformSolutionsPvtLtd",
+  "react-native-radial-slider"
+ ],
+ "react-native-rempl": [
+  "rempl",
+  "rempl"
+ ],
+ "react-native-scoped-storage": [
+  "ammarahm-ed",
+  "react-native-scoped-storage"
+ ],
+ "react-native-shadow-2": [
+  "SrBrahma",
+  "react-native-shadow-2"
+ ],
+ "react-native-slider-intro": [
+  "RichardRNStudio",
+  "react-native-slider-intro"
+ ],
+ "react-native-template-ts-boilerplate": [
+  "IgorMing",
+  "react-native-template-ts-boilerplate"
+ ],
+ "react-native-tenjin": [
+  "tenjin",
+  "tenjin-react-native-sdk"
+ ],
+ "react-native-toast-message": [
+  "calintamas",
+  "react-native-toast-message"
+ ],
+ "react-native-xaml": [
+  "microsoft",
+  "react-native-xaml"
+ ],
+ "react-navigation-backhandler": [
+  "vonovak",
+  "react-navigation-backhandler"
+ ],
+ "react-phonenr-input": [
+  "KaiHotz",
+  "React-PhoneNr-Input"
+ ],
+ "react-puzzle-captcha": [
+  "venkatmcajj",
+  "react-puzzle-captcha"
+ ],
+ "react-recaptcha-that-works": [
+  "douglasjunior",
+  "react-recaptcha-that-works"
+ ],
+ "react-remove-scroll": [
+  "theKashey",
+  "react-remove-scroll"
+ ],
+ "react-router-typesafe-routes": [
+  "fenok",
+  "react-router-typesafe-routes"
+ ],
+ "react-rumbletalk": [
+  "RumbleTalk",
+  "react-rumbletalk"
+ ],
+ "react-treeselectjs": [
+  "dipson88",
+  "react-treeselectjs"
+ ],
+ "react-use-platform": [
+  "FilipChalupa",
+  "react-use-platform"
+ ],
+ "react-use-sub": [
+  "fdc-viktor-luft",
+  "react-use-sub"
+ ],
+ "react-user-voice": [
+  "TakesTheBiscuit",
+  "react-user-voice"
+ ],
+ "reactigation": [
+  "tobua",
+  "reactigation"
+ ],
+ "reactjs-common": [
+  "atmulyana",
+  "reactjs-common"
+ ],
+ "read-chunk": [
+  "sindresorhus",
+  "read-chunk"
+ ],
+ "read-config-file": [
+  "develar",
+  "read-config-file"
+ ],
+ "recheck-jar": [
+  "makenowjust-labs",
+  "recheck"
+ ],
+ "redux-astroglide": [
+  "Mulletware",
+  "redux-astroglide"
+ ],
+ "redux-balloon": [
+  "IAMSUPERMONKEY",
+  "redux-balloon"
+ ],
+ "rehype-class-names": [
+  "riderjensen",
+  "rehype-class-names"
+ ],
+ "remark-directive": [
+  "remarkjs",
+  "remark-directive"
+ ],
+ "remark-obsidian": [
+  "johackim",
+  "remark-obsidian"
+ ],
+ "remark-usage": [
+  "remarkjs",
+  "remark-usage"
+ ],
+ "requirejs-esm": [
+  "prantlf",
+  "requirejs-esm"
+ ],
+ "resize-images": [
+  "educastellano",
+  "resize-images"
+ ],
+ "rete-structures": [
+  "retejs",
+  "structures"
+ ],
+ "rn-smile-id": [
+  "smileidentity",
+  "reacti-native-sid"
+ ],
+ "rn_unique_device_id": [
+  "pumpkin-codes",
+  "react-native-unique-device-id-android"
+ ],
+ "rollup-plugin-polyfill-inject": [
+  "linsk1998",
+  "rollup-plugin-polyfill-inject"
+ ],
+ "roosterjs-react": [
+  "Microsoft",
+  "roosterjs"
+ ],
+ "root-require-utils": [
+  "zvs001",
+  "root-require-utils"
+ ],
+ "rtg-design-web": [
+  "ryantoddgarza",
+  "rtg-design-web"
+ ],
+ "rut.ts": [
+  "arrowsoftwarehq",
+  "rut.ts"
+ ],
+ "rx-effects": [
+  "mnasyrov",
+  "rx-effects"
+ ],
+ "safwa-ui-components": [
+  "SAFWA-DATA-DRIVEN-BIZ-PROCESS",
+  "SAFWA-UI-COMPONENT"
+ ],
+ "scanf": [
+  "Lellansin",
+  "node-scanf"
+ ],
+ "schemy": [
+  "aeberdinelli",
+  "schemy"
+ ],
+ "scim2-parse-filter": [
+  "thomaspoignant",
+  "scim2-parse-filter"
+ ],
+ "scrambling-letters": [
+  "Recidvst",
+  "scrambling-letters"
+ ],
+ "sd-nodeify": [
+  "dlgn2",
+  "sd-nodeify"
+ ],
+ "sdmx-json-parser": [
+  "PacificCommunity",
+  "sdmx-json-parser"
+ ],
+ "seattlejs-airtable-cli": [
+  "seattlejs",
+  "seattlejs-airtable-cli"
+ ],
+ "secondary-cache": [
+  "snowyu",
+  "secondary-cache.js"
+ ],
+ "secure-default-vpc-security-group-cdk": [
+  "isotoma",
+  "secure-default-vpc-security-group-cdk"
+ ],
+ "selectfromuser": [
+  "eces",
+  "select"
+ ],
+ "sener-form": [
+  "theajack",
+  "sener"
+ ],
+ "servecube": [
+  "GrantGryczan",
+  "ServeCube"
+ ],
+ "serverless-apigateway-log-retention": [
+  "dvla",
+  "serverless-apigateway-log-retention"
+ ],
+ "serverless-aws-function-url-custom-domain": [
+  "wangsha",
+  "serverless-aws-function-url-custom-domain"
+ ],
+ "shipengine": [
+  "ShipEngine",
+  "shipengine-js"
+ ],
+ "shuffle-letters": [
+  "georapbox",
+  "shuffle-letters"
+ ],
+ "signalr-no-jquery": [
+  "DVLP",
+  "signalr-no-jquery"
+ ],
+ "signum-chain-walker": [
+  "signum-network",
+  "signum-chain-walker"
+ ],
+ "simple-mediasoup-peer-client": [
+  "AidanNelson",
+  "SimpleMediasoupPeer"
+ ],
+ "simple-redis-mutex": [
+  "AmrSaber",
+  "simple-redis-mutex"
+ ],
+ "simple-seeder": [
+  "holepunchto",
+  "simple-seeder"
+ ],
+ "sipa": [
+  "sipa-js",
+  "sipa"
+ ],
+ "site-archive": [
+  "mirite",
+  "site-archive"
+ ],
+ "skop-api": [
+  "BenGregory23",
+  "SKOP-API-documentation"
+ ],
+ "sleepless-xlsx": [
+  "sleeplessinc",
+  "sleepless-xlsx"
+ ],
+ "smack-my-jasmine-up": [
+  "Jezorko",
+  "smack-my-jasmine-up"
+ ],
+ "smyld-lib-3d": [
+  "MFJamil",
+  "smyld-lib-3d"
+ ],
+ "soajs.marketplace": [
+  "soajs",
+  "soajs.marketplace"
+ ],
+ "sobrsa": [
+  "SoberK",
+  "sobRSA"
+ ],
+ "socket-sorcerer": [
+  "Paul-Lazunko",
+  "socket-sorcerer"
+ ],
+ "solhint-config-mud": [
+  "latticexyz",
+  "mud"
+ ],
+ "sparkplug-client": [
+  "eclipse",
+  "tahu"
+ ],
+ "spdx-license-ids": [
+  "jslicense",
+  "spdx-license-ids"
+ ],
+ "sprotty-protocol": [
+  "eclipse-sprotty",
+  "sprotty"
+ ],
+ "spyglass-cli": [
+  "spyglasshq",
+  "spyglass-cli"
+ ],
+ "sql-query-identifier": [
+  "coresql",
+  "sql-query-identifier"
+ ],
+ "sqlmath": [
+  "sqlmath",
+  "sqlmath"
+ ],
+ "srvs": [
+  "okwolf",
+  "srvs"
+ ],
+ "ssb-tribes": [
+  "ssbc",
+  "ssb-tribes"
+ ],
+ "stagnate": [
+  "md5crypt",
+  "stagnate"
+ ],
+ "staquia": [
+  "Nona9614",
+  "staquia"
+ ],
+ "starpc": [
+  "aperturerobotics",
+  "starpc"
+ ],
+ "stereo-img": [
+  "steren",
+  "stereo-img"
+ ],
+ "storybook-addon-launchdarkly": [
+  "kodai3",
+  "storybook-addon-launchdarkly"
+ ],
+ "str-async-replace": [
+  "rxog",
+  "str-async-replace"
+ ],
+ "strapi-plugin-schemas-to-ts": [
+  "mancku",
+  "strapi-plugin-schemas-to-ts"
+ ],
+ "strapi-provider-upload-ipfs-free": [
+  "IceHugh",
+  "strapi-provider-upload-ipfs-free"
+ ],
+ "stream-buffers": [
+  "samcday",
+  "node-stream-buffer"
+ ],
+ "string.prototype.trim": [
+  "es-shims",
+  "String.prototype.trim"
+ ],
+ "studo.js": [
+  "studojs",
+  "studo.js"
+ ],
+ "stylelint-basebuilder": [
+  "Studio-Lemon",
+  "stylelint-basebuilder"
+ ],
+ "superluminal-react": [
+  "superluminalengineering",
+  "superluminal-react"
+ ],
+ "survey-knockout-ui": [
+  "surveyjs",
+  "surveyjs"
+ ],
+ "surveyjs-widgets": [
+  "surveyjs",
+  "widgets"
+ ],
+ "svelte-deep-zoom": [
+  "captaincodeman",
+  "svelte-deep-zoom"
+ ],
+ "svelte-floating-ui": [
+  "fedorovvvv",
+  "svelte-floating-ui"
+ ],
+ "svelte-icons-pack": [
+  "leshak",
+  "svelte-icons-pack"
+ ],
+ "svelte-time": [
+  "metonym",
+  "svelte-time"
+ ],
+ "svelte-wagmi-stores": [
+  "hardyjosh",
+  "svelte-wagmi-stores"
+ ],
+ "svelte-websocket-store": [
+  "arlac77",
+  "svelte-websocket-store"
+ ],
+ "swears": [
+  "thathurtabit",
+  "swear-words"
+ ],
+ "table-buddy": [
+  "Dulce-Engineering",
+  "table-buddy"
+ ],
+ "tabular-filesize-gzip": [
+  "jenssimon",
+  "tabular-filesize-gzip"
+ ],
+ "tailwind-compose": [
+  "eels",
+  "tailwind-compose"
+ ],
+ "tailwind-variant-group": [
+  "NazmusSayad",
+  "tailwind-variant-group"
+ ],
+ "tap-payment-popupjs": [
+  "TouchAndPay-Technologies",
+  "TAP-Inlinejs"
+ ],
+ "tardis-machine": [
+  "tardis-dev",
+  "tardis-machine"
+ ],
+ "tarm": [
+  "kanongil",
+  "tarm"
+ ],
+ "tasksat": [
+  "Paul-Lazunko",
+  "tasksat"
+ ],
+ "tdesign-starter-cli": [
+  "tencent",
+  "tdesign-starter-cli"
+ ],
+ "telegrafen-wc": [
+  "larserikfinholt",
+  "telegrafen-wc"
+ ],
+ "tencentcloud-sdk-nodejs-cim": [
+  "tencentcloud",
+  "tencentcloud-sdk-nodejs"
+ ],
+ "testcafe-legacy-api": [
+  "DevExpress",
+  "testcafe-legacy-api"
+ ],
+ "testing-library-table-queries": [
+  "lexanth",
+  "testing-library-table-queries"
+ ],
+ "thelounge-theme-mininapse": [
+  "MiniDigger",
+  "thelounge-theme-mininapse"
+ ],
+ "themer": [
+  "themerdev",
+  "themer"
+ ],
+ "thermal-fn": [
+  "markthree",
+  "thermal-fn"
+ ],
+ "three-csm": [
+  "vtHawk",
+  "three-csm"
+ ],
+ "thumbnail-manager": [
+  "Holusion",
+  "node-thumbnail-manager"
+ ],
+ "time-chainer": [
+  "amoshydra",
+  "time-chainer"
+ ],
+ "timezone-select-js": [
+  "vixnguyen",
+  "timezone-select"
+ ],
+ "tings": [
+  "will-stone",
+  "tings"
+ ],
+ "tinymce-i18n": [
+  "mklkj",
+  "tinymce-i18n"
+ ],
+ "tkv-cache": [
+  "rileytomasek",
+  "tkv-cache"
+ ],
+ "token-verify": [
+  "northone-inc",
+  "token-verify"
+ ],
+ "total4": [
+  "totaljs",
+  "framework4"
+ ],
+ "transpile-md-to-json": [
+  "sunknudsen",
+  "transpile-md-to-json"
+ ],
+ "tree-lodash": [
+  "zhangshichun",
+  "tree-lodash"
+ ],
+ "tree-sitter-cg": [
+  "apertium",
+  "tree-sitter-apertium"
+ ],
+ "tree-sitter-cpp": [
+  "tree-sitter",
+  "tree-sitter-cpp"
+ ],
+ "trident.js": [
+  "Velozity",
+  "trident.js"
+ ],
+ "trie-mapping": [
+  "rtomrud",
+  "trie-mapping"
+ ],
+ "trpc-svelte-query-adapter": [
+  "vishalbalaji",
+  "trpc-svelte-query-adapter"
+ ],
+ "ts-jest": [
+  "kulshekhar",
+  "ts-jest"
+ ],
+ "ts-json-object": [
+  "moshegottlieb",
+  "ts-json-object"
+ ],
+ "tubular-react-common": [
+  "unosquare",
+  "tubular-react-common"
+ ],
+ "tw-elements": [
+  "mdbootstrap",
+  "TW-Elements"
+ ],
+ "tw-elevation": [
+  "tranvansang",
+  "tw-elevation"
+ ],
+ "type-safe-errors": [
+  "wiktor-obrebski",
+  "type-safe-errors"
+ ],
+ "typechecker": [
+  "bevry",
+  "typechecker"
+ ],
+ "typed-query-parser": [
+  "frolad",
+  "typed-query-parser"
+ ],
+ "typescript-auto-import-cache": [
+  "volarjs",
+  "typescript-auto-import-cache"
+ ],
+ "typescript-form-validator": [
+  "mahziyar-es",
+  "typescript-form-validator"
+ ],
+ "typescript-to-js": [
+  "elyx-code",
+  "typescript-to-js"
+ ],
+ "typewind": [
+  "mokshit06",
+  "typewind"
+ ],
+ "uk-clear-addressing": [
+  "ideal-postcodes",
+  "uk-clear-addressing"
+ ],
+ "unify-react-mobile": [
+  "tokopedia",
+  "unify"
+ ],
+ "uninspected": [
+  "unexpectedjs",
+  "uninspected"
+ ],
+ "uniq-clients-rtc": [
+  "summitnetworks",
+  "uniq-clients-rtc"
+ ],
+ "unist-util-replace-all-between": [
+  "unicorn-utterances",
+  "unist-util-replace-all-between"
+ ],
+ "univapay-node": [
+  "univapay",
+  "univapay-node"
+ ],
+ "unocss-preset-easing": [
+  "ntnyq",
+  "unocss-presets"
+ ],
+ "unrev": [
+  "unrevealedtech",
+  "unrevealed"
+ ],
+ "upstash-redis-level": [
+  "tinacms",
+  "upstash-redis-level"
+ ],
+ "urlset": [
+  "Mitica",
+  "urlset"
+ ],
+ "use-0": [
+  "finom",
+  "use-0"
+ ],
+ "use-full-reducer": [
+  "GeoDaz",
+  "use-full-reducer"
+ ],
+ "use-logic-block": [
+  "k1moshka",
+  "use-logic-block"
+ ],
+ "use-pull-to-refresh": [
+  "Senbonzakura1234",
+  "use-pull-to-refresh"
+ ],
+ "use-request": [
+  "termosa",
+  "use-request"
+ ],
+ "use-typewriter-animation": [
+  "doguyilmaz",
+  "typewriter-animation"
+ ],
+ "ut-port-http": [
+  "softwaregroup-bg",
+  "ut-port-http"
+ ],
+ "ut-port-script": [
+  "softwaregroup-bg",
+  "ut-port-script"
+ ],
+ "utils-test-yeonsu": [
+  "YeonsuBaek",
+  "yeonsui"
+ ],
+ "utopia-ui": [
+  "utopia-os",
+  "utopia-ui"
+ ],
+ "ux4iot-react": [
+  "deviceinsight",
+  "ux4iot-react"
+ ],
+ "v-qr-code-next": [
+  "v-poc",
+  "vite-qr-code"
+ ],
+ "vahv": [
+  "unleashy",
+  "vahv"
+ ],
+ "validate-conventional-commit": [
+  "voxpelli",
+  "validate-conventional-commit"
+ ],
+ "validness": [
+  "eddienubes",
+  "validness"
+ ],
+ "vanillajs-scrollspy": [
+  "ederssouza",
+  "vanillajs-scrollspy"
+ ],
+ "varex": [
+  "OlaHulleberg",
+  "varEx"
+ ],
+ "verify-nvmrc": [
+  "bitttttten",
+  "verify-nvmrc"
+ ],
+ "version-rocket": [
+  "guMcrey",
+  "version-rocket"
+ ],
+ "versionn": [
+  "commenthol",
+  "versionn"
+ ],
+ "videojs-hls-quality-selector": [
+  "chrisboustead",
+  "videojs-hls-quality-selector"
+ ],
+ "vin-socket.client": [
+  "petatemarvin26",
+  "vin-socket.client"
+ ],
+ "vite-plugin-dts": [
+  "qmhc",
+  "vite-plugin-dts"
+ ],
+ "vite-plugin-env-switch": [
+  "PengBoUESTC",
+  "vite-plugin-env-switch"
+ ],
+ "vite-plugin-solid": [
+  "solidjs",
+  "vite-plugin-solid"
+ ],
+ "vite-plugin-virtual-html": [
+  "Windson1806",
+  "vite-plugin-virtual-html"
+ ],
+ "vite-svg-loader": [
+  "jpkleemans",
+  "vite-svg-loader"
+ ],
+ "vitepress-plugin-shiki-twoslash": [
+  "wagmi-dev",
+  "vitepress-plugin-shiki-twoslash"
+ ],
+ "vizchange-plot-builder": [
+  "nicklassundin",
+  "vizchange-plot-render"
+ ],
+ "vscode-extension-kie-ba-bundle": [
+  "kiegroup",
+  "kie-tools"
+ ],
+ "vue-command-palette": [
+  "xiaoluoboding",
+  "vue-command-palette"
+ ],
+ "vue-cropper": [
+  "xyxiao001",
+  "vue-cropper"
+ ],
+ "vue-d3-charts-hire3x": [
+  "sandeepss2020",
+  "vue-d3-charts"
+ ],
+ "vue-ele-nav-plus": [
+  "QuietHear",
+  "vue-ele-nav-plus"
+ ],
+ "vue-grabbing-box": [
+  "CoderMonkie",
+  "vue-grabbing-box"
+ ],
+ "vue-navigation-bar": [
+  "johndatserakis",
+  "vue-navigation-bar"
+ ],
+ "vue-page-split": [
+  "ChenChengbi",
+  "vue-page-split"
+ ],
+ "vue-share-it": [
+  "thisDOTname",
+  "vue-share-it"
+ ],
+ "vue-sidebar-menu": [
+  "yaminncco",
+  "vue-sidebar-menu"
+ ],
+ "vue-split-carousel": [
+  "r23qw",
+  "vue-split-carousel"
+ ],
+ "vue-stable": [
+  "hzq-up",
+  "vue-stable"
+ ],
+ "vue-tsc": [
+  "vuejs",
+  "language-tools"
+ ],
+ "vue-workflow-chart": [
+  "vue-workflow-chart",
+  "vue-workflow-chart"
+ ],
+ "vue3-apexcharts": [
+  "apexcharts",
+  "vue3-apexcharts"
+ ],
+ "vue3-dropzone": [
+  "Yaxian",
+  "vue3-dropzone"
+ ],
+ "w-email": [
+  "yuda-lyu",
+  "w-email"
+ ],
+ "w-ui-dwload": [
+  "yuda-lyu",
+  "w-ui-dwload"
+ ],
+ "wallpaper": [
+  "sindresorhus",
+  "wallpaper"
+ ],
+ "wam-community": [
+  "boourns",
+  "wam-community"
+ ],
+ "warehouse": [
+  "hexojs",
+  "warehouse"
+ ],
+ "wasm-pack": [
+  "rustwasm",
+  "wasm-pack"
+ ],
+ "watchy": [
+  "caseywebdev",
+  "watchy"
+ ],
+ "web-credential-handler": [
+  "credential-handler",
+  "web-credential-handler"
+ ],
+ "web-manager": [
+  "itw-creative-works",
+  "web-manager"
+ ],
+ "web-tracker": [
+  "927230462",
+  "web-tracker"
+ ],
+ "webcm": [
+  "cloudflare",
+  "webcm"
+ ],
+ "webpackbar": [
+  "unjs",
+  "webpackbar"
+ ],
+ "webpy": [
+  "qiushiyan",
+  "webpy"
+ ],
+ "whois-node-json": [
+  "denisix",
+  "node-whois-json"
+ ],
+ "wickrbot": [
+  "WickrInc",
+  "wickrio-bot-framework"
+ ],
+ "windy-plugin-da": [
+  "rittels",
+  "windy-plugins"
+ ],
+ "winix-api": [
+  "regaw-leinad",
+  "winix-api"
+ ],
+ "wistia-video-element": [
+  "muxinc",
+  "media-elements"
+ ],
+ "workbox-build": [
+  "googlechrome",
+  "workbox"
+ ],
+ "worker-timers-worker": [
+  "chrisguttandin",
+  "worker-timers-worker"
+ ],
+ "world-countries": [
+  "mledoze",
+  "countries"
+ ],
+ "wpa-ui": [
+  "lv-saharan",
+  "wpa-ui"
+ ],
+ "wpage": [
+  "iexn",
+  "wpage"
+ ],
+ "ws-menu-components": [
+  "ionic-team",
+  "stencil-component-starter"
+ ],
+ "ws-server-wrapper": [
+  "bminer",
+  "ws-server-wrapper"
+ ],
+ "wtc-gl": [
+  "wethegit",
+  "wtc-gl"
+ ],
+ "xgovw-lint-js": [
+  "algorandfoundation",
+  "xgovw"
+ ],
+ "xgplayer-flv-single-4reach.js": [
+  "bytedance",
+  "xgplayer"
+ ],
+ "yaml": [
+  "eemeli",
+  "yaml"
+ ],
+ "yaml-language-server": [
+  "redhat-developer",
+  "yaml-language-server"
+ ],
+ "yaml-ls-check": [
+  "InoUno",
+  "yaml-ls-check"
+ ],
+ "yarnhook": [
+  "frontsideair",
+  "yarnhook"
+ ],
+ "youtube-sr": [
+  "twlite",
+  "youtube-sr"
+ ],
+ "zero-width": [
+  "bluelovers",
+  "ws-string"
+ ],
+ "zingchart": [
+  "zingchart",
+  "ZingChart"
+ ],
+ "zmethods": [
+  "klren0312",
+  "zutils"
+ ],
+ "zod-i18n-map": [
+  "aiji42",
+  "zod-i18n"
+ ],
+ "zoxios": [
+  "strictest-coral",
+  "zoxios"
+ ]
+}

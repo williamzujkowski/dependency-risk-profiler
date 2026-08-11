@@ -1,0 +1,235 @@
+{
+  "protocol": "docs/transfer-outcome-protocol.md \u00a715",
+  "cohort": "burned (2026-08-06 snapshot); disjoint from the fresh frame",
+  "reads": "classification buckets only; no score joined to any row",
+  "t": "2024-08-01",
+  "examined": 1784,
+  "counts": {
+    "unchanged": 1514,
+    "transferred": 61,
+    "owner_renamed": 0,
+    "ambiguous": 43,
+    "unresolvable": 166,
+    "unparseable": 0
+  },
+  "ambiguity_share": 0.41346153846153844,
+  "ambiguity_ci95": [
+    0.3235475820993937,
+    0.5095409477443771
+  ],
+  "attrition_share": 0.11715246636771301,
+  "owner_type_changes": 30,
+  "positives_by_provenance": {
+    "as_of_t": 0,
+    "resolved_today": 61
+  },
+  "declared_login_resolution_status": {
+    "404": 31,
+    "200": 73
+  },
+  "transport_failures": 0,
+  "decision": "channel-inadequate",
+  "reason": "ambiguity 0.413, 95% CI [0.324, 0.510]; the point estimate exceeds the ceiling. Proceed only with ids known as of T, or report the outcome unmeasurable. Do not lower the gate.",
+  "examples": [
+    {
+      "package": "@alpin11/eslint-config",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to elevantiq but alpin11 no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@as-code/eslint-config",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to avilyre but AvilyRs no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@avanio/expire-cache",
+      "outcome": "transferred",
+      "detail": "account 22674886 -> 2276211"
+    },
+    {
+      "package": "@bassem97/upup",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to DevinoSolutions but uNotesOfficial no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@cdm-logger/client",
+      "outcome": "transferred",
+      "detail": "account 20957416 -> 38191075"
+    },
+    {
+      "package": "@chenyueban/tsconfig",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to xinyao27 but chenyueban no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@codegateinc/react-form-builder-v2",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to codemaskinc but codegateinc no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@coder/logger",
+      "outcome": "transferred",
+      "detail": "account 1375 -> 95932066"
+    },
+    {
+      "package": "@common-stack/server-core",
+      "outcome": "transferred",
+      "detail": "account 20957416 -> 38191075"
+    },
+    {
+      "package": "@cungminh2710/pseudolocalize",
+      "outcome": "transferred",
+      "detail": "account 8063319 -> 208270282"
+    },
+    {
+      "package": "@deepkit/angular-universal",
+      "outcome": "ambiguous",
+      "detail": "deepkit resolves today to account 195848268, which was created 2025-01-21, after T, so it cannot be the account that declared the repository at T"
+    },
+    {
+      "package": "@defichain/jellyfish-transaction",
+      "outcome": "transferred",
+      "detail": "account 97283370 -> 58245741"
+    },
+    {
+      "package": "@envelop/apollo-federation",
+      "outcome": "transferred",
+      "detail": "account 14338007 -> 182742256"
+    },
+    {
+      "package": "@eventstore/db-client",
+      "outcome": "ambiguous",
+      "detail": "EventStore resolves today to account 205090155, which was created 2025-03-26, after T, so it cannot be the account that declared the repository at T"
+    },
+    {
+      "package": "@file-services/test-kit",
+      "outcome": "transferred",
+      "detail": "account 20948122 -> 224593435"
+    },
+    {
+      "package": "@fireactjs/saas",
+      "outcome": "transferred",
+      "detail": "account 116952645 -> 188328685"
+    },
+    {
+      "package": "@freshworks/datepicker",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to freshworks-oss but freshdesk no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@harry-vin/js-lib",
+      "outcome": "ambiguous",
+      "detail": "Harry-Wen resolves today to account 194652761, which was created 2025-01-12, after T, so it cannot be the account that declared the repository at T"
+    },
+    {
+      "package": "@hyperledger/cactus-plugin-keychain-vault",
+      "outcome": "transferred",
+      "detail": "account 7657900 -> 183657288"
+    },
+    {
+      "package": "@hyperledger/caliper-ethereum",
+      "outcome": "transferred",
+      "detail": "account 7657900 -> 185365280"
+    },
+    {
+      "package": "@justeat/f-navigation-links",
+      "outcome": "transferred",
+      "detail": "account 1516790 -> 86794680"
+    },
+    {
+      "package": "@labforward/config",
+      "outcome": "transferred",
+      "detail": "account 11680575 -> 237710191"
+    },
+    {
+      "package": "@laoban/generations",
+      "outcome": "transferred",
+      "detail": "account 283634 -> 122032018"
+    },
+    {
+      "package": "@leichtgewicht/ip-codec",
+      "outcome": "transferred",
+      "detail": "account 914122 -> 106806789"
+    },
+    {
+      "package": "@liskhq/lisk-bft",
+      "outcome": "transferred",
+      "detail": "account 16600915 -> 25390529"
+    },
+    {
+      "package": "@lrnwebcomponents/app-editor-hax",
+      "outcome": "transferred",
+      "detail": "account 12715666 -> 170651362"
+    },
+    {
+      "package": "@maticnetwork/maticjs",
+      "outcome": "transferred",
+      "detail": "account 30753617 -> 66309068"
+    },
+    {
+      "package": "@minar-kotonoha/vite-ssg",
+      "outcome": "transferred",
+      "detail": "account 11247099 -> 167634566"
+    },
+    {
+      "package": "@nextui-org/system",
+      "outcome": "ambiguous",
+      "detail": "nextui-org resolves today to account 190121916, which was created 2024-11-29, after T, so it cannot be the account that declared the repository at T"
+    },
+    {
+      "package": "@nutui/nutui",
+      "outcome": "transferred",
+      "detail": "account 22739181 -> 75349771"
+    },
+    {
+      "package": "@openenergytools/scl-lib",
+      "outcome": "transferred",
+      "detail": "account 132256116 -> 70894358"
+    },
+    {
+      "package": "@paulrobertlloyd/mf2tojf2",
+      "outcome": "transferred",
+      "detail": "account 813383 -> 68553280"
+    },
+    {
+      "package": "@perfsee/chrome-finder",
+      "outcome": "transferred",
+      "detail": "account 109669302 -> 4158466"
+    },
+    {
+      "package": "@primate/session",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to primate-run but primatejs no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@prosekit/preact",
+      "outcome": "transferred",
+      "detail": "account 24715727 -> 139704095"
+    },
+    {
+      "package": "@qitt/spin",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to ichi0g0y but ichiql no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@rainprotocol/rainlang",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to rainlanguage but rainprotocol no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@react-native/babel-plugin-codegen",
+      "outcome": "transferred",
+      "detail": "account 69631 -> 102812"
+    },
+    {
+      "package": "@real-system/animation-library",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to w0ofy but bigwoof91 no longer resolves, so no id comparison"
+    },
+    {
+      "package": "@rolldown/node-binding-linux-arm64-musl",
+      "outcome": "ambiguous",
+      "detail": "owner login changed to rolldown but rolldown-rs no longer resolves, so no id comparison"
+    }
+  ]
+}
