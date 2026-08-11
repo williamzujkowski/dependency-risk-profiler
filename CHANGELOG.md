@@ -49,6 +49,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same tree with the same key: gitleaks reports *no leaks found*; the rule fails
   and names the file.
 
+- **And then the gate itself turned out to be scanning nothing.** The paragraph
+  above says gitleaks now runs in the `security` job. It ran; it did not scan.
+  `gitleaks-action` scans a commit range on `pull_request`, `actions/checkout`
+  fetches shallow, so `<base>^` was not in the object store. Git errored and the
+  scan reported `scanned ~0 bytes (0)` and then `no leaks found`. The job went
+  red only because the action surfaced git's exit code — the scanner's own
+  verdict, over zero bytes, was a pass. That is rule 6 and the same shape as
+  `Analyze (go)` in #231: a required check answering for a subject it never
+  looked at.
+
+  Resolving the range would not have been enough. A diff scan cannot see a
+  secret that is *already* in the tree, and that is exactly how this key
+  survived: it entered in b43e41e and was redacted in ec45676, and every pull
+  request in between was legitimately clean, because the key was in no diff.
+  That is the real reason GitHub's scanner found it first — a diff-scoped gate
+  structurally could not have.
+
+  So the scan reads the working tree, `--no-git --source .`, covering 5.86 MB
+  in CI where the old step covered none of it. The binary is invoked directly
+  and pinned by SHA-256; the action's only remaining value was installing it,
+  its scan mode is not overridable, and dropping it takes a third-party
+  JavaScript action holding `GITHUB_TOKEN` out of the job.
+
+  And the step now scans a planted credential *before* it scans the tree, under
+  the same `--config`, and fails if that comes back clean. A scanner that cannot
+  fail is indistinguishable from one that found nothing, which is the shape of
+  every silent-pass defect in this file. `test_secret_scan_reads_the_tree_and_
+  proves_it_can_fail` holds both properties.
+
+  Pinning the version also surfaced two findings the older local binary missed:
+  the canary literal itself, moved out of the workflow into
+  `.github/secret-scan-canary.txt` and allowlisted by exact path, and
+  `slf4j-parent.pom` scoring 3.88 on `generic-api-key` — a Maven fixture
+  filename, allowlisted by a pattern narrowed to the two extensions the
+  conformance fixtures actually name.
+
+  The key remains reachable in git history at `2555c50`. Purging it needs a
+  history rewrite, which is the owner's call: #323.
+
 
 ### Added
 
