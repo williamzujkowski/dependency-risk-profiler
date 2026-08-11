@@ -1241,10 +1241,11 @@ NODEJS_CASES: Tuple[FixtureCase, ...] = (
             ),
             SignalValue(
                 "maintainer",
-                unmeasured=True,
+                equals=0.0,
                 because=(
-                    "npm publishes no cheap maintainer count; recorded as "
-                    "SCORES_FROM_REGISTRY_ALONE['nodejs'] is False"
+                    "npm publishes a top-level `maintainers` array and this "
+                    "capture carries all five of express's; the read was "
+                    "routed past it, not absent from the payload"
                 ),
             ),
             SignalValue(

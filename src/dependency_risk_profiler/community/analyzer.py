@@ -270,6 +270,22 @@ def analyze_pypi_community_metrics(
     return dependency
 
 
+def _is_npm_packument(metadata: Dict) -> bool:
+    """Return whether a registry document is an npm packument.
+
+    Decided by keys npm always publishes and no other registry here does:
+    ``dist-tags`` and ``versions``. PyPI nests everything under ``info``;
+    crates.io under ``crate``; RubyGems answers a flat version array.
+
+    Args:
+        metadata: A registry document.
+
+    Returns:
+        True when the document is an npm packument.
+    """
+    return "dist-tags" in metadata or "versions" in metadata
+
+
 def analyze_community_metrics(
     dependency: DependencyMetadata,
     metadata: Optional[Dict] = None,
@@ -298,10 +314,24 @@ def analyze_community_metrics(
         if dependency.repository_url:
             dependency = analyze_forge_community_metrics(dependency, github_token)
 
-        # Analyze package registry specific metrics
+        # Analyze package registry specific metrics.
+        #
+        # Route on the shape of the document, not on the shape of the name.
+        # This used to read `"name" in metadata and dependency.name.startswith("@")`,
+        # which is a test for whether a package is SCOPED, under a comment
+        # saying "npm package". Every unscoped npm package -- express, lodash,
+        # react, most of the ecosystem's best-known names -- fell past it and
+        # matched neither branch, so its `maintainer_count` was never read
+        # even though the packument carries a `maintainers` array. Measured:
+        # express publishes 5 maintainers and the field came out None, while
+        # @antv/g2 published 19 and got 19.
+        #
+        # That is the one signal the abandonment pilot found carrying any
+        # information -- ablating `maintainer` drops the model below chance --
+        # so it was missing for the majority of npm exactly where it mattered
+        # most.
         if metadata:
-            if "name" in metadata and dependency.name.startswith("@"):
-                # npm package
+            if _is_npm_packument(metadata):
                 dependency = analyze_npm_community_metrics(dependency, metadata)
             elif "info" in metadata and "name" in metadata["info"]:
                 # PyPI package
