@@ -932,11 +932,17 @@ class RiskScorer:
         else:
             last_updated = last_updated.astimezone(timezone.utc)
 
-        reference = as_of if as_of is not None else datetime.now(timezone.utc)
-        if reference.tzinfo is None:
-            reference = reference.replace(tzinfo=timezone.utc)
+        if as_of is None:
+            # Already UTC-aware; normalising it again costs an `astimezone`
+            # call on every dependency scored, which is measurable at profile
+            # scale and buys nothing.
+            reference = datetime.now(timezone.utc)
+        elif as_of.tzinfo is None:
+            reference = as_of.replace(tzinfo=timezone.utc)
+        elif as_of.tzinfo is timezone.utc:
+            reference = as_of
         else:
-            reference = reference.astimezone(timezone.utc)
+            reference = as_of.astimezone(timezone.utc)
         days_since_update = (reference - last_updated).days
 
         # Scoring thresholds for staleness
