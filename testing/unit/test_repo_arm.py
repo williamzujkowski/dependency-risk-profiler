@@ -66,16 +66,28 @@ class TestDeclarationParsing:
         # GitHub Enterprise on someone else's domain is another host.
         assert not _mentions_github("https://github.deutsche-boerse.de/dev/x")
 
-    def test_fragment_is_unparseable_not_deleted(self) -> None:
+    def test_a_fragment_no_longer_survives_into_the_repository_name(self) -> None:
+        """The production parser now drops the committish, so this resolves.
+
+        It used to return ``b.git#main`` — a name GitHub cannot have — and the
+        study's own charset rule was what stopped that reaching git. Finding
+        that during stage 2 is what surfaced the defect; it is fixed at the
+        source now, so the parser resolves the URL rather than the study
+        rejecting it.
+
+        The counts in the stage 2-4 record are unaffected: those 43 packages
+        were classified UNPARSEABLE, and with the fix they resolve to real
+        repositories. That changes future runs, not the recorded one.
+        """
         from dependency_risk_profiler.utils import extract_github_repo_info
 
         from repo_arm.resolve import _REPO
 
         info = extract_github_repo_info("https://github.com/a/b.git#main")
-        assert info is not None
-        # The loose production parser keeps the fragment; the strict charset
-        # rule is what rejects it, so it is never handed to git.
-        assert not _REPO.match(info[1])
+        assert info == ("a", "b")
+        # The study's charset rule is kept as a second line rather than the
+        # only one: it now passes what the parser hands it.
+        assert _REPO.match(info[1])
 
     def test_constants_are_distinct(self) -> None:
         assert len({GITHUB, OTHER_HOST, UNDECLARED, UNPARSEABLE}) == 4
