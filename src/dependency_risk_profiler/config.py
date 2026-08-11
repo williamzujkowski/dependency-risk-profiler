@@ -367,14 +367,6 @@ class Config:
         """
         return self._config.get(section, {}).copy()
 
-    def get_all(self) -> Dict[str, Dict[str, object]]:
-        """Get the entire configuration.
-
-        Returns:
-            Complete configuration as a dictionary
-        """
-        return self._config.copy()
-
     @staticmethod
     def _weight(weights: Dict[str, object], key: str, default: float) -> float:
         """Return a numeric scoring weight, falling back when it is not one.

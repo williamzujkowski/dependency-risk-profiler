@@ -285,26 +285,6 @@ class PythonAnalyzer(BaseAnalyzer):
         url = f"https://pypi.org/pypi/{package_name}/json"
         return fetch_json(url, self.timeout)
 
-    def _normalize_version(self, version_str: str) -> str:
-        """Normalize version string for comparison.
-
-        Args:
-            version_str: Version string to normalize.
-
-        Returns:
-            Normalized version string.
-        """
-        if (
-            version_str.startswith(">")
-            or version_str.startswith("<")
-            or version_str.startswith("=")
-        ):
-            # Extract version without operators
-            match = re.search(r"[0-9].*", version_str)
-            if match:
-                return match.group(0)
-        return version_str
-
 
 def _upload_times(pypi_data: Mapping[str, object]) -> Iterator[object]:
     """Yield every file upload timestamp in a PyPI payload.
