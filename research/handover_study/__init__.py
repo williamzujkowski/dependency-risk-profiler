@@ -1,8 +1,12 @@
-"""Stage 1 and 2 of the maintainer-handover study.
+"""The maintainer-handover study, pre-registered in
+``docs/handover-outcome-protocol.md``.
 
-Pre-registered in ``docs/handover-outcome-protocol.md``. This package holds
-only the harvest (§10 step 1) and the base-rate / effective-n computation
-(§10 step 2). Nothing downstream of the §10 step-2 gate lives here, by design:
-the gate is a stop rule, and a module that could score a model is a module that
-could be run before the gate is read.
+Stage 1 is the harvest (§10 step 1), stage 2 the base rate and effective n
+(§10 step 2), and stages 3 to 6 the negative control, the trivial baselines,
+the model head-to-head and the per-signal ablations (§10 steps 3-6).
+
+**Step 7, the misclassification audit, is not implemented here.** §7 forbids
+any "evidence of absence" claim until it bounds the rename and silent-transfer
+error rates, and a module that could produce such a claim without that audit is
+a module that could be run without it.
 """
