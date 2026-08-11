@@ -1,0 +1,147 @@
+{
+ "arm": {
+  "abandoned": 742,
+  "base_rate": 0.3970037453183521,
+  "effective_maintainer_clusters": 1348,
+  "nominal_n": 1869,
+  "population": "cohort members whose declared GitHub repository resolved and whose signals read without error",
+  "signals_measured": {
+   "license": 1825,
+   "maintainer": 1869,
+   "source_repository": 1869
+  }
+ },
+ "bootstrap": {
+  "replicates": 2000,
+  "seed": 20260811
+ },
+ "neither_is_promoted": "Protocol 12: the within-stratum figure describes download-reported packages and the unstratified figure describes the arm. The pair is the answer.",
+ "not_the_comparator": {
+  "published_full_cohort_auc": 0.577,
+  "published_full_cohort_within_stratum": 0.539,
+  "why": "Those were measured on the full cohort. This arm is the survivorship-selected subset whose repository still resolves (protocol 6), so the difference between them is a difference between populations, not between arms."
+ },
+ "support_reconciliation": {
+  "agrees": false,
+  "amendment_1_stated": {
+   "clusters": 850,
+   "packages": 981,
+   "positives": 402
+  },
+  "note": "Stage 4 recorded 979 / 849 / 401 for the same support. Amendment 1 states 981 / 850 / 402. The realised figure governs; the MDE is read from the published SE regardless, which a two-package difference does not move.",
+  "realised_here": {
+   "clusters": 849,
+   "packages": 979,
+   "positives": 401
+  }
+ },
+ "unstratified_on_the_stratified_support": {
+  "auc": 0.5905413801137295,
+  "clustered": {
+   "ci95": [
+    0.5606978743987316,
+    0.6203098220171391
+   ],
+   "replicates": 2000
+  },
+  "effective_maintainer_clusters": 849,
+  "nominal_n": 979,
+  "statistic": "pooled AUC over the download-reported rows",
+  "why": "Diagnostic only, and reported because falsification line 4 compares stratified against unstratified: on different populations that comparison confounds stratification with selection. This row holds the population fixed."
+ },
+ "unstratified_over_the_arm": {
+  "auc": 0.6134389417316206,
+  "bootstrap_se": 0.0174315261483746,
+  "clustered": {
+   "ci95": [
+    0.5766291506905485,
+    0.6452868339521226
+   ],
+   "replicates": 2000
+  },
+  "effective_maintainer_clusters": 1348,
+  "nominal_n": 1869,
+  "population": "the whole repository arm; covers the arm, controls for nothing",
+  "positives": 742,
+  "statistic": "pooled AUC"
+ },
+ "what_this_is": "The paired registry-only comparator, re-measured on the repository arm's own packages. Protocol 9 stage 5.",
+ "within_download_stratum": {
+  "auc": 0.5617019410004367,
+  "bins": [
+   {
+    "abandoned": 134,
+    "auc": 0.5595179838512356,
+    "base_rate": 0.6871794871794872,
+    "bin": 1,
+    "downloads_at_t": [
+     2,
+     83
+    ],
+    "effective_maintainer_clusters": 187,
+    "nominal_n": 195
+   },
+   {
+    "abandoned": 82,
+    "auc": 0.5776494711849773,
+    "base_rate": 0.4205128205128205,
+    "bin": 2,
+    "downloads_at_t": [
+     83,
+     237
+    ],
+    "effective_maintainer_clusters": 182,
+    "nominal_n": 195
+   },
+   {
+    "abandoned": 73,
+    "auc": 0.5281271053222547,
+    "base_rate": 0.37435897435897436,
+    "bin": 3,
+    "downloads_at_t": [
+     239,
+     1354
+    ],
+    "effective_maintainer_clusters": 190,
+    "nominal_n": 195
+   },
+   {
+    "abandoned": 63,
+    "auc": 0.5749158249158249,
+    "base_rate": 0.3230769230769231,
+    "bin": 4,
+    "downloads_at_t": [
+     1388,
+     13643
+    ],
+    "effective_maintainer_clusters": 184,
+    "nominal_n": 195
+   },
+   {
+    "abandoned": 49,
+    "auc": 0.5682993197278912,
+    "base_rate": 0.24623115577889448,
+    "bin": 5,
+    "downloads_at_t": [
+     14934,
+     199959655
+    ],
+    "effective_maintainer_clusters": 156,
+    "nominal_n": 199
+   }
+  ],
+  "bootstrap_se": 0.016597425684767755,
+  "clustered": {
+   "ci95": [
+    0.5295402006103951,
+    0.5925918571841828
+   ],
+   "replicates": 2000
+  },
+  "effective_maintainer_clusters": 849,
+  "nominal_n": 979,
+  "population": "download-reported packages only. NOT the cohort: protocol 12 records that npm answers download counts for every unscoped package and about a fifth of scoped ones.",
+  "positives": 401,
+  "statistic": "unweighted mean of the within-download-bin AUCs"
+ }
+}

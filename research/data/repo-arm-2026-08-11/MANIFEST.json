@@ -1,5 +1,9 @@
 {
  "T": "2024-08-01",
+ "bootstrap": {
+  "replicates": 2000,
+  "seed": 20260811
+ },
  "clone_method": "git clone --filter=blob:none --bare --no-recurse-submodules --no-tags, URL after a -- separator and rebuilt from the validated owner/repo, GIT_TERMINAL_PROMPT=0, ambient git config neutralised, ulimit -f 512MiB and a 300s wall clock per clone (protocol 10).",
  "clone_storage": "6.3 GB under /home/william/.cache/drp-repo-arm/clones; deleted after stage 4. signals.json carries the per-repo reads, so stages 5-7 do not need the clones back.",
  "files": {
@@ -23,19 +27,27 @@
   },
   "stage4.json": {
    "sha256": "6773afd5635ce2d29ac3005a6df8ce072de853d1d6cd51f3d7cae3dff688405e"
+  },
+  "stage5.json": {
+   "sha256": "9539d4a16f78351dcde547e9afdc3523428ef731078602dd615b9d254e28b92a"
+  },
+  "stage6.json": {
+   "sha256": "f4d3faaad9188c71bb60ed275b6a6cb7554c21cd96ae4b0728abbe974aaeaf91"
+  },
+  "stage7.json": {
+   "sha256": "df2572d2053c7553ae6b59e45577444f60c9e39269e9be05ded14872bb1432e4"
   }
  },
- "note": "No model AUC, no registry-only baseline and no ablation was computed in this run. Stage 4 measures only permuted-label distributions.",
- "registers": "docs/repository-arm-protocol.md stages 2-4",
+ "note": "Stages 5-7 ran on 2026-08-11 against the stage 2-4 artifacts in this directory, seed 20260811, 2000 clustered bootstrap resamples. Stage 4 was re-run first and reproduced bit-identically, which is why its hash is unchanged. No clone was re-fetched: signals.json carries every per-repository read.",
+ "registers": "docs/repository-arm-protocol.md stages 2-7, including amendment 1",
  "snapshot": "research/data/npm-2026-08-06",
- "stages_not_run": [
-  5,
-  6,
-  7
- ],
+ "stages_not_run": [],
  "stages_run": [
   2,
   3,
-  4
+  4,
+  5,
+  6,
+  7
  ]
 }
