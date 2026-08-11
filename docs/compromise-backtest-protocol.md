@@ -1,6 +1,13 @@
 # Compromise backtest — pre-registration
 
-**Status:** pre-registered. Fixed before any cohort was assembled or any package scored.
+**Status:** pre-registered, and **halted at stage 1 by the stop rule in §11**.
+Measured 43 distinct campaign-days against a threshold of 75. The record,
+including why re-clustering to clear the gate was rejected, is in
+[`compromise-backtest-stage1.md`](compromise-backtest-stage1.md). Everything
+below stands as written — it is the document the halt was measured against,
+and editing it now would defeat the point of having fixed it first.
+
+**Originally:** pre-registered before any cohort was assembled or any package scored.
 **Registers:** #327. Extends `validation-protocol.md`, which registered the abandonment pilot.
 **Date fixed:** 2026-08-11, against `main` at 9d49a0a.
 

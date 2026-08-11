@@ -635,6 +635,57 @@ def test_the_readme_carries_the_result_that_bounds_its_own_claim() -> None:
     )
 
 
+def test_the_compromise_backtest_stays_halted_until_its_gate_is_met() -> None:
+    """AGENTS.md rule 6: a gate that fired must not be quietly stepped over.
+
+    Stage 1 of the compromise backtest measured 43 distinct campaign-days
+    against a pre-registered stop rule of 75, so the study halted before any
+    control was built. The risk now is not that someone argues with that
+    decision -- it is that a later run simply proceeds, because the reason it
+    stopped lives in prose and prose does not fail a build.
+
+    So the halt is asserted as a fact of the tree: the stage-1 record exists,
+    it carries the measured count, and no results document has appeared for a
+    study that is not supposed to have run. Producing one means either the
+    gate was met on new data -- in which case update this test with the new
+    count, deliberately -- or it was stepped over.
+
+    Deliberately NOT asserting the number 75 alone. Both numbers are required
+    together, because the failure mode worth catching is a re-run that quietly
+    lowers the bar to whatever it happened to measure.
+    """
+    root = PYPROJECT.parent
+    record = root / "docs" / "compromise-backtest-stage1.md"
+    if not record.exists():  # pragma: no cover - committed with this test
+        return
+    text = record.read_text(encoding="utf-8")
+
+    for needle, why in (
+        ("43", "the measured campaign-day count"),
+        ("below 75", "the pre-registered threshold it failed"),
+    ):
+        assert needle in text, (
+            f"The stage-1 record has lost {why}. The halt is only meaningful "
+            "while both numbers are stated together -- one alone lets a "
+            "re-run move the bar to whatever it measured."
+        )
+
+    stray = sorted(
+        path.name
+        for path in (root / "research" / "results").glob("*compromise*")
+        if path.is_file()
+    )
+    assert not stray, (
+        "A compromise-backtest results document exists, but the study is "
+        "halted at stage 1: 43 campaign-days against a pre-registered stop "
+        "rule of 75.\n"
+        "If the gate has since been met on new data, say so in "
+        "docs/compromise-backtest-stage1.md and update this test with the "
+        "new count. If it has not, the study should not have produced "
+        "results.\n\n" + "\n".join(stray)
+    )
+
+
 def test_the_compromise_protocol_still_says_what_a_null_costs() -> None:
     """A pre-registration keeps the commitments that are inconvenient to keep.
 
