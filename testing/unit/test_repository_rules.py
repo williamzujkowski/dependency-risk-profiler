@@ -597,7 +597,42 @@ def test_secret_scan_reads_the_tree_and_proves_it_can_fail() -> None:
     )
 
 
-def test_mypy_first_party_exemption_list_stays_empty() -> None:
+def test_the_readme_carries_the_result_that_bounds_its_own_claim() -> None:
+    """The README states what the tool was measured to do, with the numbers.
+
+    It used to argue that leading indicators beat lagging ones. A
+    pre-registered pilot measured that and the claim lost: download count
+    alone reached AUC 0.696 where the sixteen-signal score reached 0.577, and
+    two of the protocol's own falsification lines fired.
+
+    This asserts the *evidence* is present rather than that some phrase is
+    absent, and the difference is the point. A banned-phrase list is trivially
+    satisfied by a synonym, and it would also fire on the sentence that
+    withdraws the claim. Requiring both figures and a link to the write-up
+    means the claim cannot quietly re-broaden: whoever restores it has to
+    delete a specific measured number, which is a visible act rather than a
+    silent one.
+
+    If a later study supports a stronger claim, this test should be updated to
+    demand *that* study's numbers -- not deleted.
+    """
+    readme = PYPROJECT.parent / "README.md"
+    if not readme.exists():  # pragma: no cover - README is committed
+        return
+    text = readme.read_text(encoding="utf-8")
+
+    missing = [value for value in ("0.696", "0.577") if value not in text]
+    assert not missing, (
+        "The README must carry the measured result that bounds its claim. "
+        f"Missing: {', '.join(missing)}. Download count alone reached AUC "
+        "0.696 against the score's 0.577 on the abandonment pilot; a README "
+        "that drops those figures is making a claim the repository's own "
+        "evidence does not support."
+    )
+    assert "docs/abandonment-pilot.md" in text, (
+        "The README must link the write-up its headline numbers come from, "
+        "so a reader can check them rather than take them on trust."
+    )
     """AGENTS.md rule 8: the first-party mypy exemption list stays empty.
 
     It once held eleven modules -- including every module where this
