@@ -5,11 +5,23 @@
 [![Python Versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-CVE count is a lagging indicator: it tells you what has already been reported, not whether a dependency is drifting, under-maintained, opaque, or hard to replace. Dependency Risk Profiler triages dependencies across nine ecosystems — Python, JavaScript/TypeScript (npm), Go, Rust, Ruby, PHP, .NET, Java/Maven, and Java/Kotlin/Android via Gradle — on leading signals — release cadence, maintainer concentration, provenance, version drift, and license risk — while reporting unknown signals as unknown and filtering advisory noise instead of turning every low-confidence or withdrawn vulnerability into score pressure.
+Dependency Risk Profiler inventories what is knowable about a dependency across nine ecosystems — Python, JavaScript/TypeScript (npm), Go, Rust, Ruby, PHP, .NET, Java/Maven, and Java/Kotlin/Android via Gradle. It reads release cadence, maintainer concentration, provenance, version drift and license, **reports every signal it could not measure as unmeasured rather than as a clean value**, filters advisories that do not affect the installed version, and floors its verdict under any live advisory that does.
 
-It works on a single manifest (`analyze`) or across every repository in a GitHub organization or user account (`scan-org` / `scan-user`), so you can see which risky dependencies you are most exposed to — and where — before an advisory forces the issue.
+It works on a single manifest (`analyze`) or across every repository in a GitHub organization or user account (`scan-org` / `scan-user`).
 
-Companion post: [Zero CVEs Is Not a Safety Rating](https://williamzujkowski.github.io/posts/2026-08-06-dependency-risk-leading-indicators/).
+## What this tool has and has not been shown to do
+
+This README used to argue that leading indicators beat lagging ones. **That claim was tested against a pre-registered protocol and it lost**, so it has been withdrawn rather than left standing.
+
+On 2,906 npm packages predicting two-year abandonment, **download count alone separated the classes better than the full sixteen-signal score: AUC 0.696 against 0.577** (maintainer-clustered 95% CI on the gap [−0.155, −0.085]). Two of the protocol's own falsification lines fired. Re-run at three dates the score never exceeded 0.605, and the published figure was its best year, not its typical one. Ablations put `license` in negative territory — removing it *improved* discrimination.
+
+So the honest summary is: **no evidence yet supports ranking dependencies by this score in preference to a popularity or advisory baseline.** What the tool does do, and what the same runs support:
+
+- It says *unmeasured* when it has not measured something, instead of scoring the reassuring default. That is a correctness property, not a prediction, and it is enforced by tests.
+- It floors a verdict under a live advisory affecting the installed version, so leading signals can raise a verdict but never lower it below a known fact. That is a policy, not a forecast.
+- It filters advisories that do not affect the installed version, which is arithmetic and checkable against OSV.
+
+The full result, its method, and its limits are in [`docs/abandonment-pilot.md`](docs/abandonment-pilot.md); the protocol that pre-registered the falsification lines is in [`docs/validation-protocol.md`](docs/validation-protocol.md). A compromise backtest is designed but **not run** (#327). If it supports a stronger claim, this section changes and cites it.
 
 ## Install
 
