@@ -172,10 +172,15 @@ and eliminates subsample-selection risk in the same move.
 
 **Minimum detectable effect, fixed now:** with the full cohort the primary
 comparison is paired on the same packages, and the study is powered for the
-0.05 within-stratum delta falsification line 1 names. **If the achieved cohort
-falls below 1,000 packages, the MDE is recomputed and reported with the
-result**, and a null below that MDE is reported as uninformative rather than as
-absence — the same rule §7 of the handover protocol used.
+0.05 within-stratum delta falsification line 1 names. **If the support of the
+analysis producing the primary endpoint falls below 1,000, the MDE is computed
+and published before that analysis runs**, and a null below that MDE is
+reported as uninformative rather than as absence — the same rule §7 of the
+handover protocol used.
+
+*Amendment 1 rebound this clause from "the achieved cohort" to the primary
+endpoint's support, and moved the MDE from "reported with the result" to
+"published before the analysis". See §12.*
 
 ## 4d. One primary endpoint
 
@@ -346,3 +351,89 @@ acceptance to this cohort's own numbers.
 
 **What did not change:** the outcome stays abandonment, and the two untestable
 signals stay untestable and unproxied.
+
+---
+
+## 12. Amendment 1 — the MDE clause, and a selection problem it does not fix
+
+**Made 2026-08-11, after stages 2–4 and before any model result exists.**
+Stages 5–7 have not run: no AUC, no baseline, no ablations. 7-0 consensus.
+
+### What was wrong with §4c
+
+It bound the MDE rule to "the achieved cohort", which came in at **1,869** and
+clears 1,000. But the primary endpoint is *within-download-stratum*, and npm
+answers download counts for only about half the cohort, so **the endpoint's
+support is 981** — below the line. The letter cleared; the thing the rule
+exists to protect did not.
+
+I wrote that clause loosely. Reading the letter to skip the MDE rule would have
+been exploiting my own drafting.
+
+**Why amending here is not the amendment that was rejected for the handover
+study.** That one was proposed *after* the model AUC was observed and would have
+**loosened** the interpretation. This one is made before any score exists and
+can only make a future claim **weaker** — it downgrades a possible null from
+"absence" to "uninformative" and leaves a positive result untouched. Direction
+of hand-binding is the test, not timing alone, and the ordering is auditable in
+git rather than asserted.
+
+### The MDE, published before stage 5 runs
+
+Computed on the endpoint's actual support by maintainer-clustered bootstrap,
+600 resamples, seed 20260811:
+
+| | |
+|---|---|
+| support | **981 packages, 850 clusters, 402 positives** |
+| SE of the mean within-bin AUC | **0.0157** |
+
+Minimum detectable paired difference, α = 0.05 two-sided, power 0.80:
+
+| assumed correlation between arms | MDE |
+|---|---:|
+| independent (worst case) | 0.0623 |
+| ρ = 0.5 | 0.0441 |
+| ρ = 0.8 | 0.0279 |
+| ρ = 0.9 | 0.0197 |
+
+**The arms are nested** — the repository arm is the registry arm plus five
+signals — so independence is not merely unlikely, it is impossible, and ρ will
+be high. The study is powered for the 0.05 line at any ρ above roughly 0.36.
+
+**Fixed now, before the number exists:** a null is reported as uninformative
+only if the observed delta falls below the MDE computed at the *realised*
+correlation, which is reported alongside it.
+
+**And a pre-commitment that costs something:** "uninformative" means *this study
+cannot speak*. It does **not** mean the composite survives. The withdrawn README
+claim (#330) stays withdrawn under every branch of this study.
+
+### The problem the MDE does not fix
+
+Framing 981-of-1,869 as a power question was wrong. It is also, and more
+seriously, **a selection question**:
+
+| | n | abandonment rate | scoped |
+|---|---:|---:|---:|
+| has a download count at T | 1,414 | **0.431** [0.405, 0.457] | **27.2%** |
+| npm reports none | 1,492 | **0.380** [0.356, 0.405] | **100%** |
+
+npm answers download counts for **every unscoped package and only about a fifth
+of scoped ones**. The excluded half is not a random half — it is *entirely
+scoped*, and its abandonment rate is lower, with intervals that barely touch.
+
+So the within-stratum endpoint describes a population that is **73% unscoped,
+while the cohort is 65% scoped**. That is a different population, and no
+increase in power addresses it.
+
+**Fixed now:** the within-stratum result is reported as applying to
+download-reported packages, not to the cohort, wherever it appears. The
+unstratified comparison over the full arm is reported beside it as the figure
+that covers the cohort but does not control for popularity. **Neither is
+promoted to "the" answer**; the pair is the answer, and the gap between them is
+information rather than an inconvenience.
+
+This was found by consensus review asking what else moves when the support
+shrinks. It is the third time in this project that a question about *counts*
+turned out to be a question about *which population the counts describe*.
