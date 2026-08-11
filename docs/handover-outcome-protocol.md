@@ -248,7 +248,9 @@ All four:
    `registry.npmjs.org` only. **No mirror** — npmmirror's per-version endpoint
    is a semver *resolver* that silently returns a different version's data, and
    measuring from it fabricates results (#335). Scoped names are URL-encoded;
-   raw packuments are archived so the analysis is re-runnable and auditable.
+   each record is archived as the extracted `maintainers` array plus a
+   **SHA-256 of the raw response body**, following the `raw_sha256` convention
+   the abandonment snapshot already uses (§11 amendment 1).
    Gate: report the resolution rate. **Stop if under 90%** — below that the
    study is about packages that still exist, which is a different question.
 2. **Base rate and effective n.** Gate: **stop if the positive count is under
@@ -313,3 +315,22 @@ other frozen T share one comparator and are not replication.
 **The review is the reason this is worth anything.** The confound was
 identified before a single packument was fetched, which is the entire purpose
 of circulating a protocol rather than a result.
+
+### Amendment 1 — archival format, 2026-08-11, before any harvest
+
+The merged text said "raw packuments are archived so the analysis is
+re-runnable and auditable." That is not committable. A single packument
+carries every version's metadata: `react` is **6.7 MB**, `express` 786 KB. The
+cohort is 2,906 packages, so the literal instruction is gigabytes in git.
+
+Amended to the convention this repository already uses for exactly this
+problem: store the extracted field plus a **SHA-256 of the raw response body**,
+as `PackageRecord.raw_sha256` does in the abandonment snapshot. Anyone can
+re-fetch and verify they received the same bytes, which is what auditability
+required; the multi-gigabyte copy was never what made it auditable.
+
+**This is a mechanical amendment, not an analytical one.** It changes where
+bytes are kept. It does not touch the outcome definition, the baselines, the
+falsification lines, the stop rules or what a null means — and it is recorded
+here, before the harvest, rather than discovered later as a discrepancy
+between the protocol and what was done.
