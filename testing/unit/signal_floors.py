@@ -74,7 +74,13 @@ golang           5  ``maintainer`` (Go has no module-level owner concept)
                     dependency count).
 ===========  =====  =====================================================
 
-That right-hand column is data rather than prose.
+That right-hand column is data rather than prose, and since #337 it is also
+**checked against captured payloads** — `test_registry_withholding.py` asserts
+every entry below against what the registry actually sent, in the direction the
+entry claims. Two directions, because the rows are not all the same kind: most
+say the registry serves nothing, while Maven's `maintainer` and golang's
+`transitive` say it serves a field that measures something else, and those are
+falsified by the field *disappearing*. A row cannot be added here without one.
 :data:`REGISTRY_ONLY_CEILING` names the seven and
 :data:`REGISTRY_UNANSWERED_SIGNALS` names what each registry withholds, and
 every floor is checked to be exactly that subtraction. An attribution nothing
