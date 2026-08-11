@@ -1,0 +1,561 @@
+{
+  "N_years": 1,
+  "T": "2023-08-01",
+  "ablations": {
+    "ablate:license": {
+      "auc_moved_by": -0.030901222786610894,
+      "auc_with": 0.5830302665985393,
+      "auc_without": 0.6139314893851502,
+      "ci95_clustered": [
+        -0.06288673153435331,
+        -0.007897298612801085
+      ],
+      "insufficient_data": 2536
+    },
+    "ablate:maintainer": {
+      "auc_moved_by": 0.08408912165749954,
+      "auc_with": 0.5830302665985393,
+      "auc_without": 0.49894114494103975,
+      "ci95_clustered": [
+        0.06459098455501333,
+        0.10387498306904469
+      ],
+      "insufficient_data": 2536
+    },
+    "ablate:source_repository": {
+      "auc_moved_by": -0.0025275389979261265,
+      "auc_with": 0.5830302665985393,
+      "auc_without": 0.5855578055964654,
+      "ci95_clustered": [
+        -0.017258978985518536,
+        0.011151474998858824
+      ],
+      "insufficient_data": 2536
+    }
+  },
+  "baselines": {
+    "age_days": {
+      "auc_as_recorded": 0.4332432899522106,
+      "auc_oriented": 0.5667567100477894,
+      "ci95_clustered": [
+        -0.019414754922730926,
+        0.04768035520569103
+      ],
+      "ci95_unclustered": [
+        -0.010879769265570882,
+        0.04278058791369477
+      ],
+      "model_auc_on_support": 0.5830302665985393,
+      "model_minus_baseline": 0.016273556550749912,
+      "orientation": "less is riskier",
+      "p_value_clustered": 0.362,
+      "positives": 1164,
+      "support": 2536
+    },
+    "dep_count": {
+      "auc_as_recorded": 0.4731001001436844,
+      "auc_oriented": 0.5268998998563156,
+      "ci95_clustered": [
+        0.035950625251264245,
+        0.10946306441794673
+      ],
+      "ci95_unclustered": [
+        0.041322468491960085,
+        0.10370829589905695
+      ],
+      "model_auc_on_support": 0.5998772151347586,
+      "model_minus_baseline": 0.07297731527844298,
+      "orientation": "less is riskier",
+      "p_value_clustered": 0.0,
+      "positives": 965,
+      "support": 2155
+    },
+    "downloads_at_t": {
+      "auc_as_recorded": 0.2692374120729256,
+      "auc_oriented": 0.7307625879270744,
+      "ci95_clustered": [
+        -0.18217813966077234,
+        -0.11100722902155524
+      ],
+      "ci95_unclustered": [
+        -0.1801121898307516,
+        -0.11334812971494546
+      ],
+      "model_auc_on_support": 0.5840129737295435,
+      "model_minus_baseline": -0.14674961419753085,
+      "orientation": "less is riskier",
+      "p_value_clustered": 0.0,
+      "positives": 688,
+      "support": 1336
+    },
+    "stars_today": {
+      "auc_as_recorded": 0.3199884440592464,
+      "auc_oriented": 0.6800115559407536,
+      "ci95_clustered": [
+        -0.15246202482843696,
+        -0.03815736677927495
+      ],
+      "ci95_unclustered": [
+        -0.1285732556373549,
+        -0.06132740081572119
+      ],
+      "model_auc_on_support": 0.5852004590629212,
+      "model_minus_baseline": -0.0948110968778324,
+      "orientation": "less is riskier",
+      "p_value_clustered": 0.001,
+      "positives": 687,
+      "support": 1604
+    }
+  },
+  "cohort": {
+    "abandoned": 1164,
+    "base_rate": 0.4589905362776025,
+    "excluded_from_stored": {
+      "already_dormant_at_T": 1415,
+      "no_release_before_T": 944,
+      "too_few_releases_before_T": 355,
+      "younger_than_one_year_at_T": 890
+    },
+    "largest_cluster": 31,
+    "maintainer_clusters": 2022,
+    "size": 2536
+  },
+  "coverage": {
+    "downloads_at_t": 1336,
+    "downloads_at_t_by_name_shape": {
+      "scoped_measured": 319,
+      "scoped_total": 1519,
+      "unscoped_measured": 1017,
+      "unscoped_total": 1017
+    },
+    "insufficient_data": 2536,
+    "signals_measured": {
+      "license": 2367,
+      "maintainer": 2536,
+      "source_repository": 2536
+    },
+    "stars_today": 1604
+  },
+  "model": {
+    "auc": {
+      "ci95": [
+        0.5516950968334826,
+        0.610395276747478
+      ],
+      "estimate": 0.5830302665985393,
+      "replicates": 2000
+    },
+    "average_precision": 0.5131108631550975,
+    "calibration": [
+      {
+        "bucket": "LOW",
+        "count": 759,
+        "positives": 235,
+        "rate": 0.3096179183135705
+      },
+      {
+        "bucket": "MEDIUM",
+        "count": 1208,
+        "positives": 649,
+        "rate": 0.5372516556291391
+      },
+      {
+        "bucket": "HIGH",
+        "count": 412,
+        "positives": 199,
+        "rate": 0.4830097087378641
+      },
+      {
+        "bucket": "CRITICAL",
+        "count": 157,
+        "positives": 81,
+        "rate": 0.5159235668789809
+      }
+    ],
+    "operating_points": [
+      {
+        "flagged": 1777,
+        "precision": 0.5227912211592571,
+        "recall": 0.7981099656357389,
+        "threshold": 0.25,
+        "true_positives": 929
+      },
+      {
+        "flagged": 569,
+        "precision": 0.492091388400703,
+        "recall": 0.24054982817869416,
+        "threshold": 0.5,
+        "true_positives": 280
+      },
+      {
+        "flagged": 157,
+        "precision": 0.5159235668789809,
+        "recall": 0.06958762886597938,
+        "threshold": 0.75,
+        "true_positives": 81
+      }
+    ],
+    "signals": [
+      "license",
+      "maintainer",
+      "source_repository"
+    ]
+  },
+  "n_selection": {
+    "N_years": 1,
+    "N_years_preregistered": 2,
+    "cutoff": 0.1,
+    "override_reason": "sensitivity analysis, not the registered N",
+    "per_candidate_T": {
+      "2022-08-01": {
+        "N_years": 2,
+        "life_table": [
+          {
+            "at_risk": 337424,
+            "censored": 5388,
+            "hazard": 0.9446479251934395,
+            "resumed": 316202,
+            "years": 0
+          },
+          {
+            "at_risk": 15834,
+            "censored": 3013,
+            "hazard": 0.120816611411621,
+            "resumed": 1731,
+            "years": 1
+          },
+          {
+            "at_risk": 11090,
+            "censored": 2593,
+            "hazard": 0.04635727778628682,
+            "resumed": 454,
+            "years": 2
+          },
+          {
+            "at_risk": 8043,
+            "censored": 2251,
+            "hazard": 0.02211781713046621,
+            "resumed": 153,
+            "years": 3
+          },
+          {
+            "at_risk": 5639,
+            "censored": 1865,
+            "hazard": 0.010623605651758206,
+            "resumed": 50,
+            "years": 4
+          },
+          {
+            "at_risk": 3724,
+            "censored": 1562,
+            "hazard": 0.0054366292898402994,
+            "resumed": 16,
+            "years": 5
+          },
+          {
+            "at_risk": 2146,
+            "censored": 1057,
+            "hazard": 0.0012364760432766616,
+            "resumed": 2,
+            "years": 6
+          },
+          {
+            "at_risk": 1087,
+            "censored": 605,
+            "hazard": 0.0012746972594008922,
+            "resumed": 1,
+            "years": 7
+          }
+        ],
+        "rule_applied": "hazard_below_cutoff"
+      },
+      "2023-08-01": {
+        "N_years": 2,
+        "life_table": [
+          {
+            "at_risk": 446103,
+            "censored": 5995,
+            "hazard": 0.9495842412247196,
+            "resumed": 420766,
+            "years": 0
+          },
+          {
+            "at_risk": 19342,
+            "censored": 3211,
+            "hazard": 0.1202604798015392,
+            "resumed": 2133,
+            "years": 1
+          },
+          {
+            "at_risk": 13998,
+            "censored": 2843,
+            "hazard": 0.04333479107859897,
+            "resumed": 545,
+            "years": 2
+          },
+          {
+            "at_risk": 10610,
+            "censored": 2536,
+            "hazard": 0.02076643117105545,
+            "resumed": 194,
+            "years": 3
+          },
+          {
+            "at_risk": 7880,
+            "censored": 2230,
+            "hazard": 0.009164818920916482,
+            "resumed": 62,
+            "years": 4
+          },
+          {
+            "at_risk": 5588,
+            "censored": 1855,
+            "hazard": 0.0053642313056538994,
+            "resumed": 25,
+            "years": 5
+          },
+          {
+            "at_risk": 3708,
+            "censored": 1559,
+            "hazard": 0.002731773945705993,
+            "resumed": 8,
+            "years": 6
+          },
+          {
+            "at_risk": 2141,
+            "censored": 1053,
+            "hazard": 0.0006193868070610096,
+            "resumed": 1,
+            "years": 7
+          }
+        ],
+        "rule_applied": "hazard_below_cutoff"
+      },
+      "2024-08-01": {
+        "N_years": 2,
+        "life_table": [
+          {
+            "at_risk": 575728,
+            "censored": 6401,
+            "hazard": 0.9537253669037732,
+            "resumed": 546034,
+            "years": 0
+          },
+          {
+            "at_risk": 23293,
+            "censored": 3641,
+            "hazard": 0.12047968331586914,
+            "resumed": 2587,
+            "years": 1
+          },
+          {
+            "at_risk": 17065,
+            "censored": 2970,
+            "hazard": 0.044929396662387676,
+            "resumed": 700,
+            "years": 2
+          },
+          {
+            "at_risk": 13395,
+            "censored": 2722,
+            "hazard": 0.021854744889479808,
+            "resumed": 263,
+            "years": 3
+          },
+          {
+            "at_risk": 10410,
+            "censored": 2515,
+            "hazard": 0.009724119093143949,
+            "resumed": 89,
+            "years": 4
+          },
+          {
+            "at_risk": 7806,
+            "censored": 2209,
+            "hazard": 0.004775050361859285,
+            "resumed": 32,
+            "years": 5
+          },
+          {
+            "at_risk": 5565,
+            "censored": 1846,
+            "hazard": 0.0034467901766479965,
+            "resumed": 16,
+            "years": 6
+          },
+          {
+            "at_risk": 3703,
+            "censored": 1558,
+            "hazard": 0.0013679890560875513,
+            "resumed": 4,
+            "years": 7
+          }
+        ],
+        "rule_applied": "hazard_below_cutoff"
+      },
+      "2025-08-01": {
+        "N_years": 2,
+        "life_table": [
+          {
+            "at_risk": 708203,
+            "censored": 6087,
+            "hazard": 0.9565481284730618,
+            "resumed": 674519,
+            "years": 0
+          },
+          {
+            "at_risk": 27597,
+            "censored": 4012,
+            "hazard": 0.11754132312140987,
+            "resumed": 3008,
+            "years": 1
+          },
+          {
+            "at_risk": 20577,
+            "censored": 3407,
+            "hazard": 0.04418894216758948,
+            "resumed": 834,
+            "years": 2
+          },
+          {
+            "at_risk": 16336,
+            "censored": 2909,
+            "hazard": 0.02049524577495548,
+            "resumed": 305,
+            "years": 3
+          },
+          {
+            "at_risk": 13122,
+            "censored": 2698,
+            "hazard": 0.009768113479996602,
+            "resumed": 115,
+            "years": 4
+          },
+          {
+            "at_risk": 10309,
+            "censored": 2499,
+            "hazard": 0.0040841106021303605,
+            "resumed": 37,
+            "years": 5
+          },
+          {
+            "at_risk": 7773,
+            "censored": 2203,
+            "hazard": 0.002997826575732594,
+            "resumed": 20,
+            "years": 6
+          },
+          {
+            "at_risk": 5550,
+            "censored": 1844,
+            "hazard": 0.0019446845289541918,
+            "resumed": 9,
+            "years": 7
+          }
+        ],
+        "rule_applied": "hazard_below_cutoff"
+      }
+    },
+    "rule": "N is read off the life table by two rules in order: the first whole year whose 12-month resumption hazard is below the cutoff, or failing that the first year after which the hazard stops falling. Where the candidate cut-off dates disagree, the largest N is taken: it is the conservative one, because it labels fewer packages abandoned."
+  },
+  "negative_control": {
+    "observed_auc": 0.5830302665985393,
+    "rounds": 200,
+    "shuffled_auc_max": 0.5342164848266258,
+    "shuffled_auc_mean": 0.4998999566689711,
+    "shuffled_auc_min": 0.46989745824692175
+  },
+  "note": "Labels are lower bounds: a package counted as abandoned may yet publish again after the observation window closes.",
+  "snapshot": {
+    "directory": "npm-2026-08-06",
+    "ecosystem": "npm",
+    "files": {
+      "downloads.json.gz": {
+        "sha256": "2b85309c39ff76c941ee7d9503c2db48170474de933d087177795f0cd9d5517b"
+      },
+      "ledger.json.gz": {
+        "sha256": "8dbd9a0acd35111d085508c3b798e5a2214e0e9bc4863eeb6576eab454f89d72"
+      },
+      "packages.jsonl.gz": {
+        "sha256": "ca9efeddb80c0b9bd0638d1651881c093c7414767aa17a87164fc598b43531fb"
+      },
+      "silences.jsonl.gz": {
+        "sha256": "06153e78bf8e86ec1d4e17fabab25ebcca0d796fc9de75083f113aff6d3c24de"
+      },
+      "stars.json.gz": {
+        "sha256": "95906cb112da920238ed7a039f3d9aad439aaa5ccb59b2a1f53ac3c4c82080d1"
+      }
+    },
+    "harvested_at": "2026-08-06T14:37:36.018815+00:00",
+    "name_universe": {
+      "names": 4314619,
+      "names_json_sha256": "dc25a021066446564317ddbea4818a5bf9cd5961d11c3e44088cec9b85ca5dff",
+      "package": "all-the-package-names"
+    },
+    "sample": {
+      "seed": 20260806,
+      "size": 60000
+    },
+    "stored_packages": 6140
+  },
+  "within_download_strata": {
+    "strata": [
+      {
+        "abandoned": 210,
+        "base_rate": 0.7865168539325843,
+        "count": 267,
+        "downloads_at_t": [
+          2,
+          49
+        ],
+        "model_auc": 0.539264828738513,
+        "stratum": 1
+      },
+      {
+        "abandoned": 179,
+        "base_rate": 0.6704119850187266,
+        "count": 267,
+        "downloads_at_t": [
+          49,
+          170
+        ],
+        "model_auc": 0.5564690198070086,
+        "stratum": 2
+      },
+      {
+        "abandoned": 136,
+        "base_rate": 0.5093632958801498,
+        "count": 267,
+        "downloads_at_t": [
+          170,
+          680
+        ],
+        "model_auc": 0.4382296811854513,
+        "stratum": 3
+      },
+      {
+        "abandoned": 93,
+        "base_rate": 0.34831460674157305,
+        "count": 267,
+        "downloads_at_t": [
+          683,
+          6079
+        ],
+        "model_auc": 0.521536274873316,
+        "stratum": 4
+      },
+      {
+        "abandoned": 70,
+        "base_rate": 0.26119402985074625,
+        "count": 268,
+        "downloads_at_t": [
+          6100,
+          151784974
+        ],
+        "model_auc": 0.6188672438672439,
+        "stratum": 5
+      }
+    ],
+    "support": 1336
+  }
+}

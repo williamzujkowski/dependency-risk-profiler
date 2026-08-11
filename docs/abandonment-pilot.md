@@ -397,11 +397,17 @@ Three dates, one direction, no interval touching zero. Whatever else is
 uncertain, "download count at T beats this score at ranking npm packages for
 abandonment" is not a single-date accident.
 
-The model's own discrimination declines monotonically across the three —
-0.605, 0.585, 0.567 — while the base rate stays flat at 0.395–0.405, so it is
-not the outcome shifting underneath. The three intervals overlap, so this is a
-trend and not a demonstrated decline; what it does establish is that
-"AUC 0.577" was never a property of the tool, only of the tool in 2024.
+The model's own discrimination falls across the three — 0.605, 0.585, 0.567 —
+while the base rate stays flat at 0.395–0.405, so it is not the outcome
+shifting underneath. The three intervals overlap, so this was reported as a
+trend and not a demonstrated decline. **The k=1 sensitivity below retires even
+that reading**: the same three dates give 0.578, 0.583, 0.553, which is not
+monotone. The decline was an artefact of the two-year window, not a property
+of the tool.
+
+What survives is narrower and still worth saying: "AUC 0.577" was never a
+property of the tool, only of the tool at one date under one outcome
+definition.
 
 Two baselines behave differently and are worth separating:
 
@@ -422,6 +428,46 @@ Reproduce with `--t`, which refuses a T that leaves the label window open:
 ```bash
 python -m research.abandonment_pilot.experiment \
   --snapshot research/data/npm-2026-08-06 --t 2022-08-01 --out /tmp/t2022.json
+```
+
+---
+
+## Sensitivity to the definition of abandonment
+
+Three dates rule out a bad year. They do not rule out a bad *outcome
+definition*: N = 2 came from the life table, and if the finding only holds at
+that N it is a finding about a threshold rather than about the score.
+
+Re-run at N = 1. This is a **sensitivity analysis, not a registered result** —
+the pre-registered N stays in the results document beside the override, so the
+two cannot be confused. N = 1 also opens a fourth date, because a one-year
+label window closes at T = 2025-08-01.
+
+| T | n | base rate | model AUC | shuffled | downloads AUC | model | delta | clustered 95% CI | p |
+|---|---:|---:|---:|---:|---:|---:|---:|---|---:|
+| 2022-08-01 | 2398 | 0.479 | 0.578 | 0.499 | 0.724 | 0.572 | **−0.152** | [−0.187, −0.118] | 0.00 |
+| 2023-08-01 | 2536 | 0.459 | 0.583 | 0.500 | 0.731 | 0.584 | **−0.147** | [−0.182, −0.111] | 0.00 |
+| 2024-08-01 | 2906 | 0.476 | 0.553 | 0.499 | 0.700 | 0.567 | **−0.133** | [−0.171, −0.098] | 0.00 |
+| 2025-08-01 | 2827 | 0.412 | 0.579 | 0.500 | — | — | — | *no download baseline harvested at this T* | |
+
+**The headline survives the change.** Across two outcome definitions and three
+dates that have a download baseline, that is **six independent measurements**,
+every one significant, every one in the same direction, no interval touching
+zero:
+
+| | 2022 | 2023 | 2024 |
+|---|---:|---:|---:|
+| N = 2 | −0.141 | −0.147 | −0.119 |
+| N = 1 | −0.152 | −0.147 | −0.133 |
+
+**And it retires a secondary reading.** The monotone decline visible at N = 2
+does not appear at N = 1 (0.578, 0.583, 0.553). It was a property of the
+two-year window, not of the tool getting worse. That claim is withdrawn from
+the section above rather than left standing with a hedge on it.
+
+```bash
+python -m research.abandonment_pilot.experiment \
+  --snapshot research/data/npm-2026-08-06 --t 2025-08-01 --years 1 --out /tmp/k1.json
 ```
 
 ---

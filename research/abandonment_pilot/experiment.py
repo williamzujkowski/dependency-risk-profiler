@@ -453,6 +453,7 @@ def run(
     control_rounds: int = DEFAULT_CONTROL_ROUNDS,
     seed: int = DEFAULT_SEED,
     moment: Optional[datetime] = None,
+    override_years: Optional[int] = None,
 ) -> Dict[str, object]:
     """Run the whole pilot and return the results document.
 
@@ -466,6 +467,10 @@ def run(
             checkable against time rather than against one date: a run at a
             single T cannot distinguish a finding from an artefact of the
             year it was measured in.
+        override_years: N, overriding the value the life table selects. A
+            sensitivity analysis: it asks whether a finding survives a
+            different definition of the outcome. The pre-registered N is kept
+            alongside it in the results document.
 
     Returns:
         The results, ready to serialize.
@@ -477,6 +482,18 @@ def run(
     years = selection["N_years"]
     if not isinstance(years, int):
         raise ValueError("N selection did not produce a whole number of years")
+    if override_years is not None:
+        # N is pre-registered: it comes from the release-silence life table
+        # before any cohort exists, so it cannot be picked because it flattered
+        # a result. Overriding it is a SENSITIVITY ANALYSIS and nothing else --
+        # it asks whether a finding survives a different definition of the
+        # outcome. The override is recorded in the results document beside the
+        # pre-registered value so the two can never be confused for each other.
+        selection = dict(selection)
+        selection["N_years_preregistered"] = years
+        selection["N_years"] = override_years
+        selection["override_reason"] = "sensitivity analysis, not the registered N"
+        years = override_years
     if moment is None:
         moment = t_for(years, observed_until)
     elif moment + timedelta(days=years * DAYS_PER_YEAR) > observed_until:
@@ -625,6 +642,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "whether a result holds across time or only in its own year."
         ),
     )
+    parser.add_argument(
+        "--years",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "N, overriding the life table's selection. A sensitivity "
+            "analysis: does the finding survive a different definition of "
+            "abandonment? The pre-registered N is kept in the results."
+        ),
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     moment: Optional[datetime] = None
@@ -636,6 +664,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         control_rounds=args.control_rounds,
         seed=args.seed,
         moment=moment,
+        override_years=args.years,
     )
     with args.out.open("w", encoding="utf-8") as handle:
         json.dump(results, handle, indent=2, sort_keys=True)
