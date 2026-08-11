@@ -142,6 +142,58 @@ roughly six times the current one to clear requirement 2. **That harvest is the
 open decision it has always been**, and everything measured since has made it
 look worse rather than better.
 
+### GitHub ownership transfer — the only candidate that clears requirement 3
+
+Tested for coupling first, as the closing section of this document demands.
+**It is the first outcome in four attempts to pass that test cleanly** (#368).
+
+| | |
+|---|---|
+| **release cadence at T scores against it** | **0.5104** — chance. Against abandonment the same predictor scores 0.7346. |
+| positives / effective events | **105 / ~99** — collapse ratio **1.05**, the best of any outcome tried |
+| base rate | 5.6% of the repository-declaring cohort |
+
+It escapes what killed the others structurally, not by luck: it is a **positive
+event** rather than the absence of one, so there is no "absence of X predicted
+by the rate of X"; and it is a **binary transfer** rather than a set
+difference, so no cardinality confound and no censoring by publishing activity.
+
+**Requirement 1 is the weak one.** The owner at T comes from the repository URL
+frozen in the version document, the current owner from the GitHub API resolving
+transfers — so it says *changed by the harvest*, not *changed within a window*,
+and runs at one T only.
+
+**Power, computed rather than estimated:** clustered bootstrap SE 0.0299, so
+the MDE against chance is 0.0839 and a paired arm difference at ρ = 0.8 is
+0.053 — marginal against the 0.05 line rather than out of reach.
+
+#### What was seen, and why it is not a result
+
+Exploratory, **not pre-registered, and it cannot now be**: the data was
+collected for another study's stage 7 and the answer was looked at before any
+protocol existed. Recorded so the next person starts from it, not so anyone
+cites it.
+
+| predictor | AUC vs ownership transfer |
+|---|---:|
+| the registry composite | 0.4955 |
+| `commit_frequency` at T | 0.5455 |
+
+Both sit inside the 0.0839 MDE, so **neither is distinguishable from chance**
+and neither can be claimed either way. What the numbers do support is a bound:
+if the composite discriminates this outcome at all, it does so **below 0.584**.
+
+The reason to write it down is the shape rather than the values. Every outcome
+these signals scored above chance on was substantially an activity proxy —
+abandonment at 0.7346 for release cadence alone. Given an outcome measured to
+be independent of activity, the composite lands on 0.4955. **If that survives
+power, the reading is that the signals detect activity rather than risk, and
+the outcomes they appeared to predict were activity in disguise.**
+
+That is the claim most worth testing and least safe to assert from here. A
+replication needs a fresh cohort — not this one, whose answer is known — with
+the protocol fixed before the data is touched.
+
 ### Outcomes that do not work, and why — so they are not re-proposed
 
 | outcome | fails on | why |
@@ -194,6 +246,12 @@ both and could not be powered.
 
 Anyone proposing a fifth outcome should be asked what makes it independent of
 project activity before being asked whether it is reconstructable.
+
+**One candidate has now been put through that test and passed**: GitHub
+ownership transfer, coupling AUC 0.5104 against release cadence, with
+essentially independent events. Its weakness is requirement 1 and its size, not
+its structure — which makes it the first outcome here whose binding constraint
+is fixable.
 
 That is a statement about what is knowable here, and it should temper how much
 weight any future single study is expected to carry.
