@@ -816,6 +816,12 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
     return has_tests, has_ci, has_contribution_guidelines
 
 
+#: What GitHub actually permits in a repository name: alphanumerics, hyphen,
+#: underscore and dot. Anything else means the URL was not parsed, not that the
+#: repository is missing.
+_GITHUB_NAME = re.compile(r"[A-Za-z0-9._-]+")
+
+
 def extract_github_repo_info(repo_url: str) -> Optional[Tuple[str, str]]:
     """Extract owner and repo name from a GitHub URL.
 
@@ -828,10 +834,21 @@ def extract_github_repo_info(repo_url: str) -> Optional[Tuple[str, str]]:
     if not repo_url:
         return None
 
-    # Clean the URL
     repo_url = repo_url.strip()
 
-    # Handle various GitHub URL formats
+    # Drop a fragment or query before matching, not after.
+    #
+    # The patterns below anchor on end-of-string, so anything trailing the
+    # repository name became part of it: `github.com/foo/bar.git#main` yielded
+    # a repo named `bar.git#main`, because `.git` stripping only fires when
+    # `.git` is last. A `#` cannot appear in a GitHub repository name, so every
+    # such pair 404s and the forge lookup fails silently -- the repository
+    # signals then report unmeasured for a repository that exists.
+    #
+    # npm and Go both put a committish after `#`, so this is not a rare shape:
+    # it hit 43 of 2,109 GitHub-declaring packages in the abandonment cohort.
+    repo_url = repo_url.split("#", 1)[0].split("?", 1)[0]
+
     github_patterns = [
         r"github\.com[/:]([^/]+)/([^/]+)(\.git)?/?$",
         r"github\.com[/:]([^/]+)/([^/]+?)(?:\.git|/)?$",
@@ -844,6 +861,11 @@ def extract_github_repo_info(repo_url: str) -> Optional[Tuple[str, str]]:
             repo = match.group(2)
             if repo.endswith(".git"):
                 repo = repo[:-4]
+            # A name GitHub cannot have is not a name. Returning one sends a
+            # request that is certain to 404 and reports the answer as though
+            # the repository were missing rather than the URL unparsed.
+            if not owner or not repo or not _GITHUB_NAME.fullmatch(repo):
+                return None
             return owner, repo
 
     return None

@@ -129,3 +129,50 @@ def test_cloned_repo_yields_none_when_clone_fails() -> None:
     with mock.patch.object(utils, "clone_repo", side_effect=_fail):
         with utils.cloned_repo("https://github.com/acme/widget") as result:
             assert result is None
+
+
+@pytest.mark.parametrize(
+    "url, expected",
+    [
+        # The defect: the patterns anchor on end-of-string, so `.git` stripping
+        # only fires when `.git` is last. A committish after `#` survived into
+        # the repository name, and `bar.git#main` is a string GitHub cannot
+        # have -- so every request built from it 404s and the forge lookup
+        # reports the repository missing rather than the URL unparsed.
+        ("git+https://github.com/foo/bar.git#main", ("foo", "bar")),
+        ("git://github.com/a/b.git#v1.2.3", ("a", "b")),
+        ("https://github.com/o/r?tab=readme-ov-file", ("o", "r")),
+        # Shapes that already worked and must keep working.
+        ("https://github.com/expressjs/express.git", ("expressjs", "express")),
+        ("git+ssh://git@github.com/o/r.git", ("o", "r")),
+        ("https://github.com/o/r/", ("o", "r")),
+        ("https://gitlab.com/o/r", None),
+    ],
+)
+def test_a_committish_does_not_become_part_of_the_repository_name(
+    url: str, expected: Optional[Tuple[str, str]]
+) -> None:
+    """A fragment or query is dropped before matching, not after.
+
+    npm and Go both put a committish after ``#``, so this is not a rare
+    shape: it hit 43 of 2,109 GitHub-declaring packages in the abandonment
+    cohort, and each one silently degraded every repository-derived signal
+    for a repository that exists and is readable.
+
+    Asserted alongside the shapes that already worked, because the fix moves
+    where the URL is trimmed and that is exactly the kind of change that
+    quietly breaks a neighbouring case.
+    """
+    assert utils.extract_github_repo_info(url) == expected
+
+
+def test_a_name_github_cannot_have_is_refused() -> None:
+    """A repository name is rejected rather than returned unusable.
+
+    Returning one sends a request certain to 404, and the answer is then
+    indistinguishable from a genuinely deleted repository. That distinction
+    matters: in the repository arm it separated "unparseable" from "deleted",
+    and folding the two together would have inflated the survivor-bias
+    estimate the study reports.
+    """
+    assert utils.extract_github_repo_info("https://github.com/owner/re po") is None
