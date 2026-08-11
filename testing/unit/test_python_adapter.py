@@ -400,7 +400,13 @@ def test_abandoned_packages_are_scored_rather_than_shrugged_at() -> None:
 
 
 def test_python_meets_minimum_measured_signal_coverage() -> None:
-    """Registry metadata alone must carry a package past the insufficient-data bar."""
+    """Registry metadata alone must measure every signal this registry answers.
+
+    The floor is the coverage half. A verdict needs eight measured signals
+    and a registry document supplies at most seven, so reaching one is not
+    part of this claim — ``signal_floors.SCORES_FROM_REGISTRY_ALONE`` records
+    which ecosystems can, and today none can (#340).
+    """
     assert_meets_signal_floor(_score_offline(REQUESTS_RESPONSE, "2.31.0"), "python")
 
 

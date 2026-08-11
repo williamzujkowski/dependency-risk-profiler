@@ -518,6 +518,29 @@ result does establish is that the harness works, that stage 4's expensive
 harvest now has a reason to be prioritized differently, and that at least one of
 the sixteen signals is pointed the wrong way.
 
+## What was done about it
+
+`license` was taken out of the scored composite and is reported on its own axis
+(#340), which is the resolution the numbers above support and the limit of what
+they support. It is **not** deleted: a restrictive or unrecognized licence is a
+real legal and compliance risk to a consumer, and nothing here measured that —
+what these runs measured is that it does not forecast abandonment, and that
+averaging it into a forecast makes the forecast worse.
+
+The composite is fifteen signals now and is **no better validated for it.**
+Removing a signal measured to be harmful is not evidence that what remains
+works: the model still scores 0.577 to 0.605 against a 0.696 download-count
+baseline, line 1 is still met and still failed, and the README's withdrawn
+claim stays withdrawn.
+
+`source_repository` was left in. Line 4 asks for its bespoke weight, not its
+removal, and "does nothing on this outcome" is a weaker finding than "makes
+this outcome worse" — it may carry information on an outcome nobody has run
+yet. `maintainer` is load-bearing in all seven runs and is untouched.
+
+The ablation loop now iterates only signals the composite weighs, so a rerun
+does not report an inert `ablate:license` arm as a fresh null measurement.
+
 ## Reproducing
 
 Offline, from the pinned snapshot; see `research/README.md`.

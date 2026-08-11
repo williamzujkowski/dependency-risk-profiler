@@ -54,6 +54,10 @@ SHARED_KEYS = {
     "repository_url",
     "is_deprecated",
     "known_vulnerable",
+    # Additive in schema 2 (#340): the third axis. Whether the declared licence
+    # obliges a consumer to do something, reported beside ``risk_level``
+    # because the composite weighs it into nothing.
+    "license_flagged",
     "maintainer_count",
     "risk_level",
     # Additive in schema 2 (#242): whether ``risk_level`` is where the weighted

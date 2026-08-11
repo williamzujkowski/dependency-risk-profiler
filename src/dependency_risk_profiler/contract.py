@@ -46,6 +46,24 @@ describes. ``unknown_signal_count`` is ``len(unknown_signals)``. All four are
 gone; ``version_specs`` stays, because the set of raw specifiers different
 manifests used cannot be reconstructed from one resolved version.
 
+Three axes, not one number
+--------------------------
+``risk_level`` is a forecast built from leading maintenance indicators, and it
+is the only field in this payload that claims to be one. Two facts are reported
+beside it and never folded into it:
+
+* ``known_vulnerable`` — the installed version has advisories that counted
+  (#242). It also sets a floor under the verdict, recorded in
+  ``verdict_floor``.
+* ``license_flagged`` with the ``license`` block — the obligation the declared
+  licence places on a consumer (#340). It floors nothing, because a copyleft
+  obligation is not a maintenance problem; it is a different question with a
+  different reader.
+
+A consumer that wants one number from this payload has to decide for itself how
+to weigh a compliance obligation against a maintenance forecast. That decision
+is not ours to make silently, and making it silently is what these axes undo.
+
 The extension rule
 ------------------
 Concepts that only exist in an org scan — ``blast_radius``, ``usage``,
@@ -64,13 +82,15 @@ stderr so stdout stays parseable.
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, FrozenSet, List, Mapping, Optional, Sequence, Tuple
 
 from .models import (
     CommunityMetrics,
     DependencyMetadata,
     DependencyRiskScore,
+    LicenseCategory,
     LicenseInfo,
+    RiskLevel,
     SecurityMetrics,
     VerdictFloor,
 )
@@ -368,6 +388,81 @@ def known_vulnerable(metadata: DependencyMetadata) -> bool:
     return bool(metadata.has_known_exploits)
 
 
+#: How severe a licence's own risk level has to be before the axis raises it.
+#: Read off ``LicenseInfo.risk_level``, which the licence analyzer sets from the
+#: category, so this is one read of that classification rather than a second
+#: opinion about which licences matter.
+_FLAGGED_LICENSE_LEVELS: FrozenSet[RiskLevel] = frozenset(
+    {RiskLevel.HIGH, RiskLevel.CRITICAL}
+)
+
+
+def license_flagged(metadata: DependencyMetadata) -> bool:
+    """Whether the declared licence is one a consumer has to make a call about.
+
+    **A compliance fact, not a prediction.** It says the licence carries an
+    obligation the consumer of the package is on the hook for. It says nothing
+    about whether the package will be maintained, and no study has measured it
+    as predicting anything: the one outcome it has been tested against,
+    two-year abandonment, it made *worse*, in all seven runs (#340).
+
+    That is why it sits beside ``risk_level`` rather than inside it, exactly
+    as ``known_vulnerable`` does. One definition, so the terminal table, the
+    org report and the JSON cannot each pick their own threshold.
+
+    The bar is the licence's own risk level, so at the analyzer's current
+    categorization it raises network copyleft, commercial, and licences it does
+    not recognize. **Plain copyleft is MEDIUM and does not raise it** — an
+    obligation confined to the distributed work is one most consumers have
+    already decided about. Read the ``license`` block for the category when
+    that boundary is not where a particular policy would put it.
+
+    Args:
+        metadata: The dependency's metadata.
+
+    Returns:
+        True when a licence was read and it carries an obligation worth
+        raising. False when the licence is milder than that *or* when none was
+        read — ``license`` carries which of the two it is.
+    """
+    license_info = metadata.license_info
+    if license_info is None:
+        return False
+    return license_info.risk_level in _FLAGGED_LICENSE_LEVELS
+
+
+#: What each category obliges a consumer to do, in the fewest words that say
+#: it. One phrasing for every renderer: the terminal column, the org report's
+#: licence panel and anything downstream describe the same categorization
+#: rather than three paraphrases of it.
+_LICENSE_OBLIGATIONS: Mapping[LicenseCategory, str] = {
+    LicenseCategory.PERMISSIVE: "permissive",
+    LicenseCategory.COPYLEFT: "copyleft",
+    LicenseCategory.NETWORK_COPYLEFT: "network copyleft",
+    LicenseCategory.COMMERCIAL: "commercial",
+    LicenseCategory.UNKNOWN: "unrecognized",
+}
+
+
+def license_obligation(metadata: DependencyMetadata) -> str:
+    """Describe what the declared licence asks of a consumer, in a phrase.
+
+    The category and nothing else. Whether it clears an approval policy is a
+    separate question with a separate answer in ``license.is_approved``, and
+    folding the two together is how one field comes to mean two things.
+
+    Args:
+        metadata: The dependency's metadata.
+
+    Returns:
+        The obligation, or that no licence was read at all.
+    """
+    license_info = metadata.license_info
+    if license_info is None:
+        return "no license was read"
+    return _LICENSE_OBLIGATIONS[license_info.category]
+
+
 def measurement_to_dict(measurement: Measurement) -> Dict[str, object]:
     """Serialize one signal's two-state measurement.
 
@@ -439,9 +534,10 @@ def forge_to_dict(metadata: DependencyMetadata) -> Dict[str, object]:
     """Serialize which forge was asked, and what it answered per capability.
 
     The reason a package hosted somewhere without an adapter scores on fewer
-    signals than a GitHub one, readable from the payload alone (#292). Fifteen
-    of sixteen signals are read from a ``git clone`` and are unaffected by any
-    of this; the ones reported here are the facts a clone cannot carry, so a
+    signals than a GitHub one, readable from the payload alone (#292). All but
+    one of the scored signals are read from a ``git clone`` and are unaffected
+    by any of this; the ones reported here are the facts a clone cannot carry,
+    so a
     consumer can attribute a missing ``community_popularity`` to the host
     rather than to the package.
 
@@ -682,6 +778,12 @@ def scored_dependency(
         "repository_url": metadata.repository_url,
         "is_deprecated": metadata.is_deprecated,
         "known_vulnerable": known_vulnerable(metadata),
+        # The second and third axes, both beside ``risk_level`` rather than
+        # inside it. ``known_vulnerable`` is concrete exposure in the shipped
+        # version (#242); ``license_flagged`` is an obligation the consumer
+        # takes on (#340). Neither is a forecast, and the weighted mean below
+        # is not a measure of either.
+        "license_flagged": license_flagged(metadata),
         "maintainer_count": metadata.maintainer_count,
         "risk_level": score.risk_level.value,
         # Additive in schema 2 (#242). Says whether ``risk_level`` is where the

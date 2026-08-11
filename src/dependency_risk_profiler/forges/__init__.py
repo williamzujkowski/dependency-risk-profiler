@@ -1,6 +1,6 @@
 """Which forge hosts a repository, and what that forge can be asked (#292).
 
-Fifteen of this tool's sixteen signals never reach a forge API. The eight
+All but one of this tool's signals never reach a forge API. The eight
 repository-derived ones are read from a shallow ``git clone`` — ``pathlib``
 existence checks against :mod:`~dependency_risk_profiler.forge_paths` and
 ``git`` subprocesses — and that is what makes them portable: a host nobody
@@ -152,9 +152,9 @@ class ForgeAnswer:
     states: ``MEASURED`` requires a value and forbids a reason, ``UNMEASURED``
     requires a reason and forbids a value. A separate type rather than a reuse
     because a forge answer additionally carries *which* acquisition path
-    produced it, and ``Measurement`` is built sixteen times per dependency
-    across an org scan's thousands — a field only this path reads does not
-    belong on it.
+    produced it, and ``Measurement`` is built once per scored signal per
+    dependency across an org scan's thousands — a field only this path reads
+    does not belong on it.
 
     ``field_source`` travels with the value for the reason
     :class:`~dependency_risk_profiler.signals.FieldSource` exists: a star count

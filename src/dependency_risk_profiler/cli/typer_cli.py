@@ -557,13 +557,6 @@ def analyze(
         min=0.0,
         max=1.0,
     ),
-    license_weight: Optional[float] = typer.Option(
-        None,
-        "--license-weight",
-        help="Weight for license risk score (default: 0.3)",
-        min=0.0,
-        max=1.0,
-    ),
     community_weight: Optional[float] = typer.Option(
         None,
         "--community-weight",
@@ -690,7 +683,6 @@ def analyze(
         "exploit_weight": exploit_weight,
         "version_weight": version_weight,
         "health_weight": health_weight,
-        "license_weight": license_weight,
         "community_weight": community_weight,
         "transitive_weight": transitive_weight,
         "enable_osv": enable_osv,

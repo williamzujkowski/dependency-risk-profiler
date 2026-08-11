@@ -224,7 +224,7 @@ enable_osv = true
         assert "exploit_weight" in weights
         assert "version_difference_weight" in weights
         assert "health_indicators_weight" in weights
-        assert "license_weight" in weights
+        assert "license_weight" not in weights
         assert "community_weight" in weights
         assert "transitive_weight" in weights
 

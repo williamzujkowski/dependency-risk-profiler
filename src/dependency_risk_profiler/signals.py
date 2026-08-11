@@ -609,6 +609,10 @@ class SignalSpec:
         summary: What the signal measures, in one line.
         repository_derived: Whether the signal can only be answered by reading
             the package's source repository. Drives the #146 collapse.
+        scored: Whether the signal enters the weighted composite. A signal with
+            ``scored=False`` is measured and published on its own axis and
+            carries no weight in ``risk_level``; :data:`SCORED_SIGNALS` is the
+            set the scorer is allowed to weigh.
         unmeasured_reason: The reason to record when this signal's input is
             absent and nothing more specific applies.
         scorecard_check: The nearest OpenSSF Scorecard check at
@@ -620,6 +624,7 @@ class SignalSpec:
     name: str
     summary: str
     repository_derived: bool
+    scored: bool
     unmeasured_reason: UnmeasuredReason
     scorecard_check: Optional[str]
     scorecard_fidelity: ScorecardFidelity
@@ -670,6 +675,7 @@ def _spec(
     summary: str,
     *,
     repository_derived: bool = False,
+    scored: bool = True,
     unmeasured_reason: UnmeasuredReason = UnmeasuredReason.NO_DATA_FROM_SOURCE,
     scorecard_check: Optional[str] = None,
     scorecard_fidelity: ScorecardFidelity = ScorecardFidelity.NONE,
@@ -681,6 +687,7 @@ def _spec(
         name: Our stable signal name.
         summary: What the signal measures.
         repository_derived: Whether it needs the source repository.
+        scored: Whether it enters the weighted composite.
         unmeasured_reason: Default reason when its input is absent.
         scorecard_check: Nearest Scorecard check, or None.
         scorecard_fidelity: How much that correspondence is worth.
@@ -693,6 +700,7 @@ def _spec(
         name=name,
         summary=summary,
         repository_derived=repository_derived,
+        scored=scored,
         unmeasured_reason=unmeasured_reason,
         scorecard_check=scorecard_check,
         scorecard_fidelity=scorecard_fidelity,
@@ -700,7 +708,10 @@ def _spec(
     )
 
 
-#: Every signal the scorer weighs, with its Scorecard correspondence.
+#: Every signal the tool measures and publishes, with its Scorecard
+#: correspondence. ``scored`` says which of them the composite weighs;
+#: :data:`SCORED_SIGNALS` is that subset and is what the scorer is checked
+#: against.
 #:
 #: The table is the source of truth: ``docs/signals.md`` is checked against it
 #: by ``testing/unit/test_signal_catalog.py``, so the published mapping cannot
@@ -780,15 +791,23 @@ SIGNAL_CATALOG: Mapping[str, SignalSpec] = {
                 "requests rather than of the repository's configuration."
             ),
         ),
+        # Reported on its own axis, never weighed. What a licence carries is a
+        # legal and compliance obligation the consumer takes on, which is a
+        # different kind of fact from a forecast of how the package will be
+        # maintained — the category error #242 separated for advisories.
+        # Blending it also measured worse: removing it raised the composite's
+        # discrimination in all seven abandonment ablations, every clustered
+        # interval excluding zero (#340).
         _spec(
             SIGNAL_LICENSE,
-            "How much policy risk the declared license carries.",
+            "What obligation the declared license places on a consumer.",
+            scored=False,
             scorecard_check="License",
             scorecard_fidelity=ScorecardFidelity.APPROXIMATE,
             scorecard_note=(
                 "Scorecard asks whether a license file exists and is "
                 "SPDX-recognized. We categorize the license — permissive, "
-                "copyleft, network copyleft, commercial — and score the "
+                "copyleft, network copyleft, commercial — and report the "
                 "obligation it creates. A clean Apache-2.0 and a clean AGPL "
                 "are identical upstream and far apart here."
             ),
@@ -911,6 +930,18 @@ SIGNAL_CATALOG: Mapping[str, SignalSpec] = {
 #: repository-derived signal joins the #146 collapse by declaring itself once.
 REPOSITORY_DERIVED_SIGNALS: FrozenSet[str] = frozenset(
     name for name, spec in SIGNAL_CATALOG.items() if spec.repository_derived
+)
+
+#: The signals the weighted composite is allowed to weigh. Derived from the
+#: catalog for the same reason :data:`REPOSITORY_DERIVED_SIGNALS` is: a signal
+#: declares its own membership once, in its row, rather than in a second list
+#: that can disagree with it.
+#:
+#: The complement is not "signals we do not measure". It is signals measured
+#: and published beside the verdict instead of inside it, because what they
+#: state is a fact rather than a forecast.
+SCORED_SIGNALS: FrozenSet[str] = frozenset(
+    name for name, spec in SIGNAL_CATALOG.items() if spec.scored
 )
 
 

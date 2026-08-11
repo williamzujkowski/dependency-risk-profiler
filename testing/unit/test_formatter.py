@@ -102,6 +102,9 @@ def test_terminal_report_uses_plain_language_table() -> None:
     assert "VERSION" in output
     assert "LEADING SIGNALS" in output
     assert "ADVISORIES" in output
+    # The two axes the verdict is not a measure of, each with a column of its
+    # own beside the one that lists what moved the verdict (#242, #340).
+    assert "LICENSE" in output
 
     flask_line = next(line for line in lines if "flask" in line)
     requests_line = next(line for line in lines if "requests" in line)

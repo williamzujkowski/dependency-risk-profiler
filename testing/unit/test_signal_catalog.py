@@ -36,7 +36,9 @@ from dependency_risk_profiler.signals import (
     AdvisoryLookupState,
     SCORECARD_CHECKS,
     SCORECARD_VERSION,
+    SCORED_SIGNALS,
     SIGNAL_CATALOG,
+    SIGNAL_LICENSE,
     SIGNAL_SIGNED_COMMITS,
     Measurement,
     MeasurementState,
@@ -48,28 +50,30 @@ from dependency_risk_profiler.signals import (
 
 DOC_PATH = Path(__file__).resolve().parents[2] / "docs" / "signals.md"
 
-# `| `name` | Check | fidelity | note |` — the mapping table's row shape. The
-# note is matched loosely because it is prose; the first three cells are the
-# contract.
+# `| `name` | scored | Check | fidelity | note |` — the mapping table's row
+# shape. The note is matched loosely because it is prose; the first four cells
+# are the contract.
 _ROW = re.compile(
-    r"^\| `(?P<signal>[a-z_]+)` \| (?P<check>[^|]+?) \| (?P<fidelity>[a-z_]+) \| "
-    r"(?P<note>.+) \|$"
+    r"^\| `(?P<signal>[a-z_]+)` \| (?P<scored>yes|no) \| (?P<check>[^|]+?) \| "
+    r"(?P<fidelity>[a-z_]+) \| (?P<note>.+) \|$"
 )
 
 
-def _documented_rows() -> Dict[str, Tuple[Optional[str], str, str]]:
+def _documented_rows() -> Dict[str, Tuple[bool, Optional[str], str, str]]:
     """Parse the mapping table out of ``docs/signals.md``.
 
     Returns:
-        Mapping of signal name to ``(scorecard check or None, fidelity, note)``.
+        Mapping of signal name to ``(scored, scorecard check or None,
+        fidelity, note)``.
     """
-    rows: Dict[str, Tuple[Optional[str], str, str]] = {}
+    rows: Dict[str, Tuple[bool, Optional[str], str, str]] = {}
     for line in DOC_PATH.read_text(encoding="utf-8").splitlines():
         match = _ROW.match(line.strip())
         if match is None:
             continue
         check = match.group("check").strip()
         rows[match.group("signal")] = (
+            match.group("scored") == "yes",
             None if check == "—" else check,
             match.group("fidelity"),
             match.group("note").strip(),
@@ -149,15 +153,60 @@ def test_catalog_covers_every_signal_the_scorer_weighs() -> None:
     fully_measured = scorer.score_dependency(_fully_measured_dependency())
 
     # A fully-measured dependency measures everything, so the catalog must have
-    # exactly as many rows as the scorer has signals.
+    # exactly as many scored rows as the scorer has weighted signals.
     assert fully_measured.unknown_signals == []
-    assert fully_measured.total_signal_count == len(SIGNAL_CATALOG), (
+    assert fully_measured.total_signal_count == len(SCORED_SIGNALS), (
         "the scorer weighs a different number of signals than the catalog "
-        f"names: {fully_measured.total_signal_count} vs {len(SIGNAL_CATALOG)}"
+        f"marks scored: {fully_measured.total_signal_count} vs "
+        f"{len(SCORED_SIGNALS)}"
     )
 
     for name in _scored_signal_names():
         assert name in SIGNAL_CATALOG, f"scorer emits {name!r} with no catalog row"
+
+
+def test_the_scorer_weighs_exactly_the_signals_the_catalog_marks_scored() -> None:
+    """The catalog's ``scored`` flag is the rule, not a description of it.
+
+    A row that says ``scored=False`` while the scorer still weighs the signal
+    would be a published claim nothing enforces, which is this repository's
+    most-repeated defect. Read off a real scoring run rather than from the
+    scorer's source, so the check cannot be satisfied by a matching literal.
+    """
+    weighed = set(_scored_signal_names())
+
+    assert weighed == set(SCORED_SIGNALS), (
+        "the scorer and the catalog disagree about what is scored; "
+        f"weighed but not marked: {sorted(weighed - SCORED_SIGNALS)}, "
+        f"marked but not weighed: {sorted(SCORED_SIGNALS - weighed)}"
+    )
+    assert set(SIGNAL_CATALOG) - SCORED_SIGNALS == {SIGNAL_LICENSE}, (
+        "license is the one measured signal published beside the verdict "
+        "rather than inside it (#340); a second one needs its own argument"
+    )
+
+
+def test_a_reported_only_signal_is_still_published_with_its_state() -> None:
+    """Not scoring a signal is not a licence to withhold it.
+
+    ``license`` leaves the weighted set and the counts that describe it, and
+    stays in ``signals`` with the same two-state shape as everything else. A
+    consumer that stopped seeing the key could not tell "not scored" from "not
+    measured", which is the #164 distinction pointed at a new target.
+    """
+    scorer = RiskScorer()
+    measured = scorer.score_dependency(_fully_measured_dependency())
+    unmeasured = scorer.score_dependency(
+        DependencyMetadata(name="bare", installed_version="1.0.0")
+    )
+
+    assert measured.measurements[SIGNAL_LICENSE].is_measured
+    assert SIGNAL_LICENSE not in measured.unknown_signals
+
+    absent = unmeasured.measurements[SIGNAL_LICENSE]
+    assert not absent.is_measured
+    assert absent.reason is UnmeasuredReason.NO_DATA_FROM_SOURCE
+    assert SIGNAL_LICENSE not in unmeasured.unknown_signals
 
 
 def test_every_mapped_check_exists_at_the_pinned_scorecard_version() -> None:
@@ -211,7 +260,8 @@ def test_published_mapping_matches_the_catalog() -> None:
     )
 
     for name, spec in SIGNAL_CATALOG.items():
-        check, fidelity, note = documented[name]
+        scored, check, fidelity, note = documented[name]
+        assert scored == spec.scored, f"{name}: doc disagrees about being scored"
         assert check == spec.scorecard_check, f"{name}: doc check disagrees"
         assert fidelity == spec.scorecard_fidelity.value, f"{name}: doc fidelity"
         assert note == " ".join(spec.scorecard_note.split()), f"{name}: doc note"

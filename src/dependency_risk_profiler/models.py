@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 from .forges import ForgeAnswer, ForgeCapability, ForgeSoftware
 from .signals import (
+    SIGNAL_LICENSE,
     SIGNAL_SOURCE_REPOSITORY,
     SOURCE_REPOSITORY_UNREADABLE,
     AdvisoryLookupState,
@@ -485,6 +486,9 @@ class DependencyRiskScore:
     health_indicators_score: Optional[float] = None
 
     # Enhanced risk scores
+    # The licence axis's own value. Published beside ``risk_level`` and never
+    # inside it: an obligation a consumer takes on is a compliance fact, not a
+    # forecast of how the package will be maintained (#340).
     license_score: Optional[float] = None
     community_score: Optional[float] = None
     transitive_score: Optional[float] = None
@@ -529,12 +533,17 @@ class DependencyRiskScore:
         from "measured, and the answer happens to be null". Surfacing it is
         #164 step 5, and this is the view the output contract serializes.
 
-        Built on demand, not at scoring time. ``source_repository`` is added
-        here when it never entered the weighted score, so a consumer can tell
-        "unmeasured" from "this build has no such signal" — it stays out of
-        ``unknown_signals`` and the counts, which describe the weighted set,
-        because #74's rule is that an unavailable signal leaves both the
-        numerator and the denominator.
+        Built on demand, not at scoring time. Two signals reach it from
+        outside ``weighted_signals`` and neither belongs in the counts, which
+        describe the weighted set:
+
+        * ``source_repository`` when this build never weighed it, so a
+          consumer can tell "unmeasured" from "this build has no such
+          signal". #74's rule is that an unavailable signal leaves both the
+          numerator and the denominator.
+        * ``license``, which is never weighed at all. It is measured and
+          published on its own axis, so withholding it here would hide a
+          measurement rather than decline to score it (#340).
 
         Returns:
             Mapping of stable signal name to its measurement.
@@ -542,19 +551,44 @@ class DependencyRiskScore:
         measurements = {
             name: measurement for name, measurement, _ in self.weighted_signals
         }
+        measurements[SIGNAL_LICENSE] = self._unweighted_measurement(
+            SIGNAL_LICENSE, self.license_score
+        )
         if SIGNAL_SOURCE_REPOSITORY not in measurements:
-            unreadable = (
-                self.dependency.source_repository_state in SOURCE_REPOSITORY_UNREADABLE
-            )
-            measurements[SIGNAL_SOURCE_REPOSITORY] = Measurement.unmeasured(
-                unmeasured_reason_for(
-                    SIGNAL_SOURCE_REPOSITORY,
-                    source_repository_unreadable=unreadable,
-                    advisory_lookup=self.dependency.advisory_lookup_state,
-                    registry_lookup=self.dependency.registry_lookup_state,
-                )
+            measurements[SIGNAL_SOURCE_REPOSITORY] = self._unweighted_measurement(
+                SIGNAL_SOURCE_REPOSITORY, self.source_repository_score
             )
         return measurements
+
+    def _unweighted_measurement(
+        self, signal: str, value: Optional[float]
+    ) -> Measurement:
+        """Return the measurement for a signal that no weight carried here.
+
+        Routes an absence through the one centralized reason table rather than
+        letting this view invent its own, which is the #164 rule and the reason
+        an unmeasured signal can say *why*.
+
+        Args:
+            signal: A stable signal name from the catalog.
+            value: What was measured, or None when nothing was.
+
+        Returns:
+            The measured value, or the reason there is not one.
+        """
+        if value is not None:
+            return Measurement.measured(value)
+        unreadable = (
+            self.dependency.source_repository_state in SOURCE_REPOSITORY_UNREADABLE
+        )
+        return Measurement.unmeasured(
+            unmeasured_reason_for(
+                signal,
+                source_repository_unreadable=unreadable,
+                advisory_lookup=self.dependency.advisory_lookup_state,
+                registry_lookup=self.dependency.registry_lookup_state,
+            )
+        )
 
     @property
     def unknown_signal_count(self) -> int:

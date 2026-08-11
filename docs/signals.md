@@ -29,6 +29,28 @@ is worse than no shared name at all, because it looks like a guarantee.
 So the correspondence is published as a mapping, pinned to a version, with
 every approximate row marked approximate.
 
+## How to read the "in the composite" column
+
+`yes` means the signal is one of the fifteen the weighted risk score averages.
+`no` means the tool measures and publishes it, on its own axis, and the risk
+score does not move when it changes.
+
+One signal is `no` today: `license`.
+
+A licence states an obligation a consumer takes on — copyleft, network
+copyleft, commercial, or a licence nobody recognized. That is a compliance fact
+about the package, and it is reported as one: in
+`license` and `license_flagged` in the JSON, as its own column in the terminal
+table and the CSV, and as its own panel in the org report. **Nothing has
+measured what it predicts.** The one outcome it has been tested against, npm
+two-year abandonment, it predicted backwards: removing it *raised* the
+composite's discrimination in all seven runs, every clustered interval
+excluding zero (#340, `docs/abandonment-pilot.md`).
+
+This is the same separation `known_vulnerable` got in #242, for the same
+reason. Two kinds of fact were being averaged into one number, and averaging
+them made the number worse at the only job anyone has measured it doing.
+
 ## How to read the fidelity column
 
 | Fidelity | Means |
@@ -40,24 +62,24 @@ every approximate row marked approximate.
 
 ## The mapping
 
-| Our signal | Scorecard `v5.5.0` check | Fidelity | What differs |
-|---|---|---|---|
-| `staleness` | Maintained | approximate | Ours reads the registry's own release timestamp, which cannot be broken by a repository rename (#146). Scorecard reads repository commit and issue activity over the trailing 90 days. A package with a live repository and no releases for three years scores well upstream and badly here, on purpose. |
-| `maintainer` | Contributors | approximate | Ours is a bus-factor count from the registry's owner or author list. Scorecard counts repository contributors from at least two organizations, which is a diversity-of-affiliation question, not a bus-factor one. |
-| `deprecation` | — | none | Scorecard has no deprecation check. |
-| `exploit` | Vulnerabilities | approximate | Both read OSV. Scorecard reports a count of open advisories for the repository. Ours is severity-weighted, scoped to the installed version's affected ranges, and reports advisories whose applicability could not be decided rather than assuming them away (#61). |
-| `version` | — | none | Scorecard scores repositories, not installed versions, so it has no equivalent. The nearest thing is Pinned-Dependencies, which asks whether *this* project pins its own dependencies. |
-| `health_indicators` | CI-Tests | approximate | A composite of three presence checks, only one of which (CI) Scorecard asks about, and Scorecard asks it of pull requests rather than of the repository's configuration. |
-| `license` | License | approximate | Scorecard asks whether a license file exists and is SPDX-recognized. We categorize the license — permissive, copyleft, network copyleft, commercial — and score the obligation it creates. A clean Apache-2.0 and a clean AGPL are identical upstream and far apart here. |
-| `community_popularity` | — | none | Scorecard deliberately excludes popularity: stars are not a security property. We keep it as a dampener on abandonment scoring, never as a finding in itself. |
-| `community_activity` | Maintained | approximate | Both read commit activity. Scorecard folds issue activity in and thresholds at 90 days; ours is a rate over six months and is weighed apart from popularity so a well-starred package with a dead commit log cannot pass as healthy (#166). |
-| `transitive` | — | none | Scorecard has no dependency-tree-size check. Its Pinned-Dependencies check asks a different question, about how dependencies are referenced rather than how many exist. |
-| `security_policy` | Security-Policy | close | Same question, same evidence (a SECURITY.md in a well-known location). Scorecard grades the policy's contents out of ten; ours is presence or absence. |
-| `dependency_update` | Dependency-Update-Tool | close | Same question, same evidence (Dependabot or Renovate configuration in the repository). |
-| `signed_commits` | — | removed_upstream | No Scorecard check asks this at v5.5.0, and this row is why the design was amended to keep our own names. We read git history directly: commit signature status (git log %G?), tag signature status, and workflow- or settings-enforced signing. Scorecard's nearest historical check was Signed-Tags, which existed at v2.0.0 and was gone by v3.2.1. The nearest live check, Signed-Releases, inspects the last release's *assets* for detached signature files and never reads git history, so it answers a different question and must not be joined to this signal. Do not rename this signal to either name. |
-| `branch_protection` | Branch-Protection | close | Same question, same evidence. Scorecard needs an admin token to see the full settings and degrades without one; ours reads what an unauthenticated or read-scoped view exposes, so a disagreement here is usually a permissions difference rather than a finding. |
-| `maintained` | Maintained | close | Same question and the closest of our three Maintained rows. Scorecard thresholds on activity in the trailing 90 days and treats an archived repository as unmaintained outright. |
-| `source_repository` | — | none | Scorecard starts from a repository URL, so it cannot ask this question: a package that declares no source is one it cannot score. That is precisely why we measure it — the packages Scorecard cannot reach are not thereby safe (#146). |
+| Our signal | In the composite | Scorecard `v5.5.0` check | Fidelity | What differs |
+|---|---|---|---|---|
+| `staleness` | yes | Maintained | approximate | Ours reads the registry's own release timestamp, which cannot be broken by a repository rename (#146). Scorecard reads repository commit and issue activity over the trailing 90 days. A package with a live repository and no releases for three years scores well upstream and badly here, on purpose. |
+| `maintainer` | yes | Contributors | approximate | Ours is a bus-factor count from the registry's owner or author list. Scorecard counts repository contributors from at least two organizations, which is a diversity-of-affiliation question, not a bus-factor one. |
+| `deprecation` | yes | — | none | Scorecard has no deprecation check. |
+| `exploit` | yes | Vulnerabilities | approximate | Both read OSV. Scorecard reports a count of open advisories for the repository. Ours is severity-weighted, scoped to the installed version's affected ranges, and reports advisories whose applicability could not be decided rather than assuming them away (#61). |
+| `version` | yes | — | none | Scorecard scores repositories, not installed versions, so it has no equivalent. The nearest thing is Pinned-Dependencies, which asks whether *this* project pins its own dependencies. |
+| `health_indicators` | yes | CI-Tests | approximate | A composite of three presence checks, only one of which (CI) Scorecard asks about, and Scorecard asks it of pull requests rather than of the repository's configuration. |
+| `license` | no | License | approximate | Scorecard asks whether a license file exists and is SPDX-recognized. We categorize the license — permissive, copyleft, network copyleft, commercial — and report the obligation it creates. A clean Apache-2.0 and a clean AGPL are identical upstream and far apart here. |
+| `community_popularity` | yes | — | none | Scorecard deliberately excludes popularity: stars are not a security property. We keep it as a dampener on abandonment scoring, never as a finding in itself. |
+| `community_activity` | yes | Maintained | approximate | Both read commit activity. Scorecard folds issue activity in and thresholds at 90 days; ours is a rate over six months and is weighed apart from popularity so a well-starred package with a dead commit log cannot pass as healthy (#166). |
+| `transitive` | yes | — | none | Scorecard has no dependency-tree-size check. Its Pinned-Dependencies check asks a different question, about how dependencies are referenced rather than how many exist. |
+| `security_policy` | yes | Security-Policy | close | Same question, same evidence (a SECURITY.md in a well-known location). Scorecard grades the policy's contents out of ten; ours is presence or absence. |
+| `dependency_update` | yes | Dependency-Update-Tool | close | Same question, same evidence (Dependabot or Renovate configuration in the repository). |
+| `signed_commits` | yes | — | removed_upstream | No Scorecard check asks this at v5.5.0, and this row is why the design was amended to keep our own names. We read git history directly: commit signature status (git log %G?), tag signature status, and workflow- or settings-enforced signing. Scorecard's nearest historical check was Signed-Tags, which existed at v2.0.0 and was gone by v3.2.1. The nearest live check, Signed-Releases, inspects the last release's *assets* for detached signature files and never reads git history, so it answers a different question and must not be joined to this signal. Do not rename this signal to either name. |
+| `branch_protection` | yes | Branch-Protection | close | Same question, same evidence. Scorecard needs an admin token to see the full settings and degrades without one; ours reads what an unauthenticated or read-scoped view exposes, so a disagreement here is usually a permissions difference rather than a finding. |
+| `maintained` | yes | Maintained | close | Same question and the closest of our three Maintained rows. Scorecard thresholds on activity in the trailing 90 days and treats an archived repository as unmaintained outright. |
+| `source_repository` | yes | — | none | Scorecard starts from a repository URL, so it cannot ask this question: a package that declares no source is one it cannot score. That is precisely why we measure it — the packages Scorecard cannot reach are not thereby safe (#146). |
 
 ### The mapping is not invertible
 
@@ -276,20 +298,22 @@ the installed artifact*, not a *prediction about the project*.
 
 ### Why the rule was needed: the verdict could not reach the evidence (#242)
 
-`exploit` carries the largest single weight, 0.5. There are sixteen signals and
-their weights sum to 3.5, so the exploit signal's maximum share of the
-normalized score is `0.5 / 3.5 = 0.143`, against a LOW/MEDIUM boundary of 0.25.
+`exploit` carries the largest single weight, 0.5. The scored weights sum to
+3.0, so the exploit signal's maximum share of the normalized score is
+`0.5 / 3.0 = 0.167`, against a LOW/MEDIUM boundary of 0.25. It was `0.5 / 3.5 =
+0.143` when the licence was still weighed.
 
 A package with a **maximal** exploit signal and a perfect, zero-risk record on
-all fifteen other signals normalizes to 0.143 — LOW. No advisory load, however
-severe, could cross the first boundary on its own. axios 1.6.5 is the case
+every other signal normalizes to 0.167 — LOW. No advisory load, however severe,
+crosses the first boundary on its own. axios 1.6.5 is the case
 that surfaced it, found by running the tool against
 `examples/manifests/package-lock.json`: 44 advisories found, 29 confirmed to
 affect the installed version, maximum counted severity HIGH at CVSS 8.0, and a
 printed verdict of `LOW` on the same record as `known_vulnerable: true`.
 
-That ceiling was **emergent**, not designed. Nobody recorded a decision to cap
-the signal; it fell out of sixteen weights summing to 3.5.
+That ceiling is **emergent**, not designed. Nobody recorded a decision to cap
+the signal; it falls out of the weights summing to more than twice the largest
+one. The floor is what makes the arithmetic stop mattering to the verdict.
 
 The example manifest has since been upgraded to current releases (#253), so it
 no longer reproduces the case — axios 1.19.0 finds the same 44 advisories and

@@ -13,7 +13,7 @@ a remembered one.
 
 ## Most signals do not need a forge at all
 
-Eight of this tool's sixteen signals are repository-derived, and **seven of the
+Eight of this tool's fifteen scored signals are repository-derived, and **seven of the
 eight are read from a shallow `git clone`** — `pathlib` existence checks against
 the path table in `forge_paths.py`, plus `git log` and `git tag` subprocesses.
 None of them asks a forge API anything. That is why a package hosted on a forge

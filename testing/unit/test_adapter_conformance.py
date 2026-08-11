@@ -174,11 +174,15 @@ def test_the_npm_maintainer_count_is_read_for_unscoped_packages_too() -> None:
 def test_the_pypi_maintainer_count_comes_from_the_ownership_object() -> None:
     """#171, settled against the payload PyPI actually serves.
 
-    ``SCORES_FROM_REGISTRY_ALONE['python']`` was False for one stated reason:
-    PyPI publishes no cheap maintainer count. It does — in a top-level
-    ``ownership`` object beside ``info``, which the adapter read straight past.
-    Both halves are asserted: the payload's shape (there is no ``maintainers``
-    key to have read instead) and the resulting count.
+    PyPI was recorded as publishing no cheap maintainer count. It does — in a
+    top-level ``ownership`` object beside ``info``, which the adapter read
+    straight past. Both halves are asserted: the payload's shape (there is no
+    ``maintainers`` key to have read instead) and the resulting count.
+
+    The count is read and weighed; it is still not enough for a verdict from a
+    registry document alone, because seven measured signals is one short of the
+    eight a verdict costs (#340). That is a fact about the ceiling rather than
+    about this read, and ``test_signal_floors`` derives it.
     """
     fixture = load_fixture("python", "requests")
     payload = fixture.payload
@@ -196,7 +200,8 @@ def test_the_pypi_maintainer_count_comes_from_the_ownership_object() -> None:
 
     assert score.dependency.maintainer_count == 3
     assert score.maintainer_score == 0.25
-    assert SCORES_FROM_REGISTRY_ALONE["python"] is True
+    assert "maintainer" not in score.unknown_signals
+    assert SCORES_FROM_REGISTRY_ALONE["python"] is False
 
 
 def test_an_org_owned_project_reports_no_maintainer_count_rather_than_zero() -> None:

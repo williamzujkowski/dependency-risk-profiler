@@ -51,7 +51,6 @@ DEFAULT_CONFIG: Dict[str, Dict[str, object]] = {
         "exploit": 0.5,
         "version_difference": 0.15,
         "health_indicators": 0.1,
-        "license": 0.3,
         "community": 0.2,
         "transitive": 0.15,
         # Mature, widely adopted projects often release less frequently. These
@@ -280,9 +279,6 @@ class Config:
         if "health_weight" in args and args["health_weight"] is not None:
             self._config["scoring_weights"]["health_indicators"] = args["health_weight"]
 
-        if "license_weight" in args and args["license_weight"] is not None:
-            self._config["scoring_weights"]["license"] = args["license_weight"]
-
         if "community_weight" in args and args["community_weight"] is not None:
             self._config["scoring_weights"]["community"] = args["community_weight"]
 
@@ -416,7 +412,6 @@ class Config:
                 weights, "version_difference", 0.15
             ),
             "health_indicators_weight": self._weight(weights, "health_indicators", 0.1),
-            "license_weight": self._weight(weights, "license", 0.3),
             "community_weight": self._weight(weights, "community", 0.2),
             "transitive_weight": self._weight(weights, "transitive", 0.15),
             "security_policy_weight": self._weight(weights, "security_policy", 0.25),

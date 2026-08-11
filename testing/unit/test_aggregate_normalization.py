@@ -4,7 +4,7 @@ signals (#276).
 ``test_score_normalization`` pins the rule one layer down: inside a single
 dependency's score, an unmeasured signal leaves both the numerator and the
 denominator. That is why a package this tool knows three things about does not
-read as safer than one it knows fifteen things about.
+read as safer than one it knows every other thing about.
 
 The mean *across* dependencies did not do the same. A dependency the scan could
 not resolve carries ``total_score = 0.0`` and ``insufficient_data: True``, and
@@ -115,8 +115,8 @@ def _unresolvable(name: str) -> DependencyMetadata:
     """Return metadata for a package no registry answered about.
 
     What a private-index package, an offline run, or a typo'd name produces:
-    a name and a pinned version, and nothing else. The scorer measures two of
-    its sixteen signals and reports ``insufficient_data``.
+    a name and a pinned version, and nothing else. The scorer measures none of
+    its scored signals and reports ``insufficient_data``.
 
     Args:
         name: The package name.
@@ -238,7 +238,7 @@ def test_a_fully_measured_manifest_prints_no_coverage_caveat() -> None:
     )
 
     assert "across" not in output.splitlines()[1]
-    assert "overall 1.1 / 5.0" in output.splitlines()[1]
+    assert "overall 1.2 / 5.0" in output.splitlines()[1]
 
 
 def test_a_directory_run_weights_manifests_by_their_scored_dependencies() -> None:
