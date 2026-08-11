@@ -61,6 +61,8 @@ from dependency_risk_profiler.analyzers.golang import (
     TRANSITIVE_UNMEASURED_REASON,
     deprecation_notice,
 )
+from dependency_risk_profiler.community.analyzer import analyze_community_metrics
+from dependency_risk_profiler.models import DependencyMetadata
 from dependency_risk_profiler.parsers.python import runtime_requirement_names
 from dependency_risk_profiler.signals import TRANSITIVE_SOURCE_UNMEASURED
 
@@ -131,6 +133,42 @@ def test_the_gem_license_is_read_from_the_list_shape() -> None:
     assert score.dependency.license_info is not None
     assert score.dependency.license_info.license_id == "MIT"
     assert score.license_score == 0.0
+
+
+def test_the_npm_maintainer_count_is_read_for_unscoped_packages_too() -> None:
+    """The npm twin of #171, which survived the PyPI fix by six months.
+
+    ``SCORES_FROM_REGISTRY_ALONE['nodejs']`` was False for one stated reason:
+    npm publishes no cheap maintainer count. It does — a top-level
+    ``maintainers`` array — and this capture carries all five of express's.
+    The read existed; it was routed behind
+    ``dependency.name.startswith("@")``, which tests whether a package is
+    **scoped**, under a comment reading "npm package". Every unscoped name
+    matched neither branch and came out with ``maintainer_count = None``.
+
+    Asserted on an unscoped fixture on purpose. A scoped one passed
+    throughout, which is what let this live: the branch was not dead, it was
+    dead for the majority.
+
+    This is the signal the abandonment pilot found carrying the only
+    information in the model — ablating ``maintainer`` drops it below chance —
+    so the field was missing precisely where it mattered most.
+    """
+    fixture = load_fixture("nodejs", "express")
+    payload = fixture.payload
+    assert isinstance(payload, Mapping)
+    maintainers = payload["maintainers"]
+    assert isinstance(maintainers, list)
+    assert len(maintainers) == 5
+
+    dependency = DependencyMetadata(name="express", installed_version="4.18.2")
+    assert not dependency.name.startswith("@")
+    analyze_community_metrics(dependency, metadata=dict(payload), github_token=None)
+    assert dependency.maintainer_count == 5, (
+        "An unscoped npm package must get its maintainer count from the "
+        "packument. Routing on the shape of the name rather than the shape "
+        "of the document is what hid this."
+    )
 
 
 def test_the_pypi_maintainer_count_comes_from_the_ownership_object() -> None:

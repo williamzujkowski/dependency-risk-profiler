@@ -65,6 +65,18 @@ EXPRESS_PACKUMENT: Dict[str, object] = {
     },
     "homepage": "http://expressjs.com/",
     "license": "MIT",
+    # npm serves this on every packument and the captured conformance fixture
+    # carries all five. It was absent here because this stub was trimmed to
+    # the keys the adapter read, and the adapter did not read it -- so the
+    # stub could not have caught the read being routed past it. Five entries
+    # because that is what express actually publishes.
+    "maintainers": [
+        {"name": "dougwilson", "email": "doug@somethingdoug.com"},
+        {"name": "expressjs-bot", "email": "bot@expressjs.com"},
+        {"name": "jonchurch", "email": "npm@jonchurch.com"},
+        {"name": "linusu", "email": "linus@folkdatorn.se"},
+        {"name": "wesleytodd", "email": "wes@wesleytodd.com"},
+    ],
     "versions": {
         "4.17.1": {"name": "express", "version": "4.17.1"},
         # Both dependency objects, abridged to the same shape npm publishes.
@@ -538,31 +550,35 @@ def test_nodejs_measures_the_signals_the_registry_provides() -> None:
     assert_measures_registry_signals(_express_score(), "nodejs")
 
 
-def test_npm_lands_one_signal_short_of_a_verdict_from_the_packument_alone() -> None:
-    """A packument on its own does not reach a verdict, and this says which signal.
+def test_npm_reaches_a_verdict_from_the_packument_by_exactly_one_signal() -> None:
+    """A packument alone now reaches a verdict, and it did not used to.
 
-    Seven measured against nine unmeasured, and ``insufficient_data`` is
-    ``unmeasured > measured``, so every npm package scored from registry
-    metadata alone is UNKNOWN. Two facts put it there and both are named here
-    rather than left to the count: npm publishes no cheap owner list, and no
-    advisory source is asked, so the tool's largest single weight has no
-    answer behind it (#321).
+    This test used to assert the opposite, under the name "lands one signal
+    short". The signal it was short of was ``maintainer``, and the stated
+    reason was that npm publishes no cheap owner list. npm publishes one on
+    every packument; the read was routed behind a test for whether the package
+    name is scoped, so every unscoped name missed it.
 
-    The second one is the one to act on. An npm scan that asks OSV measures
-    eight of sixteen and clears the bar by exactly nothing, which is what the
-    packument alone used to appear to do while the exploit signal was quietly
-    filled in with ``has_known_exploits``'s ``False``.
+    Eight measured against eight unmeasured, and ``insufficient_data`` is
+    ``unmeasured > measured``, so eight clears the bar by exactly nothing.
+    That margin is the point rather than an aside: one signal moving back to
+    unmeasured returns every unscoped npm package to UNKNOWN, which is why
+    both counts are asserted and not just the verdict.
+
+    ``exploit`` is still unmeasured because no advisory source is asked
+    (#321), and that remains the single input which would move this and every
+    other ecosystem up by one.
     """
     score = _express_score()
 
-    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is False
-    assert "maintainer" in score.unknown_signals, "npm still publishes no owner list"
+    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is True
+    assert "maintainer" not in score.unknown_signals
     assert "exploit" in score.unknown_signals, "no advisory source was asked"
     assert "transitive" not in score.unknown_signals
-    assert score.insufficient_data is True
-    assert score.risk_level is RiskLevel.UNKNOWN
-    assert score.measured_signal_count == 7
-    assert score.unknown_signal_count == 9
+    assert score.insufficient_data is False
+    assert score.risk_level is not RiskLevel.UNKNOWN
+    assert score.measured_signal_count == 8
+    assert score.unknown_signal_count == 8
 
 
 def test_dev_dependencies_are_not_runtime_dependencies() -> None:

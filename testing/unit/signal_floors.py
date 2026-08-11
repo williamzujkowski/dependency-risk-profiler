@@ -51,7 +51,7 @@ composer         8  —
 nuget            8  —
 python           8  —
 rubygems         8  —
-nodejs           7  ``maintainer``: npm publishes no cheap owner count.
+nodejs           8  —
 maven            6  ``maintainer`` (``<developers>`` is inherited free
                     text), ``deprecation`` (Maven Central publishes no
                     retirement marker of any kind — see #179).
@@ -146,12 +146,16 @@ from dependency_risk_profiler.models import DependencyRiskScore, RiskLevel
 # normal part of improving an adapter; lowering one is a regression that needs
 # a reason in the commit.
 #
-# Eight is the ceiling in this mode and five ecosystems reach it. The four
-# below it are missing a registry field rather than an adapter read: npm
-# publishes no cheap owner count; Maven Central publishes neither an owner list
-# a machine can read nor any retirement marker; proxy.golang.org publishes no
-# licence, no owner list and a scopeless ``go.mod``. The module docstring
-# derives each subtraction.
+# Eight is the ceiling in this mode and six ecosystems reach it. The three
+# below it are missing a registry field rather than an adapter read: Maven
+# Central publishes neither an owner list a machine can read nor any
+# retirement marker; proxy.golang.org publishes no licence, no owner list and
+# a scopeless ``go.mod``. The module docstring derives each subtraction.
+#
+# npm was the fourth until the read that reaches its `maintainers` array was
+# found routed behind a test for whether the package name is SCOPED. It was an
+# adapter read after all, which is why the claim that npm "publishes no cheap
+# owner count" belonged in this comment for as long as nothing checked it.
 MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "cargo": 8,
     "composer": 8,
@@ -159,7 +163,7 @@ MIN_MEASURED_SIGNALS: Dict[str, int] = {
     "gradle": 6,
     "maven": 6,
     "nuget": 8,
-    "nodejs": 7,
+    "nodejs": 8,
     "python": 8,
     "rubygems": 8,
 }
@@ -203,7 +207,7 @@ REGISTRY_UNANSWERED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "gradle": frozenset({"maintainer", "deprecation"}),
     "maven": frozenset({"maintainer", "deprecation"}),
     "nuget": frozenset(),
-    "nodejs": frozenset({"maintainer"}),
+    "nodejs": frozenset(),
     "python": frozenset(),
     "rubygems": frozenset(),
 }
@@ -241,7 +245,8 @@ REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
     "maven": _REGISTRY_CORE | {"transitive", "source_repository"},
     "nuget": _REGISTRY_CORE
     | {"deprecation", "maintainer", "transitive", "source_repository"},
-    "nodejs": _REGISTRY_CORE | {"deprecation", "source_repository", "transitive"},
+    "nodejs": _REGISTRY_CORE
+    | {"deprecation", "maintainer", "source_repository", "transitive"},
     "python": _REGISTRY_CORE
     | {"deprecation", "maintainer", "source_repository", "transitive"},
     "rubygems": _REGISTRY_CORE
@@ -265,7 +270,7 @@ SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
     "golang": False,
     "gradle": False,
     "maven": False,
-    "nodejs": False,
+    "nodejs": True,
     "nuget": True,
     "python": True,
     "rubygems": True,
