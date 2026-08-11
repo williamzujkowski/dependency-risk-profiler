@@ -75,7 +75,10 @@ it is the capstone — either branch completes `docs/outcome-landscape.md`.
 | Path | What it is |
 |---|---|
 | `transfer_study/detect.py` | The pre-registered decision procedure. Pure; takes fetched documents, opens nothing |
-| `transfer_study/pilot.py` | **The only module here that opens a socket.** Measures the detection channel on the burned cohort |
+| `transfer_study/pilot.py` | **Opens a socket.** Measures the detection channel on the burned cohort |
+| `transfer_study/maintainer_now.py` | **Opens a socket.** Harvests current top-level maintainer sets for the band-crossing study |
+| `transfer_study/band_crossing.py` | Band logic and rates. Pure |
+| `transfer_study/band_run.py` | The band-crossing run. `docs/band-crossing-result.md` |
 
 **Nothing has been harvested.** The procedure exists before the cohort on
 purpose: it is condition 3 of the protocol's review, and its fixtures live in
