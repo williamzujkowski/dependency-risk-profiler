@@ -156,6 +156,38 @@ here because both were invisible in the statistics anyone would check first.
   cohort on that mechanism does not rescue it either; that selects on a
   variable downstream of the exposure.
 
+## Stage 0 — validate the negative control before accepting the protocol
+
+**A negative control must be shown to be non-degenerate on the actual cohort
+before the protocol naming it is accepted.** Measure what fraction of the label
+vector the permutation actually moves, and record it in the protocol.
+
+This exists because a protocol was written without it and a study died on it.
+The handover study pre-registered a control that shuffled labels *within
+maintainer cluster*. On its cohort — 2,905 packages across 2,176 components,
+1.33 members each — a within-cluster shuffle cannot move a label in a singleton
+or in a component whose members already share one. **96.6% of labels survived
+the shuffle.** The permutation was close to the identity, so the control
+returned roughly the observed model AUC and fired the gate at 0.2449.
+
+The failure mode is worse than a wasted study. Such a control **passes when the
+model is weak and fires when the model is strong**, which is backwards, and
+nothing about its output announces that.
+
+The check costs one line and is available at design time. Not running it is the
+same defect this repository keeps finding in its code — a bar written down with
+nothing checking it — relocated into a protocol.
+
+Two notes on doing it honestly:
+
+- **A preservation rate computed on real labels is not outcome-free.** Cluster
+  *structure* is knowable before any outcome contact; preservation is not. Run
+  the check at design time on the cohort's structure, and treat any later
+  diagnosis as data-contaminated for the purpose of amending a clause.
+- **Report the control's null, not an assumption about it.** A permutation that
+  preserves a covariate associated with the outcome does not have a null of
+  0.5, and reading it against a [0.47, 0.53] band would be wrong.
+
 ## Falsification lines — fixed now
 
 These are chosen before data collection. If any is met, the stated change happens.
