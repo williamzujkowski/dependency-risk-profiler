@@ -1508,9 +1508,14 @@ def test_logging_information_completeness() -> None:
     original_calculate_staleness = RiskScorer._calculate_staleness_score
 
     def logged_calculate_staleness(
-        self: RiskScorer, last_updated: Optional[datetime]
+        self: RiskScorer,
+        last_updated: Optional[datetime],
+        as_of: Optional[datetime] = None,
     ) -> Optional[float]:
-        result = original_calculate_staleness(self, last_updated)
+        # `as_of` is forwarded rather than dropped: a wrapper that silently
+        # ignored it would make this test pass while the historical-scoring
+        # path it stands in for was broken (#376).
+        result = original_calculate_staleness(self, last_updated, as_of)
         logger.debug(
             f"Calculated staleness score {result} for last_updated {last_updated}"
         )
