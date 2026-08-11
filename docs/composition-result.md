@@ -71,6 +71,15 @@ Two separate causes, both worth naming:
   date** — see #376. Every release in a two-year-old snapshot is far enough in
   the past to saturate the signal, so it pins to 1.0 for the entire cohort.
 
+  **Fixed since (#376).** `score_dependency` now takes `as_of`, and at
+  T = 2024-08-01 the signal spreads across five bands — 0.75 (1,001 packages),
+  0.0 (796), 0.5 (575), 0.25 (519), 1.0 (15) — instead of 1.0 for all 2,906.
+  **Falsification line 4 is therefore answerable now and was not when this
+  study ran**, so the shipped-versus-ablated comparison should be re-run rather
+  than read off this document. The abstention rate does not move (2,147 / 759,
+  unchanged), because sufficiency counts *measured* signals and a saturated
+  signal was already counted as measured.
+
 ## The two constant signals still decide whether the tool answers at all
 
 | composite | abstention rate |

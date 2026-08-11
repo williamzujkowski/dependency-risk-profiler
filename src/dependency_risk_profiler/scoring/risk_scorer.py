@@ -411,11 +411,18 @@ class RiskScorer:
             RiskLevel.CRITICAL: 1.0,  # 75% - 100%
         }
 
-    def score_dependency(self, dependency: DependencyMetadata) -> DependencyRiskScore:
+    def score_dependency(
+        self, dependency: DependencyMetadata, as_of: Optional[datetime] = None
+    ) -> DependencyRiskScore:
         """Score a dependency based on its metadata.
 
         Args:
             dependency: Dependency metadata to score.
+            as_of: The moment to score *as of*. Defaults to now, which is the
+                only correct reference for a live run. Supplying it makes
+                historical scoring possible: without it ``staleness`` is always
+                measured from wall-clock time and saturates on any snapshot
+                more than a year old (#376).
 
         Returns:
             Risk score for the dependency.
@@ -428,7 +435,9 @@ class RiskScorer:
         advisory = dependency.advisory_lookup_state
         registry = dependency.registry_lookup_state
 
-        staleness_score = self._calculate_staleness_score(dependency.last_updated)
+        staleness_score = self._calculate_staleness_score(
+            dependency.last_updated, as_of
+        )
         staleness_score = self._dampen_staleness_for_popularity(
             dependency,
             staleness_score,
@@ -892,15 +901,26 @@ class RiskScorer:
         return len(remaining)
 
     def _calculate_staleness_score(
-        self, last_updated: Optional[datetime]
+        self, last_updated: Optional[datetime], as_of: Optional[datetime] = None
     ) -> Optional[float]:
         """Calculate staleness score based on last update date.
 
         Args:
             last_updated: Date of last update.
+            as_of: The moment to measure staleness *from*. Defaults to now,
+                which is right for a live run and wrong for every other use.
 
         Returns:
             Staleness score between 0.0 and 1.0.
+
+        Note:
+            Before #376 the reference was always ``datetime.now()`` with no way
+            to supply another, so this signal could not be computed for any
+            past date. On a two-year-old snapshot every release was far enough
+            back to saturate the top band, and the signal came out **1.0 for
+            all 2,906 packages** in the composition study -- a constant, which
+            distinguishes nothing while still counting toward the sufficiency
+            bar that decides whether a verdict is issued at all.
         """
         if last_updated is None:
             return None
@@ -912,8 +932,18 @@ class RiskScorer:
         else:
             last_updated = last_updated.astimezone(timezone.utc)
 
-        now = datetime.now(timezone.utc)
-        days_since_update = (now - last_updated).days
+        if as_of is None:
+            # Already UTC-aware; normalising it again costs an `astimezone`
+            # call on every dependency scored, which is measurable at profile
+            # scale and buys nothing.
+            reference = datetime.now(timezone.utc)
+        elif as_of.tzinfo is None:
+            reference = as_of.replace(tzinfo=timezone.utc)
+        elif as_of.tzinfo is timezone.utc:
+            reference = as_of
+        else:
+            reference = as_of.astimezone(timezone.utc)
+        days_since_update = (reference - last_updated).days
 
         # Scoring thresholds for staleness
         if days_since_update < 30:  # Less than a month
