@@ -39,7 +39,9 @@ So the composite's behaviour is unmeasured for most of what it computes. That is
 
 The full result, its method, and its limits are in [`docs/abandonment-pilot.md`](docs/abandonment-pilot.md); the protocol that pre-registered the falsification lines is in [`docs/validation-protocol.md`](docs/validation-protocol.md).
 
-A compromise backtest was designed and pre-registered, and **halted at its own stop rule** — the 2,074 dated npm cases arrive on only 43 distinct campaign days against a threshold of 75, so it could not be run at a usable power ([`docs/compromise-backtest-stage1.md`](docs/compromise-backtest-stage1.md)). If a study ever supports a stronger claim, this section changes and cites it.
+Three outcomes have been attempted. Abandonment ran, and is the result above. A **compromise backtest** was pre-registered and **halted at its own stop rule** — 2,074 dated npm cases arrive on only 43 distinct campaign days against a threshold of 75. A **maintainer-handover study** was pre-registered and **halted at its negative control** — its outcome turned out to be mechanically confounded with maintainer-set size, the very thing the signal measures.
+
+[`docs/outcome-landscape.md`](docs/outcome-landscape.md) maps what is left, and why abandonment is so far the only outcome that clears all three requirements a validation needs: reconstructable at a past date, enough *independent* events, and not mechanically coupled to the signals. If a study ever supports a stronger claim, this section changes and cites it.
 
 ## Install
 
