@@ -2,7 +2,10 @@
 
 **Status:** pre-registered. Fixed and committed before any counterfactual was
 computed; the order is checkable from git.
-**Registers:** #383.
+**Registers:** #382, the synthesis epic. (An earlier draft cited #383, which
+turned out to be this study's own pull request rather than an issue — the
+number was predicted rather than read, and predicting an issue number is how a
+document ends up citing itself.)
 **Date fixed:** 2026-08-11, against `main` at 7aa9d53.
 
 ---
