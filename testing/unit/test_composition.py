@@ -116,19 +116,21 @@ def test_the_composition_branch_is_machine_checked(year: str) -> None:
         f"the {year} artifact records branch {result['branch']!r} but its own "
         f"numbers adjudicate to {recomputed!r}"
     )
-    assert result["branch"] == "claim-withdrawn", (
-        "composition-result.md and the README are written on the withdrawal "
-        f"branch; {year} now fires {result['branch']!r} and the prose is stale"
+    assert result["branch"] == "difference-is-the-headline", (
+        "composition-result.md leads on line 4 firing; "
+        f"{year} now fires {result['branch']!r} and the prose is stale"
     )
 
 
 def test_the_recorded_r2_stays_below_the_line_it_was_read_against() -> None:
-    """The number the corrections were written on, pinned.
+    """The ABLATED number the corrections were written on, pinned.
 
-    Not a re-derivation of the analysis — a guard that the artifact still says
-    what three documents now assert about it. If a future run pushes R² over
-    0.15, the withdrawal in outcome-landscape.md and the README is wrong and
-    this fails rather than letting them quietly disagree.
+    `outcome-landscape.md` and the README withdrew the claim that the signals
+    *emergently* track activity, on the strength of the ablated arm. The
+    shipped arm is ~0.48 and that is definitional -- `staleness` is days since
+    last release, regressed on a battery containing days since last release.
+    So the guard is on the ablated figure specifically; a future run pushing it
+    over 0.15 would make the withdrawal wrong.
     """
     for year in ("2022", "2023", "2024"):
         result = json.loads((RESULTS / f"composition-{year}.json").read_text())
@@ -141,23 +143,34 @@ def test_the_recorded_r2_stays_below_the_line_it_was_read_against() -> None:
         )
 
 
-def test_the_shipped_composite_is_recorded_as_unanswerable() -> None:
-    """Line 4 could not be adjudicated, and the artifact has to say so.
+def test_line_four_is_answerable_and_fires() -> None:
+    """What #376 changed, pinned.
 
-    At a reconstructed T both cadence signals are constant — staleness 1.0 and
-    version 0.0 for every package — so the shipped composite is an affine
-    transform of the ablated one. That is a limitation of the measurement, not
-    a null, and recording it as a null is the Hoenig-Heisey mistake this
-    repository has already made once.
+    `staleness` used to be 1.0 for every package at a reconstructed T, so the
+    shipped composite was an affine transform of the ablated one and line 4
+    could not be adjudicated. With `as_of` it varies over five bands and the
+    line fires at every date.
+
+    The distinct-value counts are asserted because they were once *hardcoded*
+    to 1 and stayed 1 after the signal stopped being constant -- a value that
+    satisfies its type and lies about the fact.
     """
-    result = json.loads((RESULTS / "composition-2024.json").read_text())
-    assert result["shipped"]["staleness_distinct_values"] == 1
-    assert result["shipped"]["version_distinct_values"] == 1
-    assert "VOID" in result["shipped"]["note"]
-    assert result["shipped"]["r2"] == result["ablated"]["r2"], (
-        "the two composites are no longer rank-identical, so line 4 may now "
-        "be answerable and the write-up needs revisiting"
-    )
+    for year in ("2022", "2023", "2024"):
+        result = json.loads((RESULTS / f"composition-{year}.json").read_text())
+        shipped, ablated = result["shipped"], result["ablated"]
+        assert shipped["staleness_distinct_values"] == 5, (
+            f"{year}: staleness no longer varies, so line 4 is unanswerable "
+            "again and the write-up is stale"
+        )
+        assert shipped["version_distinct_values"] == 1, (
+            f"{year}: version now varies, so the gap is no longer "
+            "attributable to staleness alone"
+        )
+        assert result["branch"] == "difference-is-the-headline"
+        assert shipped["r2"] - ablated["r2"] > 0.20
+        assert shipped["ci95"][0] > ablated["ci95"][1], (
+            f"{year}: the shipped and ablated intervals now overlap"
+        )
 
 
 def test_ranks_share_ties_and_spearman_survives_a_constant() -> None:

@@ -73,6 +73,8 @@ def run(snapshot_dir: Path, t: str, years: int) -> Dict:
     all_names: List[str] = []
     all_battery: List[Tuple[float, ...]] = []
     per_signal: Dict[str, List[Tuple[float, float]]] = {}
+    staleness_values: List[Optional[float]] = []
+    version_values: List[Optional[float]] = []
     groups: List[int] = []
     all_groups: List[int] = []
     abstained_ablated = 0
@@ -85,8 +87,16 @@ def run(snapshot_dir: Path, t: str, years: int) -> Dict:
         all_battery.append(activity.as_vector())
         all_groups.append(clusters[position])
 
-        ablated_result = scorer.score_dependency(ablated_metadata(record, member))
-        shipped_result = scorer.score_dependency(shipped_metadata(record, member))
+        # §10: `as_of` is what makes the shipped arm meaningful. Before #376
+        # `staleness` was measured from wall-clock now and pinned to 1.0 for
+        # every package, so the shipped composite was an affine transform of
+        # the ablated one and falsification line 4 could not be adjudicated.
+        ablated_result = scorer.score_dependency(
+            ablated_metadata(record, member), as_of=moment
+        )
+        shipped_result = scorer.score_dependency(
+            shipped_metadata(record, member), as_of=moment
+        )
         # §9: the population is every cohort member. The ablated composite
         # abstains on all of them, so "among packages the tool scores" would
         # be an empty set; the score exists regardless, and is what the
@@ -102,6 +112,8 @@ def run(snapshot_dir: Path, t: str, years: int) -> Dict:
         groups.append(clusters[position])
         ablated.append(ablated_result.total_score / scorer.max_score)
         shipped.append(shipped_result.total_score / scorer.max_score)
+        staleness_values.append(shipped_result.staleness_score)
+        version_values.append(shipped_result.version_score)
         for signal, value in signal_scores(shipped_result).items():
             if value is not None:
                 per_signal.setdefault(signal, []).append(
@@ -164,13 +176,23 @@ def run(snapshot_dir: Path, t: str, years: int) -> Dict:
         },
         "shipped": {
             "note": (
-                "VOID at reconstructed T: staleness is 1.0 and version 0.0 "
-                "for all 2,906 packages, so the shipped composite is an "
-                "affine transform of the ablated one and rank-identical to "
-                "it. Falsification line 4 is unanswerable, not answered."
+                "Answerable since #376. `staleness` used to be measured from "
+                "wall-clock now and pinned to 1.0 for every package, which "
+                "made the shipped composite an affine transform of the "
+                "ablated one; with `as_of` it varies. `version` is still 0.0 "
+                "for all, so the whole shipped-minus-ablated gap is "
+                "attributable to staleness alone."
             ),
-            "staleness_distinct_values": 1,
-            "version_distinct_values": 1,
+            # Counted, not asserted. These were hardcoded to 1 while both
+            # signals were constant, and stayed 1 after one of them stopped
+            # being -- a value that satisfies its type and lies about the
+            # fact, which is the defect this repository keeps finding.
+            "staleness_distinct_values": len(
+                {v for v in staleness_values if v is not None}
+            ),
+            "version_distinct_values": len(
+                {v for v in version_values if v is not None}
+            ),
             "r2": shipped_r2,
             "ci95": clustered_bootstrap_r2(shipped, columns, groups),
             "tie_structure": tie_structure(shipped),

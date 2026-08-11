@@ -47,7 +47,52 @@ to predict.** That is #349's harder reading, and it is now the supported one —
 "adding signals of the same family is not obviously the fix" was right for a
 reason nobody had measured.
 
-## Falsification line 4 is unanswerable, not answered
+## Falsification line 4, answered — since #376
+
+**Superseded section below.** When this study first ran, both cadence signals
+were constant at a reconstructed T and line 4 could not be adjudicated. #376
+gave the scorer an `as_of` parameter; `staleness` now varies over five bands
+and the line fires decisively at all three dates.
+
+| T | n | ablated R² | shipped R² | gap | 95% CIs |
+|---|---:|---:|---:|---:|---|
+| 2022-08-01 | 2,398 | 0.0745 | **0.4652** | **+0.3907** | [0.042, 0.120] vs [0.414, 0.518] |
+| 2023-08-01 | 2,536 | 0.0937 | **0.4932** | **+0.3995** | [0.071, 0.127] vs [0.458, 0.531] |
+| 2024-08-01 | 2,906 | 0.0990 | **0.4805** | **+0.3815** | [0.077, 0.130] vs [0.443, 0.522] |
+
+The intervals do not overlap at any date, and the gap is roughly **twice** the
+0.20 threshold. **Branch: difference-is-the-headline**, exactly as
+pre-registered.
+
+### What the gap means, and what it does not
+
+**The shipped composite is about 48% explained by publication activity. The
+ablated one is about 10%.** Nearly forty points of the shipped score's activity
+loading is **definitional** rather than emergent — and that quantity is what §2
+called "the quantity of interest" and could not previously reach.
+
+It is definitional in the most literal sense available: `staleness` *is* days
+since the last release, and `days_since_last_release` *is* a member of the
+battery it is being regressed on. A high shipped R² is therefore not a finding
+about the world; it is the arithmetic of regressing a variable on itself.
+
+`version` remains 0.0 for every package at a single past T, so **the entire gap
+is attributable to `staleness` alone.** One signal accounts for the whole
+difference between "the score is activity" and "the score is not".
+
+### This sharpens the withdrawal above rather than reversing it
+
+The claim withdrawn earlier was that the signals **emergently** track activity.
+They do not: 0.099, stable across three dates. That stands.
+
+What is now measurable is that the score a user actually receives *is*
+substantially activity — because two of its signals are activity by
+construction. Both sentences are true, and line 4 exists precisely because
+reporting either alone would mislead.
+
+---
+
+## Superseded: why line 4 was unanswerable when this study first ran
 
 The design compared a **shipped** composite against an **ablated** one, the
 difference being `staleness` and `version` — cadence in another notation. At
@@ -71,14 +116,11 @@ Two separate causes, both worth naming:
   date** — see #376. Every release in a two-year-old snapshot is far enough in
   the past to saturate the signal, so it pins to 1.0 for the entire cohort.
 
-  **Fixed since (#376).** `score_dependency` now takes `as_of`, and at
-  T = 2024-08-01 the signal spreads across five bands — 0.75 (1,001 packages),
-  0.0 (796), 0.5 (575), 0.25 (519), 1.0 (15) — instead of 1.0 for all 2,906.
-  **Falsification line 4 is therefore answerable now and was not when this
-  study ran**, so the shipped-versus-ablated comparison should be re-run rather
-  than read off this document. The abstention rate does not move (2,147 / 759,
-  unchanged), because sufficiency counts *measured* signals and a saturated
-  signal was already counted as measured.
+  **Fixed in #376 and re-run in #392.** `score_dependency` takes `as_of`, the
+  signal spreads across five bands, and line 4 now fires — see the section
+  above. The abstention rate does not move (2,147 / 759), because sufficiency
+  counts *measured* signals and a saturated signal was already counted as
+  measured.
 
 ## The two constant signals still decide whether the tool answers at all
 

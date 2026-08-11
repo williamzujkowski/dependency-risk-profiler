@@ -49,17 +49,17 @@
     "permutation_null_p95": 0.005213944226499456
   },
   "shipped": {
-    "note": "VOID at reconstructed T: staleness is 1.0 and version 0.0 for all 2,906 packages, so the shipped composite is an affine transform of the ablated one and rank-identical to it. Falsification line 4 is unanswerable, not answered.",
-    "staleness_distinct_values": 1,
+    "note": "Answerable since #376. `staleness` used to be measured from wall-clock now and pinned to 1.0 for every package, which made the shipped composite an affine transform of the ablated one; with `as_of` it varies. `version` is still 0.0 for all, so the whole shipped-minus-ablated gap is attributable to staleness alone.",
+    "staleness_distinct_values": 5,
     "version_distinct_values": 1,
-    "r2": 0.07451374092816554,
+    "r2": 0.4652240037448917,
     "ci95": [
-      0.04234022992820452,
-      0.11958978399926246
+      0.4142608570538935,
+      0.518221924616972
     ],
     "tie_structure": {
-      "distinct_values": 11.0,
-      "largest_level_share": 0.5175145954962469
+      "distinct_values": 33.0,
+      "largest_level_share": 0.1926605504587156
     }
   },
   "spearman_ablated_vs_battery": {
@@ -70,19 +70,19 @@
     "release_span_days": -0.2069838949736636
   },
   "spearman_shipped_vs_battery": {
-    "days_since_last_release": 0.1818417494271238,
-    "releases_1y": -0.1545201162683632,
-    "releases_90d": -0.15587934036750042,
-    "releases_total": -0.22034099567161433,
-    "release_span_days": -0.2069838949736636
+    "days_since_last_release": 0.6677762505027693,
+    "releases_1y": -0.40788080334875104,
+    "releases_90d": -0.6068220903915514,
+    "releases_total": -0.37612484081343656,
+    "release_span_days": -0.2793213101404663
   },
   "per_signal_spearman_vs_days_since_last_release": {
     "license_score": -0.04819338592997291,
     "maintainer_score": 0.20397380071555948,
     "source_repository_score": 0.009122906318539414,
-    "staleness_score": null,
+    "staleness_score": 0.9621357981827293,
     "version_score": null
   },
-  "branch": "claim-withdrawn",
-  "reason": "ablated R\u00b2 0.0745; the composite is not substantially a function of publication activity, and the project's headline conclusion is corrected in the same change"
+  "branch": "difference-is-the-headline",
+  "reason": "shipped 0.4652 and ablated 0.0745 differ by +0.3907; whether the score is activity depends entirely on counting the two signals that are activity by definition"
 }

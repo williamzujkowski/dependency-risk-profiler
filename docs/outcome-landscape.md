@@ -199,8 +199,17 @@ about forty times the permutation null and nowhere near the 0.15 floor the
 protocol pre-registered for the claim.
 
 So both halves of the shape are true and the conclusion drawn from them was
-not. The composite **is not an activity proxy**, and it still failed against
-every outcome tried. That is the harder reading #349 pointed at: it measures
+not. The composite **does not emergently track activity**, and it still failed
+against every outcome tried.
+
+**One refinement, measured after #376 made it measurable.** The *shipped*
+composite — the score a user actually receives — is about **48%** explained by
+the activity battery, against the ablated arm's 10%. That gap is
+**definitional**: `staleness` is days since the last release, regressed on a
+battery containing days since the last release. So the honest pair of
+sentences is that the signals do not *discover* activity, and the score
+nonetheless *is* substantially activity, because two of its members are
+activity by construction. `composition-result.md` carries both. That is the harder reading #349 pointed at: it measures
 something largely orthogonal to the obvious proxies — ρ = −0.295 against log
 downloads, R² ≈ 0.10 against activity — *and that something barely predicts
 anything.* Adding more signals of the same family is not obviously the fix, and
