@@ -1,7 +1,10 @@
 # Would finer bands help? — result
 
 **Protocol:** `granularity-protocol.md`, amended at §6 after a 4-3 reject.
-**Registers:** #383.
+**Registers:** #382, the synthesis epic. (An earlier draft cited #383, which
+turned out to be this study's own pull request rather than an issue — the
+number was predicted rather than read, and predicting an issue number is how a
+document ends up citing itself.)
 **Subset:** 1,174 quiet packages (no publish after T), from the existing
 harvest. No new fetch.
 
