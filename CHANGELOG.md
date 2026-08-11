@@ -341,6 +341,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2144 → 882, MEDIUM 588 → 1349, HIGH 174 → 496, CRITICAL 0 → 179. Nothing in
   the scale changed. Two fabricated zeros left it.
 
+  **Read that npm row with its abstention rate or it says more than it knows.**
+  On the same run, `insufficient_data` goes 2303 → **2906**: every package in
+  the cohort, without exception. So those four buckets are where the thresholds
+  land, not verdicts the tool will publish — a registry-only npm scan now
+  declines to score the entire cohort, which is the honest answer once npm
+  answers neither the advisory question nor the deprecation one. Quoting the
+  distribution without the abstention would repeat, in the entry describing the
+  fix, the shape of the defect being fixed. Discrimination is unchanged
+  (AUC 0.5658 → 0.5665), exactly as expected: `deprecation` was constant across
+  the cohort, so removing it cannot reorder anything — it moves absolute scores
+  and the calibration buckets, and nothing else.
+
+  **One ecosystem was measured; eight were derived.** The cohort above is npm.
+  The other eight floors — including maven and gradle, which fall by two and
+  are therefore the largest claim in the table — rest on the attribution
+  argument and the conformance corpus, not on distribution data. The npm run
+  does not vouch for them.
+
   The state is validated wherever it is set, not only where it is recorded.
   `record_advisory_lookup` is the writer, but a dataclass field is settable at
   construction too, and that is the shape a deserializer takes: read a state
