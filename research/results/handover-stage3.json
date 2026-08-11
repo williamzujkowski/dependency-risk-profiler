@@ -1,0 +1,268 @@
+{
+  "T": "2024-08-01",
+  "cohort": {
+    "maintainer_clusters": 2176,
+    "nominal": 2906,
+    "primary_positive_clusters": 473,
+    "primary_positives_nominal": 662,
+    "resolved": 2905,
+    "unresolved_by_category": {
+      "no_top_level_maintainers": 1
+    }
+  },
+  "control_rounds": 200,
+  "coverage": {
+    "ablate:maintainer": {
+      "distinct_measured_values": {
+        "source_repository": {
+          "0.0000": 2146,
+          "0.7500": 58,
+          "1.0000": 701
+        },
+        "staleness": {
+          "0.0000": 796,
+          "0.2500": 519,
+          "0.5000": 575,
+          "0.7500": 1000,
+          "1.0000": 15
+        },
+        "version": {
+          "0.0000": 2905
+        }
+      },
+      "distinct_total_scores": 14,
+      "insufficient_data": 2905,
+      "signals_measured": {
+        "source_repository": 2905,
+        "staleness": 2905,
+        "version": 2905
+      },
+      "signals_supplied": [
+        "source_repository",
+        "staleness",
+        "version"
+      ]
+    },
+    "ablate:source_repository": {
+      "distinct_measured_values": {
+        "maintainer": {
+          "0.0000": 480,
+          "0.2500": 378,
+          "0.5000": 346,
+          "1.0000": 1701
+        },
+        "staleness": {
+          "0.0000": 796,
+          "0.2500": 519,
+          "0.5000": 575,
+          "0.7500": 1000,
+          "1.0000": 15
+        },
+        "version": {
+          "0.0000": 2905
+        }
+      },
+      "distinct_total_scores": 19,
+      "insufficient_data": 2905,
+      "signals_measured": {
+        "maintainer": 2905,
+        "staleness": 2905,
+        "version": 2905
+      },
+      "signals_supplied": [
+        "maintainer",
+        "staleness",
+        "version"
+      ]
+    },
+    "ablate:staleness": {
+      "distinct_measured_values": {
+        "maintainer": {
+          "0.0000": 480,
+          "0.2500": 378,
+          "0.5000": 346,
+          "1.0000": 1701
+        },
+        "source_repository": {
+          "0.0000": 2146,
+          "0.7500": 58,
+          "1.0000": 701
+        },
+        "version": {
+          "0.0000": 2905
+        }
+      },
+      "distinct_total_scores": 11,
+      "insufficient_data": 2905,
+      "signals_measured": {
+        "maintainer": 2905,
+        "source_repository": 2905,
+        "version": 2905
+      },
+      "signals_supplied": [
+        "maintainer",
+        "source_repository",
+        "version"
+      ]
+    },
+    "ablate:version": {
+      "distinct_measured_values": {
+        "maintainer": {
+          "0.0000": 480,
+          "0.2500": 378,
+          "0.5000": 346,
+          "1.0000": 1701
+        },
+        "source_repository": {
+          "0.0000": 2146,
+          "0.7500": 58,
+          "1.0000": 701
+        },
+        "staleness": {
+          "0.0000": 796,
+          "0.2500": 519,
+          "0.5000": 575,
+          "0.7500": 1000,
+          "1.0000": 15
+        }
+      },
+      "distinct_total_scores": 37,
+      "insufficient_data": 2905,
+      "signals_measured": {
+        "maintainer": 2905,
+        "source_repository": 2905,
+        "staleness": 2905
+      },
+      "signals_supplied": [
+        "maintainer",
+        "source_repository",
+        "staleness"
+      ]
+    },
+    "model": {
+      "distinct_measured_values": {
+        "maintainer": {
+          "0.0000": 480,
+          "0.2500": 378,
+          "0.5000": 346,
+          "1.0000": 1701
+        },
+        "source_repository": {
+          "0.0000": 2146,
+          "0.7500": 58,
+          "1.0000": 701
+        },
+        "staleness": {
+          "0.0000": 796,
+          "0.2500": 519,
+          "0.5000": 575,
+          "0.7500": 1000,
+          "1.0000": 15
+        },
+        "version": {
+          "0.0000": 2905
+        }
+      },
+      "distinct_total_scores": 36,
+      "insufficient_data": 2146,
+      "signals_measured": {
+        "maintainer": 2905,
+        "source_repository": 2905,
+        "staleness": 2905,
+        "version": 2905
+      },
+      "signals_supplied": [
+        "maintainer",
+        "source_repository",
+        "staleness",
+        "version"
+      ]
+    }
+  },
+  "harvested_at": "2026-08-11T08:27:43.781813+00:00",
+  "notes": {
+    "no_absence_claim": "No claim of evidence of absence is made or licensed here. Protocol section 7 forbids one until the stage-7 misclassification audit bounds the rename and silent-transfer error rates, and stage 2 measured the generalised rename signature at 10.0% of positives -- exactly the ceiling above which section 7 says a null is reported as uninformative. Stage 7 was not run.",
+    "single_T": "One T only (2024-08-01). The outcome says 'changed by the harvest', not 'changed within a fixed window', so no multi-date replication exists. The abandonment result earned its weight from three dates; this cannot.",
+    "solo_cohort": "This is a solo cohort: 58.6% of packages have exactly one maintainer at T and the median is 1 at both ends (stage 2, check 2). For a solo package 'gained', 'lost' and 'complete turnover' are nearly the same event, so these five sub-definitions are far less independent than the split implies and must not be read as five findings."
+  },
+  "replicates": 2000,
+  "seed": 20260811,
+  "signal_reconstruction": {
+    "staleness": {
+      "as_of_T_buckets": {
+        "0.00": 796,
+        "0.25": 519,
+        "0.50": 575,
+        "0.75": 1000,
+        "1.00": 15
+      },
+      "days_at_T": {
+        "max": 365,
+        "min": 1,
+        "p50": 105
+      },
+      "literal_reading": {
+        "buckets": {
+          "1.00": 2905
+        },
+        "days": {
+          "max": 1105,
+          "min": 741,
+          "p50": 845
+        },
+        "degenerate": true,
+        "why_degenerate": "cohort eligibility caps staleness at T at 365 days, so every exposure window is at least 2.03 years and every one lands in the scorer's 'more than a year' bucket"
+      },
+      "supplied_as": "reference_now minus (T - release in force at T), so the shipped now-relative scorer computes the as-of-T bucket",
+      "why_not_the_publish_time": "RiskScorer._calculate_staleness_score buckets datetime.now() - last_updated. Handing it the unadjusted publish time measures days from that release to today, which IS exposure_window_days -- the quantity protocol section 5 assigns to baseline 5. Feeding it to the model would put the baseline inside the model."
+    },
+    "version": {
+      "degenerate": true,
+      "scores_from_the_shipped_scorer": {
+        "0.0000": 2905
+      },
+      "supplied_as": "latest_version set to the version of the release in force at T, because at T that release IS the latest release",
+      "why": "RiskScorer._calculate_version_difference_score returns 0.0 on its equality branch, before the calendar-versioning path that would have read the two release dates. Every package scores an identical measured 0.0: the signal is supplied, weighed at 0.15, and cannot vary. A signal that cannot vary is not a tested signal."
+    }
+  },
+  "stage3_negative_control_primary": {
+    "band": [
+      0.47,
+      0.53
+    ],
+    "caveat": "The pre-registered within-cluster shuffle cannot move the label of a row in a singleton cluster, nor of any cluster whose members already share a label. On this cohort that is most of the vector, so the control returns the observed AUC shrunk towards 0.5 rather than collapsing it: it passes when the model is weak and fires when the model is strong, which is the opposite of what a negative control is for. The global and cluster-block permutations are reported because they are the ones that can detect a harness reading the outcome through a path other than the features. Neither substitutes for the pre-registered gate, and neither is used to override it.",
+    "gate_passed": false,
+    "observed_auc": 0.23489358635728746,
+    "pre_registered": "within_cluster",
+    "variants": {
+      "cluster_block": {
+        "inside_band": false,
+        "max_auc": 0.47837717342844405,
+        "mean_auc": 0.4356993829746255,
+        "mean_label_preservation": 0.6955111876075725,
+        "min_auc": 0.3962030917267956,
+        "rounds": 200
+      },
+      "global": {
+        "inside_band": true,
+        "max_auc": 0.530825003737711,
+        "mean_auc": 0.5007088686790593,
+        "mean_label_preservation": 0.6471153184165239,
+        "min_auc": 0.4676334430177538,
+        "rounds": 200
+      },
+      "within_cluster": {
+        "inside_band": false,
+        "max_auc": 0.25286120094338477,
+        "mean_auc": 0.24486206667807067,
+        "mean_label_preservation": 0.9655215146299492,
+        "min_auc": 0.23595529832321568,
+        "rounds": 200
+      }
+    },
+    "within_cluster_invariant_share": 0.8733218588640276
+  },
+  "stages": "3",
+  "stages_4_to_6": "not run: --stage3-only, so the section 6 line 2 gate is read from this artifact before anything downstream exists",
+  "study": "maintainer handover, docs/handover-outcome-protocol.md"
+}
