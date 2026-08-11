@@ -1,0 +1,24 @@
+{
+ "studied_vs_rest_of_cohort": {
+  "ci95_clustered": [
+   -0.088557491971333,
+   0.040996637770831346
+  ],
+  "difference": -0.022210669253152293,
+  "excludes_zero": false,
+  "rate_not_studied": 0.4190106692531523,
+  "rate_studied": 0.3968,
+  "replicates": 2000
+ },
+ "within_github_declarers": {
+  "ci95_clustered": [
+   -0.18480018480018484,
+   0.09590792838874679
+  ],
+  "difference": -0.0429905759162304,
+  "excludes_zero": false,
+  "rate_not_studied": 0.4397905759162304,
+  "rate_studied": 0.3968,
+  "replicates": 2000
+ }
+}

@@ -1,0 +1,71 @@
+{
+ "measurement_gate": 0.5,
+ "per_signal": {
+  "community_activity": {
+   "packages_measured": 1869,
+   "passes_gate": true,
+   "rate_of_cohort": 0.6431520991052994,
+   "rate_of_studied_arm": 0.9968,
+   "reported": "measured",
+   "repositories_measured": 1581
+  },
+  "community_popularity": {
+   "packages_measured": 0,
+   "passes_gate": false,
+   "rate_of_cohort": 0.0,
+   "rate_of_studied_arm": 0.0,
+   "reason": "gh_archive_unavailable: cumulative WatchEvent to T needs ~84,000 hourly files (~6.6 TB); the public ClickHouse mirror starts 2023-01-13, covering 16.2% of the window. No current-state star count substituted (protocol 4b).",
+   "reported": "unmeasured",
+   "repositories_measured": 0
+  },
+  "dependency_update": {
+   "packages_measured": 1869,
+   "passes_gate": true,
+   "rate_of_cohort": 0.6431520991052994,
+   "rate_of_studied_arm": 0.9968,
+   "reported": "measured",
+   "repositories_measured": 1581
+  },
+  "health_indicators": {
+   "packages_measured": 1869,
+   "passes_gate": true,
+   "rate_of_cohort": 0.6431520991052994,
+   "rate_of_studied_arm": 0.9968,
+   "reported": "measured",
+   "repositories_measured": 1581
+  },
+  "maintained": {
+   "packages_measured": 1869,
+   "passes_gate": true,
+   "rate_of_cohort": 0.6431520991052994,
+   "rate_of_studied_arm": 0.9968,
+   "reported": "measured",
+   "repositories_measured": 1581
+  },
+  "security_policy": {
+   "packages_measured": 1869,
+   "passes_gate": true,
+   "rate_of_cohort": 0.6431520991052994,
+   "rate_of_studied_arm": 0.9968,
+   "reported": "measured",
+   "repositories_measured": 1581
+  }
+ },
+ "positive_fraction_over_repositories": {
+  "has_ci": 0.7204301075268817,
+  "has_contribution_guidelines": 0.26881720430107525,
+  "has_dependency_update_tools": 0.2226438962681847,
+  "has_security_policy": 0.11258697027197975,
+  "has_tests": 0.3301707779886148,
+  "is_maintained": 0.232764073371284
+ },
+ "repository_read_errors": {
+  "git_read_failed": 1,
+  "no_commit_before_T": 5
+ },
+ "resolved_repositories": 1587,
+ "signals_reported_unmeasured": [
+  "community_popularity"
+ ],
+ "studied_packages": 1875
+}
