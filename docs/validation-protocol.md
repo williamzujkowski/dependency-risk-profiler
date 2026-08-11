@@ -130,6 +130,32 @@ packages than MEDIUM).
 - **Born-malicious packages** are excluded: a typosquat that was never legitimate
   has no at-risk state at T.
 
+Two more, added after they were hit rather than anticipated. Both are recorded
+here because both were invisible in the statistics anyone would check first.
+
+- **Counting rows is not a power analysis.** Report the **effective** number of
+  independent events beside the nominal one, always, and gate on the effective
+  count. This has now bitten three times. The compromise backtest had 2,074
+  dated cases arriving on **43 campaign-days** — it cleared a raw-count bar and
+  died on the effective one, and the estimate it was designed against was wrong
+  by 5.7× because it extrapolated per-package from a 65-package sample that
+  could not see concentration. A provenance measurement had 30 packages that
+  decomposed to **3 victims**, 28 of them one owner in a four-minute burst. A
+  study quoting the nominal count is not merely imprecise; it overstates
+  confidence by whatever the clustering ratio happens to be.
+
+- **Check what makes the outcome *observable*, not only how often it occurs.**
+  Maintainer handover looked ideal — exactly reconstructable, base rate 14.5%,
+  stable across three dates, ~180 events. It is **perfectly censored**: a
+  maintainer change is only visible through a new release, so packages that
+  published nothing after T showed **0 of 1,176**, and the censored set was
+  *exactly* the abandonment positive class. Any cadence-correlated signal would
+  have predicted it by construction. Nothing in the base rate, the stability
+  across dates, or the event count showed this — it appears only when you
+  condition on the mechanism that makes a positive recordable. Conditioning the
+  cohort on that mechanism does not rescue it either; that selects on a
+  variable downstream of the exposure.
+
 ## Falsification lines — fixed now
 
 These are chosen before data collection. If any is met, the stated change happens.
