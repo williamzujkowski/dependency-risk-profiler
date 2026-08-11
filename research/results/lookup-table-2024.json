@@ -1,0 +1,451 @@
+{
+  "cells": 44,
+  "distinct_scores": 11,
+  "conflicts": [],
+  "is_a_function": true,
+  "table": [
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 1.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 1.0,
+      "insufficient_data": true,
+      "packages": 298
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 1.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 1.0,
+      "insufficient_data": true,
+      "packages": 86
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 1.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 1.0,
+      "insufficient_data": true,
+      "packages": 15
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 1.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 1.0,
+      "insufficient_data": true,
+      "packages": 10
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 1.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.8928571428571429,
+      "insufficient_data": true,
+      "packages": 17
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 1.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.8928571428571429,
+      "insufficient_data": true,
+      "packages": 7
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 1.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.8928571428571429,
+      "insufficient_data": true,
+      "packages": 5
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 1.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.8928571428571429,
+      "insufficient_data": true,
+      "packages": 1
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.5,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.7142857142857143,
+      "insufficient_data": true,
+      "packages": 32
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.5,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.7142857142857143,
+      "insufficient_data": true,
+      "packages": 18
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 0.5,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.7142857142857143,
+      "insufficient_data": true,
+      "packages": 8
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.5,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.7142857142857143,
+      "insufficient_data": true,
+      "packages": 8
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.5,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.6071428571428572,
+      "insufficient_data": true,
+      "packages": 11
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.5,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.6071428571428572,
+      "insufficient_data": true,
+      "packages": 2
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.5,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.6071428571428572,
+      "insufficient_data": true,
+      "packages": 1
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 1.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 1142
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.25,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 61
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 1.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 45
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 1.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 40
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 1.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 35
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.25,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 18
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.25,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 6
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 0.25,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.5714285714285715,
+      "insufficient_data": true,
+      "packages": 5
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.25,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.46428571428571425,
+      "insufficient_data": true,
+      "packages": 7
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.25,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.46428571428571425,
+      "insufficient_data": true,
+      "packages": 1
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.42857142857142866,
+      "insufficient_data": true,
+      "packages": 87
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.42857142857142866,
+      "insufficient_data": true,
+      "packages": 26
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.42857142857142866,
+      "insufficient_data": true,
+      "packages": 18
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 0.0,
+        "repository_state": "UNDECLARED"
+      },
+      "score": 0.42857142857142866,
+      "insufficient_data": true,
+      "packages": 5
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.3214285714285714,
+      "insufficient_data": true,
+      "packages": 4
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.3214285714285714,
+      "insufficient_data": true,
+      "packages": 1
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.0,
+        "repository_state": "UNUSABLE"
+      },
+      "score": 0.3214285714285714,
+      "insufficient_data": true,
+      "packages": 1
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.5,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.28571428571428575,
+      "insufficient_data": true,
+      "packages": 207
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.5,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.28571428571428575,
+      "insufficient_data": true,
+      "packages": 36
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 0.5,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.28571428571428575,
+      "insufficient_data": true,
+      "packages": 16
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.5,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.28571428571428575,
+      "insufficient_data": true,
+      "packages": 7
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.25,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.14285714285714288,
+      "insufficient_data": true,
+      "packages": 250
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 0.25,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.14285714285714288,
+      "insufficient_data": true,
+      "packages": 13
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.25,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.14285714285714288,
+      "insufficient_data": true,
+      "packages": 12
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.25,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.14285714285714288,
+      "insufficient_data": true,
+      "packages": 6
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.PERMISSIVE",
+        "maintainer_band": 0.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.0,
+      "insufficient_data": true,
+      "packages": 299
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.UNKNOWN",
+        "maintainer_band": 0.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.0,
+      "insufficient_data": true,
+      "packages": 17
+    },
+    {
+      "inputs": {
+        "licence_category": "LicenseCategory.COPYLEFT",
+        "maintainer_band": 0.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.0,
+      "insufficient_data": true,
+      "packages": 15
+    },
+    {
+      "inputs": {
+        "licence_category": "none",
+        "maintainer_band": 0.0,
+        "repository_state": "DECLARED"
+      },
+      "score": 0.0,
+      "insufficient_data": true,
+      "packages": 7
+    }
+  ],
+  "scorer_fingerprint": "523994bdb0200508145acf6232e99297e7de30f8f6f0aed769e82087a19206ec",
+  "cohort": 2906,
+  "t": "2024-08-01"
+}

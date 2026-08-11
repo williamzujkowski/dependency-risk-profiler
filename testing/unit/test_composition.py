@@ -217,3 +217,57 @@ def test_the_four_branches_match_the_protocol(
     branch, reason = verdict(ablated, shipped)
     assert branch == expected
     assert reason.strip()
+
+
+def test_the_composite_is_a_twelve_cell_lookup_on_two_inputs() -> None:
+    """`docs/lookup-table-result.md`, pinned to the artifact it was written from.
+
+    The registry-only composite reduces to maintainer band × repository state.
+    If a future change adds a third distinguishing input — or makes licence
+    matter again — the published table stops describing the tool and this
+    fails rather than letting the document quietly go stale.
+    """
+    from collections import defaultdict
+
+    result = json.loads((RESULTS / "lookup-table-2024.json").read_text())
+    assert result["is_a_function"], result["conflicts"]
+
+    scores_by_pair = defaultdict(set)
+    packages = 0
+    for row in result["table"]:
+        pair = (row["inputs"]["maintainer_band"], row["inputs"]["repository_state"])
+        scores_by_pair[pair].add(round(row["score"], 6))
+        packages += row["packages"]
+
+    assert packages == result["cohort"] == 2906
+    assert len(scores_by_pair) == 12, "the input surface is no longer 4 x 3"
+    assert result["distinct_scores"] == 11
+
+
+def test_licence_does_not_move_the_registry_only_score() -> None:
+    """The finding a correlation could not show: the field is not read at all.
+
+    ρ = −0.051 looks like a weak signal. Enumeration shows licence changes the
+    score in **zero** of twelve (maintainer, repository) pairs — the correct
+    consequence of #340 removing it from the composite after it measured
+    harmful. A statistic said "weak"; the table says "absent".
+    """
+    from collections import defaultdict
+
+    result = json.loads((RESULTS / "lookup-table-2024.json").read_text())
+    scores_by_pair = defaultdict(set)
+    for row in result["table"]:
+        pair = (row["inputs"]["maintainer_band"], row["inputs"]["repository_state"])
+        scores_by_pair[pair].add(round(row["score"], 6))
+
+    moved = {pair: sorted(s) for pair, s in scores_by_pair.items() if len(s) > 1}
+    assert not moved, (
+        "licence category now changes the registry-only score for "
+        f"{sorted(moved)}; docs/lookup-table-result.md says it changes nothing"
+    )
+
+
+def test_the_table_records_which_scorer_produced_it() -> None:
+    """A lookup table is only meaningful against its weights."""
+    result = json.loads((RESULTS / "lookup-table-2024.json").read_text())
+    assert len(result["scorer_fingerprint"]) == 64
