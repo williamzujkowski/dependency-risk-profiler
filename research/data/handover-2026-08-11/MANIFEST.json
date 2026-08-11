@@ -1,0 +1,26 @@
+{
+  "T": "2024-08-01",
+  "archival": "extracted top-level maintainers array plus SHA-256 of the raw response body, per protocol amendment 1",
+  "cohort_size": 2906,
+  "cohort_snapshot": "research/data/npm-2026-08-06",
+  "dispositions": {
+    "no_top_level_maintainers": 1,
+    "ok": 2905
+  },
+  "files": {
+    "maintainers-current.jsonl": {
+      "sha256": "0e4e43f01257db99cea6a7ca3678c0912827956072758d4f737cba89da7ea4cb"
+    }
+  },
+  "harvest_finished_at": "2026-08-11T08:27:43.781813+00:00",
+  "harvest_started_at": "2026-08-11T08:23:22.149081+00:00",
+  "mirror_used": false,
+  "registry": "https://registry.npmjs.org",
+  "request_interval_seconds": 0.09,
+  "resolution_rate": 0.9996558843771507,
+  "resolved": 2905,
+  "stage": 1,
+  "study": "maintainer handover, docs/handover-outcome-protocol.md",
+  "user_agent": "dependency-risk-profiler-research/handover-study (+https://github.com/williamzujkowski/dependency-risk-profiler; contact grenlan@gmail.com)",
+  "workers": 8
+}
