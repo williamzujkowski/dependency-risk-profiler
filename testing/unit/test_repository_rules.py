@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -435,6 +436,164 @@ def test_every_required_codeql_language_has_something_to_analyse() -> None:
         "which is what `Analyze (go)` did for months.\n"
         "Either remove the language from the matrix, or fix the scope so it "
         "reaches the files it claims to cover.\n\n" + "\n".join(empty)
+    )
+
+
+# --------------------------------------------------------------------------
+# Rule 5 -- a captured fixture may not carry a credential
+# --------------------------------------------------------------------------
+
+# High-confidence credential shapes. Deliberately narrow: this check runs over
+# decoded fixture payloads, which are third-party source files full of ordinary
+# identifiers, so a broad entropy heuristic would fire constantly and teach
+# people to ignore it. Each pattern here is issued by a named provider in a
+# fixed format.
+_CREDENTIAL_PATTERNS: Tuple[Tuple[str, str], ...] = (
+    (r"AIza[0-9A-Za-z_-]{35}", "Google API key"),
+    (r"sk_live_[0-9A-Za-z]{20,}", "Stripe secret key"),
+    (r"pk_live_[0-9A-Za-z]{20,}", "Stripe publishable key"),
+    (r"gh[pousr]_[0-9A-Za-z]{36}", "GitHub token"),
+    (r"github_pat_[0-9A-Za-z_]{50,}", "GitHub fine-grained token"),
+    (r"AKIA[0-9A-Z]{16}", "AWS access key id"),
+    (r"glpat-[0-9A-Za-z_-]{20}", "GitLab token"),
+    (r"npm_[0-9A-Za-z]{36}", "npm token"),
+    (r"-----BEGIN [A-Z ]*PRIVATE KEY-----", "private key"),
+)
+
+# Values written by a redaction, which must not be mistaken for the thing they
+# replaced.
+_REDACTION_MARKER = re.compile(r"REDACTED-[A-Z-]+")
+
+
+def _decoded_strings(node: object) -> List[str]:
+    """Return every string value in a parsed JSON document.
+
+    Args:
+        node: A value from ``json.loads``.
+
+    Returns:
+        Every string reachable from the node, decoded -- so a payload stored as
+        an escaped JSON string is searched as the text it represents.
+    """
+    found: List[str] = []
+    if isinstance(node, str):
+        found.append(node)
+    elif isinstance(node, dict):
+        for value in node.values():
+            found.extend(_decoded_strings(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(_decoded_strings(value))
+    return found
+
+
+def test_captured_fixtures_carry_no_credentials() -> None:
+    """AGENTS.md rule 5: a capture may not republish someone's credentials.
+
+    Conformance fixtures are captured verbatim from live third-party projects,
+    which is what makes them able to reveal a dead read -- and what makes them
+    able to carry a real key. Signal's Android build file arrived with a Google
+    Maps key and two Stripe publishable keys.
+
+    This check exists because a general secret scanner cannot see them. A
+    fixture stores its payload as a JSON string, so a key inside it is written
+    ``\\"AIza...\\"`` -- the escaped quote defeats the trailing word boundary
+    that provider rules use, and the scanner reports the file clean. Verified
+    against gitleaks: the identical key is found in a ``.txt`` file, found in a
+    ``.json`` file as raw text, and **missed** once JSON-encoded.
+
+    So the payloads are decoded first and searched as the source they are.
+    """
+    fixtures = Path(__file__).resolve().parents[1] / "fixtures"
+    if not fixtures.is_dir():  # pragma: no cover - fixtures are committed
+        return
+
+    offenders: List[str] = []
+    for path in sorted(fixtures.rglob("*.json")):
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, UnicodeDecodeError):  # pragma: no cover
+            continue
+        for text in _decoded_strings(document):
+            for pattern, label in _CREDENTIAL_PATTERNS:
+                for match in re.finditer(pattern, text):
+                    if _REDACTION_MARKER.search(match.group(0)):
+                        continue
+                    offenders.append(
+                        f"{path.relative_to(fixtures.parent.parent)}: {label}"
+                    )
+
+    assert not offenders, (
+        "AGENTS.md rule 5: a captured fixture may not carry a credential.\n"
+        "Capturing from a live project is what lets a fixture reveal a dead "
+        "read; it is also how a real key arrives. Redact the value, record the "
+        "redaction and its reason in the fixture, and keep the capture "
+        "otherwise verbatim.\n\n" + "\n".join(sorted(set(offenders)))
+    )
+
+
+def test_secret_scan_reads_the_tree_and_proves_it_can_fail() -> None:
+    """AGENTS.md rule 6: a required check must analyse its own subject.
+
+    The secret scan is the second check to fail this rule, and it failed it
+    twice over. It ran ``gitleaks-action``, which scans a commit range on
+    ``pull_request`` events:
+
+    * The range never resolved. ``actions/checkout`` fetches shallow, so
+      ``<base>^`` was absent, git errored, and the scan printed
+      ``scanned ~0 bytes (0)`` and then ``no leaks found``. The job went red
+      only because the action surfaced git's exit code; the scanner's own
+      verdict on zero bytes was a pass.
+    * A range scan cannot see a secret already in the tree. Signal's key
+      entered in ``b43e41e`` and was redacted in ``ec45676``; every pull
+      request in between was clean under a diff scan because the key was in
+      no diff. GitHub's scanner found it. This job could not have.
+
+    So two properties are asserted, not one. Reading the whole tree is what
+    makes the scan capable of finding the thing; scanning the canary first is
+    what makes a pass mean something, because a scanner that cannot fail is
+    indistinguishable from one that found nothing.
+    """
+    root = PYPROJECT.parent
+    workflow = root / ".github" / "workflows" / "ci.yml"
+    if not workflow.exists():  # pragma: no cover - workflow is committed
+        return
+    text = workflow.read_text(encoding="utf-8")
+
+    step = re.search(
+        r"^\s*-\s*name:\s*Scan for secrets\s*$(.*?)(?=^\s*-\s*name:|\Z)",
+        text,
+        re.M | re.S,
+    )
+    assert step, (
+        "AGENTS.md rule 6: no 'Scan for secrets' step in ci.yml. If it was "
+        "renamed, rename it here too -- a parser that silently finds nothing "
+        "is the defect it is meant to catch."
+    )
+    body = step.group(1)
+
+    assert "--no-git" in body and "--source ." in body, (
+        "AGENTS.md rule 6: the secret scan must read the working tree "
+        "(`--no-git --source .`), not a commit range. A diff scan is clean "
+        "for every secret that is already in the tree -- which is how "
+        "Signal's key survived from b43e41e to ec45676."
+    )
+    assert "gitleaks-action" not in body, (
+        "AGENTS.md rule 6: gitleaks-action scans a commit range on "
+        "pull_request and its scan mode is not overridable. It reported "
+        "'no leaks found' over ~0 bytes here. Invoke the binary directly."
+    )
+
+    canary = root / ".github" / "secret-scan-canary.txt"
+    assert canary.exists(), (
+        "AGENTS.md rule 6: the secret scan's canary is missing. Without a "
+        "planted credential to find first, a passing scan and a broken "
+        "scanner produce the same output."
+    )
+    assert canary.name in body, (
+        "AGENTS.md rule 6: the secret scan must scan "
+        f"{canary.name} and require a finding before it trusts its own "
+        "verdict on the tree."
     )
 
 
