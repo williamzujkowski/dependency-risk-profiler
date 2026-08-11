@@ -1,7 +1,9 @@
 # Repository ownership transfer — pre-registration
 
-**Status:** pre-registered and revised once against a 7-0 review, before any
-package outside the existing snapshot has been fetched. Revisions in §11.
+**Status:** pre-registered and revised twice, before any package outside the
+existing snapshot has been fetched. Design review (7-0 approve with conditions)
+in §11; detection-procedure review (**7-0 reject**, with the defect and its fix)
+in §14; the pilot that must clear before any harvest in §15.
 **Registers:** #368. Fifth protocol, after abandonment (ran), compromise
 (halted stage 1), handover (halted stage 3) and the repository arm (ran, no
 claim licensed).
@@ -319,3 +321,96 @@ is the residue the ceiling caps.
 Verified by mutation: replacing the id comparison with a login comparison fails
 four fixtures, so the fixtures test the thing the module exists to prevent
 rather than merely covering its lines.
+
+---
+
+## 14. The procedure was rejected 7-0, and what replaced it
+
+The detection procedure of §13 went to review as a pre-harvest artifact and
+came back **rejected, unanimously**. The defect is worth recording in full,
+because it is the same defect this repository keeps producing in new clothes.
+
+### The id at T was never observed
+
+The procedure discriminates rename from transfer by comparing account **ids**,
+on the sound reasoning that logins are mutable and ids are not. But a registry
+URL carries a **login**, not an id, and nothing in the snapshot records the id
+the declaring account had at T. Every id-at-T in the procedure therefore came
+from resolving that login *today* — and GitHub does not redirect user profiles
+after a rename. The old login either 404s, or **someone else has registered
+it**.
+
+That second case resolves cleanly to a live account with a different id, and
+the procedure called it a transfer. A false positive, sitting inside the
+positive class, where the ambiguity gate cannot see it: the gate counts cases
+the procedure *admits* it could not resolve, never cases it resolved wrongly.
+And freed logins are claimed on popular projects, so the contamination is
+**activity-correlated** — the coupling the id discriminator exists to prevent,
+re-entering through its own resolution step.
+
+The fixtures did not catch it because they fed ids straight to the classifier.
+They verified the decision table; they could not verify that the table's inputs
+are obtainable. **A value that satisfies its declared type and lies about the
+fact** — this project's signature defect, arrived at from a new direction.
+
+### What changed
+
+- **A creation-date guard.** An account created after T cannot be the account
+  that declared the repository at T, so a resolved-today id whose account
+  postdates T is AMBIGUOUS, not a transfer. Missing creation dates fail the
+  guard rather than pass it.
+- **Necessary, not sufficient, and reported as such.** An account older than T
+  can also claim a freed login. Positives resolved this way carry their
+  provenance and are reported as their own stratum.
+- **Ids known as of T skip the guard.** An event archive records actor id
+  beside login at event time; that id needs no caveat, and the procedure
+  distinguishes the two sources instead of treating them as equal.
+- **The same-login branch checks the id too.** A deleted login, re-registered,
+  with the repository recreated under it, previously read UNCHANGED — the most
+  security-relevant ownership change there is, filed as the negative class.
+- **Attrition is published beside the ambiguity gate.** Deletion is not random:
+  a repository goes away more often when the project was let go, so the
+  exclusion rate is reported whatever it is.
+- **Owner type change is counted.** A user account converting to an
+  organisation keeps its id and reads UNCHANGED. The outcome cannot see it;
+  `type` rides along in a response already fetched, so the limitation is
+  quantified rather than asserted.
+
+Two of these are mutation-verified: disabling the creation-date guard fails two
+fixtures, disabling the same-login id check fails one.
+
+## 15. The mechanics pilot, and its decision rule — fixed before it runs
+
+The 20% ceiling was chosen with no data on the true ambiguity rate. Every
+reviewer said the same thing: measure the channel before spending the harvest,
+or the halt condition is first evaluated after paying for it in full.
+
+**The pilot runs on the burned cohort.** Resolution rates, 404 rates and
+re-registration rates are properties of GitHub's API, not of any particular
+sample, and the 2026-08-06 snapshot is already exploratory — its transfer
+answers were computed and read during the handover study. §1 excludes every
+package in it from the fresh frame, so a pilot there **cannot** contaminate
+the confirmatory cohort. That is not an argument that the leakage is small; it
+is that the two populations are disjoint by construction.
+
+**The pilot reads bucket counts only.** No score is joined to a pilot row, at
+any point, for any purpose. What it estimates is a nuisance parameter of the
+instrument.
+
+**The decision rule, fixed now:**
+
+1. Estimate the ambiguity share with a 95% Wilson interval on the observed
+   owner changes.
+2. **Upper bound ≤ 0.20** — the resolved-today channel is adequate. Proceed
+   with the registered gate.
+3. **Point estimate > 0.20** — the channel cannot support the outcome. The
+   study proceeds only with ids known as of T, or is declined and reported as
+   unmeasurable at this precision. It does not proceed by lowering the gate.
+4. **Interval straddles 0.20** — enlarge the pilot within the burned cohort
+   until it does not, up to that cohort's supply of owner changes. If the
+   supply is exhausted with the interval still straddling, treat it as case 3.
+
+Case 3 is the one worth naming out loud: it ends five attempts with the
+instrument, not the hypothesis, as the thing that failed. That is a publishable
+result and it is written down here **before** the number exists, which is the
+only time such a sentence is worth anything.
