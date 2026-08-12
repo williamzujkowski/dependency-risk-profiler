@@ -9,11 +9,13 @@ Dependency Risk Profiler inventories what is knowable about a dependency across 
 
 It works on a single manifest (`analyze`) or across every repository in a GitHub organization or user account (`scan-org` / `scan-user`).
 
+**Scope: maintenance risk.** The thing this tool tries to see is whether a dependency still has someone behind it. That matters for security because an unmaintained package with a disclosed vulnerability has nobody to fix it — measured here at **77.2% of npm packages carrying an unfixed advisory never publishing again** — but the tool does not detect compromise, malicious publishes, or exploitability, and nothing here should be read as if it did.
+
 ## What this tool has and has not been shown to do
 
 This README used to argue that leading indicators beat lagging ones. **That claim was tested against a pre-registered protocol and it lost**, so it has been withdrawn rather than left standing.
 
-On 2,906 npm packages predicting two-year abandonment, **download count alone separated the classes better than the then-sixteen-signal score: AUC 0.696 against 0.577** (maintainer-clustered 95% CI on the gap [−0.155, −0.085]). Two of the protocol's own falsification lines fired. Re-run at three dates the score never exceeded 0.605, and the published figure was its best year, not its typical one. Ablations put `license` in negative territory — removing it *improved* discrimination, so it is out of the composite and reported on its own axis (#340). The composite is fifteen signals now, and no better validated for it: taking out a signal measured to be harmful is not evidence that what remains works.
+On 2,906 npm packages predicting two-year abandonment, **download count alone separated the classes better than the then-sixteen-signal score: AUC 0.696 against 0.577** (maintainer-clustered 95% CI on the gap [−0.155, −0.085]). Two of the protocol's own falsification lines fired. Re-run at three dates the score never exceeded 0.605, and the published figure was its best year, not its typical one. Ablations put `license` in negative territory — removing it *improved* discrimination, so it is out of the composite and reported on its own axis (#340). The composite is thirteen signals now, and no better validated for it: taking out a signal measured to be harmful is not evidence that what remains works. `signed_commits` and `branch_protection` were retired too — the first verified commits against a local GPG keyring a fresh clone never has, making it a merge-tooling detector rather than a security signal; the second could not observe the API property it was named for (#394).
 
 So the honest summary is: **no evidence yet supports ranking dependencies by this score in preference to a popularity or advisory baseline.** What the tool does do, and what the same runs support:
 
@@ -21,7 +23,7 @@ So the honest summary is: **no evidence yet supports ranking dependencies by thi
 - It floors a verdict under a live advisory affecting the installed version, so leading signals can raise a verdict but never lower it below a known fact. That is a policy, not a forecast.
 - It filters advisories that do not affect the installed version, which is arithmetic and checkable against OSV.
 
-### How much of the score has been tested: two signals of fifteen
+### How much of the score has been tested: two signals of thirteen
 
 Worth knowing before reading anything else here. The pilot measured `maintainer`, `license` and `source_repository`. Across seven runs — two definitions of abandonment at four dates — one carries information, one is actively harmful, and one does nothing:
 
@@ -31,9 +33,9 @@ Worth knowing before reading anything else here. The pilot measured `maintainer`
 | `license` | **+0.016 to +0.044** — the score is *better* without it | 7 of 7, every interval excluding zero |
 | `source_repository` | nothing, −0.015 to +0.013 | 7 of 7, every interval spanning zero |
 
-`license` is no longer in the composite. It is reported on its own axis instead, as a compliance fact, and nothing has measured what it predicts (#340). So of the fifteen signals the score now weighs, two have ever been tested and one of those does nothing.
+`license` is no longer in the composite. It is reported on its own axis instead, as a compliance fact, and nothing has measured what it predicts (#340). So of the thirteen signals the score now weighs, two have ever been tested and one of those does nothing.
 
-The other twelve have never been in any arm. Eight are repository-derived and untested (#339); two of those — `signed_commits` and `branch_protection` — cannot be reconstructed at a past date at all, so they may never be testable this way. `staleness` and `version` were deliberately excluded from the abandonment study as circular: low release cadence predicting the future absence of releases predicts a variable from itself.
+The other eleven have never been in any arm. Six are repository-derived and untested (#339). `staleness` and `version` were deliberately excluded from the abandonment study as circular: low release cadence predicting the future absence of releases predicts a variable from itself.
 
 So the composite's behaviour is unmeasured for most of what it computes. That is a statement about the evidence, not a defect report — but it is the context for every number above.
 
@@ -43,7 +45,17 @@ Five outcomes have been attempted and the programme is now closed. Abandonment r
 
 **A composition study then tested what the score is made of**, with no outcome involved — and withdrew a conclusion this project had been circling. Five direct measures of publication activity explain **R² ≈ 0.099** of the composite's rank variance (0.075 / 0.094 / 0.099 at three dates). The score is **not** an activity proxy in disguise; it measures something largely orthogonal to activity and popularity alike, and that something is what fails to predict. [`docs/composition-result.md`](docs/composition-result.md).
 
-[`docs/outcome-landscape.md`](docs/outcome-landscape.md) maps the whole attempt and why it is closed. An outcome needs four things, and the fourth was learned the expensive way: reconstructable at a past date, enough *independent* events, not mechanically coupled to the signals, and **observable to a usable precision at the date it is claimed for**. Four outcomes failed on the third; the one that cleared it failed on the fourth. If a study ever supports a stronger claim, this section changes and cites it.
+**A sixth outcome then tested the substitution the whole programme stood in for** — *unmaintained means unpatched*. Among npm advisories with no fix at disclosure, **77.2% of packages never published again**, and of those that did, about half shipped the fix. So the abandonment framing is the right one. But against the question a user actually faces — *given a live advisory, will this get patched?* — **nothing the tool computes exceeds AUC 0.67**, `age_days` (which the tool does not compute) beats every signal that is in the composite, and CVSS severity is indistinguishable from chance at 0.4442, CI [0.3656, 0.5276]. [`docs/remediation-result.md`](docs/remediation-result.md).
+
+[`docs/outcome-landscape.md`](docs/outcome-landscape.md) maps the retrospective attempt and why it closed. An outcome needs four things, and the fourth was learned the expensive way: reconstructable at a past date, enough *independent* events, not mechanically coupled to the signals, and **observable to a usable precision at the date it is claimed for**. Four outcomes failed on the third; the one that cleared it failed on the fourth.
+
+### The one test that has never been run, now registered
+
+Every result above scored a **degenerate variant** of this tool. At a reconstructed past date `staleness` was 1.0 for all 2,906 packages and `version` 0.0 for all, and the repository-derived signals were never reconstructed at all — so the score that lost to download count was a *three-signal* object. **The instrument users actually run has never been scored against any outcome.**
+
+[`docs/prospective-protocol.md`](docs/prospective-protocol.md) fixes that by construction: score the full instrument today, on a fresh cohort, against whether each package goes quiet over the next twelve months. It is committed before any package was sampled, so the ordering is checkable from git, and it must beat **both** download count and its own `staleness` signal alone — because at a live date, time-since-last-release predicting no-release-in-a-year is autocorrelation, and a thirteen-signal instrument losing to one subtraction over its own input is a result worth naming rather than hiding.
+
+The expected outcome, stated in advance, is that it fails. **That is the result this project has been unable to obtain in either direction for its entire history.** Readable 2027-08.
 
 ## Install
 
@@ -154,6 +166,19 @@ The tool relies on public package and advisory data — deps.dev, package regist
 
 Use the output to prioritize review, upgrades, replacement decisions, and follow-up questions. Do not treat a low score, zero CVEs, or clean provenance as a guarantee.
 
+### The score can be moved by the package being scored
+
+Measured, not hypothesised, and worth knowing before anyone gates a pipeline on this number. Enumerating the scorer over reconstructable signals gives a **twelve-cell lookup table** on maintainer band × repository state, and arithmetic over it says:
+
+| | share of 2,906 packages |
+|---|---:|
+| score can be lowered at all | **88.4%** |
+| lowered **with no publish at all** | **83.5%** |
+
+`npm owner add` needs no release, and **the repository field is never verified** — nothing compares the declared repo's owner to the package's maintainers or looks for a reciprocal reference, so a package may declare any repository it likes. **41.51% of the composite's declared weight** is computed from that unverified URL. Declaring an unrelated repository can also move the tool from abstaining to issuing a verdict — though only when enough of the repository suite runs to clear the sufficiency bar; with three collectors it stays `insufficient_data`.
+
+This is how repository-health scoring works generally — Scorecard, deps.dev and Libraries.io all read unverified self-declared links. What is specific here is the **concentration**, not a unique defect. An enumerated scoring function is also an instruction manual, and publishing the table obliges pricing the moves it exposes: [`docs/manipulation-result.md`](docs/manipulation-result.md), [`docs/full-instrument-manipulation-result.md`](docs/full-instrument-manipulation-result.md) and the enumerated table in [`docs/lookup-table-result.md`](docs/lookup-table-result.md).
+
 ## Documentation
 
 - [Getting Started](docs/getting-started.md)
@@ -162,6 +187,9 @@ Use the output to prioritize review, upgrades, replacement decisions, and follow
 - [Configuration](docs/configuration.md)
 - [Scoring](docs/SCORING.md)
 - [Information Sources](docs/INFORMATION_SOURCES.md)
+- [Outcome landscape](docs/outcome-landscape.md) — every outcome attempted, and why the retrospective programme closed
+- [Prospective protocol](docs/prospective-protocol.md) — the registered test of the full instrument, readable 2027-08
+- [Manipulation results](docs/manipulation-result.md) — what the score costs to move
 
 ## Contributing
 
