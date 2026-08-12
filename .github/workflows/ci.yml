@@ -110,7 +110,16 @@ jobs:
       run: |
         set -euo pipefail
         tarball="$RUNNER_TEMP/gitleaks.tar.gz"
-        curl -sSfL -o "$tarball" \
+        # Retry the download. The release CDN 503s intermittently, and without
+        # this a single transient hiccup fails the whole SECURITY gate -- which
+        # then reads as a security finding rather than as weather. Observed on
+        # PR #398: `curl: (22) The requested URL returned error: 503`.
+        #
+        # `--retry-all-errors` is needed alongside `--retry`: curl retries
+        # 5xx by default but NOT a connection reset, and both were possible
+        # here. The checksum below is what makes retrying safe -- a truncated
+        # or substituted download fails it rather than being scanned with.
+        curl -sSfL --retry 5 --retry-delay 3 --retry-all-errors -o "$tarball" \
           "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
         echo "${GITLEAKS_SHA256}  ${tarball}" | sha256sum -c -
         tar xz -f "$tarball" -C "$RUNNER_TEMP" gitleaks
