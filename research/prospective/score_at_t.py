@@ -36,7 +36,10 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle at runtime, type-only here
+    from dependency_risk_profiler.models import DependencyMetadata
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -74,7 +77,7 @@ def scorer_fingerprint() -> Dict[str, str]:
     }
 
 
-def build_dependency(record: dict, now: datetime):
+def build_dependency(record: dict, now: datetime) -> "DependencyMetadata":
     """Turn a frozen cohort row into the metadata the production scorer reads."""
     from dependency_risk_profiler.models import DependencyMetadata
 
@@ -144,7 +147,14 @@ def score_one(record: dict, root: Path, since: str, now: datetime) -> dict:
     # `staleness_days` is the continuous quantity, reported alongside so a
     # disagreement between them is visible rather than hidden by the choice.
     staleness = getattr(scored, "staleness_score", None)
-    staleness_days = (now - dependency.last_updated).days
+    # Always set from the frozen cohort row, but `last_updated` is Optional on
+    # the model and a None here would be an anomaly worth recording rather than
+    # crashing a two-thousand-package run.
+    staleness_days = (
+        (now - dependency.last_updated).days
+        if dependency.last_updated is not None
+        else None
+    )
 
     return {
         "name": record["name"],
