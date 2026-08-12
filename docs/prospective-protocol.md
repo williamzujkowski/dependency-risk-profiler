@@ -284,3 +284,60 @@ rewritten *before* sampling, which is why that was legitimate; this one has
 seen the cohort, and moving it now would be the forking-paths hole §8 exists to
 close. Line 4 fires if the scored yield lands under 60%, and the consequence
 registered in §5 stands.
+
+## 11. Registered before scoring, after a 7-0 review of §10
+
+The panel ruled unanimously on the §10 observation. Two amendments, both
+committed **before the scoring run**, which is the only thing that makes the
+second one legitimate.
+
+### 11.1 The denominator ambiguity breaks against the author
+
+§5 line 4 says "fewer than 60% of **packages**"; §5's scope sentence says all
+lines are evaluated on the primary stratum. I wrote both and they do not agree.
+
+Registered rule: **both denominators are reported, and line 4 counts as fired
+if either reading fires.** When a registered line turns out ambiguous and the
+author has already seen the cohort, the ambiguity has to break adverse to the
+author, or pre-registration buys nothing. Reporting both preserves the
+collision as evidence about the protocol instead of laundering it.
+
+**A correction to §10, from the review.** Line 4 gates packages that *yield a
+full-instrument score*, and **a declared repository is not a yielded score.**
+§10's 0.602 is a declaration rate. The yield is lower by however many declared
+repositories fail to clone, and that must be **measured, not extrapolated** —
+the positive control's 1-of-8 is far too wide to stand in for it. §10 read the
+gate on the wrong quantity, which is recorded rather than edited away.
+
+### 11.2 A secondary analysis on the cloneable stratum
+
+§4.1 registered the uncloneable packages as a reported stratum before sampling.
+That licenses *reporting* them; it does not license promoting the cloneable
+stratum to the population. So, registered here in advance:
+
+**Secondary, conditional:** the full instrument scored on packages where it is
+computable, reported with its own yield and base rate, answering *"conditional
+on being computable, does the instrument discriminate?"*
+
+Four constraints, fixed now:
+
+1. **It can never rescue §1**, under any result. §1 is a claim about a uniform
+   draw; this is a claim about a subpopulation.
+2. **The selection is stated wherever the number appears.** Clone failure
+   correlates with the outcome, so the surviving stratum is enriched for
+   still-alive packages and the discrimination task is *easier*. Every sentence
+   carrying this AUC carries that clause.
+3. **Both comparators still apply.** Downloads and `staleness`-alone are scored
+   on the same stratum. A conditional win over neither is still a loss.
+4. **This design is data-inspired and it is dishonest not to say so.** The
+   §10 yield numbers are what prompted it. It is outcome-blind — no outcome
+   exists until 2027-08 — and it is registered before scoring, which is the
+   most that can be claimed for it.
+
+### 11.3 Why not halt
+
+Halting was on the table and was rejected 7-0. The registry-computable signals
+are measurable on the whole cohort, the cohort is frozen, and the outcome
+accrues passively — the twelve-month wait is calendar time, not effort. And the
+registry-only question is itself unanswered: *do the computable signals beat
+downloads and `staleness`-alone on a uniform draw?* Nothing has measured that.
