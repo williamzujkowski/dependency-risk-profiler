@@ -617,6 +617,13 @@ class RiskScorer:
 
         unknown_signals = self._determine_unknown_signals(weighted_scores)
         measured_signal_count = len(weighted_scores) - len(unknown_signals)
+        # drp: this bar counts signals that produced a number, not signals
+        # that carry information. A zero-variance constant clears it as well as
+        # a real measurement -- in the composition study `staleness` was 1.0
+        # for all 2,906 packages and `version` 0.0 for all, and those two
+        # constants alone drove the abstention rate from 100% to 73.9%.
+        # Upgrade when the count is variance-aware, so a signal that cannot
+        # distinguish any package from any other stops clearing it (#408).
         insufficient_data = (
             self._unexplained_unknown_count(weighted_scores) > measured_signal_count
         )
@@ -1290,6 +1297,15 @@ class RiskScorer:
             License obligation score between 0.0 and 1.0, or None when no
             licence was read at all.
         """
+        # drp: this axis is published beside the verdict and moves it in zero
+        # of the twelve cells the composite actually occupies. Enumerating the
+        # scorer over past-date-reconstructable signals gives a twelve-cell
+        # lookup on maintainer band x repository state, and the licence changes
+        # the score in none of them -- a rank correlation of -0.051 reads as
+        # "weak", but the enumeration says absent.
+        # Upgrade when the licence axis either earns weight inside the verdict
+        # or is documented as descriptive-only in the output itself, so a
+        # reader cannot mistake a published number for a scored one.
         if license_info is None:
             return None
 
@@ -1436,6 +1452,14 @@ class RiskScorer:
         if security_metrics is None:
             return None
 
+        # drp: this reads a boolean where the collector computed a graded
+        # score. `analyze_security_file_content` grades a policy's substance
+        # (0.85 for one naming a contact and a disclosure window, 0.62, 0.00
+        # for a stub), and every one of those collapses to the same True here,
+        # so a placeholder SECURITY.md scores identically to a real policy.
+        # Upgrade when the composite consumes the graded score instead of the
+        # boolean, which requires deciding how an ungraded policy weighs
+        # against a graded zero.
         # If the dependency has a security policy, it's a good sign
         if security_metrics.has_security_policy is not None:
             if security_metrics.has_security_policy:

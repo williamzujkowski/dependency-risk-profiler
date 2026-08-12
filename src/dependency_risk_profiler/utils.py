@@ -779,6 +779,13 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
     """
     repo_path = Path(repo_dir)
 
+    # drp: `has_tests` means "has a conventionally-named top-level test
+    # directory", not "has tests". The patterns below are top-level and
+    # Python/JS-shaped, so this reads a confident False for CPython (whose
+    # suite is `Lib/test/`) and for Go projects (whose tests are `*_test.go`
+    # beside the source) -- two of the most heavily tested shapes there are.
+    # Upgrade when detection is language-aware, or rename the signal to what
+    # it measures (#411).
     # Check for tests directory or test files
     test_patterns = [
         "test/",
