@@ -113,3 +113,84 @@ untested.
   free.** Download count costs one API call; the composite costs a clone and a
   dozen lookups. Beating it by 0.02 is a different proposition from being worth
   the cost, and the write-up will not conflate them.
+
+---
+
+## 9. Amendment: the frozen aggregate cannot answer the reweighting question
+
+Reviewed **4-3, below supermajority — rejected**. Four defects, all adopted.
+The first is the one that would have made the whole study answer a different
+question than the one asked.
+
+### The aggregate hides exactly what reweighting would recover
+
+Falsification line 1 concluded, from a null on the **frozen-weight composite**,
+that *"no weighting scheme saves it"*. **That inference is invalid.** A
+fixed-weight sum can *cancel* information its components carry — two signals
+with opposite-signed relationships to the outcome subtract inside the sum and
+vanish from the aggregate. **Reweighting is precisely the operation that
+recovers cancelled information**, so a null on the aggregate cannot rule it
+out.
+
+And the direct test costs almost nothing. The ablated arm has **three**
+signals, so a model on `{maintainer, license, source_repository,
+log1p(downloads)}` is five parameters against the three proposed — no new
+flexibility, the same cross-validation, and it **is** the reweighting question
+rather than a proxy for it.
+
+This is sharpened by a result from this repository's own enumeration:
+`license` moves the composite in **zero of twelve cells**. So the frozen
+aggregate is effectively a two-signal score, and testing *it* specifically
+cannot detect information the frozen weights already discard.
+
+**The primary arm is now the component model.** The frozen aggregate is kept as
+a secondary, because the gap between them is itself the measurement — it is how
+much the current weighting throws away.
+
+### A null must not launder an underpowered result into a decision
+
+Line 1 collapsed "failed to show ≥0.02" into "the reweighting work is not worth
+doing" — absence of evidence read as evidence of absence. **The verdict is now
+three-way**, decided by the clustered paired interval:
+
+- **additive** — interval excludes zero and the point estimate is ≥0.02
+- **absent** — the interval's **upper bound** falls below 0.02
+- **indeterminate** — the interval spans both, which licenses only *"not shown
+  here"* and explicitly does **not** license stopping the reweighting work
+
+The minimum detectable delta implied by the bootstrap is reported beside every
+result, so a reader can see which of the three the study was ever able to
+return.
+
+### What a null binds, stated as measurement plus argument
+
+A null on the three reconstructable signals does not *measure* anything about
+the fifteen-signal shipped composite. What licenses the wider reading is a
+two-part structure, and it is written as two parts rather than one fact:
+
+1. **Measured:** these three signals, reweighted freely, add nothing over
+   download count.
+2. **Argued:** the excluded signals cannot be evaluated against this outcome
+   anyway — `staleness` and release cadence are tautological with respect to
+   "published nothing for two years", and `version` is 0.0 for every package at
+   a single past T.
+
+So a null licenses *"no reweighting that is evaluable against this outcome is
+worth doing"* — not *"the shipped composite has no additive value"*.
+
+### Line 4 was not a valid check and is replaced
+
+"Out-of-fold AUC exceeds in-sample AUC → the harness is wrong" is false as
+stated: logistic regression optimises log loss rather than AUC, and sampling
+variation alone can produce it on a small model. It is replaced by assertions
+that actually catch a broken harness — **no maintainer component spans two
+folds, every row is predicted exactly once and only out of fold, and two runs
+under the same seed are identical.**
+
+### Refused, on the record
+
+A stratified secondary. The conditional-information worry is real, but the
+downstream action being gated is **reweighting, a linear operation** — so
+information that exists only inside a download stratum is information no
+reweighting scheme could capture. Running a free-form stratification after
+seeing a null is the flexibility this protocol exists to refuse.
