@@ -27,12 +27,30 @@ before it.
 ## 1. The claim under test
 
 > The shipped composite, scored on the full instrument, identifies packages
-> that go quiet over the next twelve months better than download count does.
+> that go quiet over the next twelve months better than download count **and
+> better than its own `staleness` signal alone**.
 
-**Download count is the comparator, not chance.** It has beaten this tool's
-signals on every outcome where both were scored, and a model with the
+**Download count is the first comparator, not chance.** It has beaten this
+tool's signals on every outcome where both were scored, and a model with the
 composite's weights freed added nothing to it. Beating chance would settle
 nothing.
+
+**`staleness` alone is the second comparator, and it is the one that decides
+whether the instrument earned anything.** At a live T, `staleness` is time
+since last release, and the outcome is *no release in the next twelve months*.
+That is renewal-process autocorrelation: quiet packages tend to stay quiet.
+Retrospectively `staleness` was saturated at 1.0 and contributed nothing to the
+0.577; this design un-saturates precisely the most self-coupled signal in the
+instrument. So the composite could beat download count while being **strictly
+worse than a one-line `now - last_publish` query**, and the headline would read
+as vindication of thirteen signals that a single subtraction outperforms.
+
+**Both comparators must fall for the §1 claim to be made.** If the composite
+beats downloads but not `staleness`-alone, the registered headline is: *the
+thirteen-signal instrument is outperformed by one of its own inputs.*
+
+A third arm, **composite-minus-activity** (`staleness` and `version` removed),
+is recorded so that a win can be attributed rather than assumed.
 
 ## 2. Cohort, fixed now
 
@@ -43,7 +61,46 @@ enter.
 
 Eligibility: at least one release before T, and a resolvable registry document.
 Packages failing either are replaced by the next draw, and the replacement
-count is reported.
+count is reported. **No activity filter is applied** — filtering on recent
+publishing would condition the cohort on `staleness` and reintroduce the exact
+coupling this design exists to escape.
+
+### 2.1 Stratification, fixed by measurement before sampling
+
+The base-rate pilot (§2.2) found that **27.4% of a uniform npm draw has exactly
+one release ever, and 85.2% of those are quiet.** That stratum is near-trivially
+predictable: any arm carrying a staleness term scores it, and pooling it in
+inflates every arm at once while telling a user nothing they did not know.
+
+Analysis is therefore **stratified, with strata fixed now**:
+
+| stratum | share (pilot) | 12-mo quiet rate | role |
+|---|---:|---:|---|
+| multi-release (≥2 releases at T) | 72.6% | **0.748** | **primary — the §1 claim is made here or not at all** |
+| one-shot (exactly 1 release at T) | 27.4% | 0.852 | reported, never pooled into the headline |
+
+Each stratum reports its own AUC, its own base rate, and its own paired deltas.
+A pooled figure is reported alongside and is explicitly **not** the headline.
+
+### 2.2 The base rate, measured before registration rather than assumed
+
+`research/prospective/base_rate_pilot.py`, seed 20260812, disjoint from every
+other harvest in this repo and excluded from the cohort. 500 uniform names,
+registry-only, no clone. Result: 492 resolved, **12-month quiet rate 0.776**,
+one-shot share 0.274, repository declared 0.628.
+
+**This measurement voided the original §5 line 4 before a single package was
+sampled.** That line guarded on the base rate falling in 5–60%; the true
+uniform rate is 0.776, so the study would have declared itself too lopsided at
+T+12 — after a year of waiting, on a design that is in fact adequately
+powered. The guard tested the wrong quantity: AUC precision binds on the
+**minority-class count**, not on which side of 50% the base rate sits. At
+n=2,000 the minority class is ~447 packages overall and ~366 in the primary
+stratum. Line 4 is respecified accordingly in §5.
+
+The general lesson, and the reason this section exists: **a guard you could
+have evaluated before registering and did not is not a falsification
+criterion, it is a deferred mistake.**
 
 ## 3. What is recorded at T, and it must be the whole instrument
 
@@ -66,23 +123,57 @@ substituted for the one under test.
 clone at evaluation and cannot fail for want of a repository that has since
 disappeared.
 
-Twelve months rather than the retrospective studies' two years: the base rate
-will be lower and the study less powerful, and that is the price of an answer
-in a year instead of never.
+Twelve months rather than the retrospective studies' two years. Note the pilot
+correction: the 12-month rate (0.776 uniform) is **higher** than the two-year
+snapshot rate (0.405), not lower as §4 originally assumed — a shorter silence
+is easier to achieve, and the two figures are also measured on different
+populations.
+
+**Edge cases, fixed now** — each is a distinct registry state, and none is
+silently folded into "quiet":
+
+| state at T+12 | disposition |
+|---|---|
+| whole package unpublished (`time.unpublished`) | **censored**, own category, excluded from AUC (0.4% in pilot) |
+| all versions deprecated but package present | **quiet if no release in window** — deprecation is not a release |
+| name transferred to npm security-holder | **censored**, own category |
+| registry document no longer resolves | **censored**, own category |
+
+`time.modified` is never read as a release: npm touches it on any write,
+including an owner change, so it would score maintainer edits as publishing.
+
+### 4.1 The uncloneable stratum
+
+Clone failure correlates with the outcome, so the full-instrument subset is
+conditioned on repo-alive and its AUC applies to a healthier-than-uniform
+population. Registered now: the uncloneable packages are a **reported stratum
+with their own base rate**, never imputed to a score and never dropped
+silently. The pilot puts declared-repository share at 0.628, which bounds the
+full-instrument yield before any clone is attempted — §5 line 3's 60% floor is
+therefore live, not hypothetical.
 
 ## 5. Falsification lines — fixed now
 
-1. **If the composite does not beat download count by ≥0.03 AUC**, on a
-   maintainer-clustered paired bootstrap with the interval excluding zero, the
-   claim in §1 is not made. Given the record, this is the expected result.
-2. **If the composite does not beat chance by more than the MDE**, that is
+All lines are evaluated **on the primary (multi-release) stratum**, on a
+maintainer-clustered paired bootstrap with intervals excluding zero.
+
+1. **If the composite does not beat download count by ≥0.03 AUC**, the claim in
+   §1 is not made. Given the record, this is the expected result.
+2. **If the composite does not beat `staleness`-alone by ≥0.03 AUC**, the
+   registered headline is *the instrument is outperformed by one of its own
+   inputs* — regardless of how line 1 resolves. This line was added at review;
+   all seven voters named its absence, and it is the one that makes a positive
+   result interpretable.
+3. **If the composite does not beat chance by more than the MDE**, that is
    reported as the headline: the shipped instrument, scored on its own terms
    with nothing saturated, does not discriminate.
-3. **If fewer than 60% of packages yield a full-instrument score**, the study
+4. **If fewer than 60% of packages yield a full-instrument score**, the study
    is reported as a registry-only study and §1's claim is not made, because the
    thing under test was not measured.
-4. **If the base rate falls outside 5–60%**, the outcome is reported as
-   too lopsided at this horizon and no AUC is claimed.
+5. **If the minority class in the primary stratum falls below 300**, no AUC is
+   claimed. *(Respecified from "base rate outside 5–60%", which §2.2 measured
+   as wrong before sampling: the uniform rate is 0.776 and the study is
+   nonetheless powered. The binding quantity is the minority count.)*
 
 ## 6. What either result licenses
 
@@ -108,4 +199,50 @@ entire history, in either direction.**
   plausibly closer to abandonment already, so the full-instrument subset is not
   a random half of the cohort. Line 3 exists for this and the two subsets are
   compared on the registry-only signals they share.
+- **The harvest clones ~2,000 self-declared repository URLs.** #388 established
+  that no package↔repository binding check exists anywhere in this tool, so
+  these URLs are attacker-controllable input and the clone step is bulk
+  execution of `git` against them. Registered constraints: **https-only
+  transport allowlist** (no `ext::`, `file://`, `ssh://`),
+  `--no-recurse-submodules`, partial clone with hard size and wall-clock caps,
+  and the working tree treated as hostile input by the six repo-derived
+  collectors (symlink traversal, oversized packs, resource exhaustion).
 - **One ecosystem, one T, one horizon.**
+
+## 8. What is frozen, and when
+
+Ordering is git-checkable, which is the only reason any of this is worth
+writing down.
+
+| artifact | frozen before | why |
+|---|---|---|
+| this protocol | any package sampled | the registration |
+| base-rate pilot + result (§2.2) | this amendment | a guard evaluated after registration is not a guard |
+| cohort name list | the T-snapshot harvest | membership cannot drift |
+| scorer configuration hash | scoring | a re-weighted composite cannot be substituted |
+| scorer code commit SHA | scoring | the configuration alone does not pin behaviour |
+| **the analysis script** | **the T-snapshot harvest** | pre-registered criteria with unwritten analysis code is the forking-paths hole that survives twelve months |
+| evaluation script hash | scoring | the last unfrozen degree of freedom |
+
+### 8.1 Interim reads, outcome-blind
+
+A twelve-month dead window with no checkpoints means a doomed run surfaces at
+month twelve. Registered now: at **3, 6 and 9 months**, cumulative quiet-rate
+and cohort-integrity reads only. **No AUC is computed and no arm is compared**
+at any interim point. These exist so a base-rate surprise surfaces at month
+three, and they license no claim.
+
+## 9. Review record
+
+Reviewed by seven-role `consensus_vote`: **approved 6-1 (85.7%)**. Every voter,
+including all six approvals, named the same binding condition — the missing
+`staleness`-alone comparator — and five named the base-rate pilot. The single
+reject asked for re-registration with both fixes rather than approval with
+conditions.
+
+Both are now in the document, along with the clone-failure estimand, the
+outcome edge cases, the frozen analysis script, the transport allowlist and the
+outcome-blind interim reads. **The base-rate pilot ran before this amendment
+and changed a falsification line**, which is the outcome the panel was asking
+for: a criterion voided by measurement costs one afternoon, and voided by a
+twelve-month wait costs a year.
