@@ -232,8 +232,10 @@ def test_all_missing_data_is_unknown_not_medium() -> None:
         "transitive",
         "security_policy",
         "dependency_update",
-        "signed_commits",
-        "branch_protection",
+        # ``signed_commits`` and ``branch_protection`` are absent for the same
+        # reason as ``license``: #339 retired them from the weighted set after
+        # an audit, and they are published on their own axis. A signal that
+        # carries no weight is not a gap in the weighted set.
         "maintained",
     ]
 
@@ -630,13 +632,22 @@ def _zero_weight_scorer(**overrides: float) -> RiskScorer:
 
 
 def test_maintained_weight_defaults_to_020_and_is_independent() -> None:
-    """#104: the maintained signal owns a dedicated, separately tunable weight."""
+    """#104: the maintained signal owns a dedicated, separately tunable weight.
+
+    Originally written against ``branch_protection_weight``, which #339 retired
+    to 0.0. The bug this guards -- one signal silently reusing another's weight
+    -- is unchanged, so the comparison moved to a weight that is still live
+    rather than being deleted with the signal.
+    """
     scorer = RiskScorer()
 
     assert scorer.maintained_weight == 0.20
-    # It must not be an alias of branch_protection_weight.
-    assert scorer.maintained_weight is not scorer.branch_protection_weight
-    assert scorer.branch_protection_weight == 0.15
+    # Not an alias of another live weight.
+    assert scorer.maintained_weight != scorer.security_policy_weight
+    assert scorer.security_policy_weight == 0.25
+    # And the retired one contributes nothing, which is the #339 invariant.
+    assert scorer.branch_protection_weight == 0.0
+    assert scorer.signed_commits_weight == 0.0
 
 
 def test_each_weighted_score_maps_to_its_own_weight_attribute() -> None:
@@ -660,14 +671,6 @@ def test_each_weighted_score_maps_to_its_own_weight_attribute() -> None:
         "dependency_update": (
             "dependency_update_weight",
             lambda: SecurityMetrics(has_dependency_update_tools=False),
-        ),
-        "signed_commits": (
-            "signed_commits_weight",
-            lambda: SecurityMetrics(has_signed_commits=False),
-        ),
-        "branch_protection": (
-            "branch_protection_weight",
-            lambda: SecurityMetrics(has_branch_protection=False),
         ),
         "maintained": (
             "maintained_weight",
@@ -696,30 +699,58 @@ def test_each_weighted_score_maps_to_its_own_weight_attribute() -> None:
             score.total_score == scorer.max_score
         ), f"signal '{name}' is not wired to '{weight_kwarg}'"
 
+    # The other half of the same property since #339: a RETIRED signal must
+    # contribute nothing even when its weight is set. Without this, rewiring
+    # one back into the contribution table would reinstate it silently -- the
+    # weight parameter is still accepted, so nothing else would complain.
+    for retired, metrics in (
+        ("signed_commits_weight", lambda: SecurityMetrics(has_signed_commits=False)),
+        (
+            "branch_protection_weight",
+            lambda: SecurityMetrics(has_branch_protection=False),
+        ),
+    ):
+        scorer = _zero_weight_scorer(**{retired: 1.0})
+        dep = DependencyMetadata(
+            name=f"retired-{retired}",
+            installed_version="1.0.0",
+            security_metrics=metrics(),
+        )
+        assert scorer.score_dependency(dep).total_score == 0.0, (
+            f"'{retired}' is weighed again; #339 retired it from the composite "
+            "after it failed its audit, and reinstating it needs an argument"
+        )
 
-def test_branch_protection_and_maintained_contribute_at_independent_weights() -> None:
-    """#116: both OpenSSF signals present -> each adds at its own weight."""
+
+def test_two_measured_signals_contribute_at_independent_weights() -> None:
+    """#116: two signals measured together -> each adds at its OWN weight.
+
+    Was written against branch_protection and maintained. #339 retired
+    branch_protection, so the pair could no longer demonstrate anything -- a
+    signal weighing 0.0 cannot show that another is not borrowing its weight.
+    The property is unchanged; the pair moved to two that are still scored.
+    """
     scorer = _zero_weight_scorer(
-        branch_protection_weight=0.15,
+        security_policy_weight=0.25,
         maintained_weight=0.20,
     )
-    # Only maintained is risky; branch_protection is measured but clean.
+    # Only maintained is risky; security_policy is measured but clean.
     dep = DependencyMetadata(
         name="both-signals",
         installed_version="1.0.0",
         security_metrics=SecurityMetrics(
-            has_branch_protection=True,  # clean -> 0.0
+            has_security_policy=True,  # clean -> 0.0
             is_maintained=False,  # risky -> 1.0
         ),
     )
 
     score = scorer.score_dependency(dep)
 
-    # Renormalized over the two measured weights: 0.20 / (0.15 + 0.20) * max.
-    expected = (0.20 / (0.15 + 0.20)) * scorer.max_score
+    # Renormalized over the two measured weights: 0.20 / (0.25 + 0.20) * max.
+    expected = (0.20 / (0.25 + 0.20)) * scorer.max_score
     assert score.total_score == expected
-    # Under the shipped bug maintained would reuse 0.15, giving 0.15/0.30*max.
-    assert score.total_score != (0.15 / (0.15 + 0.15)) * scorer.max_score
+    # Were maintained to reuse security_policy's weight, this would be 0.5*max.
+    assert score.total_score != 0.5 * scorer.max_score
 
 
 class _HealthySignals(TypedDict):

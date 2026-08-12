@@ -17,12 +17,13 @@ measured.
 
 ## The load-bearing number
 
-**48.33% of the composite's declared weight is computed from a URL the package
-chooses and nobody verifies.**
+**41.51% of the composite's declared weight is computed from a URL the package
+chooses and nobody verifies** — 48.33% when this was first measured, before
+#339 retired two of the eight repository-derived signals.
 
 | block | weight |
 |---|---:|
-| repository-derived (8 signals) | **1.45** |
+| repository-derived (6 signals, was 8) | **1.10** |
 | registry-derived (6 signals) | 1.55 |
 | total | 3.00 |
 
@@ -109,7 +110,9 @@ Not one of the three reads clean. **The 0.8710 ceiling above is not reachable
 by pointing at a good repository**, and it should be read as the arithmetic
 bound it was labelled as, nothing more.
 
-**Realised drop from those three collectors alone: 0.7333.** And that is the
+**Realised drop from those three collectors alone: 0.6667** (0.7333 before #339
+retired `signed_commits` and `branch_protection`, two of the three collectors
+measured here). And that is the
 finding worth having, because it survives the premise being wrong:
 
 > **An attacker does not need a healthy repository. They need any repository.**
@@ -131,3 +134,27 @@ written was broader than what has now been measured.
 - **The fix is not obvious.** npm provenance and a reciprocal reference in the
   repository are both partial and neither is universal. This is a statement of
   the trust boundary, not a demand that it be closed tomorrow.
+
+---
+
+## Figures revised by #339
+
+`signed_commits` and `branch_protection` were retired from the weighted
+composite after an audit found neither discriminated. Both were
+repository-derived, so **the attacker-controlled surface shrank with them**:
+
+| | first measured | after #339 |
+|---|---:|---:|
+| repository-derived weight | 1.45 | **1.10** |
+| total declared weight | 3.00 | **2.65** |
+| **attacker-controlled share** | **48.33%** | **41.51%** |
+| realised substitution drop | 0.7333 | **0.6667** |
+
+The finding is unchanged in kind and smaller in degree. **An attacker still
+does not need a healthy repository**, because "no repository declared" still
+scores 1.0 — the top of the scale — so substitution still pays.
+
+Retiring two signals for failing their audit happened to reduce this surface
+by seven points. That was not the reason for retiring them and it is recorded
+as a side effect rather than claimed as a fix: the remaining six signals still
+read whatever repository the package names, and nothing verifies the link.

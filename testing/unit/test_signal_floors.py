@@ -26,6 +26,7 @@ supposed to demonstrate.
 import copy
 from typing import Dict
 
+from dependency_risk_profiler.signals import SCORED_SIGNALS
 from signal_floors import (
     MIN_MEASURED_SIGNALS,
     REGISTRY_MEASURED_SIGNALS,
@@ -45,10 +46,12 @@ from dependency_risk_profiler.models import DependencyRiskScore, RiskLevel
 # what it used to admit rather than describe it.
 SUPERSEDED_FLOOR = 7
 
-# What a verdict costs, in measured signals, out of the fifteen the composite
-# weighs. ``unmeasured > measured`` is the bar, so eight against seven clears
-# it and seven against eight does not.
-VERDICT_THRESHOLD = 8
+# What a verdict costs, in measured signals, out of the THIRTEEN the composite
+# weighs since #339. ``unmeasured > measured`` is the bar, so seven against six
+# clears it and six against seven does not. It was eight of fifteen before two
+# signals that always needed a clone -- and could never be measured from a
+# registry document -- came out of the weighted set.
+VERDICT_THRESHOLD = 7
 
 
 def _crate_response_without_license() -> Dict[str, object]:
@@ -83,25 +86,33 @@ def _one_field_short() -> DependencyRiskScore:
     )
 
 
-def test_a_healthy_crate_is_one_signal_short_of_a_verdict() -> None:
-    """Cargo measures seven of fifteen and is unmeasured on eight.
+def test_a_healthy_crate_now_clears_the_verdict_bar() -> None:
+    """Cargo measures seven of thirteen and is unmeasured on six.
 
-    ``insufficient_data`` is ``unmeasured > measured``, so seven against eight
-    misses by one and the crate is reported UNKNOWN. Six ecosystems used to
-    clear this bar by exactly nothing, at eight against eight — and the eighth
-    was ``license``, which the composite no longer weighs (#340). The signal
-    carrying them over the line was the one measured to make the forecast
-    worse, so the line is where it always was and the crossing was not real.
+    ``insufficient_data`` is ``unmeasured > measured``, so seven against six
+    clears it. **This inverted in #339** and the inversion is deliberate: two
+    signals that always required a clone left the weighted set, so a
+    registry-only run no longer counts them as evidence still to come.
 
-    A scan that wants a verdict here asks an advisory source: ``exploit`` is
-    the single largest weight in the scale and this mode asks nobody for it.
+    Nothing new is measured and the score does not move -- it is renormalized
+    over measured weights either way. What changed is that the crate stops
+    being reported UNKNOWN for want of two readings that could not have been
+    taken in this mode, and could not have informed the verdict if they had.
+
+    The ``license`` history still stands (#340): six ecosystems once cleared
+    this bar at eight against eight, carried by the one signal measured to make
+    the forecast worse. They no longer need carrying.
+
+    ``exploit`` is still unmeasured here, and it is still the single largest
+    weight in the scale, so a verdict from this mode rests on a scan that asked
+    nobody about vulnerabilities.
     """
     score = _score_crate_offline(ANYHOW_CRATE_RESPONSE)
 
     assert score.measured_signal_count == 7
-    assert score.unknown_signal_count == 8
-    assert score.insufficient_data is True
-    assert score.risk_level is RiskLevel.UNKNOWN
+    assert score.unknown_signal_count == 6
+    assert score.insufficient_data is False
+    assert score.risk_level is not RiskLevel.UNKNOWN
     assert "exploit" in score.unknown_signals
 
 
@@ -157,15 +168,23 @@ def test_the_superseded_floor_of_seven_admitted_a_collapsed_ecosystem() -> None:
     )
 
 
-def test_no_ecosystem_reaches_a_verdict_from_a_registry_document_alone() -> None:
-    """The registry-only ceiling sits below the edge, and the table says so.
+def test_the_verdict_table_is_derived_from_the_ceiling_not_asserted() -> None:
+    """Which ecosystems reach a verdict alone, computed rather than looked up.
 
-    Seven signals is the most this mode can reach and eight is what a verdict
-    costs, so every entry in the verdict table is False. Derived from the
-    ceiling rather than read off the table, so a floor raised past the edge
-    without the table being updated fails here.
+    Was named ``test_no_ecosystem_reaches_a_verdict_from_a_registry_document_alone``
+    and asserted the ceiling sat strictly below the bar. #339 retired two
+    signals that a registry-only run could never measure, so the bar fell from
+    eight of fifteen to seven of thirteen and the ceiling now MEETS it: the six
+    ecosystems floored at seven carry a verdict, the three floored at five do
+    not.
+
+    The derivation is what matters and is unchanged -- a floor raised past the
+    edge without the table being updated still fails here.
     """
-    assert len(REGISTRY_ONLY_CEILING) < VERDICT_THRESHOLD
+    assert len(REGISTRY_ONLY_CEILING) >= VERDICT_THRESHOLD, (
+        "the registry-only ceiling no longer reaches a verdict; "
+        "SCORES_FROM_REGISTRY_ALONE should be all False again"
+    )
 
     for ecosystem, floor in MIN_MEASURED_SIGNALS.items():
         assert floor <= len(REGISTRY_ONLY_CEILING), f"{ecosystem} is above the ceiling"
@@ -248,3 +267,40 @@ def test_the_signals_no_registry_only_scan_reaches_are_outside_the_ceiling() -> 
     assert "maintained" not in REGISTRY_ONLY_CEILING
     assert "license" not in REGISTRY_ONLY_CEILING
     assert len(REGISTRY_ONLY_CEILING) == 7
+
+
+def test_the_verdict_bar_is_pinned_so_a_signal_change_surfaces_loudly() -> None:
+    """Retiring or adding a signal moves the abstention bar. Make it say so.
+
+    The bar is ``unmeasured > measured`` over the SCORED set, so its height is
+    a function of how many signals are scored. #340 moved it once when
+    ``license`` came out and nobody wrote it down; #339 moved it again and the
+    effect -- six ecosystems going from UNKNOWN to a verdict on identical
+    evidence -- was found while fixing unrelated tests rather than announced by
+    one.
+
+    This is the announcement. Change the scored set and this fails, which is
+    the prompt to decide whether the abstention shift is intended and to say so
+    in the changelog.
+    """
+    scored = len(SCORED_SIGNALS)
+    assert scored == 13, (
+        f"the scored set is now {scored} signals, not 13. The verdict bar "
+        "moves with it, so packages will change between UNKNOWN and a verdict "
+        "on unchanged evidence -- confirm that is intended and record it."
+    )
+    # `unmeasured > measured` with an odd count: a verdict needs the majority.
+    assert VERDICT_THRESHOLD == scored // 2 + 1
+
+    reaching = {e for e, v in SCORES_FROM_REGISTRY_ALONE.items() if v}
+    assert reaching == {
+        "cargo",
+        "composer",
+        "nodejs",
+        "nuget",
+        "python",
+        "rubygems",
+    }, (
+        "which ecosystems can reach a verdict from a registry document alone "
+        "has changed; this is user-visible and belongs in the changelog"
+    )

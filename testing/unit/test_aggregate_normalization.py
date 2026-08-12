@@ -238,7 +238,7 @@ def test_a_fully_measured_manifest_prints_no_coverage_caveat() -> None:
     )
 
     assert "across" not in output.splitlines()[1]
-    assert "overall 1.2 / 5.0" in output.splitlines()[1]
+    assert "overall 1.3 / 5.0" in output.splitlines()[1]
 
 
 def test_a_directory_run_weights_manifests_by_their_scored_dependencies() -> None:

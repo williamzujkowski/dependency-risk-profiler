@@ -537,9 +537,12 @@ def test_one_unreadable_path_does_not_discard_the_signals_that_read(
 
 # --- #74 for every signal this change can leave unmeasured -------------------
 
+# `has_signed_commits` is deliberately absent since #339 retired the signal
+# from the weighted set. Unmeasuring a weightless signal renormalizes nothing
+# and the score is identical either way, so parameterising it here would
+# assert that a number changes when by construction it cannot.
 _SECURITY_METRIC_FIELDS: List[str] = [
     "has_dependency_update_tools",
-    "has_signed_commits",
     "is_maintained",
 ]
 

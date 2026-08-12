@@ -94,13 +94,16 @@ AXIOS_COMPONENT_SCORES = {
     "source_repository_score": 0.0,
 }
 
-# The weighted mean over the fifteen scored signals, on the 0-5 scale.
-# Normalized that is 0.25 to within a float epsilon, which lands on LOW's
-# boundary from below because the comparison is strict. axios is therefore the
-# sharpest case the fixture set has for the floor's job: the leading indicators
-# put it at the very top of LOW, and it is still the counted advisories that
-# decide the verdict.
-AXIOS_UNFLOORED_SCORE = 1.2499999999999998
+# The weighted mean over the THIRTEEN scored signals, on the 0-5 scale. It was
+# 1.2499999999999998 over fifteen -- exactly 0.25 normalized, landing on LOW's
+# boundary from below because the comparison is strict -- and #339's retirement
+# of two signals moved the denominator, so the same fixture now lands lower.
+#
+# axios is still the sharpest case the fixture set has for the floor's job: the
+# leading indicators put it near the top of LOW, and it is still the counted
+# advisories that decide the verdict. What moved is the arithmetic under it,
+# not the property being tested.
+AXIOS_UNFLOORED_SCORE = 1.0377358490566038
 
 
 def _healthy_dependency(name: str) -> DependencyMetadata:
@@ -631,15 +634,18 @@ def test_axios_leading_indicators_are_untouched_by_the_floor() -> None:
     for name, expected in AXIOS_COMPONENT_SCORES.items():
         assert getattr(score, name) == expected, name
     assert score.total_score == pytest.approx(AXIOS_UNFLOORED_SCORE)
-    # 0.25 of the maximum, inside LOW's boundary because the comparison is
-    # strict. The verdict is MEDIUM anyway, which is the floor doing its work
-    # rather than the mean doing it.
+    # Inside LOW's boundary. It used to sit EXACTLY on 0.25 and clear the line
+    # only because the comparison is strict; #339's retirement of two signals
+    # changed the denominator, so it now sits below with room. The property
+    # under test is unchanged and if anything sharper: the mean puts axios
+    # comfortably inside LOW, and the verdict is MEDIUM anyway, which is the
+    # floor doing its work rather than the mean doing it.
     assert score.total_score / 5.0 < 0.25
-    assert score.total_score / 5.0 == pytest.approx(0.25, abs=1e-6)
+    assert score.total_score / 5.0 == pytest.approx(0.2075471698, abs=1e-6)
     assert score.insufficient_data is False
     assert score.unknown_signals == []
-    assert score.measured_signal_count == 15
-    assert score.total_signal_count == 15
+    assert score.measured_signal_count == 13
+    assert score.total_signal_count == 13
 
 
 # --------------------------------------------------------------------------

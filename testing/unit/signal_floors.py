@@ -309,28 +309,40 @@ REGISTRY_MEASURED_SIGNALS: Dict[str, FrozenSet[str]] = {
 
 # Whether that floor is on its own enough to clear the insufficient-data bar.
 #
-# Pure arithmetic over fifteen signals: the bar is ``unmeasured > measured``,
-# so a verdict needs eight measured against seven unmeasured. Seven is the
-# ceiling here, so every entry is False — a registry document on its own does
-# not carry a verdict in any ecosystem, and the tool says UNKNOWN rather than
-# ranking packages on half the evidence.
+# Pure arithmetic over THIRTEEN signals: the bar is ``unmeasured > measured``,
+# so a verdict needs seven measured against six unmeasured. Six ecosystems
+# reach seven from a registry document alone and now carry a verdict; the three
+# that stop at five do not.
 #
-# Six of these cleared the bar by exactly nothing while ``license`` was weighed.
-# Being carried over the line by the one signal measured to make the forecast
-# worse is not a margin, so this table is not restored by putting it back
-# (#340). One advisory lookup is what restores a verdict: it moves every
-# ecosystem here up by one and puts the six at seven over the bar with a margin
-# of one.
+# **This table inverted in #339 and the inversion is the point.** Retiring
+# ``signed_commits`` and ``branch_protection`` removed two entries from the
+# UNMEASURED side of that comparison -- both need a cloned repository, so a
+# registry-only run could never measure either. Nothing new is measured and no
+# score moves: the total is renormalized over measured weights either way. What
+# moved is the tool's willingness to publish a number it already had.
+#
+# Counting those two as "not yet measured" was manufacturing UNKNOWNs out of
+# slots that could not have informed a verdict even when filled -- one tracked
+# GitHub's web-flow key, the other returned a constant it cannot observe. The
+# bar itself barely shifted: 8 of 15 (53.3%) before, 7 of 13 (53.8%) now.
+#
+# The same six cleared the bar by exactly nothing while ``license`` was weighed,
+# and being carried over the line by the one signal measured to make the
+# forecast worse is not a margin (#340). That remains true; what changed is that
+# they no longer need carrying.
+#
+# A standing caveat this table cannot fix: the bar counts signals that PRODUCED
+# a number, not signals that carry information, so a constant still clears it.
 SCORES_FROM_REGISTRY_ALONE: Dict[str, bool] = {
-    "cargo": False,
-    "composer": False,
+    "cargo": True,
+    "composer": True,
     "golang": False,
     "gradle": False,
     "maven": False,
-    "nodejs": False,
-    "nuget": False,
-    "python": False,
-    "rubygems": False,
+    "nodejs": True,
+    "nuget": True,
+    "python": True,
+    "rubygems": True,
 }
 
 # The tables above are keyed by the same ecosystems and are edited by different

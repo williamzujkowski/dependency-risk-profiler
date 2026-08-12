@@ -43,9 +43,13 @@ def test_every_declared_weight_is_classified() -> None:
 def test_the_weight_share_still_matches_the_published_figure() -> None:
     """48.33%, the load-bearing number in the write-up."""
     surface = attacker_surface()
-    assert surface["repository_derived_weight"] == pytest.approx(1.45)
-    assert surface["total_declared_weight"] == pytest.approx(3.0)
-    assert surface["attacker_controlled_share"] == pytest.approx(0.4833, abs=5e-4)
+    # 1.10 of 2.65 since #339 retired signed_commits (0.20) and
+    # branch_protection (0.15). Both were repository-derived, so the share fell
+    # from 0.4833 -- the attacker-controlled surface shrank because two of the
+    # signals reading a self-declared URL stopped being weighed at all.
+    assert surface["repository_derived_weight"] == pytest.approx(1.10)
+    assert surface["total_declared_weight"] == pytest.approx(2.65)
+    assert surface["attacker_controlled_share"] == pytest.approx(0.4151, abs=5e-4)
 
 
 def test_the_weights_are_read_from_the_scorer_not_retyped() -> None:
