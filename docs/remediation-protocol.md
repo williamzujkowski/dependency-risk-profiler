@@ -116,3 +116,84 @@ which is itself popularity-biased, and stated beside every figure.
   time-to-fix is not attempted.
 - **Multiple advisories per package.** 6,816 advisories over 3,632 packages, so
   rows are not independent; everything clusters on package, not on advisory.
+
+---
+
+## 8. Amendment: the outcome was already closed at the prediction date
+
+Reviewed **4-3, below supermajority — rejected**. Three defects, all adopted.
+The first was visible in my own scoping table and I did not draw the inference
+from it.
+
+### Coordinated disclosure means the fix usually precedes the advisory
+
+**77.9% of GHSA advisories carry a `fixed` version at publication.** That is
+not a happy accident, it is how coordinated disclosure works: the maintainer
+patches, and the advisory is published afterwards.
+
+So for most advisories, **outcome B is already determined before the date the
+predictors are measured at.** A package that patched pre-disclosure and then
+publishes anything at all scores B = 1 mechanically. That violates this
+repository's own fourth requirement — an outcome must be genuinely *open* at
+the date it is claimed for — and it also leaks into the predictors, since
+"days since previous release" at the advisory date will be small precisely for
+the packages whose fix release just happened.
+
+**Falsification line 3 would probably have caught it**, as a base rate above
+95%. But catching it there means doing the population surgery *after* seeing
+the number, which is what pre-registration exists to prevent. So the
+restriction is fixed here instead:
+
+> **B's population is advisories for which no fixing version existed at the
+> advisory's publication date** — either the fix release postdates the
+> advisory, or there is no fix at all.
+
+That subpopulation may fail line 1's n ≥ 300. **That is the gate doing its
+job**, not a reason to widen the population afterwards.
+
+### The fixing release is itself a qualifying publish
+
+Outcome B's denominator is "published at least one version after the
+advisory" — and **the fixing release is such a publish**. So a package that
+fixes *always* enters the denominator, while a package that does not enters
+only if it published for some unrelated reason. That is selection caused by
+the outcome, which the original text under-described as "a collider,
+accepted".
+
+Left alone it can manufacture a direction: among low-activity packages the
+sampled fix rate is inflated by construction.
+
+**Two denominators are now reported and the finding must survive both:**
+
+- **B** — as originally defined
+- **B′** — excluding packages whose *only* post-advisory publish is the fixing
+  release
+
+### Severity was the obvious missing predictor
+
+CVSS is stamped on the GHSA record at publication, so it needs no
+reconstruction and carries no leakage risk. It is also the most plausible
+driver of whether a still-active maintainer bothers to patch — omitting it
+invites the conclusion "nothing predicts patching" when the honest answer would
+have been "severity does, and it was not in the model". **Added, along with the
+count of affected version ranges** as a proxy for backport burden.
+
+### An observation window, because advisory age is not uniform
+
+**40% of the corpus is dated 2026** — 3,863 of 9,640 advisory-package rows,
+against 453 in 2019. An advisory from this year has had months to be fixed and
+one from 2019 has had years, so an unwindowed binary outcome partly measures
+recency.
+
+**Advisories published within 12 months of the harvest are excluded**, giving
+every remaining advisory at least a year of observation.
+
+### What this does to the study's viability
+
+Each restriction is correct and each one costs rows. Whether the corrected
+population still clears n ≥ 300 is now genuinely unknown, and answering it
+needs the packument harvest that dates each fixing version.
+
+**That is the next step and its result may be that this study cannot run** —
+which would be the sixth outcome to fail on a requirement discovered during
+design rather than during analysis, and cheaper than the five before it.
