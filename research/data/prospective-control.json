@@ -1,0 +1,106 @@
+{
+ "negative_control": {
+  "scorecard_commit_frequency": null,
+  "has_tests": false,
+  "has_ci": false,
+  "has_contributing": false,
+  "has_security_policy": false,
+  "has_dependency_update": false,
+  "commit_frequency": null,
+  "contributor_count": null
+ },
+ "constant_and_undiscriminating": [],
+ "cloned": 7,
+ "attempted": 8,
+ "shallow_fallbacks": 0,
+ "constant_clone_derived": [
+  "has_ci"
+ ],
+ "forge_derived_unmeasured_as_expected": [
+  "commit_frequency",
+  "contributor_count"
+ ],
+ "passes": true,
+ "observations": {
+  "ossf/scorecard": {
+   "scorecard_commit_frequency": 12.916666666666666,
+   "has_tests": false,
+   "has_ci": true,
+   "has_contributing": true,
+   "has_security_policy": true,
+   "has_dependency_update": true,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  },
+  "python/cpython": {
+   "scorecard_commit_frequency": 385.5833333333333,
+   "has_tests": false,
+   "has_ci": true,
+   "has_contributing": true,
+   "has_security_policy": true,
+   "has_dependency_update": true,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  },
+  "axios/axios": {
+   "scorecard_commit_frequency": 30.083333333333332,
+   "has_tests": true,
+   "has_ci": true,
+   "has_contributing": true,
+   "has_security_policy": true,
+   "has_dependency_update": true,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  },
+  "pallets/flask": {
+   "scorecard_commit_frequency": 9.166666666666666,
+   "has_tests": true,
+   "has_ci": true,
+   "has_contributing": false,
+   "has_security_policy": false,
+   "has_dependency_update": false,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  },
+  "sigstore/cosign": {
+   "scorecard_commit_frequency": 29.0,
+   "has_tests": true,
+   "has_ci": true,
+   "has_contributing": true,
+   "has_security_policy": false,
+   "has_dependency_update": true,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  },
+  "expressjs/express": {
+   "scorecard_commit_frequency": 6.833333333333333,
+   "has_tests": true,
+   "has_ci": true,
+   "has_contributing": false,
+   "has_security_policy": false,
+   "has_dependency_update": true,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  },
+  "substack/minimist": {
+   "clone_failed": "auth"
+  },
+  "isaacs/inherits": {
+   "scorecard_commit_frequency": 0.08333333333333333,
+   "has_tests": true,
+   "has_ci": true,
+   "has_contributing": true,
+   "has_security_policy": false,
+   "has_dependency_update": false,
+   "commit_frequency": null,
+   "contributor_count": null,
+   "shallow_fallback": null
+  }
+ }
+}
