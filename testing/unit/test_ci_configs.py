@@ -109,3 +109,40 @@ def test_pre_commit_config_valid() -> None:
 
     except yaml.YAMLError as e:
         pytest.fail(f"Invalid YAML in pre-commit config file: {e}")
+
+
+def test_every_codeql_action_step_pins_the_same_version() -> None:
+    """CodeQL's sub-actions must not skew, and prose did not stop them.
+
+    `codeql-action/init` and `codeql-action/analyze` fail with "Loaded a
+    configuration file for version X, but running version Y" whenever they run
+    at different versions. That was diagnosed once and written into a comment
+    at `codeql.yml:126` -- and it recurred verbatim on 2026-08-12 as PRs #397
+    and #399, because Dependabot tracks each sub-action separately and, before
+    the `codeql-action` group was added, opened one PR per sub-action so
+    neither could pass alone.
+
+    A hazard recorded in a comment is not a hazard prevented. This is the
+    check the comment lacked.
+    """
+    import re
+    from pathlib import Path
+
+    workflows = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+    pinned: dict = {}
+    for path in workflows.glob("*.yml"):
+        for line in path.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            match = re.search(r"github/codeql-action/\S+@([0-9a-f]{40})", stripped)
+            if match:
+                pinned.setdefault(match.group(1), []).append(
+                    f"{path.name}:{stripped.split('@')[0].split('/')[-1]}"
+                )
+
+    assert pinned, "no pinned codeql-action step was found; has the pin format changed?"
+    assert len(pinned) == 1, (
+        "codeql-action steps are pinned to different commits, which fails at "
+        f"run time with a version-mismatch error: {pinned}"
+    )

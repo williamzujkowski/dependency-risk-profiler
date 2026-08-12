@@ -80,3 +80,5 @@ dependency-risk-org-report.csv
 dependency-risk-user-report.html
 dependency-risk-user-report.json
 dependency-risk-user-report.csv
+.playwright-mcp/
+.nexus-agents/

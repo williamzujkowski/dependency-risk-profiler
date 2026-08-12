@@ -64,5 +64,20 @@ updates:
   # Observed working: #192, #193, #196, #197.
   - package-ecosystem: "github-actions"
     directory: "/"
+
+    # `codeql-action/init` and `codeql-action/analyze` MUST run at the same
+    # version -- CodeQL fails with "Loaded a configuration file for version X,
+    # but running version Y" when they skew. Dependabot tracks them as separate
+    # dependencies and, ungrouped, opens one PR per sub-action, so NEITHER can
+    # pass CI alone.
+    #
+    # This was diagnosed once, written into a comment at codeql.yml:126, and
+    # nothing stopped it happening again: it recurred verbatim on 2026-08-12 as
+    # PRs #397 and #399, both red. A hazard recorded in prose is not a hazard
+    # prevented. This group is the mechanism that comment lacked.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
     schedule:
       interval: "weekly"

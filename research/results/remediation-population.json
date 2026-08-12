@@ -1,0 +1,28 @@
+{
+  "protocol": "docs/remediation-protocol.md (amended, \u00a78)",
+  "stage": "population sizing only -- no predictor has been joined to any outcome",
+  "corpus": {
+    "npm_advisories": 226616,
+    "MAL": 219149,
+    "GHSA_rows": 9640,
+    "GHSA_packages": 3632
+  },
+  "observation_window": "published before 2025-08-12, i.e. at least 12 months of observation",
+  "windowed_rows": 5255,
+  "attrition": {
+    "unresolved": 257,
+    "fix_undated": 184,
+    "fix_predates_advisory": 3214,
+    "fix_postdates_advisory": 240,
+    "never_fixed": 1360
+  },
+  "corrected_population": {
+    "n": 1600,
+    "packages": 1378,
+    "base_rate_fixed_after_advisory": 0.15
+  },
+  "gates": {
+    "line_1_n_at_least_300": true,
+    "line_3_base_rate_between_5_and_95_pct": true
+  }
+}
