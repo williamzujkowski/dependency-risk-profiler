@@ -246,3 +246,41 @@ outcome-blind interim reads. **The base-rate pilot ran before this amendment
 and changed a falsification line**, which is the outcome the panel was asking
 for: a criterion voided by measurement costs one afternoon, and voided by a
 twelve-month wait costs a year.
+
+## 10. Cohort drawn — an observation recorded before anything was scored
+
+**2026-08-12.** 2,000 packages drawn, 50 rejected as ineligible, 7,978
+already-seen packages excluded. `cohort_sha256`
+`64c07197d078753e140fbd8a7b2bb3d85174205a2da3daf467d67c15fec36746`.
+
+| stratum | n | declares a repository |
+|---|---:|---:|
+| **multi_release** (primary) | 1,345 | **0.602** |
+| one_shot | 655 | 0.521 |
+| all | 2,000 | **0.576** |
+
+**§5 line 4 is on course to fire, and this is recorded now rather than after
+the scoring run**, so the ordering is checkable from git.
+
+The floor is 60% of packages yielding a full-instrument score. 57.6% of the
+cohort declares a repository at all, and that is an **upper bound** — a
+declared repository still has to clone. The primary stratum sits at 0.602,
+which the clone step can only reduce.
+
+**This is not a study failure. It is a measurement about the product**, and it
+arrives before any AUC:
+
+> The shipped instrument cannot be fully computed for a random npm package.
+> Roughly **42% of npm packages declare no repository at all**, so the six
+> repository-derived signals — the larger block of the composite's declared
+> weight — are structurally absent, not merely missing.
+
+Prior studies could not see this. They sampled from cohorts already filtered to
+packages with reconstructable history, and they never attempted the repository
+signals at all.
+
+**No falsification line is being respecified here.** §2.2's base-rate guard was
+rewritten *before* sampling, which is why that was legitimate; this one has
+seen the cohort, and moving it now would be the forking-paths hole §8 exists to
+close. Line 4 fires if the scored yield lands under 60%, and the consequence
+registered in §5 stands.
