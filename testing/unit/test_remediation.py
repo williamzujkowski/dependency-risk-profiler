@@ -128,3 +128,57 @@ def test_age_survives_the_time_at_risk_confound() -> None:
         "time-at-risk confound is ruled out no longer holds"
     )
     assert windowed > 0.60
+
+
+def _downloads(name: str) -> Dict[str, int]:
+    rows = json.loads((RESULTS / name).read_text())
+    return {
+        f"{r['pkg']}@{r['day']}": r["downloads"]
+        for r in rows
+        if r.get("downloads") is not None
+    }
+
+
+def test_the_downloads_windows_never_span_their_advisory() -> None:
+    """The design property the whole follow-up rests on.
+
+    A window that reached past the advisory would let the outcome inform its
+    own predictor. Both harvests are keyed by the advisory date, and the near
+    window ends the day BEFORE it while the far window ends 90 days before --
+    so this asserts both files are keyed to real advisory dates in the cohort
+    rather than to something else.
+    """
+    features = _features()
+    keys = {f"{r['pkg']}@{r['published'][:10]}" for r in features}
+    for name in (
+        "remediation-downloads-near.json",
+        "remediation-downloads-far.json",
+    ):
+        harvested = set(_downloads(name))
+        assert harvested, f"{name} carries no resolved downloads"
+        assert harvested <= keys, (
+            f"{name} contains (package, date) pairs that are not advisories in "
+            "the cohort, so the window anchor is wrong"
+        )
+
+
+def test_the_attrition_is_reported_because_it_is_outcome_correlated() -> None:
+    """54 rows fail the join and they fix at a HIGHER rate than the joined ones.
+
+    That is missing-not-at-random on the predictor being tested, so the
+    write-up quotes a range rather than the complete-case point estimate. If
+    the two rates ever converge the range is over-cautious and the doc should
+    say so -- but silence would be worse than either.
+    """
+    rows = [r for r in _features() if r["published_after_excluding_fix"]]
+    near = _downloads("remediation-downloads-near.json")
+    joined = [r for r in rows if f"{r['pkg']}@{r['published'][:10]}" in near]
+    unjoined = [r for r in rows if f"{r['pkg']}@{r['published'][:10]}" not in near]
+
+    assert unjoined, "nothing fails the join any more; the range in the doc is stale"
+    joined_rate = sum(r["outcome_a"] for r in joined) / len(joined)
+    unjoined_rate = sum(r["outcome_a"] for r in unjoined) / len(unjoined)
+    assert unjoined_rate > joined_rate, (
+        "the unjoined rows no longer fix at a higher rate, so the "
+        "worst-case floor-imputation bound is no longer the conservative end"
+    )
