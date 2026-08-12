@@ -166,6 +166,18 @@ Evaluates security practices in the repository:
    normalized_score = (weighted_average / sum_of_weights) * max_score
    ```
 
+   **Consequence: scores are not comparable across coverage levels.** The
+   denominator is the weight of the signals that were *measured*, so a package
+   scored on four signals and one scored on twelve produce numbers on the same
+   scale that summarise different amounts of evidence. Measured on a uniform
+   npm draw of 2,000 packages: an identical profile (maximally stale, single
+   maintainer) scores **2.500** when its repository cannot be read and
+   **3.636** when it can. No value is imputed and no gap is filled — the
+   arithmetic is a plain weighted mean over what exists — but a reader
+   comparing two `total_score` values is comparing two different measurements
+   unless `measured_signal_count` matches. Read `total_score` together with
+   `insufficient_data`, never alone.
+
 4. **Risk Level Assignment**: The normalized score is mapped to a risk level:
 
    | Score Range (% of max) | Risk Level |

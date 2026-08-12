@@ -612,6 +612,16 @@ class RiskScorer:
                 total_score += measurement.value * weight
                 available_weights += weight
 
+        # drp: normalising over *available* weights means the score summarises
+        # however much was measured, so two packages share a scale without
+        # sharing a meaning. Measured on a uniform npm draw: an identical
+        # profile (maximally stale, single maintainer) scores 2.500 with no
+        # readable repository and 3.636 with one. Nothing is imputed -- the
+        # arithmetic is a weighted mean over what exists -- but the number is
+        # not comparable across coverage levels, and only `insufficient_data`
+        # tells a reader which kind of number they have.
+        # Upgrade when the output carries the measured-weight fraction beside
+        # the score, so comparability is visible rather than inferred (#418).
         if available_weights > 0:
             total_score = (total_score / available_weights) * self.max_score
 

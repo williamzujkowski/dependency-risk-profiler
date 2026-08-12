@@ -17,7 +17,7 @@ thirteen after #339 — has never been scored against any outcome, and every
 conclusion this project has drawn about it rests on that gap.
 
 The prospective design closes it by construction. **T is now.** Nothing is
-reconstructed, so nothing saturates, and the instrument under test is the one
+reconstructed, so the signals that saturated retrospectively are live — but see §13, where `version` turns out to be constant by construction — and the instrument under test is the one
 users actually run.
 
 It also clears the fourth landscape requirement — *observable at the date
@@ -413,3 +413,68 @@ the unfixed version. The effect on the data is that three packages are marked
 allowed and then succeeded — which yields *more* data, not wrong data. But a
 cap that does not cap is a stated bar with nothing enforcing it, which is this
 repository's own dominant defect, in a paragraph I wrote about enforcement.
+
+## 13. A saturated signal, found after scoring — §0's "nothing saturates" is wrong
+
+**2026-08-12**, found while tracing why 701 packages score exactly 2.5000.
+
+§0 says the prospective design means "nothing saturates". **That is false, and it
+is corrected here rather than edited away.**
+
+`version_score` is **0.0 for every package in the cohort.** Verified by
+reproducing the production scorer over cohort rows: 300 of 300 sampled.
+
+### Why, and why it is not fixable
+
+The harvest scores each package as installed-at-latest. `version` measures
+**drift between the installed version and the current release** — and for a
+*package*, "installed version" does not exist. Version drift is a property of a
+**consumer's pin**, not of the package being scored.
+
+So this is not a measurement that was skipped. **It is a signal that is
+structurally inapplicable to a package-level cohort**, and no sampling or
+collection change would recover it. Any package-level study of this instrument
+scores twelve informative signals and one constant.
+
+### What it does and does not damage
+
+**It does not invalidate the study.** `version` was 0.0 across the retrospective
+cohorts too, the composite under test is the one users get, and the falsification
+lines were never conditioned on it. The frozen record and configuration hash
+stand.
+
+**It does damage a sentence.** "Nothing saturates" was the design's headline
+advantage over the reconstructions, and it is now one-thirteenth false. The
+accurate claim is narrower and still worth making: **`staleness` and the six
+repository-derived signals — the ones that made every prior study degenerate —
+are live here.** `version` is not, and never can be, in a study of packages
+rather than of manifests.
+
+### The lesson, which is the same one again
+
+The retrospective studies were degenerate because signals were constant at a
+reconstructed date. This study was built to escape that, and shipped with a
+constant signal anyway — arriving by a different route, from a modelling choice
+about what "installed version" means for a package.
+
+**Checking that the design escapes a known failure is not the same as checking
+that the data did.** The check that would have caught it is mechanical: after
+any harvest, print the distinct-value count of every scored signal before
+computing anything. That is now the first thing this project should do to a
+frozen record, and it is what found this — three studies too late.
+
+### 13.1 Why it hid: the frozen record stores no per-signal scores
+
+`scored-at-T.json` keeps the composite, the ablated composite, and the inputs
+needed to re-derive them. It does **not** keep the thirteen per-signal scores.
+
+So `research/prospective/saturation_check.py` — written in response to this,
+and the mechanical check that should run first on any frozen record — reports
+no constant fields when pointed at it. That is true of the fields present and
+silent about `version`, which is exactly how the signal stayed invisible until
+someone reproduced the production scorer by hand over cohort rows.
+
+Recorded, not fixed: persisting per-signal scores now would mean re-cloning two
+thousand repositories. The requirement for the next harvest is one line —
+**store every scored signal, then run the saturation check before anything
+else** — and the tool to do it now exists.

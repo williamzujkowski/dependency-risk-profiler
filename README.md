@@ -125,6 +125,11 @@ Useful flags: `--max-repos N`, `--include-archived`, `--include-collaborations` 
 - **License obligation** — permissive, copyleft, network copyleft, commercial, or unrecognized. Reported beside the risk level and **not scored into it**: what a licence obliges a consumer to do is a compliance fact, and folding it into a maintenance forecast measured worse in every run that tested it (#340).
 - **Vulnerabilities** — advisories are considered, but withdrawn, informational, low-confidence, and below-threshold findings are filtered out of scoring (raise the bar with `--minimum-vulnerability-severity MEDIUM`). An advisory that applies to the installed version and states **no** severity is counted at every threshold, not filtered: whole databases publish none (`GO-*`, `RUSTSEC-*`, and every malicious-package `MAL-*` record), and silence about how bad something is is not a reason to say it is not there. Records that alias each other are one vulnerability and count once.
 
+Two things to know about the score itself:
+
+- **`total_score` is not comparable across packages with different measurement coverage.** The composite is a weighted mean over the signals that were *measured*, so a package scored on four signals and one scored on twelve share a scale without sharing a meaning. Measured on a uniform npm draw: the identical profile — maximally stale, single maintainer — scores **2.500 with no readable repository and 3.636 with one**. Nothing is imputed and no missing value is filled; the number simply summarises a different amount of evidence.
+- **Read `total_score` with `insufficient_data`, never alone.** The JSON output carries `insufficient_data`, `measured_signal_count`, `unknown_signal_count` and `unknown_signals` in the same object for exactly this reason. When `insufficient_data` is true the tool is declining to issue a verdict, and the accompanying score should not be read as one.
+
 Two behaviors are intentionally conservative:
 
 - **Unknown signals stay unknown.** The tool does not fill missing data with a confident medium score.
@@ -175,7 +180,7 @@ Measured, not hypothesised, and worth knowing before anyone gates a pipeline on 
 | score can be lowered at all | **88.4%** |
 | lowered **with no publish at all** | **83.5%** |
 
-`npm owner add` needs no release, and **the repository field is never verified** — nothing compares the declared repo's owner to the package's maintainers or looks for a reciprocal reference, so a package may declare any repository it likes. **41.51% of the composite's declared weight** is computed from that unverified URL. Declaring an unrelated repository can also move the tool from abstaining to issuing a verdict — though only when enough of the repository suite runs to clear the sufficiency bar; with three collectors it stays `insufficient_data`.
+`npm owner add` needs no release, and **the repository field is never verified** — nothing compares the declared repo's owner to the package's maintainers or looks for a reciprocal reference, so a package may declare any repository it likes. **41.51% of the composite's declared weight** is computed from that unverified URL. Declaring a repository also moves the tool from abstaining to issuing a verdict: on a uniform draw of 2,000 npm packages, **all 928 whose repository cloned would score `insufficient_data` without it**. (An earlier partial run with three collectors did not clear the sufficiency bar, which understated this.) The direction is not what it sounds like, though — 80% of those verdicts land on HIGH, so declaring a repository buys a verdict rather than a better score.
 
 Scored on the full instrument, with a repository actually cloned, the same enumeration gives 188 distinct values rather than 11 — so the lookup table describes the common case, not the whole tool. What the repository block mostly decides is something else entirely: **without it, every one of 928 cloned packages in a uniform draw scores `insufficient_data`.** It is not adding precision to a verdict; it is the reason there is a verdict ([`docs/full-instrument-composition-result.md`](docs/full-instrument-composition-result.md)).
 
