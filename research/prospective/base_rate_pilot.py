@@ -1,10 +1,14 @@
 """Measure the 12-month quiet rate on a uniform npm sample. **Network.**
 
-The prospective protocol (``docs/prospective-protocol.md``) registers a guard:
-if the outcome base rate lands outside 5-60%, no AUC is claimed. That guard is
-checkable *today* and the protocol left it open, which the review panel called
-out unanimously -- tripping a criterion you could have forecast in advance is
-not falsification, it is a twelve-month wait wasted.
+The prospective protocol (``docs/prospective-protocol.md``) originally guarded
+on the outcome base rate falling in 5-60%. That guard's input was checkable the
+same afternoon and the protocol left it open. This module closed it, and the
+measurement -- 0.776 -- voided the line: see §2.2, which respecifies the guard
+onto the minority-class count, the quantity AUC precision actually binds on.
+
+The line is kept here as the reason this module exists: tripping a criterion
+you could have evaluated in advance is not falsification, it is a twelve-month
+wait wasted.
 
 The estimand: sample uniformly from every published npm name, ask whether the
 package published a release in the trailing twelve months. For a stationary
@@ -52,13 +56,13 @@ def sample_names(names_path: Path, n: int, seed: int) -> List[str]:
     return rng.sample(names, n)
 
 
-def _last_publish(name: str, session: requests.Session) -> Optional[dict]:
-    """Return the reduced record for ``name``, or ``None`` if unresolvable.
+def _last_publish(name: str, session: requests.Session) -> dict:
+    """Return the reduced record for ``name``.
 
-    Only ``time`` is needed, so this asks for the abbreviated document where
-    possible; a package whose packument 404s (unpublished, or a name in the
-    list that the registry no longer serves) is a real category and is recorded
-    rather than dropped, because the prospective outcome has the same edge case.
+    Every failure mode returns a record carrying its own ``status`` rather than
+    ``None``: a packument that 404s (unpublished, or a name the registry no
+    longer serves) is a real category, and the prospective outcome has the same
+    edge cases, so dropping them here would understate them there.
     """
     url = f"{REGISTRY}/{quote(name, safe='@')}"
     try:

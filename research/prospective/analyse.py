@@ -175,9 +175,10 @@ def verdict(primary: dict) -> dict:
         delta = deltas[key]
         point = delta["delta"]
         interval = delta["clustered"]
-        if point is None or interval.get("low") is None:
+        low = interval.get("low")
+        if point is None or low is None:
             return None
-        return point >= DELTA_THRESHOLD and interval["low"] > 0
+        return bool(point >= DELTA_THRESHOLD and low > 0)
 
     over_downloads = beats("composite_vs_downloads")
     over_staleness = beats("composite_vs_staleness")
