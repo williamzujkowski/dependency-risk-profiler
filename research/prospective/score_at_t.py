@@ -122,15 +122,29 @@ def score_one(record: dict, root: Path, since: str, now: datetime) -> dict:
     scorer = RiskScorer()
     scored = scorer.score_dependency(dependency, as_of=now)
 
-    # `staleness` alone, read from the same scorer rather than recomputed: a
-    # comparator computed by a second code path is two things that must agree
-    # with nothing checking that they do.
-    staleness = None
-    for factor in getattr(scored, "factors", []) or []:
-        if getattr(factor, "name", None) == "staleness":
-            staleness = getattr(factor, "score", None)
-    if staleness is None:
-        staleness = (now - dependency.last_updated).days / 365.0
+    # §1's third arm, scored here rather than derived at readout: the
+    # collectors will not be reproducible in a year, so an arm computed later
+    # from stored fields would be a different quantity than the one the frozen
+    # analysis script expects. `staleness` and `version` are the two members
+    # that are activity by construction, so zeroing them is what "ablated"
+    # means -- and it isolates whether a win came from the other eleven.
+    ablated_scorer = RiskScorer(staleness_weight=0.0, version_difference_weight=0.0)
+    ablated = ablated_scorer.score_dependency(dependency, as_of=now)
+
+    # §1's second comparator. Two quantities were conflated here at first: the
+    # scorer's own banded `staleness_score` for some packages and a raw
+    # years-since-publish fallback for others, which is not one comparator but
+    # two, varying by row. Both are now recorded, consistently, because §1
+    # names the signal ("its own `staleness` signal") while describing the
+    # quantity ("a one-line `now - last_publish` subtraction"), and those are
+    # not the same thing: the banded score takes about five distinct values, so
+    # it carries heavy ties that a continuous version does not.
+    #
+    # `staleness` is the tool's own signal, which is what §1's claim is about.
+    # `staleness_days` is the continuous quantity, reported alongside so a
+    # disagreement between them is visible rather than hidden by the choice.
+    staleness = getattr(scored, "staleness_score", None)
+    staleness_days = (now - dependency.last_updated).days
 
     return {
         "name": record["name"],
@@ -140,9 +154,12 @@ def score_one(record: dict, root: Path, since: str, now: datetime) -> dict:
         "clone_reason": clone_reason,
         "shallow_fallback": shallow_fallback,
         "composite": getattr(scored, "total_score", None),
+        "composite_ablated": getattr(ablated, "total_score", None),
         "risk_level": str(getattr(scored, "risk_level", "")),
+        "insufficient_data": "UNKNOWN" in str(getattr(scored, "risk_level", "")),
         "downloads": record.get("downloads_last_month") or 0,
         "staleness": staleness,
+        "staleness_days": staleness_days,
         # Recorded so the ablated arm can be computed at readout without
         # re-running the collectors, which will not be reproducible in a year.
         "last_publish": record["last_publish"],
