@@ -15,6 +15,9 @@ from __future__ import annotations
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
+
+import requests
 
 RESEARCH = Path(__file__).resolve().parents[2] / "research"
 sys.path.insert(0, str(RESEARCH))
@@ -44,7 +47,10 @@ class _Session:
 
 
 def _observe(status: int, payload: object) -> dict:
-    return outcome.observe("pkg", T, _Session(_Response(status, payload)))
+    # A stand-in for requests.Session with only the one method observe() calls.
+    # cast rather than a real Session so these stay offline.
+    session = cast(requests.Session, _Session(_Response(status, payload)))
+    return outcome.observe("pkg", T, session)
 
 
 def test_a_release_after_t_is_not_quiet() -> None:
@@ -124,3 +130,44 @@ def test_modified_is_never_read_as_a_release() -> None:
         },
     )
     assert result["quiet"] is True
+
+
+def test_the_scorer_output_satisfies_the_frozen_analysis_contract(tmp_path: Path) -> None:
+    """score_at_t -> outcome join -> analyse, end to end, twelve months early.
+
+    The analysis script was frozen before the harvest, so nothing may change to
+    fit it later. That makes the contract between the two a thing to verify
+    now, while a mismatch is a five-minute fix rather than a discovery made in
+    2027 with the outcome already visible and no honest way to re-run.
+    """
+    import json
+
+    from prospective import analyse
+    from prospective.score_at_t import score_one
+
+    record = {
+        "name": "example",
+        "last_publish": "2024-01-01T00:00:00.000Z",
+        "release_count": 4,
+        "stratum": "multi_release",
+        # No repository, so this exercises the contract without a network call.
+        "repo_slug": None,
+        "maintainers": ["someone"],
+        "downloads_last_month": 12,
+        "deprecated": False,
+    }
+    scored = score_one(record, tmp_path, "2025-07-12", datetime.now(timezone.utc))
+
+    joined = tmp_path / "joined.json"
+    joined.write_text(json.dumps({"packages": [{**scored, "quiet": True}]}))
+
+    rows = analyse.load_rows(joined)
+    assert len(rows) == 1
+    row = rows[0]
+    # Every field the frozen Row requires, present and the right type.
+    assert isinstance(row.composite, float)
+    assert isinstance(row.composite_ablated, float)
+    assert isinstance(row.staleness, float)
+    assert isinstance(row.downloads, float)
+    assert row.stratum == "multi_release"
+    assert row.full_instrument is False
