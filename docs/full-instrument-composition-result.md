@@ -207,3 +207,53 @@ fourth, in the same document, one section earlier — and it took the form of
 comparing an instrument against **itself minus a block**, when four of its
 other signals were already missing from both arms. **A difference measured
 between two degraded arms describes the degradation.**
+
+## 8. What the repository block actually does, measured properly
+
+Same two-arm design as §1 — score each package with the block and without it —
+but with the omitted signals measured in **both** arms, so the difference is
+the block rather than the gap.
+
+The no-block arm is produced by pointing the same enrichment at an empty clone
+root: identical code path, identical inputs, no repository read.
+
+| | with block | without block |
+|---|---:|---:|
+| abstaining | **0** | **0** |
+| packages where the block ran | 932 | — |
+| **verdict band changed** | **685 of 932 (73.5%)** | |
+| raised risk / lowered risk | **667 / 18** (97.4% raise) | |
+| median score change | **+1.085** (p25 +0.885, p75 +1.157) | |
+| ran but changed nothing | 0 | |
+
+Sanity check that the arms are otherwise identical: of the 1,068 packages where
+no repository was read, **zero** changed verdict.
+
+### The corrected reading
+
+**The block does not decide whether the tool answers.** It answers either way.
+What the block does is move roughly three-quarters of the packages it can read
+into a *different* band, and it moves them **up**: 667 raised against 18
+lowered, a median of +1.085 on a five-point scale.
+
+That has a sharper consequence than §1's withdrawn version, and it points the
+opposite way from the manipulation reading:
+
+> A package that declares a readable repository is scored **worse**, almost
+> without exception. The repository block is not a reward for transparency —
+> in this cohort it is a penalty for it.
+
+Whether the penalty is *deserved* is the open question, and it is exactly what
+the 2027-08 outcome read is for. If packages with readable repositories are
+genuinely more likely to go quiet, the block is doing its job. If they are not,
+the tool is systematically punishing the packages that gave it something to
+look at, which would be the worst possible property for a signal computed from
+a **self-declared, unverified URL** (#388) that a package can simply omit.
+
+### Why §1 got this wrong
+
+§1 compared the instrument against itself-minus-a-block while four other
+signals were missing from *both* arms. The missing signals put every cloned
+package under the sufficiency bar in the no-block arm, so every difference
+presented as `UNKNOWN` → verdict. **A difference measured between two degraded
+arms describes the degradation**, and the degradation was mine.
