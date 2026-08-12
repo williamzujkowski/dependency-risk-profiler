@@ -1,0 +1,76 @@
+{
+ "n": 2000,
+ "full_instrument": 928,
+ "distinct_values_all": 212,
+ "distinct_values_full": 188,
+ "subset_gate_passes": true,
+ "registry_only_rank_r2": 0.607569381467991,
+ "cells_occupied": 12,
+ "largest_cell_share": 0.394,
+ "cell_detail": {
+  "<=1|cloned": {
+   "n": 788,
+   "distinct_scores": 132,
+   "share": 0.394
+  },
+  "<=1|none": {
+   "n": 762,
+   "distinct_scores": 11,
+   "share": 0.381
+  },
+  "<=1|declared": {
+   "n": 189,
+   "distinct_scores": 8,
+   "share": 0.0945
+  },
+  "2|cloned": {
+   "n": 61,
+   "distinct_scores": 38,
+   "share": 0.0305
+  },
+  "3-4|cloned": {
+   "n": 48,
+   "distinct_scores": 27,
+   "share": 0.024
+  },
+  ">=5|none": {
+   "n": 36,
+   "distinct_scores": 5,
+   "share": 0.018
+  },
+  ">=5|cloned": {
+   "n": 31,
+   "distinct_scores": 19,
+   "share": 0.0155
+  },
+  "2|none": {
+   "n": 27,
+   "distinct_scores": 5,
+   "share": 0.0135
+  },
+  "3-4|none": {
+   "n": 24,
+   "distinct_scores": 5,
+   "share": 0.012
+  },
+  "3-4|declared": {
+   "n": 13,
+   "distinct_scores": 6,
+   "share": 0.0065
+  },
+  "2|declared": {
+   "n": 12,
+   "distinct_scores": 6,
+   "share": 0.006
+  },
+  ">=5|declared": {
+   "n": 9,
+   "distinct_scores": 3,
+   "share": 0.0045
+  }
+ },
+ "line_1_lookup_survives": false,
+ "line_2_block_is_decorative": false,
+ "line_2_is_uninformative": true,
+ "line_3_enumeration_stands": true
+}

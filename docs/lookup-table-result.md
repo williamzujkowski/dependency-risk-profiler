@@ -1,5 +1,23 @@
 # The registry-only composite, printed in full
 
+> **Follow-up added 2026-08-12.** This document scoped itself correctly — the
+> title says *registry-only*, the first line says *over the signals
+> reconstructable at a past date*, and the limits section says it again. The
+> caveat was never missing here. **It got lost in transmission**: the headline
+> travelled into the README, into summaries and into my own notes as "the
+> composite is a twelve-cell lookup table", without the qualifier that makes it
+> true.
+>
+> Measured on the shipped instrument at a live T
+> (`full-instrument-composition-result.md`), the same enumeration gives **188
+> distinct scores rather than 11**, and the eleven-value backbone below
+> reproduces *only* in the cells where no repository was cloned. Since that is
+> more than half of npm, the table below remains an accurate description of the
+> common case — and not of the full instrument.
+>
+> The lesson is about the caveat, not the measurement: **a condition stated only
+> in the document that earned it will be dropped by everything that cites it.**
+
 **Protocol:** `leading-indicator-protocol.md` claim A — the only half the 5-2
 review approved. Claim B's story is in §6 of that document.
 **Registers:** #379.
