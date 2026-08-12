@@ -1,0 +1,17 @@
+{
+ "n": 928,
+ "moved_at_all": 928,
+ "moved_share": 1.0,
+ "delta_min": -2.3412698412698414,
+ "delta_median": 1.035353535353536,
+ "delta_max": 2.7063492063492065,
+ "kendall_tau_with_vs_without": 0.6169516186531551,
+ "verdict_band_changed": 928,
+ "verdict_band_changed_share": 1.0,
+ "band_transitions": {
+  "UNKNOWN -> HIGH": 744,
+  "UNKNOWN -> MEDIUM": 121,
+  "UNKNOWN -> LOW": 43,
+  "UNKNOWN -> CRITICAL": 20
+ }
+}

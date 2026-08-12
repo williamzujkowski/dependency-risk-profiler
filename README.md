@@ -168,7 +168,7 @@ Use the output to prioritize review, upgrades, replacement decisions, and follow
 
 ### The score can be moved by the package being scored
 
-Measured, not hypothesised, and worth knowing before anyone gates a pipeline on this number. Enumerating the scorer over reconstructable signals gives a **twelve-cell lookup table** on maintainer band × repository state, and arithmetic over it says:
+Measured, not hypothesised, and worth knowing before anyone gates a pipeline on this number. Enumerating the scorer **over registry-only signals** — the state it is in for the ~53% of npm packages whose repository it cannot clone — gives a **twelve-cell lookup table** on maintainer band × repository state, and arithmetic over it says:
 
 | | share of 2,906 packages |
 |---|---:|
@@ -176,6 +176,8 @@ Measured, not hypothesised, and worth knowing before anyone gates a pipeline on 
 | lowered **with no publish at all** | **83.5%** |
 
 `npm owner add` needs no release, and **the repository field is never verified** — nothing compares the declared repo's owner to the package's maintainers or looks for a reciprocal reference, so a package may declare any repository it likes. **41.51% of the composite's declared weight** is computed from that unverified URL. Declaring an unrelated repository can also move the tool from abstaining to issuing a verdict — though only when enough of the repository suite runs to clear the sufficiency bar; with three collectors it stays `insufficient_data`.
+
+Scored on the full instrument, with a repository actually cloned, the same enumeration gives 188 distinct values rather than 11 — so the lookup table describes the common case, not the whole tool. What the repository block mostly decides is something else entirely: **without it, every one of 928 cloned packages in a uniform draw scores `insufficient_data`.** It is not adding precision to a verdict; it is the reason there is a verdict ([`docs/full-instrument-composition-result.md`](docs/full-instrument-composition-result.md)).
 
 This is how repository-health scoring works generally — Scorecard, deps.dev and Libraries.io all read unverified self-declared links. What is specific here is the **concentration**, not a unique defect. An enumerated scoring function is also an instruction manual, and publishing the table obliges pricing the moves it exposes: [`docs/manipulation-result.md`](docs/manipulation-result.md), [`docs/full-instrument-manipulation-result.md`](docs/full-instrument-manipulation-result.md) and the enumerated table in [`docs/lookup-table-result.md`](docs/lookup-table-result.md).
 
