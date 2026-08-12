@@ -173,3 +173,23 @@ and did not. There is nothing to reweight.
 Every predictor is oriented as **risk**, higher meaning more likely abandoned,
 so downloads enter **negated**. Unnegated the baseline scores 0.3040, which is
 1 − 0.696, and every arm appears to beat it by a quarter of an AUC.
+
+## `remediation/`
+
+`docs/remediation-protocol.md`, result in `docs/remediation-result.md`. Tests
+the substitution the whole abandonment programme stood in for: **if nobody
+maintains a package, nobody patches it when a CVE lands.**
+
+| Path | What it is |
+|---|---|
+| `remediation/build.py` | Predictors as of each advisory's publication date, and the three outcomes |
+| `remediation/evaluate.py` | Per-predictor AUC with a package-clustered bootstrap |
+
+**Of npm GHSA advisories with no fix at disclosure, 77.2% of packages never
+published again.** Among those that did, about half shipped the fix — and
+nothing measured exceeds AUC 0.67 at telling which half.
+
+Two scoping facts that would have wrecked this if missed: **97% of the npm OSV
+corpus is malicious-package takedowns** (unpublished, not patched), and **61%
+of real advisories arrive already fixed** because coordinated disclosure
+publishes after the patch. Both are excluded by rule in the protocol.
