@@ -391,10 +391,14 @@ case is the informative one.
 
 ### Abstention
 
-**1,072 of 2,000 (53.6%)** scored `insufficient_data`. The tool declines to
-issue a verdict for more than half of a uniform npm draw. That is the
-abstention machinery working as designed — it refuses to guess — but it means
-the population where the tool answers at all is a minority and a selected one.
+**1,072 of 2,000 (53.6%) scored `insufficient_data` — and that figure is
+WITHDRAWN (§14).** It measured the harvest's own omissions, not the tool: with
+the four unmeasured signals actually collected, **not one package in the cohort
+abstains**. The abstention machinery is not what this cohort exercised.
+
+The count that stands from this section is the full-instrument *yield* (0.4640),
+which is a clone-success question and is unaffected by which registry signals
+were read. Line 4 fires on that, unchanged.
 
 Incidentally corroborating #344: 744 HIGH against 20 CRITICAL.
 

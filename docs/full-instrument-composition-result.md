@@ -9,11 +9,18 @@ live T with the production collectors. 928 have the repository block. No
 outcome is involved, so this describes what the instrument *is*, never what it
 predicts.
 
-## 1. The finding
+## 1. The finding — WITHDRAWN, see §7
+
+> Everything in this section is an artifact of a harvest that performed only
+> eight of the thirteen registered signals. The numbers below are real
+> measurements of the wrong thing. §7 explains, §8 replaces them. Kept in
+> place rather than deleted so the correction is legible.
 
 Each of the 928 packages was scored twice: once as the harvest scored it, and
 once with the repository block suppressed. The block's contribution is then a
 difference, not an inference.
+
+*(Every figure in this table is withdrawn — see the banner above and §7.)*
 
 | | |
 |---|---:|
