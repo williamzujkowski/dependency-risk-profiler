@@ -341,3 +341,75 @@ are measurable on the whole cohort, the cohort is frozen, and the outcome
 accrues passively — the twelve-month wait is calendar time, not effort. And the
 registry-only question is itself unanswered: *do the computable signals beat
 downloads and `staleness`-alone on a uniform draw?* Nothing has measured that.
+
+## 12. Scored at T — the measured yield, and line 4
+
+**2026-08-12.** All 2,000 packages scored with the production collectors and
+the production scorer. Scorer weights and code commit hashed into the record.
+
+### Line 4 fires, under both registered readings
+
+§11.1 registered *report both denominators, fired if either*. Both fire, so the
+ambiguity I created never had to be resolved in anyone's favour.
+
+| denominator | full-instrument yield | floor | |
+|---|---:|---:|---|
+| cohort (all 2,000) | **0.4640** | 0.60 | **fires** |
+| primary stratum (multi_release, n=1,345) | **0.5056** | 0.60 | **fires** |
+| one_shot (n=655) | 0.3786 | — | reported |
+
+**Consequence, as registered in §5:** this is reported as a registry-only
+study, and **the §1 claim is not made.** The conditional secondary registered
+in §11.2 covers the 928 packages where the full instrument is computable, with
+its selection stated.
+
+§10 read the gate on a declaration rate and the review corrected it. Measured,
+the declaration rate (0.576) overstated the yield by 11 points.
+
+### Why the instrument could not be computed
+
+| reason | n | share of cohort |
+|---|---:|---:|
+| **no repository declared** | 849 | **0.4245** |
+| cloned, shallow-since fallback | 573 | 0.2865 |
+| cloned normally | 355 | 0.1775 |
+| **`auth`** — private, renamed or deleted, indistinguishable (#411) | 198 | 0.0990 |
+| `git_error` | 15 | 0.0075 |
+| `bad_slug` — rejected before reaching `git` | 7 | 0.0035 |
+| `timeout` | 3 | 0.0015 |
+
+Two readings worth stating plainly:
+
+**Of the 1,151 packages that declare a repository, 198 (17.2%) do not resolve
+to one.** A declared repository is a claim, not an artifact — and per #388
+nothing in this tool checks the claim.
+
+**Of the 928 repositories that did clone, 573 (61.7%) had no commit in thirteen
+months.** They reached the working tree only through the `--shallow-since`
+fallback. That is a reading about the population, not a defect: the fallback
+case is the informative one.
+
+### Abstention
+
+**1,072 of 2,000 (53.6%)** scored `insufficient_data`. The tool declines to
+issue a verdict for more than half of a uniform npm draw. That is the
+abstention machinery working as designed — it refuses to guess — but it means
+the population where the tool answers at all is a minority and a selected one.
+
+Incidentally corroborating #344: 744 HIGH against 20 CRITICAL.
+
+### A registered constraint that was not enforced
+
+§7 registered a "hard wall-clock cap" on clones. It did not hold. Python's
+`subprocess.run(timeout=…)` kills `git` but not the `index-pack` grandchild,
+and `capture_output` then blocks on a pipe the survivor still holds open — a
+repository of vendored font binaries sailed past the 180-second cap and was
+still running at 409 seconds. Fixed afterwards with `start_new_session` and a
+process-group kill.
+
+Recorded rather than quietly repaired, because the record was produced under
+the unfixed version. The effect on the data is that three packages are marked
+`timeout` and an unknown few large repositories took longer than the cap
+allowed and then succeeded — which yields *more* data, not wrong data. But a
+cap that does not cap is a stated bar with nothing enforcing it, which is this
+repository's own dominant defect, in a paragraph I wrote about enforcement.

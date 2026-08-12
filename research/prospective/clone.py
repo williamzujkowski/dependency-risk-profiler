@@ -58,8 +58,10 @@ repository, so these are attacker-controlled inputs.
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
+import signal
 import subprocess  # nosec B404 - git is invoked with a fixed argv, never a shell string
 from dataclasses import dataclass
 from pathlib import Path
@@ -158,6 +160,22 @@ def _classify(stderr: str, returncode: int) -> str:
     return "git_error"
 
 
+def _kill_group(expired: subprocess.TimeoutExpired) -> None:
+    """Kill the timed-out clone's whole process group.
+
+    ``TimeoutExpired`` does not carry the pid, but the popen object that raised
+    it has already been killed by ``run``; what survives is its group. Killing
+    the group is what actually enforces the cap.
+    """
+    pid = getattr(expired, "pid", None)
+    if pid is None:
+        return
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):  # pragma: no cover - raced
+        pass
+
+
 def _attempt(slug: str, destination: Path, since: Optional[str]) -> tuple[bool, str]:
     """Run one clone attempt. Returns ``(ok, reason)``."""
     try:
@@ -167,8 +185,17 @@ def _attempt(slug: str, destination: Path, since: Optional[str]) -> tuple[bool, 
             text=True,
             timeout=TIMEOUT_SECONDS,
             check=False,
+            # The wall-clock cap does not hold without this. `git clone` spawns
+            # `index-pack` as a grandchild; on timeout Python kills only the
+            # direct child, and `capture_output` then blocks waiting for a pipe
+            # that the surviving grandchild still holds open. Observed on a
+            # repository of vendored font binaries, which sailed past a 180s
+            # cap and was still running at 409s. A new session lets the whole
+            # group be killed at once.
+            start_new_session=True,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as expired:
+        _kill_group(expired)
         return False, "timeout"
     if completed.returncode != 0:
         return False, _classify(completed.stderr, completed.returncode)
