@@ -1,0 +1,15 @@
+{
+ "as_of": "2026-08-12T21:17:32.294558+00:00",
+ "window_days": 365,
+ "sampled": 500,
+ "resolved": 492,
+ "status_counts": {
+  "ok": 492,
+  "absent": 6,
+  "unpublished": 2
+ },
+ "quiet": 382,
+ "base_rate": 0.7764227642276422,
+ "one_shot_share": 0.27439024390243905,
+ "repo_declared_share": 0.6280487804878049
+}
