@@ -50,7 +50,7 @@ def _package(
 
 
 @pytest.fixture(autouse=True)
-def _fast_bootstrap(monkeypatch):
+def _fast_bootstrap(monkeypatch: pytest.MonkeyPatch) -> None:
     """Shrink the resample count; these tests exercise gates, not precision.
 
     The registered ``REPLICATES`` stays 2000 for the real run. Every fixture
@@ -89,7 +89,7 @@ def _separated(n: int = 400) -> list[dict]:
     return packages
 
 
-def test_downloads_are_negated_to_share_the_composite_orientation(tmp_path):
+def test_downloads_are_negated_to_share_the_composite_orientation(tmp_path: Path) -> None:
     """The polarity bug that once made a losing arm look like a +0.28 win."""
     rows = analyse.load_rows(_write(tmp_path, _separated()))
     labels = [row.quiet for row in rows]
@@ -99,7 +99,7 @@ def test_downloads_are_negated_to_share_the_composite_orientation(tmp_path):
     assert analyse.roc_auc([row.composite for row in rows], labels) == 1.0
 
 
-def test_minority_gate_fires_below_threshold(tmp_path):
+def test_minority_gate_fires_below_threshold(tmp_path: Path) -> None:
     """§5 line 5 gates on the minority count, not on the base rate."""
     # 380 quiet, 20 active: base rate 0.95, minority 20.
     packages = [
@@ -119,7 +119,7 @@ def test_minority_gate_fires_below_threshold(tmp_path):
     assert analyse.verdict(report)["claim"] == "not made"
 
 
-def test_a_high_base_rate_alone_does_not_fire_the_gate(tmp_path):
+def test_a_high_base_rate_alone_does_not_fire_the_gate(tmp_path: Path) -> None:
     """The measured 0.776 must not void the study; only a thin minority does.
 
     This is the regression guard for §2.2 -- the original criterion would have
@@ -141,7 +141,7 @@ def test_a_high_base_rate_alone_does_not_fire_the_gate(tmp_path):
     assert report["minority_gate_passes"] is True
 
 
-def test_losing_to_staleness_alone_fires_line_2_even_when_downloads_lose(tmp_path):
+def test_losing_to_staleness_alone_fires_line_2_even_when_downloads_lose(tmp_path: Path) -> None:
     """§5 line 2 is unconditional: it fires however line 1 resolved."""
     packages = []
     # 800 packages so the minority class clears the registered floor of 300.
@@ -168,7 +168,7 @@ def test_losing_to_staleness_alone_fires_line_2_even_when_downloads_lose(tmp_pat
     assert "one of its own inputs" in result["headline"]
 
 
-def test_claim_is_made_only_when_both_comparators_fall(tmp_path):
+def test_claim_is_made_only_when_both_comparators_fall(tmp_path: Path) -> None:
     packages = []
     # 800 packages so the minority class clears the registered floor of 300.
     for i in range(800):
@@ -187,7 +187,7 @@ def test_claim_is_made_only_when_both_comparators_fall(tmp_path):
     assert result["claim"] == "made"
 
 
-def test_censored_packages_are_dropped_not_scored_as_negative(tmp_path):
+def test_censored_packages_are_dropped_not_scored_as_negative(tmp_path: Path) -> None:
     """§4: an unpublished package has an undefined outcome, not a false one."""
     packages = _separated(20)
     packages.append(
@@ -208,7 +208,7 @@ def test_censored_packages_are_dropped_not_scored_as_negative(tmp_path):
     assert all(row.name != "censored" for row in rows)
 
 
-def test_one_shot_stratum_is_reported_but_never_the_headline(tmp_path, capsys):
+def test_one_shot_stratum_is_reported_but_never_the_headline(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     packages = _separated(1600)
     for rec in packages[:800]:
         rec["stratum"] = "one_shot"
@@ -222,7 +222,7 @@ def test_one_shot_stratum_is_reported_but_never_the_headline(tmp_path, capsys):
     assert result["verdict"]["claim"] in {"made", "not made", "indeterminate"}
 
 
-def test_full_instrument_yield_gate_fires(tmp_path, capsys):
+def test_full_instrument_yield_gate_fires(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """§5 line 4: below 60% cloneable this is a registry-only study."""
     packages = _separated(400)
     for rec in packages[:200]:
@@ -240,7 +240,7 @@ def test_full_instrument_yield_gate_fires(tmp_path, capsys):
 class TestBaseRatePilotReduction:
     """§2.2's measurement is only as good as its packument reduction."""
 
-    def test_unpublished_is_its_own_status_not_a_release(self):
+    def test_unpublished_is_its_own_status_not_a_release(self) -> None:
         """``time.unpublished`` is an object; ``max()`` over raw times raises."""
         doc = {
             "time": {
@@ -251,7 +251,7 @@ class TestBaseRatePilotReduction:
         }
         assert base_rate_pilot.reduce_packument("gone", doc)["status"] == "unpublished"
 
-    def test_modified_is_never_counted_as_a_release(self):
+    def test_modified_is_never_counted_as_a_release(self) -> None:
         """npm touches ``modified`` on an owner change, which is not publishing."""
         doc = {
             "time": {
@@ -265,8 +265,8 @@ class TestBaseRatePilotReduction:
         assert record["last_publish"] == "2019-01-01T00:00:00.000Z"
         assert record["release_count"] == 1
 
-    def test_quiet_is_measured_against_the_window(self):
-        records = [
+    def test_quiet_is_measured_against_the_window(self) -> None:
+        records: list[dict] = [
             {"name": "a", "status": "ok", "last_publish": "2019-01-01T00:00:00.000Z",
              "release_count": 1, "repo_declared": True, "deprecated": False},
             {"name": "b", "status": "ok", "last_publish": "2026-08-01T00:00:00.000Z",
