@@ -95,7 +95,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+      uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
@@ -129,6 +129,12 @@ jobs:
       # dependencies and bumps them in separate PRs, so the init-only bump
       # produced `Loaded a configuration file for version '4.37.4', but running
       # version '3.37.5'` and failed all three languages.
-      uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+      #
+      # This comment was here and it did not stop the same failure recurring
+      # on 2026-08-12 (#397, #399). Two mechanisms now do: a `codeql-action`
+      # group in dependabot.yml so the bumps arrive together, and
+      # `test_every_codeql_action_step_pins_the_same_version`, which fails on
+      # a skewed pin before CI ever runs it.
+      uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
       with:
         category: "/language:${{matrix.language}}"
