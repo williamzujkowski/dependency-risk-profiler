@@ -73,7 +73,17 @@ def _last_publish(name: str, session: requests.Session) -> Optional[dict]:
         doc = resp.json()
     except ValueError:
         return {"name": name, "status": "unparseable"}
+    return reduce_packument(name, doc)
 
+
+def reduce_packument(name: str, doc: dict) -> dict:
+    """Reduce a packument to the fields the base rate needs.
+
+    Split out from the fetch so the registry's edge cases can be tested without
+    a network call. They are not hypothetical: ``time.unpublished`` is an
+    *object* rather than a timestamp, and taking ``max()`` over the raw ``time``
+    values raises on it.
+    """
     times = doc.get("time") or {}
     # ``created``/``modified`` are registry bookkeeping, not releases: npm
     # touches ``modified`` on any write, including an owner change, so counting
