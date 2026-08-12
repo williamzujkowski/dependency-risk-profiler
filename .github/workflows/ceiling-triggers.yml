@@ -1,0 +1,37 @@
+name: Ceiling triggers
+
+# The scheduled half of the `# drp:` ceiling-marker convention (#401).
+#
+# `testing/unit/test_ceiling_markers.py` checks marker grammar on every commit,
+# offline. It cannot check whether a trigger has *discharged* -- that needs the
+# issue state, so it lives here rather than in the per-commit gate. This repo
+# has already had a security gate read as a security finding because a CDN
+# returned 503; putting a rate-limited API call on every push would repeat that
+# shape for no benefit, since a trigger discharges on someone else's schedule.
+
+on:
+  schedule:
+    - cron: '23 4 * * 1'  # Mondays at 04:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  triggers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check that every cited upgrade trigger is still live
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A closed issue means either the ceiling was upgraded and the marker
+        # is now a lie, or the issue was closed without the upgrade and the
+        # trigger silently discharged. Both are worth a red build.
+        run: python scripts/check_ceiling_triggers.py
