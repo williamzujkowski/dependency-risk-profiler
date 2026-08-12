@@ -101,11 +101,8 @@ an artifact.
 **Capping the outcome at a fixed 12 months moves it to 0.6730** — unchanged.
 The confound is ruled out.
 
-It remains **an association without a mechanism.** Older packages patch more,
-and the most plausible unmeasured explanation is popularity: older packages
-accumulate dependents and scrutiny, and popularity is not in this table.
-Testing whether age survives conditioning on downloads is the obvious next
-step and is not done here.
+**That test has since been run, and age does not survive it.** See the section
+below.
 
 ## What the review changed
 
@@ -130,3 +127,92 @@ The interpretation went to review and was **rejected 4-3**. Four corrections:
 - **`fixed` is OSV's claim**, not an observation.
 - **Popularity-biased population** — these are packages somebody audited.
 - **One ecosystem, one advisory source.**
+
+---
+
+# Follow-up: age is subsumed by popularity, and popularity beats everything
+
+The result above left one test undone — *does `age_days` survive conditioning
+on downloads?* It does not, and running it turned up something larger.
+
+Downloads were measured over the **30 days ending the day before** each
+advisory, so the window never spans the advisory and the outcome cannot inform
+its own predictor.
+
+## Age carries nothing beyond downloads
+
+Out of fold, maintainer-clustered 5-fold, n = 365:
+
+| model | AUC |
+|---|---:|
+| downloads only | **0.8228** |
+| age only | 0.6678 |
+| downloads + age | 0.8227 |
+
+**Adding age to downloads: Δ = −0.0001, CI [−0.0077, +0.0073], p = 0.978.**
+Downloads over age alone: Δ = +0.1550, CI [+0.0984, +0.2176], p < 0.001.
+
+ρ(age, log downloads) = **+0.578**.
+
+**What this licenses is conditional independence, and nothing more:** age
+carries no predictive information *given* downloads. It does **not** establish
+that age "was a popularity proxy" — with ρ = 0.578 both could be downstream of
+something neither measures. The mystery has moved, not closed.
+
+## Downloads predict remediation far above anything the tool computes
+
+Re-scored on the **same 365 rows**, so the comparison is like-for-like:
+
+| predictor | AUC |
+|---|---:|
+| **log downloads** | **0.8293** |
+| age_days | 0.6735 |
+| maintainers | 0.5956 |
+| releases_total | 0.5906 |
+| releases_prior_year | 0.5779 |
+| repository declared | 0.5621 |
+
+The earlier statement *"nothing we measure exceeds 0.67"* was true **of the
+tool's own signals**, and that scoping was missing. Downloads are not one of
+them.
+
+## Two checks the review demanded, both run
+
+**Leakage — ruled out.** GHSA publication trails the underlying disclosure, so
+a window ending the day before publication could sit inside the disclosure
+window and pick up attention rather than popularity. Re-running with a window
+ending **90 days before** the advisory gives **AUC 0.8233** against 0.8293.
+Unchanged. The signal is slow-moving popularity, not a disclosure spike.
+
+**Attrition — real, and it bounds the number.** 54 of 419 rows failed the
+downloads join, and **they are not missing at random: they fix at 0.704 against
+the joined rows' 0.493.** Floor-imputing all 54 as zero downloads — the
+worst case, since it forces high-fixing rows to the bottom of the predictor —
+drops the AUC to **0.7029**.
+
+**So the honest range is 0.70 to 0.83**, and both ends sit above every signal
+the tool computes on the same rows.
+
+## What this does and does not add to the programme's record
+
+Downloads have now beaten the tool's signals on two different outcomes, and a
+model with the composite's weights freed added nothing over downloads
+(−0.0114, MDE 0.0128).
+
+**The abandonment comparison is deliberately not cited as a third instance.**
+That study's 0.577 was measured on an instrument with three signals constant at
+reconstructed T, which this programme itself established makes the figure an
+artifact. Re-importing it here as a clean head-to-head would be laundering a
+number the record has already discredited.
+
+## Limits
+
+- **Mechanism unidentified.** Popular packages may get fixed because
+  maintainers attend to them, *or* because outsiders chase and submit the fix.
+  For a user triaging an advisory the distinction may not matter; for any
+  causal reading it is decisive, and none is offered.
+- **Cohort-scoped.** Advisory-receiving, still-publishing npm packages. The
+  population is already popularity-selected, which if anything restricts the
+  predictor's range and works against the observed discrimination.
+- **Missingness is outcome-correlated**, which is why the range is quoted
+  rather than the point estimate alone.
