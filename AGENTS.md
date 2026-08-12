@@ -104,6 +104,24 @@ The test: **delete the history from your comment. Does what remains still explai
 - **Non-obvious external facts.** *"OSV publishes `severity[].score` as a vector string, not a number."* Evergreen, and the reason the code looks odd.
 - **Test docstrings may name the defect they guard.** A regression test's subject *is* the historical defect; that is what makes it a regression test. This rule governs `src/`.
 
+**Ceiling markers (`# drp:`).** A deliberate simplification that cuts a real corner gets a greppable marker naming both its ceiling and the condition that lifts it:
+
+```
+# drp: <what this actually does, and where it falls short>
+# Upgrade when <observable condition> (#NNN).
+```
+
+This is rule 7 applied, not an exception to it. The ceiling half is a present-tense property of the code. The trigger half must **stand on its own with the issue number removed** — exactly the footnote test above. `Upgrade when #408 lands a variance-aware rule` fails it (delete the number and nothing stands); `Upgrade when a variance-aware sufficiency rule exists (#408)` passes.
+
+Why the convention exists: `grep -rnE '(#|//) ?(TODO|FIXME|XXX|HACK)' src/` returns **zero hits**, and that is not an absence of ceilings — it is ceilings recorded in long-form prose that nothing can count. The question *"how many known-ceiling simplifications are outstanding, and how many name no upgrade trigger?"* had no answer.
+
+Two mechanisms, because a marker checked only at write time is this repo's dominant defect wearing a regex:
+
+- `testing/unit/test_ceiling_markers.py` — offline, per-commit: every marker names a trigger, every trigger survives deleting its issue reference, no trigger is vacuously vague.
+- `scripts/check_ceiling_triggers.py` — scheduled, network: **fails once a cited issue closes.** Prose ceilings cannot expire; these expire loudly. An unreadable issue state is never treated as closed.
+
+The count may go **up** — rule 8's down-only ratchet governs debt, and forbidding new markers would punish exactly the honest discovery this repo runs on. Enforcement is per-marker, not on the total.
+
 **Why this matters here specifically.** This repository's comments carry unusually heavy rationale, deliberately — several defects survived for months because nobody recorded *why* a line was the way it was. That is worth keeping. But rationale and history are not the same thing, and the habit of writing "this used to…" turns a durable explanation into one with a shelf life. Write the reason, not the repair.
 
 ### 8. The bar
