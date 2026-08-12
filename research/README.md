@@ -147,3 +147,29 @@ activity explain R² ≈ 0.099 of the composite's rank variance (0.075 / 0.094 /
 0.099 at three dates), about forty times the permutation null and well under
 the 0.15 floor. The composite is *not* an activity proxy — which corrects a
 sentence this project had been carrying as an inference for five studies.
+
+## `additive/`
+
+`docs/additive-value-protocol.md`, result in `docs/additive-value-result.md`.
+Gates the reweighting question: **does anything the composite measures add to
+download count?**
+
+| Path | What it is |
+|---|---|
+| `additive/logistic.py` | Two-predictor logistic regression by IRLS, standard library only |
+| `additive/experiment.py` | Four arms out of fold, maintainer-clustered CV |
+
+```bash
+PYTHONPATH=research uv run python -m additive.experiment \
+    --snapshot research/data/npm-2026-08-06 \
+    --t 2024-08-01 --out research/results/additive-2024.json
+```
+
+**Result: absent.** Freeing all three signal weights adds **−0.0114** over
+download count out of fold, 95% CI [−0.0246, +0.0010], with a minimum
+detectable delta of 0.0128 — so the study could have seen a 0.02 improvement
+and did not. There is nothing to reweight.
+
+Every predictor is oriented as **risk**, higher meaning more likely abandoned,
+so downloads enter **negated**. Unnegated the baseline scores 0.3040, which is
+1 − 0.696, and every arm appears to beat it by a quarter of an AUC.
