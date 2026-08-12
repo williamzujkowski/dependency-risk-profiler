@@ -478,3 +478,59 @@ Recorded, not fixed: persisting per-signal scores now would mean re-cloning two
 thousand repositories. The requirement for the next harvest is one line —
 **store every scored signal, then run the saturation check before anything
 else** — and the tool to do it now exists.
+
+## 14. The harvest did not measure the full instrument. §3 said it would.
+
+**2026-08-12**, found by running the §13.1 saturation check against a re-scored
+record that persists every per-signal score. This is a deviation from the
+registered protocol, committed by me, and it is recorded before any outcome
+exists.
+
+§3 registered: *"For every package: **all thirteen scored signals**, including
+the six that require a cloned repository, plus the advisory lookup."*
+
+Measured, across all 2,000 packages:
+
+| signal | distinct values | why |
+|---|---:|---|
+| `exploit_score` | **1** (`None`) | **the advisory lookup was never performed** |
+| `license_score` | **1** (`None`) | licence never fetched |
+| `transitive_score` | **1** (`None`) | dependencies never resolved |
+| `source_repository_score` | **1** (`None`) | `source_repository_state` never set — the harvest passed `repository_url` and bypassed the analyser that records provenance |
+| `version_score` | **1** (`0.0`) | structural: a package has no installed version (§13) |
+| `deprecation_score` | 2 | |
+| `security_policy_score`, `dependency_update_score`, `maintained_score` | 3 each | |
+| `staleness_score`, `maintainer_score`, `health_indicators_score`, `community_score` | 5 each | |
+
+**Five of thirteen signals carry no information.** The harvest built its
+`DependencyMetadata` from six registry fields and called the scorer directly,
+rather than driving the production analyser that populates licence, advisories,
+transitive dependencies and repository provenance.
+
+### This is the exact failure the study exists to escape
+
+The retrospective studies were degenerate because three signals were constant
+at a reconstructed date. This study was registered to fix that, and its harvest
+produced **five** constant signals — by a different route, from bypassing the
+analyser rather than from reconstructing the past.
+
+§13 recorded one constant signal and called it structural. That reading was
+incomplete: **only `version` is structural.** The other four are omissions, and
+three of them are fixable without re-cloning anything.
+
+### What follows
+
+The outcome is not readable until 2027-08, **so nothing is contaminated and the
+fix is legitimate now** — the same reasoning that made §2.2's pre-sampling
+rewrite legitimate and §11's post-cohort respecification not. No outcome
+exists; there is nothing to fork paths toward.
+
+- **Fixable now, no clone needed:** advisory lookup (OSV), licence (from the
+  packument already fetched), `source_repository_state` (from the declared URL
+  through the production recorder).
+- **Fixable but expensive:** `transitive` needs dependency resolution.
+- **Not fixable:** `version`, per §13.
+
+Until that re-harvest lands, **the frozen record must not be described as the
+full instrument.** It is an eight-signal object of which four vary well, and
+any claim resting on "the shipped instrument was finally scored" is premature.

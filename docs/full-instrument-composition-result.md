@@ -159,3 +159,101 @@ time in this project that a constant has been mistaken for a measurement, after
 the saturated signals that made every prior outcome study degenerate and the
 tie-mass null in §3. Future protocols should pin the denominator per line, and
 require a null for any threshold whose scale is not obvious.
+
+---
+
+## 7. §1 IS WITHDRAWN — it measured my harvest, not the tool
+
+**2026-08-12, later the same day.** §1 reported that all 928 packages with a
+cloned repository change verdict band when the block is suppressed, every
+transition `UNKNOWN` → a verdict, and concluded that the block "is the reason
+there is a verdict".
+
+**That is an artifact of the harvest and the conclusion is withdrawn.**
+
+Protocol §14 established that the harvest bypassed the production analyser and
+never performed the advisory lookup, never fetched the licence, and never
+recorded the repository provenance state — leaving five of thirteen signals
+constant. Those omissions are what pushed packages under the sufficiency bar.
+With them measured, through the production code paths and at the shipped
+default configuration:
+
+| | harvest | measured as registered |
+|---|---:|---:|
+| constant signals | 5 of 13 | 2 of 13 |
+| **abstention** | **0.5360** | **0.0000** |
+| CRITICAL verdicts | 20 | 0 |
+
+**Not one package in the 2,000 abstains.** So the repository block cannot be
+"the reason there is a verdict" — there is a verdict either way. §1's
+measurement was real; what it measured was the gap my own harvest had left.
+
+### What survives §7
+
+The parts of this document that do not depend on abstention still stand:
+
+- The enumeration (§2): the eleven-value backbone reproduces in the uncloned
+  cells, 132 distinct scores appear in the cloned one, and the spread is real
+  rather than jitter.
+- §3's correction: line 2's rank-R² threshold was set without computing its
+  null and remains uninformative.
+- §4's withdrawal of the modal-cell reproduction as external validation.
+
+### The lesson, and it is not a new one
+
+§6 said *a cell definition with a constant axis is not a cell*, and called that
+the third time a constant had been mistaken for a measurement. §1 was the
+fourth, in the same document, one section earlier — and it took the form of
+comparing an instrument against **itself minus a block**, when four of its
+other signals were already missing from both arms. **A difference measured
+between two degraded arms describes the degradation.**
+
+## 8. What the repository block actually does, measured properly
+
+Same two-arm design as §1 — score each package with the block and without it —
+but with the omitted signals measured in **both** arms, so the difference is
+the block rather than the gap.
+
+The no-block arm is produced by pointing the same enrichment at an empty clone
+root: identical code path, identical inputs, no repository read.
+
+| | with block | without block |
+|---|---:|---:|
+| abstaining | **0** | **0** |
+| packages where the block ran | 932 | — |
+| **verdict band changed** | **685 of 932 (73.5%)** | |
+| raised risk / lowered risk | **667 / 18** (97.4% raise) | |
+| median score change | **+1.085** (p25 +0.885, p75 +1.157) | |
+| ran but changed nothing | 0 | |
+
+Sanity check that the arms are otherwise identical: of the 1,068 packages where
+no repository was read, **zero** changed verdict.
+
+### The corrected reading
+
+**The block does not decide whether the tool answers.** It answers either way.
+What the block does is move roughly three-quarters of the packages it can read
+into a *different* band, and it moves them **up**: 667 raised against 18
+lowered, a median of +1.085 on a five-point scale.
+
+That has a sharper consequence than §1's withdrawn version, and it points the
+opposite way from the manipulation reading:
+
+> A package that declares a readable repository is scored **worse**, almost
+> without exception. The repository block is not a reward for transparency —
+> in this cohort it is a penalty for it.
+
+Whether the penalty is *deserved* is the open question, and it is exactly what
+the 2027-08 outcome read is for. If packages with readable repositories are
+genuinely more likely to go quiet, the block is doing its job. If they are not,
+the tool is systematically punishing the packages that gave it something to
+look at, which would be the worst possible property for a signal computed from
+a **self-declared, unverified URL** (#388) that a package can simply omit.
+
+### Why §1 got this wrong
+
+§1 compared the instrument against itself-minus-a-block while four other
+signals were missing from *both* arms. The missing signals put every cloned
+package under the sufficiency bar in the no-block arm, so every difference
+presented as `UNKNOWN` → verdict. **A difference measured between two degraded
+arms describes the degradation**, and the degradation was mine.

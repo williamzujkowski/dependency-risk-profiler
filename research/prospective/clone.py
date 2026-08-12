@@ -62,10 +62,11 @@ import os
 import re
 import shutil
 import signal
+import threading
 import subprocess  # nosec B404 - git is invoked with a fixed argv, never a shell string
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,8 @@ class CloneResult:
     slug: str
     ok: bool
     path: Optional[Path]
-    #: ``ok``, ``ok_shallow_fallback``, ``not_found``, ``auth``, ``timeout``,
+    #: ``ok``, ``ok_shared``, ``ok_shallow_fallback``, ``not_found``, ``auth``,
+    #: ``timeout``,
     #: ``too_large``, ``bad_slug``, ``no_commits_in_window``, ``git_error``.
     #: Recorded per package so §4.1's uncloneable stratum can be described
     #: rather than merely counted.
@@ -160,6 +162,17 @@ def _classify(stderr: str, returncode: int) -> str:
     return "git_error"
 
 
+_LOCKS: Dict[str, threading.Lock] = {}
+_LOCKS_GUARD = threading.Lock()
+
+
+def _lock_for(destination: Path) -> threading.Lock:
+    """Return the one lock guarding this destination directory."""
+    key = str(destination)
+    with _LOCKS_GUARD:
+        return _LOCKS.setdefault(key, threading.Lock())
+
+
 def _kill_group(expired: subprocess.TimeoutExpired) -> None:
     """Kill the timed-out clone's whole process group.
 
@@ -213,24 +226,39 @@ def clone_one(slug: str, root: Path, since: str) -> CloneResult:
         return CloneResult(slug, False, None, "bad_slug", False)
 
     destination = root / slug.replace("/", "__")
-    if destination.exists():
-        shutil.rmtree(destination, ignore_errors=True)
     destination.parent.mkdir(parents=True, exist_ok=True)
 
-    ok, reason = _attempt(slug, destination, since)
-    if ok:
-        return CloneResult(slug, True, destination, "ok", False)
+    # One lock per destination, because the destination is keyed by SLUG and
+    # several packages can declare the same repository. In the #385 harvest one
+    # slug was declared by fourteen packages; with ten worker threads they
+    # raced, each rmtree-ing a directory another was cloning into, and the
+    # losers were recorded as `git_error`. Four packages entered the uncloneable
+    # stratum that way -- a failure recorded as a property of the package when
+    # it was a property of the harness.
+    with _lock_for(destination):
+        if destination.exists():
+            # A completed clone from another package declaring the same slug is
+            # the same bytes this call would fetch, so reuse it rather than
+            # re-cloning. Only a partial directory is worth discarding.
+            if (destination / ".git").is_dir():
+                return CloneResult(slug, True, destination, "ok_shared", False)
+            shutil.rmtree(destination, ignore_errors=True)
 
-    if reason != "no_commits_in_window":
-        shutil.rmtree(destination, ignore_errors=True)
-        return CloneResult(slug, False, None, reason, False)
+        ok, reason = _attempt(slug, destination, since)
+        if ok:
+            return CloneResult(slug, True, destination, "ok", False)
 
-    # No commits in the window. That is a reading about the repository, not a
-    # failure to read it, so fall back rather than dropping the package into
-    # the uncloneable stratum and correlating clone failure with the outcome.
-    shutil.rmtree(destination, ignore_errors=True)
-    ok, reason = _attempt(slug, destination, None)
-    if not ok:
+        if reason != "no_commits_in_window":
+            shutil.rmtree(destination, ignore_errors=True)
+            return CloneResult(slug, False, None, reason, False)
+
+        # No commits in the window. That is a reading about the repository, not
+        # a failure to read it, so fall back rather than dropping the package
+        # into the uncloneable stratum and correlating clone failure with the
+        # outcome.
         shutil.rmtree(destination, ignore_errors=True)
-        return CloneResult(slug, False, None, reason, True)
-    return CloneResult(slug, True, destination, "ok_shallow_fallback", True)
+        ok, reason = _attempt(slug, destination, None)
+        if not ok:
+            shutil.rmtree(destination, ignore_errors=True)
+            return CloneResult(slug, False, None, reason, True)
+        return CloneResult(slug, True, destination, "ok_shallow_fallback", True)
