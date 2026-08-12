@@ -246,3 +246,170 @@ outcome-blind interim reads. **The base-rate pilot ran before this amendment
 and changed a falsification line**, which is the outcome the panel was asking
 for: a criterion voided by measurement costs one afternoon, and voided by a
 twelve-month wait costs a year.
+
+## 10. Cohort drawn — an observation recorded before anything was scored
+
+**2026-08-12.** 2,000 packages drawn, 50 rejected as ineligible, 7,978
+already-seen packages excluded. `cohort_sha256`
+`64c07197d078753e140fbd8a7b2bb3d85174205a2da3daf467d67c15fec36746`.
+
+| stratum | n | declares a repository |
+|---|---:|---:|
+| **multi_release** (primary) | 1,345 | **0.602** |
+| one_shot | 655 | 0.521 |
+| all | 2,000 | **0.576** |
+
+**§5 line 4 is on course to fire, and this is recorded now rather than after
+the scoring run**, so the ordering is checkable from git.
+
+The floor is 60% of packages yielding a full-instrument score. 57.6% of the
+cohort declares a repository at all, and that is an **upper bound** — a
+declared repository still has to clone. The primary stratum sits at 0.602,
+which the clone step can only reduce.
+
+**This is not a study failure. It is a measurement about the product**, and it
+arrives before any AUC:
+
+> The shipped instrument cannot be fully computed for a random npm package.
+> Roughly **42% of npm packages declare no repository at all**, so the six
+> repository-derived signals — the larger block of the composite's declared
+> weight — are structurally absent, not merely missing.
+
+Prior studies could not see this. They sampled from cohorts already filtered to
+packages with reconstructable history, and they never attempted the repository
+signals at all.
+
+**No falsification line is being respecified here.** §2.2's base-rate guard was
+rewritten *before* sampling, which is why that was legitimate; this one has
+seen the cohort, and moving it now would be the forking-paths hole §8 exists to
+close. Line 4 fires if the scored yield lands under 60%, and the consequence
+registered in §5 stands.
+
+## 11. Registered before scoring, after a 7-0 review of §10
+
+The panel ruled unanimously on the §10 observation. Two amendments, both
+committed **before the scoring run**, which is the only thing that makes the
+second one legitimate.
+
+### 11.1 The denominator ambiguity breaks against the author
+
+§5 line 4 says "fewer than 60% of **packages**"; §5's scope sentence says all
+lines are evaluated on the primary stratum. I wrote both and they do not agree.
+
+Registered rule: **both denominators are reported, and line 4 counts as fired
+if either reading fires.** When a registered line turns out ambiguous and the
+author has already seen the cohort, the ambiguity has to break adverse to the
+author, or pre-registration buys nothing. Reporting both preserves the
+collision as evidence about the protocol instead of laundering it.
+
+**A correction to §10, from the review.** Line 4 gates packages that *yield a
+full-instrument score*, and **a declared repository is not a yielded score.**
+§10's 0.602 is a declaration rate. The yield is lower by however many declared
+repositories fail to clone, and that must be **measured, not extrapolated** —
+the positive control's 1-of-8 is far too wide to stand in for it. §10 read the
+gate on the wrong quantity, which is recorded rather than edited away.
+
+### 11.2 A secondary analysis on the cloneable stratum
+
+§4.1 registered the uncloneable packages as a reported stratum before sampling.
+That licenses *reporting* them; it does not license promoting the cloneable
+stratum to the population. So, registered here in advance:
+
+**Secondary, conditional:** the full instrument scored on packages where it is
+computable, reported with its own yield and base rate, answering *"conditional
+on being computable, does the instrument discriminate?"*
+
+Four constraints, fixed now:
+
+1. **It can never rescue §1**, under any result. §1 is a claim about a uniform
+   draw; this is a claim about a subpopulation.
+2. **The selection is stated wherever the number appears.** Clone failure
+   correlates with the outcome, so the surviving stratum is enriched for
+   still-alive packages and the discrimination task is *easier*. Every sentence
+   carrying this AUC carries that clause.
+3. **Both comparators still apply.** Downloads and `staleness`-alone are scored
+   on the same stratum. A conditional win over neither is still a loss.
+4. **This design is data-inspired and it is dishonest not to say so.** The
+   §10 yield numbers are what prompted it. It is outcome-blind — no outcome
+   exists until 2027-08 — and it is registered before scoring, which is the
+   most that can be claimed for it.
+
+### 11.3 Why not halt
+
+Halting was on the table and was rejected 7-0. The registry-computable signals
+are measurable on the whole cohort, the cohort is frozen, and the outcome
+accrues passively — the twelve-month wait is calendar time, not effort. And the
+registry-only question is itself unanswered: *do the computable signals beat
+downloads and `staleness`-alone on a uniform draw?* Nothing has measured that.
+
+## 12. Scored at T — the measured yield, and line 4
+
+**2026-08-12.** All 2,000 packages scored with the production collectors and
+the production scorer. Scorer weights and code commit hashed into the record.
+
+### Line 4 fires, under both registered readings
+
+§11.1 registered *report both denominators, fired if either*. Both fire, so the
+ambiguity I created never had to be resolved in anyone's favour.
+
+| denominator | full-instrument yield | floor | |
+|---|---:|---:|---|
+| cohort (all 2,000) | **0.4640** | 0.60 | **fires** |
+| primary stratum (multi_release, n=1,345) | **0.5056** | 0.60 | **fires** |
+| one_shot (n=655) | 0.3786 | — | reported |
+
+**Consequence, as registered in §5:** this is reported as a registry-only
+study, and **the §1 claim is not made.** The conditional secondary registered
+in §11.2 covers the 928 packages where the full instrument is computable, with
+its selection stated.
+
+§10 read the gate on a declaration rate and the review corrected it. Measured,
+the declaration rate (0.576) overstated the yield by 11 points.
+
+### Why the instrument could not be computed
+
+| reason | n | share of cohort |
+|---|---:|---:|
+| **no repository declared** | 849 | **0.4245** |
+| cloned, shallow-since fallback | 573 | 0.2865 |
+| cloned normally | 355 | 0.1775 |
+| **`auth`** — private, renamed or deleted, indistinguishable (#411) | 198 | 0.0990 |
+| `git_error` | 15 | 0.0075 |
+| `bad_slug` — rejected before reaching `git` | 7 | 0.0035 |
+| `timeout` | 3 | 0.0015 |
+
+Two readings worth stating plainly:
+
+**Of the 1,151 packages that declare a repository, 198 (17.2%) do not resolve
+to one.** A declared repository is a claim, not an artifact — and per #388
+nothing in this tool checks the claim.
+
+**Of the 928 repositories that did clone, 573 (61.7%) had no commit in thirteen
+months.** They reached the working tree only through the `--shallow-since`
+fallback. That is a reading about the population, not a defect: the fallback
+case is the informative one.
+
+### Abstention
+
+**1,072 of 2,000 (53.6%)** scored `insufficient_data`. The tool declines to
+issue a verdict for more than half of a uniform npm draw. That is the
+abstention machinery working as designed — it refuses to guess — but it means
+the population where the tool answers at all is a minority and a selected one.
+
+Incidentally corroborating #344: 744 HIGH against 20 CRITICAL.
+
+### A registered constraint that was not enforced
+
+§7 registered a "hard wall-clock cap" on clones. It did not hold. Python's
+`subprocess.run(timeout=…)` kills `git` but not the `index-pack` grandchild,
+and `capture_output` then blocks on a pipe the survivor still holds open — a
+repository of vendored font binaries sailed past the 180-second cap and was
+still running at 409 seconds. Fixed afterwards with `start_new_session` and a
+process-group kill.
+
+Recorded rather than quietly repaired, because the record was produced under
+the unfixed version. The effect on the data is that three packages are marked
+`timeout` and an unknown few large repositories took longer than the cap
+allowed and then succeeded — which yields *more* data, not wrong data. But a
+cap that does not cap is a stated bar with nothing enforcing it, which is this
+repository's own dominant defect, in a paragraph I wrote about enforcement.

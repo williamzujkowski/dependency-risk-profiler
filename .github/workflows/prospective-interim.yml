@@ -1,0 +1,52 @@
+name: Prospective cohort — interim read
+
+# §8.1 of docs/prospective-protocol.md. The study's outcome is not readable
+# until 2027-08, and a twelve-month dead window with no checkpoints means a
+# doomed run surfaces at month twelve rather than month three.
+#
+# These reads are OUTCOME-BLIND BY CONSTRUCTION: `--interim` emits a cumulative
+# quiet rate and cohort integrity only. It computes no AUC, compares no arm,
+# and issues no verdict. That is enforced in the script, not by convention --
+# an interim read that compared anything would contaminate the pre-registration
+# it exists to protect.
+#
+# Quarterly rather than monthly: the point is to catch a base-rate surprise, and
+# a quiet rate does not move meaningfully in thirty days.
+
+on:
+  schedule:
+    - cron: '0 6 1 2,5,8,11 *'  # 06:00 UTC on the 1st, quarterly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  interim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Read the cohort's cumulative quiet rate
+        # Writes to the runner only. The result is deliberately not committed:
+        # an interim read that accumulated into the repository would become a
+        # record someone reasons from, and §8.1 licenses no claim from these.
+        run: |
+          python research/prospective/outcome.py \
+            --scored research/data/prospective-cohort/scored-at-T.json \
+            --out "$RUNNER_TEMP/interim.json" \
+            --interim
+
+      - name: Upload the interim read
+        uses: actions/upload-artifact@v4
+        with:
+          name: prospective-interim
+          path: ${{ runner.temp }}/interim.json
+          retention-days: 90

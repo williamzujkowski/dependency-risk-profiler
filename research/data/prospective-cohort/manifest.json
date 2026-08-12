@@ -1,0 +1,15 @@
+{
+ "harvested_at": "2026-08-12T22:38:14.692345+00:00",
+ "seed": 202608122,
+ "target": 2000,
+ "drawn": 2000,
+ "rejected": 50,
+ "excluded_already_seen": 7978,
+ "names_sha256": "dc25a021066446564317ddbea4818a5bf9cd5961d11c3e44088cec9b85ca5dff",
+ "cohort_sha256": "64c07197d078753e140fbd8a7b2bb3d85174205a2da3daf467d67c15fec36746",
+ "strata": {
+  "one_shot": 655,
+  "multi_release": 1345
+ },
+ "repo_declared": 1151
+}
