@@ -82,8 +82,13 @@ def test_a_mediocre_substituted_repository_still_pays() -> None:
 
     result = scorer.score_dependency(dependency)
     normalised = result.total_score / scorer.max_score
-    assert normalised == pytest.approx(0.2667, abs=5e-4)
-    assert 1.0 - normalised == pytest.approx(0.7333, abs=5e-4)
+    # 0.3333 since #339: two of the three collectors measured here
+    # (branch_protection, signed_commits) no longer carry weight, so the same
+    # substituted repository buys less. The finding is unchanged and the number
+    # moved -- an attacker still does not need a healthy repository, because
+    # "no repository" still scores 1.0.
+    assert normalised == pytest.approx(0.3333, abs=5e-4)
+    assert 1.0 - normalised == pytest.approx(0.6667, abs=5e-4)
 
 
 def test_three_collectors_do_not_clear_the_sufficiency_bar() -> None:

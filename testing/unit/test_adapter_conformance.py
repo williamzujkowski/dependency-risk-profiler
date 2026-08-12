@@ -201,7 +201,11 @@ def test_the_pypi_maintainer_count_comes_from_the_ownership_object() -> None:
     assert score.dependency.maintainer_count == 3
     assert score.maintainer_score == 0.25
     assert "maintainer" not in score.unknown_signals
-    assert SCORES_FROM_REGISTRY_ALONE["python"] is False
+    # True since #339: retiring two signals that a registry-only run could
+    # never measure moved the bar from 8-of-15 to 7-of-13, and PyPI's floor of
+    # seven now clears it. The maintainer read this test is really about is
+    # unaffected -- it is asserted by name above, not through this count.
+    assert SCORES_FROM_REGISTRY_ALONE["python"] is True
 
 
 def test_an_org_owned_project_reports_no_maintainer_count_rather_than_zero() -> None:

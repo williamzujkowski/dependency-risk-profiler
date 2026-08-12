@@ -322,7 +322,7 @@ def test_total_score_calculation_with_partial_metrics() -> None:
     # unresolved transitive tree read as "resolved, and empty" (#199), an
     # unrecorded advisory lookup read as "asked, and clean" (#321), and a
     # `bool` deprecation flag read as "asked, and live" (#320).
-    assert score.unknown_signal_count == 14
+    assert score.unknown_signal_count == 12
     assert score.measured_signal_count == 0
     for silent in ("transitive", "exploit", "deprecation"):
         assert silent in score.unknown_signals
@@ -683,7 +683,10 @@ def test_regression_risk_factors_without_data() -> None:
             partial_security_score.factors
         ), "Should include risk factor for known false security metric"
         assert "security_policy" in partial_security_score.unknown_signals
-        assert "signed_commits" in partial_security_score.unknown_signals
+        # `signed_commits` is deliberately absent: #339 retired it from the
+        # weighted set, so an unmeasured reading is no longer a gap IN that
+        # set -- the same treatment `license` has had since #340.
+        assert "signed_commits" not in partial_security_score.unknown_signals
     except Exception as e:
         pytest.fail(f"Risk factor determination failed with exception: {e}")
 

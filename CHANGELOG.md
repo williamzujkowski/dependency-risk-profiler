@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`signed_commits` and `branch_protection` no longer contribute to the risk
+  score, and some packages that returned UNKNOWN now return a verdict.**
+
+  Both signals were retired from the weighted composite after an audit across
+  eight real repositories: `signed_commits` abstained on six of eight, and the
+  signatures it did see were GitHub's web-flow key — so a positive reading
+  meant "this project merges through the GitHub UI", not "this project signs
+  its commits". `branch_protection` returned an identical 0.10 for five of
+  eight, because real branch protection is a GitHub API property that a clone
+  cannot observe. Both are still measured and reported on their own axis, the
+  same treatment `license` has had since #340.
+
+  **The behaviour change worth knowing about:** the abstention rule is
+  `unmeasured > measured`, and both retired signals required a cloned
+  repository — so a registry-only run could never measure either and they sat
+  permanently on the unmeasured side. Removing them moves six ecosystems
+  (cargo, composer, nodejs, nuget, python, rubygems) from "cannot reach a
+  verdict from a registry document alone" to reaching one.
+
+  No score changes: the total is renormalised over measured weights either way.
+  What changed is the tool's willingness to publish a number it already had.
+  If you run with `--fail-on`, packages that previously returned UNKNOWN may
+  now return a verdict, in either direction relative to your threshold.
+
+  This is not more evidence — it is the same evidence, no longer withheld for
+  want of two readings that could not have been taken in that mode and could
+  not have informed the verdict if they had.
+
 ### Security
 
 - **A captured fixture republished three of Signal's credentials.** GitHub's

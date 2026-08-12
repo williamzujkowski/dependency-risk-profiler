@@ -331,8 +331,16 @@ class RiskScorer:
         # OpenSSF Scorecard-inspired risk factors
         security_policy_weight: float = 0.25,
         dependency_update_weight: float = 0.2,
-        signed_commits_weight: float = 0.2,
-        branch_protection_weight: float = 0.15,
+        # Retired from the composite (#339). Accepted so existing callers and
+        # configuration files keep working, and ignored: both signals were
+        # audited across eight real repositories and neither discriminated.
+        # `signed_commits` reported on GitHub's web-flow key -- effectively
+        # whether a project merges via the GitHub UI -- and
+        # `branch_protection` returned an identical 0.10 for five of eight,
+        # because the property it is named for lives in the GitHub API and
+        # cannot be observed from a clone at all.
+        signed_commits_weight: float = 0.0,
+        branch_protection_weight: float = 0.0,
         maintained_weight: float = 0.20,
         popularity_high_stars: float = float(POPULARITY_HIGH_STARS_DEFAULT),
         popularity_high_contributors: float = float(
@@ -567,16 +575,6 @@ class RiskScorer:
                 SIGNAL_DEPENDENCY_UPDATE,
                 measure(SIGNAL_DEPENDENCY_UPDATE, dependency_update_score, context),
                 self.dependency_update_weight,
-            ),
-            (
-                SIGNAL_SIGNED_COMMITS,
-                measure(SIGNAL_SIGNED_COMMITS, signed_commits_score, context),
-                self.signed_commits_weight,
-            ),
-            (
-                SIGNAL_BRANCH_PROTECTION,
-                measure(SIGNAL_BRANCH_PROTECTION, branch_protection_score, context),
-                self.branch_protection_weight,
             ),
             (
                 SIGNAL_MAINTAINED,

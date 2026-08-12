@@ -35,7 +35,30 @@ every approximate row marked approximate.
 `no` means the tool measures and publishes it, on its own axis, and the risk
 score does not move when it changes.
 
-One signal is `no` today: `license`.
+Three signals are `no` today: `license`, `signed_commits` and
+`branch_protection`.
+
+`license` came out of the composite in #340 because it measured **actively
+harmful** — removing it *raised* discrimination, with the interval excluding
+zero. It is still reported, because what licence a package carries is a fact a
+consumer wants.
+
+`signed_commits` and `branch_protection` came out in #339, after an audit
+across eight real repositories:
+
+- **`signed_commits` abstained on six of eight**, and the two findings tracked
+  merge tooling rather than signing practice. The signatures it does see are
+  GitHub's web-flow key `B5690EEEBB952194`, which GitHub applies to
+  merge-button merges — so a `True` meant "this project merges through the
+  GitHub UI", not "this project signs its commits".
+- **`branch_protection` returned an identical 0.10 for five of eight.** Real
+  branch protection is a GitHub API property and a clone cannot observe it, so
+  what was being scored were file-based hints standing in for it. Re-specify it
+  against the API and it can come back.
+
+Both are still measured and published on their own axis, for the same reason
+`license` is: what they state is a fact, and a fact is worth reporting even
+when it is not worth forecasting from.
 
 A licence states an obligation a consumer takes on — copyleft, network
 copyleft, commercial, or a licence nobody recognized. That is a compliance fact
@@ -76,8 +99,8 @@ them made the number worse at the only job anyone has measured it doing.
 | `transitive` | yes | — | none | Scorecard has no dependency-tree-size check. Its Pinned-Dependencies check asks a different question, about how dependencies are referenced rather than how many exist. |
 | `security_policy` | yes | Security-Policy | close | Same question, same evidence (a SECURITY.md in a well-known location). Scorecard grades the policy's contents out of ten; ours is presence or absence. |
 | `dependency_update` | yes | Dependency-Update-Tool | close | Same question, same evidence (Dependabot or Renovate configuration in the repository). |
-| `signed_commits` | yes | — | removed_upstream | No Scorecard check asks this at v5.5.0, and this row is why the design was amended to keep our own names. We read git history directly: commit signature status (git log %G?), tag signature status, and workflow- or settings-enforced signing. Scorecard's nearest historical check was Signed-Tags, which existed at v2.0.0 and was gone by v3.2.1. The nearest live check, Signed-Releases, inspects the last release's *assets* for detached signature files and never reads git history, so it answers a different question and must not be joined to this signal. Do not rename this signal to either name. |
-| `branch_protection` | yes | Branch-Protection | close | Same question, same evidence. Scorecard needs an admin token to see the full settings and degrades without one; ours reads what an unauthenticated or read-scoped view exposes, so a disagreement here is usually a permissions difference rather than a finding. |
+| `signed_commits` | no | — | removed_upstream | No Scorecard check asks this at v5.5.0, and this row is why the design was amended to keep our own names. We read git history directly: commit signature status (git log %G?), tag signature status, and workflow- or settings-enforced signing. Scorecard's nearest historical check was Signed-Tags, which existed at v2.0.0 and was gone by v3.2.1. The nearest live check, Signed-Releases, inspects the last release's *assets* for detached signature files and never reads git history, so it answers a different question and must not be joined to this signal. Do not rename this signal to either name. |
+| `branch_protection` | no | Branch-Protection | close | Same question, same evidence. Scorecard needs an admin token to see the full settings and degrades without one; ours reads what an unauthenticated or read-scoped view exposes, so a disagreement here is usually a permissions difference rather than a finding. |
 | `maintained` | yes | Maintained | close | Same question and the closest of our three Maintained rows. Scorecard thresholds on activity in the trailing 90 days and treats an archived repository as unmaintained outright. |
 | `source_repository` | yes | — | none | Scorecard starts from a repository URL, so it cannot ask this question: a package that declares no source is one it cannot score. That is precisely why we measure it — the packages Scorecard cannot reach are not thereby safe (#146). |
 

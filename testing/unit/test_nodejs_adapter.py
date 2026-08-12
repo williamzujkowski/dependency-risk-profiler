@@ -550,30 +550,43 @@ def test_nodejs_measures_the_signals_the_registry_provides() -> None:
     assert_measures_registry_signals(_express_score(), "nodejs")
 
 
-def test_npm_reads_its_owner_list_and_still_lands_one_signal_short() -> None:
-    """A packument carries an owner list; it does not carry a verdict.
+def test_npm_reads_its_owner_list_and_now_scores_from_the_registry_alone() -> None:
+    """A packument carries an owner list, and since #339 it carries a verdict.
 
     npm was recorded as publishing no cheap owner list. It publishes one on
     every packument; the read was routed behind a test for whether the package
     name is scoped, so every unscoped name missed it. That read works, and this
     asserts it by name rather than through a count that a swap could hold flat.
 
-    Seven measured against eight unmeasured, and ``insufficient_data`` is
-    ``unmeasured > measured``, so a packument alone is one signal short of a
-    verdict. ``exploit`` is that signal: no advisory source is asked here
-    (#321), and asking one is the single input that moves this and every other
-    ecosystem up by one.
+    **The verdict half of this test inverted deliberately in #339.** It used to
+    read "seven measured against eight unmeasured, so a packument alone is one
+    signal short of a verdict". Retiring `signed_commits` and `branch_protection`
+    removed two entries from the UNMEASURED side -- both need a cloned
+    repository, so a registry-only run could never measure either -- and the
+    count is now seven against six.
+
+    That is not the tool growing confident on the same evidence. The score is
+    renormalized over measured weights and does not move at all; only the
+    willingness to publish it does. The two retired signals were never pending
+    evidence: one tracked GitHub's web-flow key and the other returned a
+    constant it cannot observe, so counting them as "not yet measured" was
+    manufacturing UNKNOWNs out of slots that could not have informed a verdict
+    even when filled.
+
+    The bar itself barely moved: a verdict needed 8 of 15 measured (53.3%) and
+    now needs 7 of 13 (53.8%). What changed is that two permanently unclearable
+    hurdles left the course.
     """
     score = _express_score()
 
-    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is False
+    assert SCORES_FROM_REGISTRY_ALONE["nodejs"] is True
     assert "maintainer" not in score.unknown_signals
     assert "exploit" in score.unknown_signals, "no advisory source was asked"
     assert "transitive" not in score.unknown_signals
-    assert score.insufficient_data is True
-    assert score.risk_level is RiskLevel.UNKNOWN
+    assert score.insufficient_data is False
+    assert score.risk_level is not RiskLevel.UNKNOWN
     assert score.measured_signal_count == 7
-    assert score.unknown_signal_count == 8
+    assert score.unknown_signal_count == 6
 
 
 def test_dev_dependencies_are_not_runtime_dependencies() -> None:
