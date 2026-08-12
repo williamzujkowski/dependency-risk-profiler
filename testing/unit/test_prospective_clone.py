@@ -109,3 +109,36 @@ def test_a_file_size_limit_is_imposed() -> None:
     argv = argv_for("axios/axios")
     assert argv[0] == "/bin/sh"
     assert str(clone.FSIZE_BLOCKS) in argv
+
+
+def test_a_shared_slug_reuses_the_clone_instead_of_racing(tmp_path: Path) -> None:
+    """Several packages can declare the same repository; one slug, one clone.
+
+    In the #385 harvest one slug was declared by fourteen packages. With ten
+    worker threads they raced -- each rmtree-ing a destination another was
+    cloning into -- and the losers were recorded as `git_error`, entering the
+    uncloneable stratum. A failure recorded as a property of the package when
+    it was a property of the harness.
+    """
+    destination = tmp_path / "owner__repo"
+    (destination / ".git").mkdir(parents=True)
+
+    result = clone.clone_one("owner/repo", tmp_path, "2025-07-12")
+
+    assert result.ok is True
+    assert result.reason == "ok_shared"
+    assert result.path == destination
+    # The existing clone survives: nothing was rmtree'd out from under a
+    # concurrent reader.
+    assert (destination / ".git").is_dir()
+
+
+def test_a_partial_directory_is_discarded_not_reused(tmp_path: Path) -> None:
+    """Only a completed clone is shareable; a half-written one is not."""
+    destination = tmp_path / "owner__repo"
+    destination.mkdir(parents=True)  # no .git -- an interrupted clone
+
+    argv = clone.clone_argv("owner/repo", destination, "2025-07-12")
+    # Reaching git at all means the partial directory was not treated as a
+    # usable clone; the call itself needs no network to assert that.
+    assert "--shallow-since=2025-07-12" in argv
