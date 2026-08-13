@@ -42,3 +42,17 @@ what makes a correction legible to someone reading later.
 <!-- Rows are read by the test; keep the figure in the first column and inside
      backticks. A row whose figure never appears anywhere is fine — it means
      the claim was fully removed. -->
+
+## A fourth instance, recorded because it is a different shape
+
+Protocol §15 documents one that this registry could not have caught: the
+readout was pointed at a record that did not satisfy the frozen analysis
+contract, while a contract test passed throughout because it checked the
+*producer* rather than the artifact.
+
+No figure was withdrawn, so there was nothing for this file to track. The
+mechanism that catches it is `testing/unit/test_canonical_record.py`, which
+asserts against the committed record.
+
+The two are the same lesson at different layers: **a claim, or a contract,
+verified where the author is looking rather than where it is consumed.**

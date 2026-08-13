@@ -538,3 +538,45 @@ exists; there is nothing to fork paths toward.
 Until that re-harvest lands, **the frozen record must not be described as the
 full instrument.** It is an eight-signal object of which four vary well, and
 any claim resting on "the shipped instrument was finally scored" is premature.
+
+## 15. The canonical record — one file, named, and contract-tested
+
+**2026-08-12.** §14's re-measurement left a trap for 2027: the readout was
+designated to use the enriched record, and the enriched record did **not carry
+the fields `analyse.py` requires**. Six were absent (`cluster`, `stratum`,
+`full_instrument`, `downloads`, `staleness`, `composite_ablated`), and the
+ablated arm that *was* present had been computed before four signals were
+measured, so it ablated a different instrument than the one it is compared to.
+
+`analyse.py` was frozen before the harvest and must not change. **The record is
+the thing that has to meet it.**
+
+### The authoritative file
+
+`research/data/prospective-cohort/canonical-at-T.json`
+
+One file, named here, so there is no question at readout time about which
+record is authoritative. It carries every scored signal, both arms, and every
+field the frozen analysis reads. The two earlier records stay committed as
+history and are **not** to be read by the analysis:
+
+| file | status |
+|---|---|
+| `scored-at-T.json` | superseded — the harvest that omitted four signals (§14) |
+| `enriched-at-T.json` | superseded — signals measured, analysis fields absent |
+| **`canonical-at-T.json`** | **authoritative** |
+
+### Why a contract test already existed and did not catch this
+
+`test_prospective_outcome.py` has asserted the scorer-to-analysis contract
+since before the harvest. It passed throughout — because it exercised
+`score_at_t.score_one`, the *harvest* producer, while the record designated for
+the readout had moved to the enrichment producer.
+
+> **A contract test that checks a producer proves nothing about the artifact.**
+
+`test_canonical_record.py` checks the committed file: every required field on
+every row, the frozen loader accepting it, the ablated arm actually differing
+from the composite, and no scored signal constant beyond the two known ones.
+That last assertion pins §13 and §14 so a signal cannot silently stop being
+collected between now and 2027.

@@ -151,12 +151,42 @@ def enrich_one(
             logger.warning("analyze_repository failed for %s: %s", cohort_row["name"], exc)
 
     scored = RiskScorer().score_dependency(dependency, as_of=t)
+
+    # §1's third arm, recomputed here rather than carried over: the harvest's
+    # `composite_ablated` was scored without the four signals §14 found
+    # missing, so it ablates a different instrument than this one.
+    ablated = RiskScorer(
+        staleness_weight=0.0, version_difference_weight=0.0
+    ).score_dependency(dependency, as_of=t)
+
     row: Dict[str, object] = {
         "name": cohort_row["name"],
         "used_clone": used_clone,
         "composite": scored.total_score,
+        "composite_ablated": ablated.total_score,
         "risk_level": str(scored.risk_level).replace("RiskLevel.", ""),
         "insufficient_data": scored.insufficient_data,
+        # Everything `analyse.py` needs, carried here so the frozen analysis
+        # script can read this record directly. That script was frozen before
+        # the harvest and must not change; this is the record that has to meet
+        # it. Leaving the gap would mean the 2027-08 readout either fails or
+        # silently falls back to the superseded harvest record.
+        "stratum": cohort_row["stratum"],
+        "cluster": (
+            cohort_row["maintainers"][0]
+            if cohort_row["maintainers"]
+            else cohort_row["name"]
+        ),
+        "downloads": cohort_row.get("downloads_last_month") or 0,
+        # `full_instrument` means the repository block ran, which here is
+        # exactly whether a clone was read.
+        "full_instrument": used_clone,
+        "staleness": getattr(scored, "staleness_score", None),
+        "staleness_days": (
+            (t - dependency.last_updated).days
+            if dependency.last_updated is not None
+            else None
+        ),
     }
     for field in SIGNAL_FIELDS:
         row[field] = getattr(scored, field, None)
