@@ -1,0 +1,68 @@
+{
+ "seed": 20260813,
+ "results": [
+  {
+   "ecosystem": "npm",
+   "population": 4312119,
+   "sampled": 1000,
+   "resolved": 979,
+   "resolution_rate": 0.979,
+   "counts": {
+    "undeclared": 387,
+    "declared": 546,
+    "unusable": 46,
+    "unresolved": 21
+   },
+   "declared_share": 0.557711950970378,
+   "unusable_share": 0.04698672114402452,
+   "undeclared_share": 0.3953013278855976
+  },
+  {
+   "ecosystem": "packagist",
+   "population": 457720,
+   "sampled": 1000,
+   "resolved": 773,
+   "resolution_rate": 0.773,
+   "counts": {
+    "declared": 768,
+    "unresolved": 227,
+    "unusable": 5
+   },
+   "declared_share": 0.9935316946959897,
+   "unusable_share": 0.00646830530401035,
+   "undeclared_share": 0.0
+  },
+  {
+   "ecosystem": "pypi",
+   "population": 869565,
+   "sampled": 1000,
+   "resolved": 969,
+   "resolution_rate": 0.969,
+   "counts": {
+    "declared": 652,
+    "undeclared": 301,
+    "unresolved": 31,
+    "unusable": 16
+   },
+   "declared_share": 0.672858617131063,
+   "unusable_share": 0.016511867905056758,
+   "undeclared_share": 0.3106295149638803
+  },
+  {
+   "ecosystem": "rubygems",
+   "population": 195951,
+   "sampled": 1000,
+   "resolved": 1000,
+   "resolution_rate": 1.0,
+   "counts": {
+    "declared": 741,
+    "undeclared": 234,
+    "unusable": 25
+   },
+   "declared_share": 0.741,
+   "unusable_share": 0.025,
+   "undeclared_share": 0.234
+  }
+ ],
+ "spread_points": 43.58197437256117
+}
