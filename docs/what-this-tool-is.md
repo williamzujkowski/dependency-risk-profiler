@@ -1,7 +1,7 @@
 # What this tool is, on the evidence
 
 **Status:** the synthesis #382 asked for. Not a study — every number here is
-measured elsewhere and cited. Written after ten studies, several of which
+measured elsewhere and cited. Written after thirteen studies, several of which
 corrected earlier ones, including three that corrected each other within a
 single day.
 
@@ -37,6 +37,9 @@ shipped instrument is registered and its outcome is not readable until
 | **41.51%** of declared weight is computed from a self-declared, unverified repository URL | `full-instrument-manipulation-result.md` | read from the scorer |
 | The one lead-capable signal moves for 7.2% of quiet packages, at **half** the active rate, in a **directionless** split | `band-crossing-result.md` | 2,906 packuments |
 | Finer maintainer bands recover only **1.58×** the movement; **17.6%** of changes are swaps invisible at every resolution | `granularity-result.md` | pre-registered tri-state |
+| A repository-derived score is **fully computable for 41.5–57.8%** of packages, across npm/PyPI/RubyGems | `cross-ecosystem-result.md` | 4 ecosystems, 1,000 each |
+| **Declaration** is the binding constraint — it spreads 18.3 points across ecosystems while clone success spreads 3.5 | `cross-ecosystem-result.md` | stage two, 200 each |
+| **21.2%** of dead declared links point at a freed owner namespace (≈3.2% of all declared links) | `dangling-links-result.md` | 118 owners, 0 API errors |
 
 ### Measured on a uniform npm draw (the #385 cohort, n=2,000)
 
@@ -76,6 +79,18 @@ concentration.
 changes the verdict for 73.5% of the packages it can read, and raises risk in
 667 of 685. A package that shows its source is scored worse. Whether that is
 *deserved* is precisely what the prospective study will answer.
+
+**Most of what it claims to measure, it cannot measure.** Across npm, PyPI and
+RubyGems a repository-derived score is fully computable for **41.5% to 57.8%**
+of packages — and the binding constraint is *declaration*, which varies by 18.3
+points between ecosystems while clone success varies by 3.5. Ecosystems differ
+in whether maintainers publish a link, not in whether published links work.
+
+**And the link rots.** Roughly one declared link in five no longer resolves, and
+**21.2% of those point at an owner namespace GitHub has freed** — about 3.2% of
+all declared links. So the input carrying 41.51% of the weight is, for a
+measurable slice, a name nobody currently holds. Nothing in this tool, or in
+Scorecard, Snyk or deps.dev, checks that.
 
 **What works is the refusal to guess.** Unmeasured stays unmeasured; a live
 advisory floors the verdict and leading signals can raise it but never lower it
@@ -176,6 +191,12 @@ validated. Three things from it belong here:
 What appears genuinely absent from the literature is a **prospective,
 pre-registered validation of a shipped health score against a future outcome,
 with a popularity baseline**. That is what `prospective-protocol.md` is.
+
+Also absent, and now measured here: **what fraction of packages any of these
+tools can score at all.** `cross-ecosystem-result.md` bounds four tools at once
+— including Scorecard, Snyk and deps.dev, which read the same declared link —
+and unlike every predictive claim this project has made, that bound does not
+decay.
 
 ---
 
