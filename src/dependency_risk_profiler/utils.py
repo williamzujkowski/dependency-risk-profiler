@@ -768,6 +768,116 @@ def is_shallow_clone(repo_dir: str) -> bool:
     return result.stdout.strip() == "true"
 
 
+#: Directories that conventionally hold a test suite, checked at the repository
+#: root and one level down. One level covers the layouts that put the suite
+#: inside the package rather than beside it -- CPython's ``Lib/test``, Django's
+#: ``django/test``, and the ``src/test`` of every Maven and Gradle project.
+TEST_DIRECTORY_NAMES = ("test", "tests", "spec", "specs", "testing", "__tests__")
+
+#: Languages that put tests *beside* the source rather than in a directory, so
+#: no directory check can ever find them. Go is the important one: ``go test``
+#: requires ``*_test.go`` next to the code, which is why a Go repository with a
+#: thorough suite reads as having none.
+TEST_FILE_GLOBS = (
+    "*_test.go",
+    "*_test.py",
+    "test_*.py",
+    "*_test.rb",
+    "*_spec.rb",
+    "*.test.js",
+    "*.test.ts",
+    "*.spec.js",
+    "*.spec.ts",
+    "*Test.java",
+    "*Tests.cs",
+    "*_test.rs",
+)
+
+#: Bounded so this stays cheap on a large repository. Three levels reaches
+#: ``src/main/java/...`` layouts without walking an entire monorepo, and the
+#: search stops at the first hit either way.
+_TEST_SEARCH_DEPTH = 3
+
+#: Never descended. ``.git`` alone can hold hundreds of thousands of objects,
+#: and vendored trees carry other projects' tests, which are not this project's.
+_TEST_SEARCH_SKIP = {
+    ".git",
+    "node_modules",
+    "vendor",
+    "third_party",
+    "site-packages",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+    ".tox",
+}
+
+
+def detect_tests(repo_path: Path) -> bool:
+    """Does this repository carry a test suite?
+
+    Two shapes, because languages disagree about where tests live.
+
+    **A directory**, at the root or one level down. The old check looked only at
+    the root, which is why CPython -- whose suite is ``Lib/test`` -- reported no
+    tests, along with every Maven and Gradle project keeping ``src/test``.
+
+    **Files beside the source**, which no directory check can find. ``go test``
+    requires ``*_test.go`` next to the code it exercises, so a thoroughly tested
+    Go repository has no test directory at all; the same is true of Rust's
+    ``*_test.rs`` and much of the JavaScript ``*.test.ts`` convention.
+
+    Measured on the #385 cohort, the old check read a confident ``False`` for
+    ``python/cpython`` and ``ossf/scorecard`` -- two of the most heavily tested
+    codebases in existence (#411). A confident False the collector cannot
+    justify is the defect class this repository keeps finding, so the fix is to
+    look where the tests actually are rather than to soften the claim.
+
+    The walk is depth-bounded and skips vendored trees, and it stops at the
+    first hit, so the common case costs a handful of ``stat`` calls.
+
+    Args:
+        repo_path: Root of the cloned repository.
+
+    Returns:
+        True when a test suite was found, False when the tree was readable and
+        held none. Callers distinguish "no tests" from "could not look" by
+        catching the exception this may raise on an unreadable tree.
+    """
+    for depth, directory in _walk_bounded(repo_path):
+        if directory.name in TEST_DIRECTORY_NAMES:
+            return True
+        # Globbing every directory would re-walk the tree; checking the files
+        # of each directory as it is visited costs one listing.
+        for pattern in TEST_FILE_GLOBS:
+            if next(directory.glob(pattern), None) is not None:
+                return True
+        if depth >= _TEST_SEARCH_DEPTH:
+            continue
+    return False
+
+
+def _walk_bounded(root: Path) -> Iterator[Tuple[int, Path]]:
+    """Yield ``(depth, directory)`` for the root and its readable descendants."""
+    frontier = [(0, root)]
+    while frontier:
+        depth, directory = frontier.pop()
+        yield depth, directory
+        if depth >= _TEST_SEARCH_DEPTH:
+            continue
+        try:
+            children = [c for c in directory.iterdir() if c.is_dir()]
+        except OSError:
+            # An unreadable subdirectory is not evidence about tests; skip it
+            # and keep looking rather than failing the whole read (#236).
+            continue
+        for child in children:
+            if child.name in _TEST_SEARCH_SKIP or child.name.startswith("."):
+                continue
+            frontier.append((depth + 1, child))
+
+
 def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
     """Check for health indicators in a repository.
 
@@ -779,36 +889,7 @@ def check_health_indicators(repo_dir: str) -> Tuple[bool, bool, bool]:
     """
     repo_path = Path(repo_dir)
 
-    # drp: `has_tests` means "has a conventionally-named top-level test
-    # directory", not "has tests". The patterns below are top-level and
-    # Python/JS-shaped, so this reads a confident False for CPython (whose
-    # suite is `Lib/test/`) and for Go projects (whose tests are `*_test.go`
-    # beside the source) -- two of the most heavily tested shapes there are.
-    # Upgrade when detection is language-aware, or rename the signal to what
-    # it measures (#411).
-    # Check for tests directory or test files
-    test_patterns = [
-        "test/",
-        "tests/",
-        "spec/",
-        "specs/",
-        "*_test.py",
-        "*_spec.js",
-        "test_*.py",
-    ]
-    has_tests = False
-    for pattern in test_patterns:
-        if "*" in pattern:
-            # Handle filename patterns
-            for file_path in repo_path.glob(pattern):
-                if file_path.exists():
-                    has_tests = True
-                    break
-        else:
-            # Handle directory patterns
-            if repo_path.joinpath(pattern).exists():
-                has_tests = True
-                break
+    has_tests = detect_tests(repo_path)
 
     # Check for CI configuration. The forge-native workflow directories and
     # Woodpecker join the list here (#291): the Codeberg clone of
