@@ -171,8 +171,8 @@ Evaluates security practices in the repository:
    scored on four signals and one scored on twelve produce numbers on the same
    scale that summarise different amounts of evidence. Measured on a uniform
    npm draw of 2,000 packages: an identical profile (maximally stale, single
-   maintainer) scores **2.500** when its repository cannot be read and
-   **3.636** when it can. No value is imputed and no gap is filled — the
+   maintainer) scores a median **1.935** when its repository cannot be read
+   and **2.609** when it can. No value is imputed and no gap is filled — the
    arithmetic is a plain weighted mean over what exists — but a reader
    comparing two `total_score` values is comparing two different measurements
    unless `measured_signal_count` matches. Read `total_score` together with

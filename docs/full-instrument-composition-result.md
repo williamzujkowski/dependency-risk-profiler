@@ -72,37 +72,56 @@ summaries and into my own notes as *"the composite is a twelve-cell lookup
 table"*, shedding the qualifier that made it true. **A condition stated only in
 the document that earned it will be dropped by everything that cites it.**
 
-The same enumeration on the shipped instrument:
+The same enumeration, **re-measured on the canonical record** (protocol §15 —
+the earlier figures here came from the harvest that omitted four signals, and
+are superseded):
 
 | cell (maintainer band \| repository state) | n | share | distinct scores |
 |---|---:|---:|---:|
-| ≤1 \| **cloned** | 788 | 0.394 | **132** |
-| ≤1 \| none declared | 762 | 0.381 | **11** |
-| ≤1 \| declared, uncloneable | 189 | 0.095 | 8 |
+| ≤1 \| **cloned** | 792 | 0.396 | **136** |
+| ≤1 \| none declared | 762 | 0.381 | **23** |
+| ≤1 \| declared, uncloneable | 185 | 0.092 | 9 |
 | 2 \| cloned | 61 | 0.030 | 38 |
 | 3–4 \| cloned | 48 | 0.024 | 27 |
-| ≥5 \| cloned | 31 | 0.015 | 19 |
-| six further uncloned cells | 121 | 0.061 | 3–6 each |
+| ≥5 \| none declared | 36 | 0.018 | 5 |
 
-Within one maintainer band: **11 distinct scores with no repository, 132 with a
-cloned one.** The uncloned cells reproduce the eleven-value backbone almost
-exactly, which is the strongest possible confirmation that the earlier
-enumeration measured its instrument correctly.
+**The twelve-cell structure survives**, and the modal cell reproduces at 0.396
+against the harvest's 0.394 and the original study's 0.39. What does not
+survive is the sharpness of the contrast.
 
-Spread, not jitter — measured, because distinct-value counts cannot tell the
-difference:
+### What changed, and it weakens the headline
+
+On the harvest the uncloned cell held **11** distinct scores — the original
+eleven-value backbone, reproduced exactly. On the canonical record it holds
+**23**, because licence, repository provenance and the advisory lookup all vary
+there and none of them was measured before.
+
+The gap is still large — 136 against 23, roughly six-fold — so *"the composite
+without its repository block is much coarser"* stands. But *"the lookup table is
+what the tool becomes when its block cannot run"* was a claim about an
+eleven-value object, and that object was partly my harvest's making.
+
+### The single-number evidence does not survive
 
 | cell | n | p25 | median | p75 | IQR |
 |---|---:|---:|---:|---:|---:|
-| ≤1 \| cloned | 788 | 3.179 | 3.535 | 3.636 | **0.458** |
-| ≤1 \| none declared | 762 | 2.500 | 2.500 | 2.500 | **0.000** |
+| ≤1 \| cloned | 792 | 2.318 | 2.536 | 2.609 | 0.291 |
+| ≤1 \| none declared | 762 | 1.734 | 1.935 | 1.935 | **0.202** |
+| ≤1 \| declared, uncloneable | 185 | 1.452 | 1.452 | 1.452 | **0.000** |
 
-**The middle half of the uncloned cell is a single number.** And **701 of 2,000
-packages — 35.0% of the cohort — receive exactly the score 2.5000**; among
-packages with no cloned repository, 65.4% do.
+The harvest showed the uncloned cell's middle half collapsing to a single value
+(IQR 0.000). **On the canonical record its IQR is 0.202 and that claim is
+withdrawn.** The single-number property survives only in the much smaller
+declared-but-uncloneable cell, where 185 packages all score 1.452.
 
-Stated the other way, honestly: concentration does not vanish when the block
-runs. **289 of the 928 cloned packages (31.1%) still share one score** (3.6364).
+Concentration, restated on the canonical record:
+
+> **513 of 2,000 packages — 25.6% of the cohort — share the modal score
+> 1.9355.** Among packages with no readable repository that is **48.0%**.
+
+Both figures are lower than the harvest's (35.0% and 65.4%), and both are still
+large enough that the point holds: a quarter of a uniform npm draw receives one
+number.
 
 ## 3. A pre-registered line whose null was never computed
 
