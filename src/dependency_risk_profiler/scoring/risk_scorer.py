@@ -615,8 +615,8 @@ class RiskScorer:
         # drp: normalising over *available* weights means the score summarises
         # however much was measured, so two packages share a scale without
         # sharing a meaning. Measured on a uniform npm draw: an identical
-        # profile (maximally stale, single maintainer) scores 2.500 with no
-        # readable repository and 3.636 with one. Nothing is imputed -- the
+        # profile (maximally stale, single maintainer) scores a median 1.935
+        # with no readable repository and 2.609 with one. Nothing is imputed -- the
         # arithmetic is a weighted mean over what exists -- but the number is
         # not comparable across coverage levels, and only `insufficient_data`
         # tells a reader which kind of number they have.

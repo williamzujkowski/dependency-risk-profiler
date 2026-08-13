@@ -38,6 +38,10 @@ what makes a correction legible to someone reading later.
 | `928 / 928` | every cloned package abstains without the repository block | PR #420 | the harvest performed 8 of 13 registered signals; the omissions caused the abstentions, not the block |
 | `53.6%` | the tool declines to issue a verdict for over half a uniform draw | PR #420 | same cause; measured as registered, **no package abstains** |
 | `0.5360` | as above, in decimal | PR #420 | same |
+| `2.5000` | the modal score of a uniform npm draw | PR #423 | measured on the harvest that omitted four signals; the canonical record gives `1.9355` |
+| `3.636` | the same profile's score with a readable repository | PR #423 | same cause; the canonical figure is 2.609 |
+| `65.4%` | share of uncloned packages sharing one score | PR #423 | same cause; the canonical figure is 48.0% |
+| `701 of 2,000` | packages sharing the modal score | PR #423 | same cause; the canonical figure is 513 of 2,000 |
 
 <!-- Rows are read by the test; keep the figure in the first column and inside
      backticks. A row whose figure never appears anywhere is fine — it means

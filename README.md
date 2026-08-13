@@ -127,7 +127,7 @@ Useful flags: `--max-repos N`, `--include-archived`, `--include-collaborations` 
 
 Two things to know about the score itself:
 
-- **`total_score` is not comparable across packages with different measurement coverage.** The composite is a weighted mean over the signals that were *measured*, so a package scored on four signals and one scored on twelve share a scale without sharing a meaning. Measured on a uniform npm draw: the identical profile — maximally stale, single maintainer — scores **2.500 with no readable repository and 3.636 with one**. Nothing is imputed and no missing value is filled; the number simply summarises a different amount of evidence.
+- **`total_score` is not comparable across packages with different measurement coverage.** The composite is a weighted mean over the signals that were *measured*, so a package scored on four signals and one scored on twelve share a scale without sharing a meaning. Measured on a uniform npm draw: the identical profile — maximally stale, single maintainer — scores a median **1.935 with no readable repository and 2.609 with one**. Nothing is imputed and no missing value is filled; the number simply summarises a different amount of evidence.
 - **Read `total_score` with `insufficient_data`, never alone.** The JSON output carries `insufficient_data`, `measured_signal_count`, `unknown_signal_count` and `unknown_signals` in the same object for exactly this reason. When `insufficient_data` is true the tool is declining to issue a verdict, and the accompanying score should not be read as one.
 
 Two behaviors are intentionally conservative:
