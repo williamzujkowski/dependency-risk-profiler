@@ -82,6 +82,53 @@ Two worked examples of the same shape in tests, both caught only because someone
 - A new test invoked the code without `--recursive`, so `os.walk` never descended and the branch it claimed to cover was never entered.
 - New scanner tests used a fixture client that classified its own trees; deleting the classifier from the *production* client left all seventeen green. The double had reimplemented the subject, so the test proved the double works.
 
+### 6b. Measure a threshold's input before you register it
+
+**A criterion whose input you could have measured, and did not, is not a
+falsification criterion. It is a deferred mistake.** Rule 6 says verify that a
+gate bites; this is its pre-registration form, and it exists because a gate
+that cannot fire until a future readout has no bite to observe.
+
+Before writing a threshold, ask what quantity it reads and whether that
+quantity is observable now. If it is, measure it and register against the
+measurement. Three instances, all in one programme:
+
+- A prospective study registered *"if the base rate falls outside 5–60%, no AUC
+  is claimed"* and left the base rate unmeasured. It was one afternoon's work:
+  500 uniform npm names, registry-only. The true rate was **0.776**, so the
+  guard would have voided an adequately-powered study twelve months later — and
+  it was reading the wrong quantity anyway, since AUC precision binds on the
+  minority-class count, not on which side of 50% the rate sits.
+- A composition study registered *"the block is decorative if registry-only
+  rank-R² ≥ 0.90"* without computing what that statistic reads under the null.
+  The baseline was ~85% tied, which mechanically depresses rank-R² against any
+  tie-broken refinement, so the measured 0.6076 was consistent with the block
+  contributing **nothing**. The line was reported as uninformative rather than
+  passed.
+- A synthesis claimed the LOW bucket works on a 7-of-7 record, without asking
+  whether the free baseline does it better. It does: download count's bottom
+  bucket beat it in **3 of 3** runs. The claim inverted.
+
+The habit that catches all three is one question asked twice — **what does this
+threshold read, and what does it read under the null or the baseline?** Where a
+comparator exists, the answer is a measurement rather than an argument, and it
+is nearly always cheaper than the study it is guarding.
+
+Corollary, learned the same way: **when a registered line turns out ambiguous
+and you have already seen the data, the ambiguity breaks against you.** Report
+every defensible reading and treat the line as fired if any of them fires.
+
+Worth knowing before assuming this is a standing weakness: a sweep of the
+earlier protocols found the practice **already latent and correctly applied**.
+The transfer study fixed its pilot's decision rule before the pilot ran and
+halted on the result; the handover study measured its control AUC first and
+halted at 0.2449; the remediation study checked its missingness mechanism
+rather than assuming it, and found the assumption backwards. All three
+failures above were introduced later, in quick succession, by the same author
+moving fast. **A discipline that holds when you are careful and lapses when you
+are quick is exactly the kind that belongs in this file rather than in
+someone's memory.**
+
 ### 7. Comments are evergreen
 
 **A comment states what is true now and why the code is the way it is. It never narrates the change that produced it.**
