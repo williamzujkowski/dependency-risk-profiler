@@ -197,6 +197,7 @@ This is how repository-health scoring works generally — Scorecard, deps.dev an
 - [Scoring](docs/SCORING.md)
 - [Information Sources](docs/INFORMATION_SOURCES.md)
 - [What this tool is, on the evidence](docs/what-this-tool-is.md) — the synthesis; start here
+- [Dangling repository links](docs/dangling-links-result.md) — 21.2% of dead declared links point at a freed owner namespace
 - [Cross-ecosystem computability](docs/cross-ecosystem-result.md) — a repository-derived score is fully computable for **41.5–57.8%** of packages, and the same ceiling binds Scorecard, Snyk and deps.dev
 - [Prior art](docs/prior-art.md) — what OWASP, Scorecard, Snyk and Libraries.io measure, and what anyone has validated
 - [Outcome landscape](docs/outcome-landscape.md) — every outcome attempted, and why the retrospective programme closed

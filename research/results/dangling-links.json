@@ -1,0 +1,18 @@
+{
+ "auth_failing_links_by_ecosystem": {
+  "npm": 40,
+  "packagist": 10,
+  "pypi": 31,
+  "rubygems": 39
+ },
+ "distinct_owners": 118,
+ "checked": 118,
+ "errors": 0,
+ "error_share": 0.0,
+ "owner_missing": 25,
+ "owner_exists": 93,
+ "missing_share": 0.211864406779661,
+ "line_2_too_few_slugs": false,
+ "line_3_inconclusive": false,
+ "line_1_material": true
+}
