@@ -12,6 +12,10 @@ name: Prospective cohort — interim read
 #
 # Quarterly rather than monthly: the point is to catch a base-rate surprise, and
 # a quiet rate does not move meaningfully in thirty days.
+#
+# Reads canonical-at-T.json, named authoritative in protocol §15. The two
+# earlier records are committed as history and must not be read here: one
+# omitted four registered signals, the other lacked the analysis fields.
 
 on:
   schedule:
@@ -40,7 +44,7 @@ jobs:
         # record someone reasons from, and §8.1 licenses no claim from these.
         run: |
           python research/prospective/outcome.py \
-            --scored research/data/prospective-cohort/scored-at-T.json \
+            --scored research/data/prospective-cohort/canonical-at-T.json \
             --out "$RUNNER_TEMP/interim.json" \
             --interim
 
