@@ -16,7 +16,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ..async_http import AsyncHTTPClient, batch_client
+from ..async_http import AsyncHTTPClient
 from ..models import DependencyMetadata
 from ..signals import AdvisoryLookupState
 from .aggregator import (
@@ -542,8 +542,6 @@ def aggregate_vulnerability_data_async(
                 )
             )
         finally:
-            # Clean up resources
-            loop.run_until_complete(batch_client.close())
             loop.close()
     except Exception as e:
         logger.error(
