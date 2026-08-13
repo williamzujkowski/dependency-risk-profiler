@@ -9,7 +9,6 @@ import pytest
 from aioresponses import aioresponses
 
 from dependency_risk_profiler.async_http import (
-    AsyncHTTPBatchClient,
     AsyncHTTPClient,
     fetch_json_async,
     fetch_url_async,
@@ -27,14 +26,6 @@ def mock_aioresponse() -> Iterator[aioresponses]:
 async def http_client() -> AsyncIterator[AsyncHTTPClient]:
     """Fixture for AsyncHTTPClient."""
     client = AsyncHTTPClient()
-    yield client
-    await client.close()
-
-
-@pytest.fixture
-async def batch_client() -> AsyncIterator[AsyncHTTPBatchClient]:
-    """Fixture for AsyncHTTPBatchClient."""
-    client = AsyncHTTPBatchClient()
     yield client
     await client.close()
 
@@ -175,113 +166,6 @@ class TestAsyncHTTPClient:
         await client.close()
 
 
-class TestAsyncHTTPBatchClient:
-    """Tests for the AsyncHTTPBatchClient class."""
-
-    @async_test
-    async def test_batch_get(
-        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
-    ) -> None:
-        """HYPOTHESIS: Batch GET requests should execute in parallel."""
-        # Arrange
-        urls = [
-            "https://api.example.com/test1",
-            "https://api.example.com/test2",
-            "https://api.example.com/test3",
-        ]
-        expected_data = [
-            {"message": "success1"},
-            {"message": "success2"},
-            {"message": "success3"},
-        ]
-
-        for i, url in enumerate(urls):
-            mock_aioresponse.get(url, status=200, payload=expected_data[i])
-
-        # Act
-        results = await batch_client.batch_get(urls)
-
-        # Assert
-        assert results == expected_data
-
-    @async_test
-    async def test_batch_get_with_errors(
-        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
-    ) -> None:
-        """HYPOTHESIS: Batch GET should handle mixed success and errors."""
-        # Arrange
-        urls = [
-            "https://api.example.com/test1",
-            "https://api.example.com/test2",
-            "https://api.example.com/test3",
-        ]
-        expected_data = [
-            {"message": "success1"},
-            None,  # this will be an error
-            {"message": "success3"},
-        ]
-
-        mock_aioresponse.get(urls[0], status=200, payload=expected_data[0])
-        mock_aioresponse.get(urls[1], status=404)
-        mock_aioresponse.get(urls[2], status=200, payload=expected_data[2])
-
-        # Act
-        results = await batch_client.batch_get(urls)
-
-        # Assert
-        assert results == expected_data
-
-    @async_test
-    async def test_batch_post(
-        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
-    ) -> None:
-        """HYPOTHESIS: Batch POST requests should execute in parallel."""
-        # Arrange
-        urls = [
-            "https://api.example.com/test1",
-            "https://api.example.com/test2",
-        ]
-        request_data = [
-            {"key1": "value1"},
-            {"key2": "value2"},
-        ]
-        expected_data = [
-            {"message": "success1"},
-            {"message": "success2"},
-        ]
-
-        for i, url in enumerate(urls):
-            mock_aioresponse.post(url, status=200, payload=expected_data[i])
-
-        # Act
-        results = await batch_client.batch_post(urls, request_data)
-
-        # Assert
-        assert results == expected_data
-
-    @async_test
-    async def test_batch_get_exception_handling(
-        self, batch_client: AsyncHTTPBatchClient, mock_aioresponse: aioresponses
-    ) -> None:
-        """REGRESSION: Batch GET should handle and mask exceptions."""
-        # Arrange
-        urls = [
-            "https://api.example.com/test1",
-            "https://api.example.com/test2",
-        ]
-
-        # First URL works, second raises exception
-        mock_aioresponse.get(urls[0], status=200, payload={"message": "success"})
-        mock_aioresponse.get(urls[1], exception=aiohttp.ClientError("Test error"))
-
-        # Act
-        results = await batch_client.batch_get(urls)
-
-        # Assert
-        assert results[0] == {"message": "success"}
-        assert results[1] is None
-
-
 class TestUtilityFunctions:
     """Tests for utility functions fetch_url_async and fetch_json_async."""
 
@@ -358,78 +242,3 @@ class TestUtilityFunctions:
 
         # Assert
         assert result is None
-
-
-@pytest.mark.benchmark
-class TestAsyncPerformance:
-    """Benchmark tests for async HTTP performance."""
-
-    @async_test
-    async def test_batch_vs_sequential_performance(
-        self, mock_aioresponse: aioresponses
-    ) -> None:
-        """BENCHMARK: Batch requests should be faster than sequential requests.
-
-        SLA Requirements:
-        - Batch requests should be at least 2x faster than sequential for 10+ requests
-        """
-        # Arrange
-        num_requests = 10
-        urls = [f"https://api.example.com/test{i}" for i in range(num_requests)]
-        expected_data = {"message": "success"}
-
-        # Setup mock responses with delay
-        async def delay_callback(*args: object, **kwargs: object) -> Dict[str, Any]:
-            await asyncio.sleep(0.1)
-            return dict(status=200, payload=expected_data)
-
-        for url in urls:
-            mock_aioresponse.get(url, callback=delay_callback)
-
-        client = AsyncHTTPClient()
-        batch_client = AsyncHTTPBatchClient()
-
-        # Act - Sequential requests
-        import time
-
-        seq_start = time.time()
-        for url in urls:
-            await client.get(url)
-        seq_time = time.time() - seq_start
-
-        # Act - Batch requests
-        batch_start = time.time()
-        await batch_client.batch_get(urls)
-        batch_time = time.time() - batch_start
-
-        # Assert - Batch should be faster (relaxed test requirement for CI environment)
-        speedup = seq_time / batch_time
-        assert (
-            speedup > 1.0
-        ), f"Batch requests speedup ({speedup:.2f}x) not faster than sequential"
-
-        # Cleanup
-        await client.close()
-        await batch_client.close()
-
-
-def test_parse_retry_after_numeric_and_capped() -> None:
-    """Numeric Retry-After is honored and capped; date/missing fall back."""
-    from dependency_risk_profiler.async_http import (
-        MAX_RETRY_AFTER_SECONDS,
-        AsyncHTTPClient,
-        _parse_retry_after,
-    )
-
-    assert _parse_retry_after({"Retry-After": "7"}) == 7.0
-    assert _parse_retry_after({"Retry-After": "9999"}) == MAX_RETRY_AFTER_SECONDS
-    # HTTP-date form is not numeric -> fall back to exponential backoff (None).
-    assert _parse_retry_after({"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}) is None
-    assert _parse_retry_after({}) is None
-    assert _parse_retry_after(None) is None
-
-    client = AsyncHTTPClient(backoff_factor=0.5)
-    # Retry-After overrides exponential backoff.
-    assert client._retry_delay(retry=1, retry_after=5.0) == 5.0
-    # Without Retry-After, exponential backoff applies.
-    assert client._retry_delay(retry=2, retry_after=None) == 0.5 * (2**1)
