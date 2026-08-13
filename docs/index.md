@@ -53,3 +53,7 @@ dependency-risk-profiler analyze requirements.txt --output json
 - .NET / C# (NuGet): `packages.lock.json`, `*.csproj`
 - Java (Maven): `pom.xml`
 - Java / Kotlin / Android (Gradle): `build.gradle`, `build.gradle.kts` (versions from `gradle/libs.versions.toml`)
+
+## What the evidence says
+
+- [What this tool is, on the evidence](what-this-tool-is.md) — the synthesis of every study, what is established and what is not.
