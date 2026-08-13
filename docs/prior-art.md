@@ -151,8 +151,10 @@ same ceiling applies to all of them — and none of them publishes it.
   not known, and it bounds what every repository-derived score can claim.
 
 **Measured, 2026-08-13** — `cross-ecosystem-result.md`. Across npm, PyPI and
-RubyGems a repository-derived score is computable for **56% to 74%** of
-packages, an 18.3-point spread. Packagist reaches 99.4% because its package
+RubyGems a repository-derived score is **fully computable for 41.5% to 57.8%**
+of packages: declaration runs 55.8–74.1% and roughly a fifth of declared links
+no longer resolve. Declaration is the binding constraint — it varies by 18.3
+points across ecosystems while clone success varies by 3.5. Packagist reaches 99.4% because its package
 identity *is* a VCS coordinate, which tripped two pre-registered guards and is
 reported separately. The ceiling is shared by Scorecard, Snyk and deps.dev, and
 none of them publishes it.
