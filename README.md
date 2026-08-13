@@ -13,6 +13,8 @@ It works on a single manifest (`analyze`) or across every repository in a GitHub
 
 ## What this tool has and has not been shown to do
 
+**One place to read all of it: [`docs/what-this-tool-is.md`](docs/what-this-tool-is.md)** — ten studies, what they establish, what they do not, and the four things that are still unknown.
+
 This README used to argue that leading indicators beat lagging ones. **That claim was tested against a pre-registered protocol and it lost**, so it has been withdrawn rather than left standing.
 
 On 2,906 npm packages predicting two-year abandonment, **download count alone separated the classes better than the then-sixteen-signal score: AUC 0.696 against 0.577** (maintainer-clustered 95% CI on the gap [−0.155, −0.085]). Two of the protocol's own falsification lines fired. Re-run at three dates the score never exceeded 0.605, and the published figure was its best year, not its typical one. Ablations put `license` in negative territory — removing it *improved* discrimination, so it is out of the composite and reported on its own axis (#340). The composite is thirteen signals now, and no better validated for it: taking out a signal measured to be harmful is not evidence that what remains works. `signed_commits` and `branch_protection` were retired too — the first verified commits against a local GPG keyring a fresh clone never has, making it a merge-tooling detector rather than a security signal; the second could not observe the API property it was named for (#394).
@@ -194,6 +196,7 @@ This is how repository-health scoring works generally — Scorecard, deps.dev an
 - [Configuration](docs/configuration.md)
 - [Scoring](docs/SCORING.md)
 - [Information Sources](docs/INFORMATION_SOURCES.md)
+- [What this tool is, on the evidence](docs/what-this-tool-is.md) — the synthesis; start here
 - [Outcome landscape](docs/outcome-landscape.md) — every outcome attempted, and why the retrospective programme closed
 - [Prospective protocol](docs/prospective-protocol.md) — the registered test of the full instrument, readable 2027-08
 - [Manipulation results](docs/manipulation-result.md) — what the score costs to move

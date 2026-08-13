@@ -1,0 +1,32 @@
+{
+ "runs": [
+  {
+   "t": "2022-08-01",
+   "n": 1346,
+   "base_rate": 0.4591381872213967,
+   "downloads_safest_quartile": 0.24404761904761904,
+   "downloads_lift": 0.5315341346894745,
+   "tool_low_lift": 0.63,
+   "downloads_wins": true
+  },
+  {
+   "t": "2023-08-01",
+   "n": 1336,
+   "base_rate": 0.4453592814371258,
+   "downloads_safest_quartile": 0.20658682634730538,
+   "downloads_lift": 0.46386554621848736,
+   "tool_low_lift": 0.66,
+   "downloads_wins": true
+  },
+  {
+   "t": "2024-08-01",
+   "n": 1414,
+   "base_rate": 0.4306930693069307,
+   "downloads_safest_quartile": 0.2747875354107649,
+   "downloads_lift": 0.6380124385399369,
+   "tool_low_lift": 0.68,
+   "downloads_wins": true
+  }
+ ],
+ "downloads_wins_all_runs": true
+}
