@@ -150,4 +150,11 @@ same ceiling applies to all of them — and none of them publishes it.
   declaration rates differ by an order of magnitude between Maven and npm is
   not known, and it bounds what every repository-derived score can claim.
 
+**Measured, 2026-08-13** — `cross-ecosystem-result.md`. Across npm, PyPI and
+RubyGems a repository-derived score is computable for **56% to 74%** of
+packages, an 18.3-point spread. Packagist reaches 99.4% because its package
+identity *is* a VCS coordinate, which tripped two pre-registered guards and is
+reported separately. The ceiling is shared by Scorecard, Snyk and deps.dev, and
+none of them publishes it.
+
 Tracked in #425.
