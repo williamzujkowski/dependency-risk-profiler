@@ -53,9 +53,10 @@ def _get(url: str, session: requests.Session) -> Optional[dict]:
         if resp.status_code != 200:
             return None
         try:
-            return resp.json()
+            payload = resp.json()
         except ValueError:
             return None
+        return payload if isinstance(payload, dict) else None
     return None
 
 
