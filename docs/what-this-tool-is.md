@@ -10,16 +10,57 @@ together they are an account that was not readable in one place.
 
 ---
 
-## 1. The one-paragraph version
+## 1. What we measured, and it held up
 
-This tool inventories what is publicly knowable about a dependency and refuses
-to guess when it cannot see something. That refusal is enforced by tests and is
-its most defensible property. What it has **never** been shown to do is rank
-dependencies by risk better than a popularity baseline: against every outcome
-tried, download count beat it — including, as of this document, at the one end
-of the scale that had looked like an exception. The one prospective test of the
-shipped instrument is registered and its outcome is not readable until
-**2027-08**.
+These are findings about packages and ecosystems rather than claims about this
+tool. Each survived review, several survived a control that was run
+specifically to kill them, and none depends on the composite predicting
+anything.
+
+| | |
+|---|---:|
+| npm packages with an **unfixed advisory** that **never published again** | **77.2%** |
+| — decomposed: P(fixed) = P(publishes) × P(fixes \| publishes) | 0.28 × 0.52 ≈ **0.146** (observed 15.1%) |
+| repository-derived scoring is **fully computable** for | **41.5–57.8%** of packages |
+| declared repository links that **no longer resolve** | ~1 in 5 |
+| — of those, pointing at a **freed owner namespace** | **21.2%** |
+| a uniform npm draw that **published exactly once, ever** | **27.4%** |
+| **12-month quiet rate**, uniform npm | **0.776** |
+
+**Unmaintained does mean unpatched, and the mechanism is sharper than the
+phrase.** Almost all the predictable variance sits in *whether the package is
+alive at all* — given a maintainer publishes again, whether the fix ships is
+close to a coin flip.
+
+**Registry design determines whether declared links are real.** Packagist's
+dead-link rate is 5% against 16–20% elsewhere, because a Composer package's
+identity *is* a VCS coordinate, so the link is load-bearing for installation
+and cannot rot unnoticed.
+
+**Quiet packages don't hand over.** Maintainer sets change for 22.8% of
+packages overall, but quiet ones cross a scoring band at 7.2% against 13.1%
+for active ones — half the rate, in the population where it would matter most —
+and the direction splits 48 risk-decreasing to 38 risk-increasing.
+
+## 1b. And the part with problems: the score itself
+
+The composite has **never** been shown to rank dependencies better than a
+popularity baseline. Against every outcome tried, download count beat it —
+including, as of this document, at the one end of the scale that had looked
+like an exception.
+
+Two things follow, and they are different in kind:
+
+- **What works is not prediction.** The refusal to guess, the advisory floor,
+  and filtering inapplicable advisories are correctness properties, enforced by
+  tests. They are the tool's most defensible feature and none of them forecasts
+  anything.
+- **What fails is the ranking.** Nothing computed here exceeds AUC 0.67 against
+  the question a user actually faces, and CVSS severity is indistinguishable
+  from chance at 0.4433.
+
+The one prospective test of the shipped instrument is registered, and its
+outcome is not readable until **2027-08**.
 
 ---
 

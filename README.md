@@ -11,9 +11,33 @@ It works on a single manifest (`analyze`) or across every repository in a GitHub
 
 **Scope: maintenance risk.** The thing this tool tries to see is whether a dependency still has someone behind it. That matters for security because an unmaintained package with a disclosed vulnerability has nobody to fix it — measured here at **77.2% of npm packages carrying an unfixed advisory never publishing again** — but the tool does not detect compromise, malicious publishes, or exploitability, and nothing here should be read as if it did.
 
-## What this tool has and has not been shown to do
+## What this work has measured
 
-**One place to read all of it: [`docs/what-this-tool-is.md`](docs/what-this-tool-is.md)** — ten studies, what they establish, what they do not, and the four things that are still unknown.
+Thirteen studies, all pre-registered, all published including the ones that
+failed. **One place to read them: [`docs/what-this-tool-is.md`](docs/what-this-tool-is.md).**
+
+These are findings about packages and ecosystems. None of them depends on this
+tool's score predicting anything, and several survived a control run
+specifically to kill them.
+
+| | |
+|---|---:|
+| npm packages with an **unfixed advisory** that **never published again** | **77.2%** |
+| repository-derived scoring is **fully computable** for | **41.5–57.8%** of packages |
+| declared repository links that **no longer resolve** | ~1 in 5 |
+| — of those, pointing at a **freed owner namespace** | **21.2%** |
+| a uniform npm draw that **published exactly once, ever** | **27.4%** |
+
+*Unmaintained does mean unpatched*, and the mechanism is sharper than the
+phrase: almost all the predictable variance is in whether the package is alive
+at all. Given a maintainer publishes again, whether the fix ships is close to a
+coin flip.
+
+The computability figure bounds **OpenSSF Scorecard, Snyk Advisor and deps.dev
+as well as this tool** — all four read the same declared repository link, and
+none of them publishes what fraction of packages it can be computed for.
+
+## And the part that has problems: the score itself
 
 This README used to argue that leading indicators beat lagging ones. **That claim was tested against a pre-registered protocol and it lost**, so it has been withdrawn rather than left standing.
 
