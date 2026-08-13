@@ -86,3 +86,61 @@ resolve. The per-ecosystem clone stage is registered as stage two and has not
 been run. Nothing here should be read as if it had.
 
 **Four ecosystems, one draw, one date.**
+
+---
+
+## Stage two — clone yield, and the exact bound
+
+Registered in §8 before running: 200 declared packages per ecosystem, drawn
+from stage one's own sample, clones deleted after probing.
+
+| ecosystem | declares | **clones, of declared** | **computable** |
+|---|---:|---:|---:|
+| **npm** | 0.558 | 0.745 | **0.415** |
+| **PyPI** | 0.673 | 0.765 | **0.515** |
+| **RubyGems** | 0.741 | 0.780 | **0.578** |
+| Packagist | 0.994 | 0.900 | 0.894 |
+
+> **A repository-derived score is fully computable for 41.5% to 57.8% of
+> packages** across npm, PyPI and RubyGems. For the rest — between two-fifths
+> and three-fifths of each ecosystem — the repository block cannot run, and
+> every tool in this class reports a score anyway.
+
+### Declaration is the binding constraint, and the numbers say so cleanly
+
+| | spread across the three |
+|---|---:|
+| declaration rate | **18.3 points** |
+| clone success, given declaration | **3.5 points** |
+
+Clone success is nearly uniform — 0.745, 0.765, 0.780 — while declaration
+varies by five times as much. **Ecosystems differ in whether maintainers
+publish a repository link, not in whether the published links work.**
+
+§8's line 5 asked whether clone success would exceed 95% everywhere, in which
+case stage two would be a footnote. It does not (it is ~78%), so the level of
+the bound genuinely moves — but the *ordering* is unchanged and the mechanism
+is declaration, which is what §8 named as the alternative worth stating in
+advance.
+
+### Packagist again, and the same explanation fits
+
+0.894 computable, and its `auth` failure rate is **5%** against 16–20%
+everywhere else. An ecosystem whose package identity *is* a VCS coordinate has
+both a higher declaration rate and more *real* links — the declarations are
+load-bearing for installation, so they cannot rot unnoticed.
+
+### One in five declared links does not resolve
+
+`auth` — GitHub's indistinguishable private/renamed/deleted response (#411) —
+accounts for 20% of npm attempts, 20% of RubyGems, 16% of PyPI.
+
+That is a finding in its own right: **a declared repository is a claim, and
+roughly one claim in five is no longer true.** Nothing in this tool, or in
+Scorecard or Snyk or deps.dev, checks it.
+
+### Cross-check against the #385 cohort
+
+npm computes to **0.415** here against **0.464** measured on the #385 cohort —
+a different draw, a different clone run, and one that carried a since-fixed
+race. Two independent estimates within 5 points.

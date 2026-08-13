@@ -1,0 +1,71 @@
+{
+ "seed": 20260813,
+ "subsample": 200,
+ "results": [
+  {
+   "ecosystem": "npm",
+   "declared_in_stage_one": 543,
+   "attempted": 200,
+   "on_github": 190,
+   "cloned": 149,
+   "clone_success_of_github": 0.7842105263157895,
+   "clone_success_of_declared": 0.745,
+   "reasons": {
+    "ok": 60,
+    "auth": 40,
+    "not_github": 10,
+    "ok_shallow_fallback": 88,
+    "bad_slug": 1,
+    "ok_shared": 1
+   }
+  },
+  {
+   "ecosystem": "packagist",
+   "declared_in_stage_one": 768,
+   "attempted": 200,
+   "on_github": 190,
+   "cloned": 180,
+   "clone_success_of_github": 0.9473684210526315,
+   "clone_success_of_declared": 0.9,
+   "reasons": {
+    "ok": 39,
+    "ok_shallow_fallback": 141,
+    "auth": 10,
+    "not_github": 10
+   }
+  },
+  {
+   "ecosystem": "pypi",
+   "declared_in_stage_one": 652,
+   "attempted": 200,
+   "on_github": 193,
+   "cloned": 153,
+   "clone_success_of_github": 0.7927461139896373,
+   "clone_success_of_declared": 0.765,
+   "reasons": {
+    "ok_shallow_fallback": 85,
+    "auth": 31,
+    "ok": 68,
+    "not_github": 7,
+    "bad_slug": 9
+   }
+  },
+  {
+   "ecosystem": "rubygems",
+   "declared_in_stage_one": 741,
+   "attempted": 200,
+   "on_github": 196,
+   "cloned": 156,
+   "clone_success_of_github": 0.7959183673469388,
+   "clone_success_of_declared": 0.78,
+   "reasons": {
+    "ok_shallow_fallback": 127,
+    "auth": 39,
+    "ok": 28,
+    "not_github": 4,
+    "ok_shared": 1,
+    "timeout": 1
+   }
+  }
+ ]
+}

@@ -104,3 +104,39 @@ good. This measures whether they can be computed at all.
 - **Declaration is an upper bound.** npm's declared share was 57.6% and its
   measured clone yield 46.4% (`what-this-tool-is.md` §2). Stage two closes that
   gap; stage one must not be read as if it already had.
+
+---
+
+## 8. Stage two — clone yield, registered before running
+
+Stage one measured **declaration**, which §7 flagged as an upper bound: npm
+declared 0.558 and yielded 0.464 once cloning was attempted.
+
+Stage two closes that gap per ecosystem, and is deliberately **subsampled**.
+A clone-success *rate* does not need every declared package: **200 declared
+packages per ecosystem** gives roughly ±7 points at 95%, which is well inside
+the 15-point threshold the ecosystems are being compared against, and it avoids
+a second multi-gigabyte sweep for precision nobody needs.
+
+Fixed now:
+
+- **n = 200** declared packages per ecosystem, drawn from stage one's own
+  sample so the two stages describe the same draw.
+- Packagist is included here **descriptively only**, since §5 lines 2 and 3
+  already excluded it from the comparison.
+- The clone uses the same hardened path as #385 — https-only constructed URL,
+  no submodules, `--shallow-since` with the recorded `--depth=1` fallback,
+  process-group kill on timeout.
+- Clones are deleted after probing. Stage one's finding does not depend on
+  keeping them, and the npm sweep already left 16 GB on disk.
+
+### Line 5, added here
+
+**If clone success exceeds 95% in every ecosystem**, declaration is the binding
+constraint and stage two adds nothing but a footnote — report it as such rather
+than as a second finding.
+
+**What stage two can change:** the *level* of the computability bound, not the
+ordering, unless clone success itself differs by more than the declaration gap.
+That would be the interesting outcome and is worth naming in advance: it would
+mean an ecosystem's declared links are systematically less real than another's.

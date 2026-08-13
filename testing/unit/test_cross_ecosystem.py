@@ -78,3 +78,60 @@ def test_every_ecosystem_has_a_lister_and_a_prober() -> None:
 def test_the_seed_is_the_registered_one() -> None:
     """§2 fixes it; a changed seed is a different cohort."""
     assert computability.SEED == 20260813
+
+
+class TestStageTwoSlugExtraction:
+    """`_slug` reads URLs from four registries with different conventions.
+
+    A bug here would look like a clone-yield finding: packages whose declared
+    URL is perfectly good would be counted `not_github` and depress the
+    ecosystem's rate. Stage two keeps URL extraction separate from stage one's
+    resolver-based state for the same reason.
+    """
+
+    def test_the_git_plus_https_spelling_npm_uses(self) -> None:
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug("git+https://github.com/axios/axios.git") == "axios/axios"
+
+    def test_the_scp_style_spelling(self) -> None:
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug("git@github.com:pallets/flask.git") == "pallets/flask"
+
+    def test_a_tagged_subpath_is_trimmed_to_owner_repo(self) -> None:
+        """RubyGems commonly points at `.../tree/v2.0.6`."""
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug("https://github.com/mikel/mail/tree/v2.0.6") == "mikel/mail"
+
+    def test_plain_http_still_resolves(self) -> None:
+        """15%+ of gems declare their repository over plain http."""
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug("http://github.com/rubygems/rubygems") == "rubygems/rubygems"
+
+    def test_a_non_github_forge_is_not_a_slug(self) -> None:
+        """GitLab, Bitbucket and self-hosted forges are a real category."""
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug("https://gitlab.com/gitlab-org/gitlab") is None
+        assert _slug("https://bitbucket.org/atlassian/pipelines") is None
+
+    def test_a_bare_owner_with_no_repo_is_not_a_slug(self) -> None:
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug("https://github.com/sponsors/someone") == "sponsors/someone"
+        assert _slug("https://github.com/octocat") is None
+
+    def test_a_missing_or_non_string_url_is_not_a_slug(self) -> None:
+        from cross_ecosystem.clone_yield import _slug
+
+        assert _slug(None) is None
+        assert _slug("") is None
+
+    def test_the_registered_subsample_size(self) -> None:
+        """§8 fixes it at 200; a changed value is a different study."""
+        from cross_ecosystem import clone_yield
+
+        assert clone_yield.SUBSAMPLE == 200
