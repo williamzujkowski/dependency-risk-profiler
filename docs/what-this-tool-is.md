@@ -155,6 +155,30 @@ because each was a claim about a *different instrument* than the one users run.
 
 ---
 
+## 5b. How this compares to everyone else
+
+`prior-art.md` reviews what the other tools measure and what has been
+validated. Three things from it belong here:
+
+- **OWASP's tools are a different category.** Dependency-Check matches CPEs to
+  CVEs; Dependency-Track sums advisory severities. Both are lagging indicators
+  and neither attempts a maintenance forecast.
+- **Snyk Advisor scores popularity as one of its four pillars.** Given that
+  download count beat this composite on every outcome tried, that looks like
+  the better modelling choice and this tool's exclusion of it looks like the
+  error.
+- **When published health scores have been tested, they have not held up.**
+  Scorecard against vulnerability counts came out at R² 0.09–0.12 *with the
+  sign backwards*; SourceRank failed to separate malicious PyPI packages from
+  legitimate ones. This project's negative results are not an outlier — they
+  are the pattern.
+
+What appears genuinely absent from the literature is a **prospective,
+pre-registered validation of a shipped health score against a future outcome,
+with a popularity baseline**. That is what `prospective-protocol.md` is.
+
+---
+
 ## 6. What is not known, stated as plainly as the rest
 
 - **Whether the composite predicts anything on the instrument users run.** Every
