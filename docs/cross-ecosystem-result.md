@@ -139,6 +139,11 @@ That is a finding in its own right: **a declared repository is a claim, and
 roughly one claim in five is no longer true.** Nothing in this tool, or in
 Scorecard or Snyk or deps.dev, checks it.
 
+**Measured further** in `dangling-links-result.md`: **21.2%** of those dead
+links point at an owner namespace that no longer exists on GitHub — roughly
+**3.2% of all declared links** — so for that share the field carrying 41.51% of
+this tool's weight refers to a name nobody currently holds.
+
 ### Cross-check against the #385 cohort
 
 npm computes to **0.415** here against **0.464** measured on the #385 cohort —
