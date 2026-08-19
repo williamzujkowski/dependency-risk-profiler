@@ -49,7 +49,7 @@ jobs:
             --interim
 
       - name: Upload the interim read
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: prospective-interim
           path: ${{ runner.temp }}/interim.json
