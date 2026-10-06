@@ -68,7 +68,7 @@ dev = [
     # (pnuckowski/aioresponses#288) is open and unreleased. This holds 14
     # advisories in uv.lock. Removing the coupling, which is the actual fix, is
     # #244 — raise both together, or neither.
-    "aiohttp>=3.8.6,<3.14",
+    "aiohttp>=3.8.6,<3.15",
     "aioresponses>=0.7.9",      # For mocking async HTTP requests
     "tomli>=2.0.1",  # TOML parsing/writing in tests (make available for all Python versions)
     "tomli-w>=1.0.0",           # For TOML writing in tests
